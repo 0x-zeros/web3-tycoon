@@ -1,0 +1,51 @@
+{
+  "name": "md-paste-image",
+  "displayName": "Markdown Paste Image",
+  "description": "Simple extension to paste Mac screenshots into markdown files",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mdPasteImage.paste",
+        "title": "Paste Image from Clipboard"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "mdPasteImage.paste",
+        "key": "cmd+shift+v",
+        "when": "editorTextFocus && resourceExtname == .md"
+      }
+    ],
+    "configuration": {
+      "title": "Markdown Paste Image",
+      "properties": {
+        "mdPasteImage.imagePath": {
+          "type": "string",
+          "default": "assets/images_md",
+          "description": "Path to save images relative to workspace root"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "eslint": "^8.28.0"
+  }
+}

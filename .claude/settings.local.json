@@ -4,7 +4,9 @@
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(mkdir:*)",
-      "Bash(osascript:*)"
+      "Bash(osascript:*)",
+      "WebFetch(domain:docs.cocos.com)",
+      "WebFetch(domain:www.cocos.com)"
     ],
     "deny": [],
     "ask": []

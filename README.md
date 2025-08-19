@@ -13,7 +13,6 @@ Web3 Tycoon 是一款参考大富翁10、11等经典游戏的Web3区块链游戏
 
 **核心特色：**
 - 🎮 经典大富翁玩法 + Web3创新
-- 🏦 多DeFi协议深度集成 (Bucket + Scallop + Navi)
 - 🖼️ NFT资产化的游戏道具
 - 🗳️ 社区治理决定游戏发展
 - 💰 Play-to-Earn可持续经济模型
@@ -58,19 +57,13 @@ web3-tycoon/
 - [ ] Move合约框架开发
 - [ ] TypeScript控制台Demo
 
-### Phase 2: 核心功能 (第3-4周)
+### Phase 2: 核心功能 (第3-5周)
 - [ ] 完整游戏循环实现
 - [ ] 多人匹配系统
 - [ ] NFT系统集成
 - [ ] 基础UI界面
 
-### Phase 3: DeFi集成 (第5-6周)
-- [ ] Bucket Protocol数据存储
-- [ ] Scallop Protocol借贷功能
-- [ ] Navi Protocol流动性挖矿
-- [ ] 经济模型优化
-
-### Phase 4: 客户端完善 (第7-8周)
+### Phase 3: 客户端完善 (第6-8周)
 - [ ] Cocos Creator图形客户端
 - [ ] AI生成美术资源集成
 - [ ] 性能优化和测试
@@ -84,33 +77,25 @@ web3-tycoon/
 - **Sui TypeScript SDK** - 客户端集成
 
 ### 服务器层  
-- **Node.js + TypeScript** - 服务器开发
-- **WebSocket** - 实时通信
-- **Redis** - 缓存管理
-- **PostgreSQL** - 数据持久化
+- 联机匹配（待定）
+
 
 ### 客户端层
 - **Cocos Creator** - 游戏引擎
 - **TypeScript** - 开发语言
 - **控制台Demo** - 快速原型
 
-### DeFi集成
-- **Bucket Protocol** - 去中心化数据存储
-- **Scallop Protocol** - 借贷和流动性
-- **Navi Protocol** - 流动性挖矿和治理
 
 ## 🎮 游戏特色
 
 ### 创新玩法
 - **地产NFT化**：每块地产都是独特的NFT资产
-- **DeFi借贷**：使用地产作为抵押品获得贷款
+- **DeFi借贷**：使用地产作为抵押品获得贷款 ？
 - **流动性挖矿**：质押游戏代币获得额外奖励
 - **社区治理**：玩家投票决定游戏规则和发展方向
 
 ### 经济模型
-- **TYCO (游戏币)** - 游戏内流通货币，用于购买地产和支付费用
-- **TYCOON (治理币)** - 治理代币，用于社区投票和质押挖矿
-- **双代币循环** - 游戏收益 ↔️ DeFi收益，形成可持续经济循环
+- 待定
 
 ## 🚀 快速开始
 
@@ -197,19 +182,14 @@ game UI element, transparent background"
 
 本项目参与以下赛道竞争：
 - **Sui赛道** (必选) - 创新使用Sui区块链特性
-- **Bucket赛道** - 去中心化数据存储应用
-- **Scallop赛道** - 游戏化借贷机制创新  
-- **Navi赛道** - 流动性挖矿和治理集成
+
 
 ### 技术挑战与解决方案
 
 #### Sui性能和Gas费优化
 - **挑战**：大富翁游戏逻辑复杂，可能导致高Gas费
 - **解决方案**：
-  - 批量操作减少交易数量
-  - 状态压缩优化存储
-  - 混合链上链下架构
-  - 预计算和缓存机制
+  - 待定
 
 #### 地图编辑器设计
 - **需求**：支持策划手动编辑和AI生成
@@ -219,15 +199,6 @@ game UI element, transparent background"
   - AI辅助地图生成
   - 多主题地图支持
 
-## 📄 许可证
-
-本项目采用 [MIT License](LICENSE) 开源许可证。
-
-## 📞 联系我们
-
-- **GitHub Issues**: [提交问题或建议](https://github.com/your-org/web3-tycoon/issues)
-- **Discord**: [加入社区讨论](https://discord.gg/web3tycoon)
-- **Email**: team@web3tycoon.game
 
 ---
 
@@ -235,6 +206,6 @@ game UI element, transparent background"
 
 **🎲 Web3 Tycoon - 让DeFi变得简单有趣，让游戏创造真实价值！🎲**
 
-[开始游戏](https://play.web3tycoon.game) • [查看文档](docs/) • [加入社区](https://discord.gg/web3tycoon)
+[开始游戏](https://www.web3tycoon.game) • [查看文档](docs/) • [加入社区]
 
 </div>

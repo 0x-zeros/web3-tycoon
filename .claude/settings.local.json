@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(mkdir:*)",
+      "Bash(osascript:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

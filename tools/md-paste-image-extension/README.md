@@ -12,12 +12,26 @@
 
 ## 安装方法
 
-1. 将整个插件文件夹复制到VS Code扩展目录：
-   ```bash
-   cp -r tools/md-paste-image-extension ~/.vscode/extensions/
-   ```
+### 查目标插件文件夹
+```bash
+ls ~/.cursor/extensions/ 
+```
 
-2. 重启VS Code
+### VS Code
+```bash
+# 如果目录不存在，先创建
+mkdir -p ~/.vscode/extensions/
+cp -r tools/md-paste-image-extension ~/.vscode/extensions/
+```
+
+### Cursor
+```bash
+# 如果目录不存在，先创建
+mkdir -p ~/.cursor/extensions/
+cp -r tools/md-paste-image-extension ~/.cursor/extensions/
+```
+
+重启编辑器即可使用。
 
 ## 使用方法
 
@@ -40,11 +54,24 @@
 
 ## 工作原理
 
-1. 使用`pbpaste -Prefer public.png`检测剪贴板中的图片
-2. 生成时间戳命名的PNG文件
-3. 保存到配置的目录
+1. 使用AppleScript检测剪贴板内容类型
+2. 如果检测到图片，使用AppleScript直接读取剪贴板图片数据
+3. 生成时间戳命名的PNG文件保存到配置目录
 4. 插入相对路径的markdown图片语法
 
+## 技术改进
+
+相比原版本，新版本采用AppleScript方案：
+- **类型检测**：`scripts/check_clipboard_type.applescript` - 精确检测剪贴板内容类型
+- **图片保存**：`scripts/save_clipboard_image.applescript` - 直接操作剪贴板图片数据
+- **兼容性**：支持PNG和TIFF格式，更好的Mac系统集成
+- **错误处理**：详细的错误信息和状态反馈
+
+## 测试方法
+
+1. 截图（`Cmd+Shift+4` 或其他截图方式）
+2. 在markdown文件中按 `Cmd+Shift+V`
+3. 图片将自动保存并插入markdown语法
 
 ## todo
-移动.md文件是，修改文件里图片的相对位置的（自动执行或者手动执行的）插件，（考虑到代码review， 以后有空再让ai看看）
+移动.md文件时，修改文件里图片的相对位置的（自动执行或者手动执行的）插件，（考虑到代码review， 以后有空再让ai看看）

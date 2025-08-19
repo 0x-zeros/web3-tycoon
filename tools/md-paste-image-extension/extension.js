@@ -28,15 +28,18 @@ function activate(context) {
 }
 
 async function pasteImage(editor) {
-    // 检查剪贴板是否包含图片
+    // 使用AppleScript检查剪贴板是否包含图片
     try {
-        const result = execSync('pbpaste -Prefer public.png', { encoding: 'base64' });
-        if (!result || result.trim() === '') {
-            vscode.window.showInformationMessage('No image found in clipboard');
+        const scriptPath = path.join(__dirname, 'scripts', 'check_clipboard_type.applescript');
+        const result = execSync(`osascript "${scriptPath}"`, { encoding: 'utf8' });
+        const clipboardType = result.trim();
+        
+        if (clipboardType !== 'image') {
+            vscode.window.showInformationMessage(`No image found in clipboard (detected: ${clipboardType})`);
             return;
         }
     } catch (error) {
-        vscode.window.showInformationMessage('No image found in clipboard');
+        vscode.window.showErrorMessage(`Failed to check clipboard: ${error.message}`);
         return;
     }
 
@@ -74,9 +77,19 @@ async function pasteImage(editor) {
     const fullImagePath = path.join(fullImageDir, imageName);
 
     try {
-        // 保存图片
-        const imageData = execSync('pbpaste -Prefer public.png', { encoding: null });
-        fs.writeFileSync(fullImagePath, imageData);
+        // 使用AppleScript保存图片
+        const saveScriptPath = path.join(__dirname, 'scripts', 'save_clipboard_image.applescript');
+        const result = execSync(`osascript "${saveScriptPath}" "${fullImagePath}"`, { encoding: 'utf8' });
+        const resultTrimmed = result.trim();
+        
+        if (resultTrimmed.startsWith('error:')) {
+            throw new Error(resultTrimmed);
+        }
+        
+        // 验证文件是否成功保存
+        if (!fs.existsSync(fullImagePath)) {
+            throw new Error('Image file was not created');
+        }
 
         // 计算相对于当前markdown文件的路径
         const currentFileDir = path.dirname(editor.document.uri.fsPath);

@@ -66,6 +66,7 @@ web3-tycoon/
 ### Phase 3: 客户端完善 (第6-8周)
 - [ ] Cocos Creator图形客户端
 - [ ] AI生成美术资源集成
+- [ ] 简单网站的制作和发布
 - [ ] 性能优化和测试
 - [ ] 黑客松提交准备
 
@@ -206,6 +207,6 @@ game UI element, transparent background"
 
 **🎲 Web3 Tycoon - 让DeFi变得简单有趣，让游戏创造真实价值！🎲**
 
-[开始游戏](https://www.web3tycoon.game) • [查看文档](docs/) • [加入社区]
+[开始游戏](https://www.web3tycoon.com) • [查看文档](docs/) • [加入社区]
 
 </div>

@@ -99,7 +99,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 3
@@ -2571,7 +2571,7 @@
     "_string": "0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 60,
+    "_actualFontSize": 67.6875,
     "_fontSize": 60,
     "_fontFamily": "Arial",
     "_lineHeight": 70,
@@ -2665,8 +2665,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 35.369140625,
-      "height": 90.2
+      "width": 35.3654345567867,
+      "height": 90.19999999999999
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2988,7 +2988,7 @@
     "_string": "从下往上释放一个火焰地带，使屏幕内的所有怪物受到大量伤害，对boss效果减半",
     "_horizontalAlign": 0,
     "_verticalAlign": 0,
-    "_actualFontSize": 36,
+    "_actualFontSize": 40.612500000000004,
     "_fontSize": 36,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -3976,7 +3976,7 @@
     "_string": "0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 60,
+    "_actualFontSize": 67.6875,
     "_fontSize": 60,
     "_fontFamily": "Arial",
     "_lineHeight": 70,
@@ -4070,8 +4070,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 35.369140625,
-      "height": 90.2
+      "width": 35.3654345567867,
+      "height": 90.19999999999999
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -4393,7 +4393,7 @@
     "_string": "从下往上释放一个火焰地带，使屏幕内的所有怪物受到大量伤害，对boss效果减半",
     "_horizontalAlign": 0,
     "_verticalAlign": 0,
-    "_actualFontSize": 36,
+    "_actualFontSize": 40.612500000000004,
     "_fontSize": 36,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -5360,7 +5360,7 @@
     "_string": "8888888",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 80,
+    "_actualFontSize": 90.25,
     "_fontSize": 80,
     "_fontFamily": "Arial",
     "_lineHeight": 90,
@@ -5601,7 +5601,7 @@
     "_string": "第888层",
     "_horizontalAlign": 0,
     "_verticalAlign": 0,
-    "_actualFontSize": 50,
+    "_actualFontSize": 56.40625,
     "_fontSize": 50,
     "_fontFamily": "Arial",
     "_lineHeight": 60,
@@ -5676,7 +5676,7 @@
     },
     "_alignFlags": 9,
     "_target": null,
-    "_left": -494.71142578125,
+    "_left": -494.701254382358,
     "_right": 0,
     "_top": -843.8,
     "_bottom": 0,
@@ -5731,7 +5731,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 185.4228515625,
+      "width": 185.40250876471606,
       "height": 77.6
     },
     "_anchorPoint": {

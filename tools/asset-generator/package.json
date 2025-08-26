@@ -1,0 +1,49 @@
+{
+  "name": "web3-tycoon-asset-generator",
+  "version": "1.0.0",
+  "description": "AIGC美术资源批量生成工具 - Web3 Tycoon游戏专用",
+  "main": "asset_generator.js",
+  "scripts": {
+    "generate": "node asset_generator.js",
+    "generate:core": "node asset_generator.js core 20",
+    "generate:tiles": "node asset_generator.js category tiles",
+    "generate:ui": "node asset_generator.js category ui",
+    "generate:icons": "node asset_generator.js category icons",
+    "generate:cards": "node asset_generator.js category cards",
+    "generate:characters": "node asset_generator.js category characters",
+    "generate:fast": "node asset_generator.js core 10",
+    "test": "node -e \"console.log('Asset generator ready!')\"",
+    "clean": "rm -rf output/* logs/*",
+    "setup": "mkdir -p output logs && cp .env.example .env"
+  },
+  "keywords": [
+    "aigc",
+    "game-assets",
+    "dall-e-3",
+    "web3",
+    "monopoly",
+    "cocos-creator",
+    "ai-generated",
+    "batch-generation"
+  ],
+  "author": "Web3 Tycoon Team",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.20.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/web3-tycoon/web3-tycoon"
+  },
+  "bugs": {
+    "url": "https://github.com/web3-tycoon/web3-tycoon/issues"
+  },
+  "homepage": "https://github.com/web3-tycoon/web3-tycoon#readme"
+}

@@ -21,18 +21,10 @@ Web3 Tycoon 是一款参考大富翁10、11等经典游戏的Web3区块链游戏
 
 ```
 web3-tycoon/
-├── contracts/          # Move智能合约
-│   ├── sources/        # 合约源代码
-│   ├── tests/          # 合约测试
-│   └── scripts/        # 部署脚本
+├── move/               # Move智能合约
 ├── server/             # 后端服务
-│   ├── matchmaking/    # 匹配服务
-│   ├── api/            # API接口
-│   └── database/       # 数据管理
 ├── client/             # 客户端
-│   ├── console-demo/   # 控制台Demo
-│   ├── cocos-project/  # Cocos Creator项目
-│   └── shared/         # 共享代码
+│   ├── tycoon_cocos/  # Cocos Creator项目
 ├── docs/               # 项目文档
 │   ├── design/         # 设计文档
 │   ├── tech/           # 技术文档
@@ -40,11 +32,7 @@ web3-tycoon/
 ├── tools/              # 开发工具
 │   ├── map-editor/     # 地图编辑器
 │   └── asset-generator/# AI资源生成
-└── assets/             # 游戏资源
-    ├── sprites/        # 精灵图
-    ├── models/         # 3D模型
-    ├── audio/          # 音频文件
-    └── maps/           # 地图数据
+└── assets/             # 项目相关资源
 ```
 
 ## 🛣️ 开发路线图
@@ -54,17 +42,19 @@ web3-tycoon/
 - [x] ✅ 开发计划制定  
 - [x] ✅ 游戏机制分析
 - [x] ✅ 技术架构设计
-- [ ] Move合约框架开发
-- [ ] TypeScript控制台Demo
+- [ ] Cocos Creator客户端基础
+- [ ] 地图编辑器等工具
+
 
 ### Phase 2: 核心功能 (第3-5周)
+- [ ] Move合约框架开发
 - [ ] 完整游戏循环实现
 - [ ] 多人匹配系统
 - [ ] NFT系统集成
 - [ ] 基础UI界面
 
 ### Phase 3: 客户端完善 (第6-8周)
-- [ ] Cocos Creator图形客户端
+- [ ] 客户端继续开发完善
 - [ ] AI生成美术资源集成
 - [ ] 简单网站的制作和发布
 - [ ] 性能优化和测试

@@ -578,10 +578,14 @@ export class DemolishCard extends Card {
         const immunityText = this.immunityLevel > 0 ? 
             `，等级${this.immunityLevel}以上建筑免疫拆除` : '';
 
-        return `使用拆除卡可以破坏其他玩家的建筑。\n` +
-               `- 选择目标建筑进行拆除\n` +
-               `- 建筑${levelText}\n` +
-               `- ${compensationText}\n` +
+        return `使用拆除卡可以破坏其他玩家的建筑。
+` +
+               `- 选择目标建筑进行拆除
+` +
+               `- 建筑${levelText}
+` +
+               `- ${compensationText}
+` +
                `- ${selfText}${immunityText}`;
     }
 }

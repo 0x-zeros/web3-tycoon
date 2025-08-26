@@ -43,4 +43,276 @@ export class StartTile extends MapTile {
     
     // ========================= 抽象方法实现 =========================
     
-    /**\n     * 获取地块类型\n     */\n    public get tileType(): TileType {\n        return TileType.START;\n    }\n    \n    /**\n     * 地块初始化\n     * @param tileData 地块数据\n     */\n    protected onTileInitialized(tileData: MapTileData): void {\n        // 从地块数据中读取薪水配置\n        if (tileData.salaryAmount) {\n            this.passingBonus = tileData.salaryAmount;\n            this.landingBonus = tileData.salaryAmount * 2; // 停留奖励是经过的两倍\n        }\n        \n        console.log(`[StartTile] 起点地块初始化完成，经过奖励: ${this.passingBonus}, 停留奖励: ${this.landingBonus}`);\n    }\n    \n    /**\n     * 玩家停留处理\n     * 玩家停留在起点时，给予额外的起点奖励\n     * @param player 停留的玩家\n     */\n    protected async onPlayerLandOn(player: PlayerData): Promise<TileInteractionResult> {\n        console.log(`[StartTile] 玩家 ${player.nickname} 停留在起点`);\n        \n        // 给予停留奖励\n        const bonusAmount = this.landingBonus;\n        player.financialStatus.cash += bonusAmount;\n        player.financialStatus.income.salary += bonusAmount;\n        \n        // 更新统计\n        player.statistics.startPassCount++;\n        \n        // 记录经过次数\n        const currentCount = this._passageCount.get(player.id) || 0;\n        this._passageCount.set(player.id, currentCount + 1);\n        \n        // 播放特效和音效\n        if (this.showBonusEffect) {\n            await this.playBonusEffect(player, bonusAmount, true);\n        }\n        \n        // 创建游戏事件\n        const events = [{\n            eventId: `start_land_${Date.now()}`,\n            type: GameEventType.TURN_START, // 可以自定义为 SALARY_RECEIVED\n            timestamp: Date.now(),\n            turnNumber: 0, // 需要从游戏管理器获取\n            actorPlayerId: player.id,\n            parameters: {\n                bonusType: 'landing',\n                amount: bonusAmount,\n                totalPasses: this._passageCount.get(player.id)\n            },\n            description: `${player.nickname} 停留在起点，获得 ${bonusAmount} 金币`,\n            result: { newBalance: player.financialStatus.cash }\n        }];\n        \n        return {\n            success: true,\n            message: `欢迎回到起点！获得 ${bonusAmount} 金币！`,\n            events: events,\n            moneyChange: bonusAmount,\n            blockMovement: false\n        };\n    }\n    \n    /**\n     * 玩家经过处理\n     * 玩家经过起点时，给予经过奖励\n     * @param player 经过的玩家\n     */\n    protected async onPlayerPassThrough(player: PlayerData): Promise<TileInteractionResult> {\n        console.log(`[StartTile] 玩家 ${player.nickname} 经过起点`);\n        \n        // 给予经过奖励\n        const bonusAmount = this.passingBonus;\n        player.financialStatus.cash += bonusAmount;\n        player.financialStatus.income.salary += bonusAmount;\n        \n        // 更新统计\n        player.statistics.startPassCount++;\n        \n        // 记录经过次数\n        const currentCount = this._passageCount.get(player.id) || 0;\n        this._passageCount.set(player.id, currentCount + 1);\n        \n        // 播放特效和音效\n        if (this.showBonusEffect) {\n            await this.playBonusEffect(player, bonusAmount, false);\n        }\n        \n        // 创建游戏事件\n        const events = [{\n            eventId: `start_pass_${Date.now()}`,\n            type: GameEventType.TURN_START, // 可以自定义为 SALARY_RECEIVED\n            timestamp: Date.now(),\n            turnNumber: 0, // 需要从游戏管理器获取\n            actorPlayerId: player.id,\n            parameters: {\n                bonusType: 'passing',\n                amount: bonusAmount,\n                totalPasses: this._passageCount.get(player.id)\n            },\n            description: `${player.nickname} 经过起点，获得 ${bonusAmount} 金币`,\n            result: { newBalance: player.financialStatus.cash }\n        }];\n        \n        return {\n            success: true,\n            message: `经过起点，获得 ${bonusAmount} 金币！`,\n            events: events,\n            moneyChange: bonusAmount,\n            blockMovement: false\n        };\n    }\n    \n    // ========================= 特效和动画方法 =========================\n    \n    /**\n     * 播放奖励特效\n     * @param player 获得奖励的玩家\n     * @param amount 奖励金额\n     * @param isLanding 是否是停留奖励\n     */\n    private async playBonusEffect(player: PlayerData, amount: number, isLanding: boolean): Promise<void> {\n        // TODO: 实现特效播放逻辑\n        // 这里可以播放金币飞舞动画、音效等\n        \n        console.log(`[StartTile] 播放奖励特效: 玩家 ${player.nickname} 获得 ${amount} 金币 (${isLanding ? '停留' : '经过'})`);\n        \n        // 示例：创建金币文字动画\n        this.createFloatingText(`+${amount}`, isLanding);\n        \n        // 示例：播放音效\n        this.playBonusSound();\n        \n        // 模拟异步特效持续时间\n        return new Promise((resolve) => {\n            this.scheduleOnce(() => {\n                resolve();\n            }, 0.5); // 特效持续0.5秒\n        });\n    }\n    \n    /**\n     * 创建浮动文字效果\n     * @param text 显示的文字\n     * @param isLanding 是否是停留奖励\n     */\n    private createFloatingText(text: string, isLanding: boolean): void {\n        // TODO: 实现浮动文字效果\n        // 在地块上方显示获得的金币数量\n        // 可以使用Cocos Creator的Label组件和Tween动画\n        \n        console.log(`[StartTile] 创建浮动文字: ${text} (${isLanding ? '停留奖励' : '经过奖励'})`);\n        \n        // 实现提示：\n        // 1. 创建Label节点\n        // 2. 设置文字内容和样式\n        // 3. 播放向上飞行并逐渐消失的动画\n        // 4. 动画结束后销毁节点\n    }\n    \n    /**\n     * 播放奖励音效\n     */\n    private playBonusSound(): void {\n        // TODO: 实现音效播放\n        // 使用AudioSource组件播放获得奖励的音效\n        \n        console.log(`[StartTile] 播放奖励音效: ${this.bonusAudioName}`);\n        \n        // 实现提示：\n        // 1. 获取AudioSource组件\n        // 2. 加载音效资源\n        // 3. 播放音效\n    }\n    \n    // ========================= 公共方法 =========================\n    \n    /**\n     * 获取玩家的经过次数\n     * @param playerId 玩家ID\n     */\n    public getPlayerPassageCount(playerId: string): number {\n        return this._passageCount.get(playerId) || 0;\n    }\n    \n    /**\n     * 重置经过次数统计\n     */\n    public resetPassageCounts(): void {\n        this._passageCount.clear();\n        console.log('[StartTile] 经过次数统计已重置');\n    }\n    \n    /**\n     * 获取所有玩家的经过统计\n     */\n    public getAllPassageCounts(): { [playerId: string]: number } {\n        const result: { [playerId: string]: number } = {};\n        this._passageCount.forEach((count, playerId) => {\n            result[playerId] = count;\n        });\n        return result;\n    }\n    \n    /**\n     * 设置薪水金额\n     * @param passingAmount 经过时的薪水\n     * @param landingAmount 停留时的薪水\n     */\n    public setSalaryAmounts(passingAmount: number, landingAmount: number): void {\n        this.passingBonus = passingAmount;\n        this.landingBonus = landingAmount;\n        \n        console.log(`[StartTile] 薪水金额已更新: 经过 ${passingAmount}, 停留 ${landingAmount}`);\n    }\n    \n    /**\n     * 检查是否是玩家的第一次经过起点\n     * @param playerId 玩家ID\n     */\n    public isFirstPass(playerId: string): boolean {\n        return this.getPlayerPassageCount(playerId) <= 1;\n    }\n    \n    /**\n     * 计算玩家的累计薪水收入\n     * @param playerId 玩家ID\n     */\n    public calculateTotalSalary(playerId: string): number {\n        const passCount = this.getPlayerPassageCount(playerId);\n        // 假设大部分是经过，少数是停留\n        // 这里简化计算，实际应该记录详细的经过/停留历史\n        return passCount * this.passingBonus;\n    }\n    \n    // ========================= 状态和配置 =========================\n    \n    /**\n     * 获取起点地块的详细信息\n     */\n    public getStartTileInfo(): {\n        passingBonus: number;\n        landingBonus: number;\n        totalPassages: number;\n        activePlayersCount: number;\n    } {\n        let totalPassages = 0;\n        this._passageCount.forEach(count => totalPassages += count);\n        \n        return {\n            passingBonus: this.passingBonus,\n            landingBonus: this.landingBonus,\n            totalPassages: totalPassages,\n            activePlayersCount: this._passageCount.size\n        };\n    }\n    \n    /**\n     * 检查起点地块是否繁忙\n     * 如果有很多玩家停留，可能需要特殊处理\n     */\n    public isBusy(): boolean {\n        return this.getPlayersOnTile().length > 1;\n    }\n}
+    /**
+     * 获取地块类型
+     */
+    public get tileType(): TileType {
+        return TileType.START;
+    }
+    
+    /**
+     * 地块初始化
+     * @param tileData 地块数据
+     */
+    protected onTileInitialized(tileData: MapTileData): void {
+        // 从地块数据中读取薪水配置
+        if (tileData.salaryAmount) {
+            this.passingBonus = tileData.salaryAmount;
+            this.landingBonus = tileData.salaryAmount * 2; // 停留奖励是经过的两倍
+        }
+        
+        console.log(`[StartTile] 起点地块初始化完成，经过奖励: ${this.passingBonus}, 停留奖励: ${this.landingBonus}`);
+    }
+    
+    /**
+     * 玩家停留处理
+     * 玩家停留在起点时，给予额外的起点奖励
+     * @param player 停留的玩家
+     */
+    protected async onPlayerLandOn(player: PlayerData): Promise<TileInteractionResult> {
+        console.log(`[StartTile] 玩家 ${player.nickname} 停留在起点`);
+        
+        // 给予停留奖励
+        const bonusAmount = this.landingBonus;
+        player.financialStatus.cash += bonusAmount;
+        player.financialStatus.income.salary += bonusAmount;
+        
+        // 更新统计
+        player.statistics.startPassCount++;
+        
+        // 记录经过次数
+        const currentCount = this._passageCount.get(player.id) || 0;
+        this._passageCount.set(player.id, currentCount + 1);
+        
+        // 播放特效和音效
+        if (this.showBonusEffect) {
+            await this.playBonusEffect(player, bonusAmount, true);
+        }
+        
+        // 创建游戏事件
+        const events = [{
+            eventId: `start_land_${Date.now()}`,
+            type: GameEventType.TURN_START, // 可以自定义为 SALARY_RECEIVED
+            timestamp: Date.now(),
+            turnNumber: 0, // 需要从游戏管理器获取
+            actorPlayerId: player.id,
+            parameters: {
+                bonusType: 'landing',
+                amount: bonusAmount,
+                totalPasses: this._passageCount.get(player.id)
+            },
+            description: `${player.nickname} 停留在起点，获得 ${bonusAmount} 金币`,
+            result: { newBalance: player.financialStatus.cash }
+        }];
+        
+        return {
+            success: true,
+            message: `欢迎回到起点！获得 ${bonusAmount} 金币！`,
+            events: events,
+            moneyChange: bonusAmount,
+            blockMovement: false
+        };
+    }
+    
+    /**
+     * 玩家经过处理
+     * 玩家经过起点时，给予经过奖励
+     * @param player 经过的玩家
+     */
+    protected async onPlayerPassThrough(player: PlayerData): Promise<TileInteractionResult> {
+        console.log(`[StartTile] 玩家 ${player.nickname} 经过起点`);
+        
+        // 给予经过奖励
+        const bonusAmount = this.passingBonus;
+        player.financialStatus.cash += bonusAmount;
+        player.financialStatus.income.salary += bonusAmount;
+        
+        // 更新统计
+        player.statistics.startPassCount++;
+        
+        // 记录经过次数
+        const currentCount = this._passageCount.get(player.id) || 0;
+        this._passageCount.set(player.id, currentCount + 1);
+        
+        // 播放特效和音效
+        if (this.showBonusEffect) {
+            await this.playBonusEffect(player, bonusAmount, false);
+        }
+        
+        // 创建游戏事件
+        const events = [{
+            eventId: `start_pass_${Date.now()}`,
+            type: GameEventType.TURN_START, // 可以自定义为 SALARY_RECEIVED
+            timestamp: Date.now(),
+            turnNumber: 0, // 需要从游戏管理器获取
+            actorPlayerId: player.id,
+            parameters: {
+                bonusType: 'passing',
+                amount: bonusAmount,
+                totalPasses: this._passageCount.get(player.id)
+            },
+            description: `${player.nickname} 经过起点，获得 ${bonusAmount} 金币`,
+            result: { newBalance: player.financialStatus.cash }
+        }];
+        
+        return {
+            success: true,
+            message: `经过起点，获得 ${bonusAmount} 金币！`,
+            events: events,
+            moneyChange: bonusAmount,
+            blockMovement: false
+        };
+    }
+    
+    // ========================= 特效和动画方法 =========================
+    
+    /**
+     * 播放奖励特效
+     * @param player 获得奖励的玩家
+     * @param amount 奖励金额
+     * @param isLanding 是否是停留奖励
+     */
+    private async playBonusEffect(player: PlayerData, amount: number, isLanding: boolean): Promise<void> {
+        // TODO: 实现特效播放逻辑
+        // 这里可以播放金币飞舞动画、音效等
+        
+        console.log(`[StartTile] 播放奖励特效: 玩家 ${player.nickname} 获得 ${amount} 金币 (${isLanding ? '停留' : '经过'})`);
+        
+        // 示例：创建金币文字动画
+        this.createFloatingText(`+${amount}`, isLanding);
+        
+        // 示例：播放音效
+        this.playBonusSound();
+        
+        // 模拟异步特效持续时间
+        return new Promise((resolve) => {
+            this.scheduleOnce(() => {
+                resolve();
+            }, 0.5); // 特效持续0.5秒
+        });
+    }
+    
+    /**
+     * 创建浮动文字效果
+     * @param text 显示的文字
+     * @param isLanding 是否是停留奖励
+     */
+    private createFloatingText(text: string, isLanding: boolean): void {
+        // TODO: 实现浮动文字效果
+        // 在地块上方显示获得的金币数量
+        // 可以使用Cocos Creator的Label组件和Tween动画
+        
+        console.log(`[StartTile] 创建浮动文字: ${text} (${isLanding ? '停留奖励' : '经过奖励'})`);
+        
+        // 实现提示：
+        // 1. 创建Label节点
+        // 2. 设置文字内容和样式
+        // 3. 播放向上飞行并逐渐消失的动画
+        // 4. 动画结束后销毁节点
+    }
+    
+    /**
+     * 播放奖励音效
+     */
+    private playBonusSound(): void {
+        // TODO: 实现音效播放
+        // 使用AudioSource组件播放获得奖励的音效
+        
+        console.log(`[StartTile] 播放奖励音效: ${this.bonusAudioName}`);
+        
+        // 实现提示：
+        // 1. 获取AudioSource组件
+        // 2. 加载音效资源
+        // 3. 播放音效
+    }
+    
+    // ========================= 公共方法 =========================
+    
+    /**
+     * 获取玩家的经过次数
+     * @param playerId 玩家ID
+     */
+    public getPlayerPassageCount(playerId: string): number {
+        return this._passageCount.get(playerId) || 0;
+    }
+    
+    /**
+     * 重置经过次数统计
+     */
+    public resetPassageCounts(): void {
+        this._passageCount.clear();
+        console.log('[StartTile] 经过次数统计已重置');
+    }
+    
+    /**
+     * 获取所有玩家的经过统计
+     */
+    public getAllPassageCounts(): { [playerId: string]: number } {
+        const result: { [playerId: string]: number } = {};
+        this._passageCount.forEach((count, playerId) => {
+            result[playerId] = count;
+        });
+        return result;
+    }
+    
+    /**
+     * 设置薪水金额
+     * @param passingAmount 经过时的薪水
+     * @param landingAmount 停留时的薪水
+     */
+    public setSalaryAmounts(passingAmount: number, landingAmount: number): void {
+        this.passingBonus = passingAmount;
+        this.landingBonus = landingAmount;
+        
+        console.log(`[StartTile] 薪水金额已更新: 经过 ${passingAmount}, 停留 ${landingAmount}`);
+    }
+    
+    /**
+     * 检查是否是玩家的第一次经过起点
+     * @param playerId 玩家ID
+     */
+    public isFirstPass(playerId: string): boolean {
+        return this.getPlayerPassageCount(playerId) <= 1;
+    }
+    
+    /**
+     * 计算玩家的累计薪水收入
+     * @param playerId 玩家ID
+     */
+    public calculateTotalSalary(playerId: string): number {
+        const passCount = this.getPlayerPassageCount(playerId);
+        // 假设大部分是经过，少数是停留
+        // 这里简化计算，实际应该记录详细的经过/停留历史
+        return passCount * this.passingBonus;
+    }
+    
+    // ========================= 状态和配置 =========================
+    
+    /**
+     * 获取起点地块的详细信息
+     */
+    public getStartTileInfo(): {
+        passingBonus: number;
+        landingBonus: number;
+        totalPassages: number;
+        activePlayersCount: number;
+    } {
+        let totalPassages = 0;
+        this._passageCount.forEach(count => totalPassages += count);
+        
+        return {
+            passingBonus: this.passingBonus,
+            landingBonus: this.landingBonus,
+            totalPassages: totalPassages,
+            activePlayersCount: this._passageCount.size
+        };
+    }
+    
+    /**
+     * 检查起点地块是否繁忙
+     * 如果有很多玩家停留，可能需要特殊处理
+     */
+    public isBusy(): boolean {
+        return this.getPlayersOnTile().length > 1;
+    }
+}

@@ -415,10 +415,14 @@ export class BarrierCard extends Card {
      * 获取卡片的详细使用说明
      */
     public getUsageInstructions(): string {
-        return `使用路障卡可以阻挡其他玩家的移动。\n` +
-               `- 选择一个地块放置路障\n` +
-               `- 路障持续 ${this.barrierDuration} 回合\n` +
-               `- 其他玩家移动到路障地块时会被强制停止\n` +
+        return `使用路障卡可以阻挡其他玩家的移动。
+` +
+               `- 选择一个地块放置路障
+` +
+               `- 路障持续 ${this.barrierDuration} 回合
+` +
+               `- 其他玩家移动到路障地块时会被强制停止
+` +
                `${this.blocksOwner ? '- 路障也会阻挡放置者' : '- 路障不会阻挡放置者'}`;
     }
 }

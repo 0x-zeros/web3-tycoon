@@ -28,4 +28,621 @@ const { ccclass, property } = _decorator;
 
 /**
  * 卡片管理器配置接口
- */\ninterface CardManagerConfig {\n    /** 默认手牌上限 */\n    defaultHandSize: number;\n    /** 每回合最大获得卡片数 */\n    maxCardsPerTurn: number;\n    /** 是否启用卡片交易 */\n    enableCardTrading: boolean;\n    /** 卡片获得方式配置 */\n    acquisitionConfig: {\n        chanceEventRate: number;\n        purchaseEnabled: boolean;\n        rewardEnabled: boolean;\n    };\n}\n\n/**\n * 卡片使用结果统计\n */\ninterface CardUsageStats {\n    /** 总使用次数 */\n    totalUses: number;\n    /** 成功使用次数 */\n    successfulUses: number;\n    /** 按卡片类型统计 */\n    usageByType: { [cardType: string]: number };\n    /** 按玩家统计 */\n    usageByPlayer: { [playerId: string]: number };\n}\n\n/**\n * 卡片管理器主类\n */\n@ccclass('CardManager')\nexport class CardManager extends Component {\n    \n    // ========================= 编辑器属性 =========================\n    \n    @property({ displayName: \"卡片库文件\", tooltip: \"JSON格式的卡片库配置文件\" })\n    public cardDeckPath: string = 'data/cards/cards';\n    \n    @property({ displayName: \"卡片预制件目录\", tooltip: \"存放卡片预制件的目录\" })\n    public cardPrefabDir: string = 'prefabs/cards/';\n    \n    @property({ displayName: \"默认手牌上限\", tooltip: \"玩家默认最大手牌数量\" })\n    public defaultHandSize: number = 5;\n    \n    @property({ displayName: \"启用卡片交易\", tooltip: \"是否允许玩家间交易卡片\" })\n    public enableTrading: boolean = false;\n    \n    @property({ displayName: \"启用调试模式\", tooltip: \"显示卡片系统调试信息\" })\n    public debugMode: boolean = false;\n    \n    // ========================= 卡片预制件引用 =========================\n    \n    @property({ displayName: \"遥控骰子卡预制件\", type: Prefab })\n    public diceControlCardPrefab: Prefab | null = null;\n    \n    @property({ displayName: \"路障卡预制件\", type: Prefab })\n    public barrierCardPrefab: Prefab | null = null;\n    \n    @property({ displayName: \"传送卡预制件\", type: Prefab })\n    public teleportCardPrefab: Prefab | null = null;\n    \n    @property({ displayName: \"拆除卡预制件\", type: Prefab })\n    public demolishCardPrefab: Prefab | null = null;\n    \n    @property({ displayName: \"免租卡预制件\", type: Prefab })\n    public freeRentCardPrefab: Prefab | null = null;\n    \n    // ========================= 私有属性 =========================\n    \n    /** 卡片库数据 */\n    private _cardDeck: CardDeck | null = null;\n    \n    /** 所有卡片数据映射 */\n    private _cardDataMap: Map<string, CardData> = new Map();\n    \n    /** 玩家手牌映射 */\n    private _playerHands: Map<string, PlayerHand> = new Map();\n    \n    /** 活动卡片实例映射 */\n    private _activeCards: Map<string, Card> = new Map();\n    \n    /** 卡片预制件映射 */\n    private _cardPrefabs: Map<CardType, Prefab> = new Map();\n    \n    /** 管理器配置 */\n    private _config: CardManagerConfig = {\n        defaultHandSize: 5,\n        maxCardsPerTurn: 2,\n        enableCardTrading: false,\n        acquisitionConfig: {\n            chanceEventRate: 0.3,\n            purchaseEnabled: true,\n            rewardEnabled: true\n        }\n    };\n    \n    /** 使用统计 */\n    private _usageStats: CardUsageStats = {\n        totalUses: 0,\n        successfulUses: 0,\n        usageByType: {},\n        usageByPlayer: {}\n    };\n    \n    /** 获得事件历史 */\n    private _acquisitionHistory: CardAcquisitionEvent[] = [];\n    \n    /** 是否已初始化 */\n    private _isInitialized: boolean = false;\n    \n    // ========================= 生命周期方法 =========================\n    \n    protected onLoad(): void {\n        this.initializeConfig();\n        this.setupCardPrefabs();\n    }\n    \n    protected start(): void {\n        this.scheduleOnce(() => {\n            this.initializeCardSystem();\n        }, 0);\n    }\n    \n    protected onDestroy(): void {\n        this.cleanup();\n    }\n    \n    // ========================= 初始化方法 =========================\n    \n    /**\n     * 初始化配置\n     */\n    private initializeConfig(): void {\n        this._config.defaultHandSize = this.defaultHandSize;\n        this._config.enableCardTrading = this.enableTrading;\n    }\n    \n    /**\n     * 设置卡片预制件映射\n     */\n    private setupCardPrefabs(): void {\n        this._cardPrefabs.set(CardType.DICE_CONTROL, this.diceControlCardPrefab!);\n        this._cardPrefabs.set(CardType.BARRIER, this.barrierCardPrefab!);\n        this._cardPrefabs.set(CardType.TELEPORT, this.teleportCardPrefab!);\n        this._cardPrefabs.set(CardType.DEMOLISH, this.demolishCardPrefab!);\n        this._cardPrefabs.set(CardType.FREE_RENT, this.freeRentCardPrefab!);\n    }\n    \n    /**\n     * 初始化卡片系统\n     */\n    private async initializeCardSystem(): Promise<void> {\n        try {\n            console.log('[CardManager] 开始初始化卡片系统...');\n            \n            // 加载卡片库数据\n            await this.loadCardDeck();\n            \n            // 初始化卡片数据映射\n            this.initializeCardDataMap();\n            \n            this._isInitialized = true;\n            \n            console.log('[CardManager] 卡片系统初始化完成');\n            \n            // 触发初始化完成事件\n            this.node.emit('card-system-initialized', { \n                totalCards: this._cardDataMap.size \n            });\n            \n        } catch (error) {\n            console.error('[CardManager] 卡片系统初始化失败:', error);\n            this.node.emit('card-system-error', { error });\n        }\n    }\n    \n    /**\n     * 加载卡片库数据\n     */\n    private async loadCardDeck(): Promise<void> {\n        // 首先尝试加载外部卡片数据\n        try {\n            const jsonAsset = await this.loadJsonResource(this.cardDeckPath);\n            this._cardDeck = jsonAsset.json as CardDeck;\n            console.log('[CardManager] 从外部文件加载卡片库成功');\n        } catch (error) {\n            // 如果加载失败，使用内置的MVP卡片\n            console.warn('[CardManager] 外部卡片库加载失败，使用内置卡片:', error);\n            this._cardDeck = {\n                deckId: 'mvp_deck',\n                deckName: 'MVP卡片库',\n                cards: MVP_CARDS,\n                rarityWeights: {\n                    common: 70,\n                    rare: 25,\n                    epic: 4,\n                    legendary: 1\n                },\n                acquisitionRules: {\n                    maxCardsPerTurn: 2,\n                    maxHandSize: 5,\n                    acquisitionMethods: ['chance', 'purchase', 'reward']\n                }\n            };\n        }\n    }\n    \n    /**\n     * 加载JSON资源\n     */\n    private loadJsonResource(path: string): Promise<JsonAsset> {\n        return new Promise((resolve, reject) => {\n            resources.load(path, JsonAsset, (err, asset) => {\n                if (err) {\n                    reject(err);\n                } else {\n                    resolve(asset);\n                }\n            });\n        });\n    }\n    \n    /**\n     * 初始化卡片数据映射\n     */\n    private initializeCardDataMap(): void {\n        if (!this._cardDeck) {\n            return;\n        }\n        \n        this._cardDataMap.clear();\n        \n        for (const cardData of this._cardDeck.cards) {\n            this._cardDataMap.set(cardData.id, cardData);\n        }\n        \n        console.log(`[CardManager] 卡片数据映射初始化完成，共 ${this._cardDataMap.size} 张卡片`);\n    }\n    \n    // ========================= 玩家手牌管理 =========================\n    \n    /**\n     * 初始化玩家手牌\n     * @param playerId 玩家ID\n     */\n    public initializePlayerHand(playerId: string): PlayerHand {\n        const hand: PlayerHand = {\n            playerId: playerId,\n            cards: [],\n            maxHandSize: this._config.defaultHandSize,\n            handState: {\n                isDisabled: false\n            }\n        };\n        \n        this._playerHands.set(playerId, hand);\n        \n        console.log(`[CardManager] 玩家 ${playerId} 手牌初始化完成`);\n        \n        return hand;\n    }\n    \n    /**\n     * 获取玩家手牌\n     * @param playerId 玩家ID\n     */\n    public getPlayerHand(playerId: string): PlayerHand | null {\n        return this._playerHands.get(playerId) || null;\n    }\n    \n    /**\n     * 给玩家发放卡片\n     * @param playerId 玩家ID\n     * @param cardId 卡片ID\n     * @param acquisitionMethod 获得方式\n     */\n    public async giveCardToPlayer(playerId: string, cardId: string, acquisitionMethod: string = 'system'): Promise<boolean> {\n        const hand = this.getPlayerHand(playerId);\n        if (!hand) {\n            console.error(`[CardManager] 玩家 ${playerId} 手牌不存在`);\n            return false;\n        }\n        \n        // 检查手牌是否已满\n        if (hand.cards.length >= hand.maxHandSize) {\n            console.warn(`[CardManager] 玩家 ${playerId} 手牌已满`);\n            return false;\n        }\n        \n        // 检查卡片是否存在\n        const cardData = this._cardDataMap.get(cardId);\n        if (!cardData) {\n            console.error(`[CardManager] 卡片 ${cardId} 不存在`);\n            return false;\n        }\n        \n        // 创建卡片实例\n        const cardInstance: CardInstance = {\n            instanceId: `${cardId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,\n            cardId: cardId,\n            ownerId: playerId,\n            state: CardState.AVAILABLE,\n            remainingUses: cardData.maxUses,\n            remainingCooldown: 0,\n            acquiredAt: Date.now()\n        };\n        \n        // 添加到手牌\n        hand.cards.push(cardInstance);\n        \n        // 记录获得事件\n        const acquisitionEvent: CardAcquisitionEvent = {\n            eventType: acquisitionMethod as any,\n            playerId: playerId,\n            cardId: cardId,\n            acquisitionMethod: acquisitionMethod,\n            timestamp: Date.now()\n        };\n        \n        this._acquisitionHistory.push(acquisitionEvent);\n        \n        // 触发卡片获得事件\n        this.node.emit('card-acquired', {\n            playerId: playerId,\n            cardId: cardId,\n            cardName: cardData.name,\n            acquisitionMethod: acquisitionMethod\n        });\n        \n        console.log(`[CardManager] 玩家 ${playerId} 获得卡片: ${cardData.name}`);\n        \n        return true;\n    }\n    \n    /**\n     * 随机给玩家发放卡片\n     * @param playerId 玩家ID\n     * @param rarity 稀有度过滤（可选）\n     */\n    public async giveRandomCardToPlayer(playerId: string, rarity?: string): Promise<boolean> {\n        if (!this._cardDeck) {\n            return false;\n        }\n        \n        // 获取可用卡片列表\n        let availableCards = this._cardDeck.cards;\n        \n        if (rarity) {\n            availableCards = availableCards.filter(card => \n                card.rarity.toString().toLowerCase() === rarity.toLowerCase()\n            );\n        }\n        \n        if (availableCards.length === 0) {\n            console.warn(`[CardManager] 没有可用的卡片 (稀有度: ${rarity})`);\n            return false;\n        }\n        \n        // 基于权重的随机选择\n        const totalWeight = availableCards.reduce((sum, card) => sum + card.dropWeight, 0);\n        let randomValue = Math.random() * totalWeight;\n        \n        let selectedCard: CardData | null = null;\n        for (const card of availableCards) {\n            randomValue -= card.dropWeight;\n            if (randomValue <= 0) {\n                selectedCard = card;\n                break;\n            }\n        }\n        \n        if (!selectedCard) {\n            selectedCard = availableCards[0]; // 备选\n        }\n        \n        return await this.giveCardToPlayer(playerId, selectedCard.id, 'random');\n    }\n    \n    // ========================= 卡片使用管理 =========================\n    \n    /**\n     * 使用卡片\n     * @param request 使用请求\n     */\n    public async useCard(request: CardUseRequest): Promise<CardUseResult> {\n        const hand = this.getPlayerHand(request.playerId);\n        if (!hand) {\n            return {\n                success: false,\n                message: '玩家手牌不存在',\n                errorCode: 'NO_HAND',\n                appliedEffects: [],\n                affectedPlayerIds: [],\n                affectedTileIds: []\n            };\n        }\n        \n        // 查找卡片实例\n        const cardInstance = hand.cards.find(card => \n            card.instanceId === request.cardInstanceId\n        );\n        \n        if (!cardInstance) {\n            return {\n                success: false,\n                message: '卡片不存在',\n                errorCode: 'CARD_NOT_FOUND',\n                appliedEffects: [],\n                affectedPlayerIds: [],\n                affectedTileIds: []\n            };\n        }\n        \n        // 获取卡片数据\n        const cardData = this._cardDataMap.get(cardInstance.cardId);\n        if (!cardData) {\n            return {\n                success: false,\n                message: '卡片数据不存在',\n                errorCode: 'INVALID_CARD_DATA',\n                appliedEffects: [],\n                affectedPlayerIds: [],\n                affectedTileIds: []\n            };\n        }\n        \n        // 创建卡片实例组件（如果需要）\n        const cardComponent = await this.createCardComponent(cardData, cardInstance);\n        if (!cardComponent) {\n            return {\n                success: false,\n                message: '无法创建卡片组件',\n                errorCode: 'COMPONENT_CREATION_FAILED',\n                appliedEffects: [],\n                affectedPlayerIds: [],\n                affectedTileIds: []\n            };\n        }\n        \n        // 创建使用上下文\n        // TODO: 这里需要通过GameManager获取完整的玩家数据\n        const context: CardUseContext = {\n            player: {} as PlayerData, // 需要实际的玩家数据\n            target: request.target,\n            parameters: request.parameters\n        };\n        \n        // 执行卡片使用\n        const result = await cardComponent.useCard(context);\n        \n        // 更新统计\n        this._usageStats.totalUses++;\n        if (result.success) {\n            this._usageStats.successfulUses++;\n            \n            // 按类型统计\n            const cardType = cardData.type.toString();\n            this._usageStats.usageByType[cardType] = (this._usageStats.usageByType[cardType] || 0) + 1;\n            \n            // 按玩家统计\n            this._usageStats.usageByPlayer[request.playerId] = (this._usageStats.usageByPlayer[request.playerId] || 0) + 1;\n            \n            // 如果卡片已用完，从手牌中移除\n            if (cardInstance.state === CardState.USED) {\n                const index = hand.cards.indexOf(cardInstance);\n                if (index !== -1) {\n                    hand.cards.splice(index, 1);\n                }\n            }\n        }\n        \n        // 清理临时创建的组件\n        if (cardComponent.node.isValid) {\n            cardComponent.node.destroy();\n        }\n        \n        return result;\n    }\n    \n    /**\n     * 创建卡片组件\n     * @param cardData 卡片数据\n     * @param cardInstance 卡片实例\n     */\n    private async createCardComponent(cardData: CardData, cardInstance: CardInstance): Promise<Card | null> {\n        const prefab = this._cardPrefabs.get(cardData.type);\n        if (!prefab) {\n            console.error(`[CardManager] 找不到卡片类型 ${cardData.type} 的预制件`);\n            return null;\n        }\n        \n        const cardNode = instantiate(prefab);\n        cardNode.setParent(this.node); // 临时父节点\n        \n        const cardComponent = cardNode.getComponent(Card);\n        if (!cardComponent) {\n            console.error(`[CardManager] 卡片预制件缺少Card组件`);\n            cardNode.destroy();\n            return null;\n        }\n        \n        // 初始化卡片\n        cardComponent.initializeCard(cardData, cardInstance);\n        \n        return cardComponent;\n    }\n    \n    /**\n     * 更新所有玩家手牌的冷却时间\n     */\n    public updateAllCardCooldowns(): void {\n        this._playerHands.forEach((hand, playerId) => {\n            hand.cards.forEach(cardInstance => {\n                if (cardInstance.remainingCooldown && cardInstance.remainingCooldown > 0) {\n                    cardInstance.remainingCooldown--;\n                    \n                    if (cardInstance.remainingCooldown <= 0 && cardInstance.state === CardState.COOLING_DOWN) {\n                        cardInstance.state = CardState.AVAILABLE;\n                    }\n                }\n            });\n        });\n        \n        if (this.debugMode) {\n            console.log('[CardManager] 所有卡片冷却时间已更新');\n        }\n    }\n    \n    // ========================= 工具方法 =========================\n    \n    /**\n     * 获取卡片数据\n     * @param cardId 卡片ID\n     */\n    public getCardData(cardId: string): CardData | null {\n        return this._cardDataMap.get(cardId) || null;\n    }\n    \n    /**\n     * 获取所有卡片数据\n     */\n    public getAllCardData(): CardData[] {\n        return Array.from(this._cardDataMap.values());\n    }\n    \n    /**\n     * 检查系统是否已初始化\n     */\n    public isInitialized(): boolean {\n        return this._isInitialized;\n    }\n    \n    /**\n     * 获取使用统计\n     */\n    public getUsageStats(): CardUsageStats {\n        return { ...this._usageStats };\n    }\n    \n    /**\n     * 获取获得历史\n     */\n    public getAcquisitionHistory(playerId?: string): CardAcquisitionEvent[] {\n        if (playerId) {\n            return this._acquisitionHistory.filter(event => event.playerId === playerId);\n        }\n        return [...this._acquisitionHistory];\n    }\n    \n    /**\n     * 清理资源\n     */\n    private cleanup(): void {\n        this._cardDataMap.clear();\n        this._playerHands.clear();\n        this._activeCards.clear();\n        this._acquisitionHistory.length = 0;\n        \n        console.log('[CardManager] 资源清理完成');\n    }\n    \n    /**\n     * 重置卡片系统\n     */\n    public resetCardSystem(): void {\n        this.cleanup();\n        this._isInitialized = false;\n        \n        // 重新初始化\n        this.scheduleOnce(() => {\n            this.initializeCardSystem();\n        }, 0);\n        \n        console.log('[CardManager] 卡片系统已重置');\n    }\n    \n    /**\n     * 获取系统状态信息\n     */\n    public getSystemInfo(): {\n        initialized: boolean;\n        totalCards: number;\n        totalPlayers: number;\n        totalAcquisitions: number;\n        totalUses: number;\n    } {\n        return {\n            initialized: this._isInitialized,\n            totalCards: this._cardDataMap.size,\n            totalPlayers: this._playerHands.size,\n            totalAcquisitions: this._acquisitionHistory.length,\n            totalUses: this._usageStats.totalUses\n        };\n    }\n}
+ */
+interface CardManagerConfig {
+    /** 默认手牌上限 */
+    defaultHandSize: number;
+    /** 每回合最大获得卡片数 */
+    maxCardsPerTurn: number;
+    /** 是否启用卡片交易 */
+    enableCardTrading: boolean;
+    /** 卡片获得方式配置 */
+    acquisitionConfig: {
+        chanceEventRate: number;
+        purchaseEnabled: boolean;
+        rewardEnabled: boolean;
+    };
+}
+
+/**
+ * 卡片使用结果统计
+ */
+interface CardUsageStats {
+    /** 总使用次数 */
+    totalUses: number;
+    /** 成功使用次数 */
+    successfulUses: number;
+    /** 按卡片类型统计 */
+    usageByType: { [cardType: string]: number };
+    /** 按玩家统计 */
+    usageByPlayer: { [playerId: string]: number };
+}
+
+/**
+ * 卡片管理器主类
+ */
+@ccclass('CardManager')
+export class CardManager extends Component {
+    
+    // ========================= 编辑器属性 =========================
+    
+    @property({ displayName: "卡片库文件", tooltip: "JSON格式的卡片库配置文件" })
+    public cardDeckPath: string = 'data/cards/cards';
+    
+    @property({ displayName: "卡片预制件目录", tooltip: "存放卡片预制件的目录" })
+    public cardPrefabDir: string = 'prefabs/cards/';
+    
+    @property({ displayName: "默认手牌上限", tooltip: "玩家默认最大手牌数量" })
+    public defaultHandSize: number = 5;
+    
+    @property({ displayName: "启用卡片交易", tooltip: "是否允许玩家间交易卡片" })
+    public enableTrading: boolean = false;
+    
+    @property({ displayName: "启用调试模式", tooltip: "显示卡片系统调试信息" })
+    public debugMode: boolean = false;
+    
+    // ========================= 卡片预制件引用 =========================
+    
+    @property({ displayName: "遥控骰子卡预制件", type: Prefab })
+    public diceControlCardPrefab: Prefab | null = null;
+    
+    @property({ displayName: "路障卡预制件", type: Prefab })
+    public barrierCardPrefab: Prefab | null = null;
+    
+    @property({ displayName: "传送卡预制件", type: Prefab })
+    public teleportCardPrefab: Prefab | null = null;
+    
+    @property({ displayName: "拆除卡预制件", type: Prefab })
+    public demolishCardPrefab: Prefab | null = null;
+    
+    @property({ displayName: "免租卡预制件", type: Prefab })
+    public freeRentCardPrefab: Prefab | null = null;
+    
+    // ========================= 私有属性 =========================
+    
+    /** 卡片库数据 */
+    private _cardDeck: CardDeck | null = null;
+    
+    /** 所有卡片数据映射 */
+    private _cardDataMap: Map<string, CardData> = new Map();
+    
+    /** 玩家手牌映射 */
+    private _playerHands: Map<string, PlayerHand> = new Map();
+    
+    /** 活动卡片实例映射 */
+    private _activeCards: Map<string, Card> = new Map();
+    
+    /** 卡片预制件映射 */
+    private _cardPrefabs: Map<CardType, Prefab> = new Map();
+    
+    /** 管理器配置 */
+    private _config: CardManagerConfig = {
+        defaultHandSize: 5,
+        maxCardsPerTurn: 2,
+        enableCardTrading: false,
+        acquisitionConfig: {
+            chanceEventRate: 0.3,
+            purchaseEnabled: true,
+            rewardEnabled: true
+        }
+    };
+    
+    /** 使用统计 */
+    private _usageStats: CardUsageStats = {
+        totalUses: 0,
+        successfulUses: 0,
+        usageByType: {},
+        usageByPlayer: {}
+    };
+    
+    /** 获得事件历史 */
+    private _acquisitionHistory: CardAcquisitionEvent[] = [];
+    
+    /** 是否已初始化 */
+    private _isInitialized: boolean = false;
+    
+    // ========================= 生命周期方法 =========================
+    
+    protected onLoad(): void {
+        this.initializeConfig();
+        this.setupCardPrefabs();
+    }
+    
+    protected start(): void {
+        this.scheduleOnce(() => {
+            this.initializeCardSystem();
+        }, 0);
+    }
+    
+    protected onDestroy(): void {
+        this.cleanup();
+    }
+    
+    // ========================= 初始化方法 =========================
+    
+    /**
+     * 初始化配置
+     */
+    private initializeConfig(): void {
+        this._config.defaultHandSize = this.defaultHandSize;
+        this._config.enableCardTrading = this.enableTrading;
+    }
+    
+    /**
+     * 设置卡片预制件映射
+     */
+    private setupCardPrefabs(): void {
+        this._cardPrefabs.set(CardType.DICE_CONTROL, this.diceControlCardPrefab!);
+        this._cardPrefabs.set(CardType.BARRIER, this.barrierCardPrefab!);
+        this._cardPrefabs.set(CardType.TELEPORT, this.teleportCardPrefab!);
+        this._cardPrefabs.set(CardType.DEMOLISH, this.demolishCardPrefab!);
+        this._cardPrefabs.set(CardType.FREE_RENT, this.freeRentCardPrefab!);
+    }
+    
+    /**
+     * 初始化卡片系统
+     */
+    private async initializeCardSystem(): Promise<void> {
+        try {
+            console.log('[CardManager] 开始初始化卡片系统...');
+            
+            // 加载卡片库数据
+            await this.loadCardDeck();
+            
+            // 初始化卡片数据映射
+            this.initializeCardDataMap();
+            
+            this._isInitialized = true;
+            
+            console.log('[CardManager] 卡片系统初始化完成');
+            
+            // 触发初始化完成事件
+            this.node.emit('card-system-initialized', { 
+                totalCards: this._cardDataMap.size 
+            });
+            
+        } catch (error) {
+            console.error('[CardManager] 卡片系统初始化失败:', error);
+            this.node.emit('card-system-error', { error });
+        }
+    }
+    
+    /**
+     * 加载卡片库数据
+     */
+    private async loadCardDeck(): Promise<void> {
+        // 首先尝试加载外部卡片数据
+        try {
+            const jsonAsset = await this.loadJsonResource(this.cardDeckPath);
+            this._cardDeck = jsonAsset.json as CardDeck;
+            console.log('[CardManager] 从外部文件加载卡片库成功');
+        } catch (error) {
+            // 如果加载失败，使用内置的MVP卡片
+            console.warn('[CardManager] 外部卡片库加载失败，使用内置卡片:', error);
+            this._cardDeck = {
+                deckId: 'mvp_deck',
+                deckName: 'MVP卡片库',
+                cards: MVP_CARDS,
+                rarityWeights: {
+                    common: 70,
+                    rare: 25,
+                    epic: 4,
+                    legendary: 1
+                },
+                acquisitionRules: {
+                    maxCardsPerTurn: 2,
+                    maxHandSize: 5,
+                    acquisitionMethods: ['chance', 'purchase', 'reward']
+                }
+            };
+        }
+    }
+    
+    /**
+     * 加载JSON资源
+     */
+    private loadJsonResource(path: string): Promise<JsonAsset> {
+        return new Promise((resolve, reject) => {
+            resources.load(path, JsonAsset, (err, asset) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(asset);
+                }
+            });
+        });
+    }
+    
+    /**
+     * 初始化卡片数据映射
+     */
+    private initializeCardDataMap(): void {
+        if (!this._cardDeck) {
+            return;
+        }
+        
+        this._cardDataMap.clear();
+        
+        for (const cardData of this._cardDeck.cards) {
+            this._cardDataMap.set(cardData.id, cardData);
+        }
+        
+        console.log(`[CardManager] 卡片数据映射初始化完成，共 ${this._cardDataMap.size} 张卡片`);
+    }
+    
+    // ========================= 玩家手牌管理 =========================
+    
+    /**
+     * 初始化玩家手牌
+     * @param playerId 玩家ID
+     */
+    public initializePlayerHand(playerId: string): PlayerHand {
+        const hand: PlayerHand = {
+            playerId: playerId,
+            cards: [],
+            maxHandSize: this._config.defaultHandSize,
+            handState: {
+                isDisabled: false
+            }
+        };
+        
+        this._playerHands.set(playerId, hand);
+        
+        console.log(`[CardManager] 玩家 ${playerId} 手牌初始化完成`);
+        
+        return hand;
+    }
+    
+    /**
+     * 获取玩家手牌
+     * @param playerId 玩家ID
+     */
+    public getPlayerHand(playerId: string): PlayerHand | null {
+        return this._playerHands.get(playerId) || null;
+    }
+    
+    /**
+     * 给玩家发放卡片
+     * @param playerId 玩家ID
+     * @param cardId 卡片ID
+     * @param acquisitionMethod 获得方式
+     */
+    public async giveCardToPlayer(playerId: string, cardId: string, acquisitionMethod: string = 'system'): Promise<boolean> {
+        const hand = this.getPlayerHand(playerId);
+        if (!hand) {
+            console.error(`[CardManager] 玩家 ${playerId} 手牌不存在`);
+            return false;
+        }
+        
+        // 检查手牌是否已满
+        if (hand.cards.length >= hand.maxHandSize) {
+            console.warn(`[CardManager] 玩家 ${playerId} 手牌已满`);
+            return false;
+        }
+        
+        // 检查卡片是否存在
+        const cardData = this._cardDataMap.get(cardId);
+        if (!cardData) {
+            console.error(`[CardManager] 卡片 ${cardId} 不存在`);
+            return false;
+        }
+        
+        // 创建卡片实例
+        const cardInstance: CardInstance = {
+            instanceId: `${cardId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            cardId: cardId,
+            ownerId: playerId,
+            state: CardState.AVAILABLE,
+            remainingUses: cardData.maxUses,
+            remainingCooldown: 0,
+            acquiredAt: Date.now()
+        };
+        
+        // 添加到手牌
+        hand.cards.push(cardInstance);
+        
+        // 记录获得事件
+        const acquisitionEvent: CardAcquisitionEvent = {
+            eventType: acquisitionMethod as any,
+            playerId: playerId,
+            cardId: cardId,
+            acquisitionMethod: acquisitionMethod,
+            timestamp: Date.now()
+        };
+        
+        this._acquisitionHistory.push(acquisitionEvent);
+        
+        // 触发卡片获得事件
+        this.node.emit('card-acquired', {
+            playerId: playerId,
+            cardId: cardId,
+            cardName: cardData.name,
+            acquisitionMethod: acquisitionMethod
+        });
+        
+        console.log(`[CardManager] 玩家 ${playerId} 获得卡片: ${cardData.name}`);
+        
+        return true;
+    }
+    
+    /**
+     * 随机给玩家发放卡片
+     * @param playerId 玩家ID
+     * @param rarity 稀有度过滤（可选）
+     */
+    public async giveRandomCardToPlayer(playerId: string, rarity?: string): Promise<boolean> {
+        if (!this._cardDeck) {
+            return false;
+        }
+        
+        // 获取可用卡片列表
+        let availableCards = this._cardDeck.cards;
+        
+        if (rarity) {
+            availableCards = availableCards.filter(card => 
+                card.rarity.toString().toLowerCase() === rarity.toLowerCase()
+            );
+        }
+        
+        if (availableCards.length === 0) {
+            console.warn(`[CardManager] 没有可用的卡片 (稀有度: ${rarity})`);
+            return false;
+        }
+        
+        // 基于权重的随机选择
+        const totalWeight = availableCards.reduce((sum, card) => sum + card.dropWeight, 0);
+        let randomValue = Math.random() * totalWeight;
+        
+        let selectedCard: CardData | null = null;
+        for (const card of availableCards) {
+            randomValue -= card.dropWeight;
+            if (randomValue <= 0) {
+                selectedCard = card;
+                break;
+            }
+        }
+        
+        if (!selectedCard) {
+            selectedCard = availableCards[0]; // 备选
+        }
+        
+        return await this.giveCardToPlayer(playerId, selectedCard.id, 'random');
+    }
+    
+    // ========================= 卡片使用管理 =========================
+    
+    /**
+     * 使用卡片
+     * @param request 使用请求
+     */
+    public async useCard(request: CardUseRequest): Promise<CardUseResult> {
+        const hand = this.getPlayerHand(request.playerId);
+        if (!hand) {
+            return {
+                success: false,
+                message: '玩家手牌不存在',
+                errorCode: 'NO_HAND',
+                appliedEffects: [],
+                affectedPlayerIds: [],
+                affectedTileIds: []
+            };
+        }
+        
+        // 查找卡片实例
+        const cardInstance = hand.cards.find(card => 
+            card.instanceId === request.cardInstanceId
+        );
+        
+        if (!cardInstance) {
+            return {
+                success: false,
+                message: '卡片不存在',
+                errorCode: 'CARD_NOT_FOUND',
+                appliedEffects: [],
+                affectedPlayerIds: [],
+                affectedTileIds: []
+            };
+        }
+        
+        // 获取卡片数据
+        const cardData = this._cardDataMap.get(cardInstance.cardId);
+        if (!cardData) {
+            return {
+                success: false,
+                message: '卡片数据不存在',
+                errorCode: 'INVALID_CARD_DATA',
+                appliedEffects: [],
+                affectedPlayerIds: [],
+                affectedTileIds: []
+            };
+        }
+        
+        // 创建卡片实例组件（如果需要）
+        const cardComponent = await this.createCardComponent(cardData, cardInstance);
+        if (!cardComponent) {
+            return {
+                success: false,
+                message: '无法创建卡片组件',
+                errorCode: 'COMPONENT_CREATION_FAILED',
+                appliedEffects: [],
+                affectedPlayerIds: [],
+                affectedTileIds: []
+            };
+        }
+        
+        // 创建使用上下文
+        // TODO: 这里需要通过GameManager获取完整的玩家数据
+        const context: CardUseContext = {
+            player: {} as PlayerData, // 需要实际的玩家数据
+            target: request.target,
+            parameters: request.parameters
+        };
+        
+        // 执行卡片使用
+        const result = await cardComponent.useCard(context);
+        
+        // 更新统计
+        this._usageStats.totalUses++;
+        if (result.success) {
+            this._usageStats.successfulUses++;
+            
+            // 按类型统计
+            const cardType = cardData.type.toString();
+            this._usageStats.usageByType[cardType] = (this._usageStats.usageByType[cardType] || 0) + 1;
+            
+            // 按玩家统计
+            this._usageStats.usageByPlayer[request.playerId] = (this._usageStats.usageByPlayer[request.playerId] || 0) + 1;
+            
+            // 如果卡片已用完，从手牌中移除
+            if (cardInstance.state === CardState.USED) {
+                const index = hand.cards.indexOf(cardInstance);
+                if (index !== -1) {
+                    hand.cards.splice(index, 1);
+                }
+            }
+        }
+        
+        // 清理临时创建的组件
+        if (cardComponent.node.isValid) {
+            cardComponent.node.destroy();
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 创建卡片组件
+     * @param cardData 卡片数据
+     * @param cardInstance 卡片实例
+     */
+    private async createCardComponent(cardData: CardData, cardInstance: CardInstance): Promise<Card | null> {
+        const prefab = this._cardPrefabs.get(cardData.type);
+        if (!prefab) {
+            console.error(`[CardManager] 找不到卡片类型 ${cardData.type} 的预制件`);
+            return null;
+        }
+        
+        const cardNode = instantiate(prefab);
+        cardNode.setParent(this.node); // 临时父节点
+        
+        const cardComponent = cardNode.getComponent(Card);
+        if (!cardComponent) {
+            console.error(`[CardManager] 卡片预制件缺少Card组件`);
+            cardNode.destroy();
+            return null;
+        }
+        
+        // 初始化卡片
+        cardComponent.initializeCard(cardData, cardInstance);
+        
+        return cardComponent;
+    }
+    
+    /**
+     * 更新所有玩家手牌的冷却时间
+     */
+    public updateAllCardCooldowns(): void {
+        this._playerHands.forEach((hand, playerId) => {
+            hand.cards.forEach(cardInstance => {
+                if (cardInstance.remainingCooldown && cardInstance.remainingCooldown > 0) {
+                    cardInstance.remainingCooldown--;
+                    
+                    if (cardInstance.remainingCooldown <= 0 && cardInstance.state === CardState.COOLING_DOWN) {
+                        cardInstance.state = CardState.AVAILABLE;
+                    }
+                }
+            });
+        });
+        
+        if (this.debugMode) {
+            console.log('[CardManager] 所有卡片冷却时间已更新');
+        }
+    }
+    
+    // ========================= 工具方法 =========================
+    
+    /**
+     * 获取卡片数据
+     * @param cardId 卡片ID
+     */
+    public getCardData(cardId: string): CardData | null {
+        return this._cardDataMap.get(cardId) || null;
+    }
+    
+    /**
+     * 获取所有卡片数据
+     */
+    public getAllCardData(): CardData[] {
+        return Array.from(this._cardDataMap.values());
+    }
+    
+    /**
+     * 检查系统是否已初始化
+     */
+    public isInitialized(): boolean {
+        return this._isInitialized;
+    }
+    
+    /**
+     * 获取使用统计
+     */
+    public getUsageStats(): CardUsageStats {
+        return { ...this._usageStats };
+    }
+    
+    /**
+     * 获取获得历史
+     */
+    public getAcquisitionHistory(playerId?: string): CardAcquisitionEvent[] {
+        if (playerId) {
+            return this._acquisitionHistory.filter(event => event.playerId === playerId);
+        }
+        return [...this._acquisitionHistory];
+    }
+    
+    /**
+     * 清理资源
+     */
+    private cleanup(): void {
+        this._cardDataMap.clear();
+        this._playerHands.clear();
+        this._activeCards.clear();
+        this._acquisitionHistory.length = 0;
+        
+        console.log('[CardManager] 资源清理完成');
+    }
+    
+    /**
+     * 重置卡片系统
+     */
+    public resetCardSystem(): void {
+        this.cleanup();
+        this._isInitialized = false;
+        
+        // 重新初始化
+        this.scheduleOnce(() => {
+            this.initializeCardSystem();
+        }, 0);
+        
+        console.log('[CardManager] 卡片系统已重置');
+    }
+    
+    /**
+     * 获取系统状态信息
+     */
+    public getSystemInfo(): {
+        initialized: boolean;
+        totalCards: number;
+        totalPlayers: number;
+        totalAcquisitions: number;
+        totalUses: number;
+    } {
+        return {
+            initialized: this._isInitialized,
+            totalCards: this._cardDataMap.size,
+            totalPlayers: this._playerHands.size,
+            totalAcquisitions: this._acquisitionHistory.length,
+            totalUses: this._usageStats.totalUses
+        };
+    }
+}

@@ -502,11 +502,16 @@ export class TeleportCard extends Card {
         const startText = this.allowTeleportToStart ? '可传送到起始地块' : '不可传送到起始地块';
         const jailText = this.allowTeleportToJail ? '可传送到监狱' : '不可传送到监狱';
         
-        return `使用传送卡可以瞬间移动到指定地块。\n` +
-               `- 选择地图上的任意地块作为传送目标\n` +
-               `- 无视距离限制，立即到达目标位置\n` +
-               `- ${costText}\n` +
-               `- ${startText}\n` +
+        return `使用传送卡可以瞬间移动到指定地块。
+` +
+               `- 选择地图上的任意地块作为传送目标
+` +
+               `- 无视距离限制，立即到达目标位置
+` +
+               `- ${costText}
+` +
+               `- ${startText}
+` +
                `- ${jailText}`;
     }
 }

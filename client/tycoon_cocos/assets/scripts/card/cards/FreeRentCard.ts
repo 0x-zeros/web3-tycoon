@@ -541,10 +541,14 @@ export class FreeRentCard extends Card {
             `，${this.effectDuration}回合内有效` : '，直到使用完毕';
         const autoText = this.autoUse ? '自动触发' : '需手动触发';
 
-        return `使用免租卡可以避免支付租金。\n` +
-               `- 给自己添加免租状态\n` +
-               `- 可免除${countText}租金支付${amountText}\n` +
-               `- ${durationText}\n` +
+        return `使用免租卡可以避免支付租金。
+` +
+               `- 给自己添加免租状态
+` +
+               `- 可免除${countText}租金支付${amountText}
+` +
+               `- ${durationText}
+` +
                `- 踩到敌方地产时${autoText}`;
     }
 }

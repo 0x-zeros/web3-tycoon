@@ -231,5 +231,400 @@ export abstract class MapTile extends Component {
         // 设置3D位置
         this.setPosition(tileData.position);
         
-        // 调用子类的初始化逻辑\n        this.onTileInitialized(tileData);
-        \n        // 更新视觉表现\n        this.updateVisualAppearance();\n        \n        console.log(`[MapTile] 地块 ${this.tileName} (${this.tileType}) 数据初始化完成`);\n    }\n    \n    /**\n     * 设置地块的3D位置\n     * @param position 目标位置\n     */\n    public setPosition(position: Position3D): void {\n        const vec3Pos = new Vec3(position.x, position.y, position.z);\n        this.node.setPosition(vec3Pos);\n        \n        // 设置旋转（如果有的话）\n        if (position.rotation !== undefined) {\n            this.node.setRotationFromEuler(0, position.rotation, 0);\n        }\n    }\n    \n    /**\n     * 获取地块的世界位置\n     */\n    public getWorldPosition(): Vec3 {\n        const worldPos = new Vec3();\n        this.node.getWorldPosition(worldPos);\n        return worldPos;\n    }\n    \n    /**\n     * 玩家停留在此地块\n     * @param player 停留的玩家\n     */\n    public async playerLandOn(player: PlayerData): Promise<TileInteractionResult> {\n        console.log(`[MapTile] 玩家 ${player.nickname} 停留在地块 ${this.tileName}`);\n        \n        // 添加玩家到停留列表\n        if (!this._playersOnTile.find(p => p.id === player.id)) {\n            this._playersOnTile.push(player);\n        }\n        \n        // 更新玩家位置\n        player.currentTileId = this._tileData!.id;\n        \n        // 调用子类的停留处理逻辑\n        const result = await this.onPlayerLandOn(player);\n        \n        // 触发停留事件\n        this.emitGameEvent(GameEventType.PLAYER_MOVE, {\n            playerId: player.id,\n            tileId: this._tileData!.id,\n            tileName: this.tileName,\n            tileType: this.tileType\n        });\n        \n        return result;\n    }\n    \n    /**\n     * 玩家经过此地块（不停留）\n     * @param player 经过的玩家\n     */\n    public async playerPassThrough(player: PlayerData): Promise<TileInteractionResult> {\n        console.log(`[MapTile] 玩家 ${player.nickname} 经过地块 ${this.tileName}`);\n        \n        // 调用子类的经过处理逻辑\n        const result = await this.onPlayerPassThrough(player);\n        \n        return result;\n    }\n    \n    /**\n     * 玩家离开此地块\n     * @param player 离开的玩家\n     */\n    public playerLeave(player: PlayerData): void {\n        console.log(`[MapTile] 玩家 ${player.nickname} 离开地块 ${this.tileName}`);\n        \n        // 从停留列表中移除玩家\n        const index = this._playersOnTile.findIndex(p => p.id === player.id);\n        if (index !== -1) {\n            this._playersOnTile.splice(index, 1);\n        }\n        \n        // 调用子类的离开处理逻辑\n        this.onPlayerLeave(player);\n    }\n    \n    /**\n     * 设置地块状态\n     * @param newState 新的状态\n     */\n    public setState(newState: TileState): void {\n        const oldState = this._currentState;\n        this._currentState = newState;\n        \n        // 更新数据\n        if (this._tileData) {\n            this._tileData.state = newState;\n        }\n        \n        // 更新视觉表现\n        this.updateVisualAppearance();\n        \n        // 调用状态变化回调\n        this.onStateChanged(oldState, newState);\n        \n        console.log(`[MapTile] 地块 ${this.tileName} 状态变更: ${oldState} -> ${newState}`);\n    }\n    \n    /**\n     * 设置高亮状态\n     * @param highlighted 是否高亮\n     */\n    public setHighlighted(highlighted: boolean): void {\n        if (this._renderState.isHighlighted !== highlighted) {\n            this._renderState.isHighlighted = highlighted;\n            this.updateVisualAppearance();\n            \n            // 播放高亮动画\n            if (highlighted) {\n                this.playHighlightAnimation();\n            }\n        }\n    }\n    \n    /**\n     * 设置选中状态\n     * @param selected 是否选中\n     */\n    public setSelected(selected: boolean): void {\n        if (this._renderState.isSelected !== selected) {\n            this._renderState.isSelected = selected;\n            this.updateVisualAppearance();\n            \n            // 播放选中动画\n            if (selected) {\n                this.playSelectionAnimation();\n            }\n        }\n    }\n    \n    // ========================= 抽象方法（子类必须实现） =========================\n    \n    /**\n     * 子类初始化回调\n     * 子类可以重写此方法来执行特定的初始化逻辑\n     * @param tileData 地块数据\n     */\n    protected abstract onTileInitialized(tileData: MapTileData): void;\n    \n    /**\n     * 玩家停留处理\n     * 子类必须实现具体的停留逻辑\n     * @param player 停留的玩家\n     */\n    protected abstract onPlayerLandOn(player: PlayerData): Promise<TileInteractionResult>;\n    \n    /**\n     * 玩家经过处理\n     * 子类可以重写此方法来处理玩家经过的逻辑\n     * @param player 经过的玩家\n     */\n    protected onPlayerPassThrough(player: PlayerData): Promise<TileInteractionResult> {\n        // 默认实现：经过不触发特殊效果\n        return Promise.resolve({\n            success: true,\n            message: `玩家经过 ${this.tileName}`,\n            events: []\n        });\n    }\n    \n    /**\n     * 玩家离开处理\n     * 子类可以重写此方法来处理玩家离开的逻辑\n     * @param player 离开的玩家\n     */\n    protected onPlayerLeave(player: PlayerData): void {\n        // 默认实现：无特殊处理\n    }\n    \n    /**\n     * 状态变化回调\n     * 子类可以重写此方法来响应状态变化\n     * @param oldState 旧状态\n     * @param newState 新状态\n     */\n    protected onStateChanged(oldState: TileState, newState: TileState): void {\n        // 默认实现：无特殊处理\n    }\n    \n    // ========================= 事件处理方法 =========================\n    \n    /**\n     * 鼠标点击处理\n     */\n    protected onMouseClick(event: any): void {\n        console.log(`[MapTile] 点击地块: ${this.tileName}`);\n        \n        // 触发地块点击事件\n        this.emitGameEvent('tile_click', {\n            tileId: this._tileData?.id,\n            tileName: this.tileName,\n            tileType: this.tileType,\n            clickPosition: event.getLocation()\n        });\n        \n        // 调用子类的点击处理\n        this.onTileClicked(event);\n    }\n    \n    /**\n     * 鼠标进入处理\n     */\n    protected onMouseEnter(event: any): void {\n        if (this.enableHoverEffect) {\n            this.setHighlighted(true);\n        }\n        \n        // 调用子类的悬停处理\n        this.onTileHoverEnter(event);\n    }\n    \n    /**\n     * 鼠标离开处理\n     */\n    protected onMouseLeave(event: any): void {\n        if (this.enableHoverEffect) {\n            this.setHighlighted(false);\n        }\n        \n        // 调用子类的悬停处理\n        this.onTileHoverLeave(event);\n    }\n    \n    /**\n     * 地块点击回调（子类可重写）\n     */\n    protected onTileClicked(event: any): void {\n        // 默认实现：无特殊处理\n    }\n    \n    /**\n     * 鼠标悬停进入回调（子类可重写）\n     */\n    protected onTileHoverEnter(event: any): void {\n        // 默认实现：无特殊处理\n    }\n    \n    /**\n     * 鼠标悬停离开回调（子类可重写）\n     */\n    protected onTileHoverLeave(event: any): void {\n        // 默认实现：无特殊处理\n    }\n    \n    // ========================= 渲染和动画方法 =========================\n    \n    /**\n     * 更新视觉表现\n     * 根据当前状态更新地块的视觉效果\n     */\n    protected updateVisualAppearance(): void {\n        if (!this._meshRenderer || !this._isInitialized) {\n            return;\n        }\n        \n        // 计算当前显示颜色\n        let currentColor = this._renderState.baseColor.clone();\n        \n        // 应用高亮效果\n        if (this._renderState.isHighlighted || this._renderState.isSelected) {\n            currentColor = this._renderState.highlightColor.clone();\n        }\n        \n        // 应用状态效果\n        switch (this._currentState) {\n            case TileState.BLOCKED:\n                // 被阻挡的地块变暗\n                currentColor.r *= 0.5;\n                currentColor.g *= 0.5;\n                currentColor.b *= 0.5;\n                break;\n            case TileState.SELECTED:\n                // 被选中的地块更亮\n                currentColor.r = Math.min(255, currentColor.r * 1.2);\n                currentColor.g = Math.min(255, currentColor.g * 1.2);\n                currentColor.b = Math.min(255, currentColor.b * 1.2);\n                break;\n        }\n        \n        // 应用透明度\n        currentColor.a = this._renderState.opacity * 255;\n        \n        // 更新材质颜色\n        // TODO: 这里需要根据具体的材质类型来设置颜色\n        // 目前假设使用的是有albedo属性的材质\n        const material = this._meshRenderer.getMaterial(0);\n        if (material) {\n            // material.setProperty('albedo', currentColor); // 实际实现时需要确认属性名\n            console.log(`[MapTile] 更新地块 ${this.tileName} 颜色:`, currentColor);\n        }\n    }\n    \n    /**\n     * 播放高亮动画\n     */\n    protected playHighlightAnimation(): void {\n        // 简单的缩放动画\n        tween(this.node)\n            .to(0.1, { scale: new Vec3(1.05, 1.05, 1.05) })\n            .to(0.1, { scale: new Vec3(1, 1, 1) })\n            .start();\n    }\n    \n    /**\n     * 播放选中动画\n     */\n    protected playSelectionAnimation(): void {\n        // 简单的上下浮动动画\n        const originalY = this.node.position.y;\n        tween(this.node)\n            .to(0.2, { position: new Vec3(this.node.position.x, originalY + 0.1, this.node.position.z) })\n            .to(0.2, { position: new Vec3(this.node.position.x, originalY, this.node.position.z) })\n            .start();\n    }\n    \n    // ========================= 工具方法 =========================\n    \n    /**\n     * 发射游戏事件\n     * @param eventType 事件类型\n     * @param eventData 事件数据\n     */\n    protected emitGameEvent(eventType: GameEventType | string, eventData: any): void {\n        // TODO: 这里需要与GameManager集成来发射事件\n        // 当前只是记录日志，实际实现时需要通过事件系统通知其他组件\n        console.log(`[MapTile] 发射游戏事件: ${eventType}`, eventData);\n        \n        // 示例：通过节点事件系统发射（需要在MapManager中监听）\n        this.node.emit('game-event', {\n            type: eventType,\n            data: eventData,\n            source: this\n        });\n    }\n    \n    /**\n     * 获取地块数据\n     */\n    public getTileData(): MapTileData | null {\n        return this._tileData;\n    }\n    \n    /**\n     * 获取当前状态\n     */\n    public getCurrentState(): TileState {\n        return this._currentState;\n    }\n    \n    /**\n     * 获取当前停留的玩家列表\n     */\n    public getPlayersOnTile(): PlayerData[] {\n        return [...this._playersOnTile];\n    }\n    \n    /**\n     * 检查是否有玩家停留\n     */\n    public hasPlayersOnTile(): boolean {\n        return this._playersOnTile.length > 0;\n    }\n    \n    /**\n     * 检查特定玩家是否停留在此地块\n     */\n    public hasPlayer(playerId: string): boolean {\n        return this._playersOnTile.some(p => p.id === playerId);\n    }\n    \n    /**\n     * 获取地块描述信息（用于UI显示）\n     */\n    public getTileInfo(): { name: string; description: string; type: TileType; state: TileState } {\n        return {\n            name: this.tileName,\n            description: this.description,\n            type: this.tileType,\n            state: this._currentState\n        };\n    }\n}
+        // 调用子类的初始化逻辑
+        this.onTileInitialized(tileData);
+        
+        // 更新视觉表现
+        this.updateVisualAppearance();
+        
+        console.log(`[MapTile] 地块 ${this.tileName} (${this.tileType}) 数据初始化完成`);
+    }
+    
+    /**
+     * 设置地块的3D位置
+     * @param position 目标位置
+     */
+    public setPosition(position: Position3D): void {
+        const vec3Pos = new Vec3(position.x, position.y, position.z);
+        this.node.setPosition(vec3Pos);
+        
+        // 设置旋转（如果有的话）
+        if (position.rotation !== undefined) {
+            this.node.setRotationFromEuler(0, position.rotation, 0);
+        }
+    }
+    
+    /**
+     * 获取地块的世界位置
+     */
+    public getWorldPosition(): Vec3 {
+        const worldPos = new Vec3();
+        this.node.getWorldPosition(worldPos);
+        return worldPos;
+    }
+    
+    /**
+     * 玩家停留在此地块
+     * @param player 停留的玩家
+     */
+    public async playerLandOn(player: PlayerData): Promise<TileInteractionResult> {
+        console.log(`[MapTile] 玩家 ${player.nickname} 停留在地块 ${this.tileName}`);
+        
+        // 添加玩家到停留列表
+        if (!this._playersOnTile.find(p => p.id === player.id)) {
+            this._playersOnTile.push(player);
+        }
+        
+        // 更新玩家位置
+        player.currentTileId = this._tileData!.id;
+        
+        // 调用子类的停留处理逻辑
+        const result = await this.onPlayerLandOn(player);
+        
+        // 触发停留事件
+        this.emitGameEvent(GameEventType.PLAYER_MOVE, {
+            playerId: player.id,
+            tileId: this._tileData!.id,
+            tileName: this.tileName,
+            tileType: this.tileType
+        });
+        
+        return result;
+    }
+    
+    /**
+     * 玩家经过此地块（不停留）
+     * @param player 经过的玩家
+     */
+    public async playerPassThrough(player: PlayerData): Promise<TileInteractionResult> {
+        console.log(`[MapTile] 玩家 ${player.nickname} 经过地块 ${this.tileName}`);
+        
+        // 调用子类的经过处理逻辑
+        const result = await this.onPlayerPassThrough(player);
+        
+        return result;
+    }
+    
+    /**
+     * 玩家离开此地块
+     * @param player 离开的玩家
+     */
+    public playerLeave(player: PlayerData): void {
+        console.log(`[MapTile] 玩家 ${player.nickname} 离开地块 ${this.tileName}`);
+        
+        // 从停留列表中移除玩家
+        const index = this._playersOnTile.findIndex(p => p.id === player.id);
+        if (index !== -1) {
+            this._playersOnTile.splice(index, 1);
+        }
+        
+        // 调用子类的离开处理逻辑
+        this.onPlayerLeave(player);
+    }
+    
+    /**
+     * 设置地块状态
+     * @param newState 新的状态
+     */
+    public setState(newState: TileState): void {
+        const oldState = this._currentState;
+        this._currentState = newState;
+        
+        // 更新数据
+        if (this._tileData) {
+            this._tileData.state = newState;
+        }
+        
+        // 更新视觉表现
+        this.updateVisualAppearance();
+        
+        // 调用状态变化回调
+        this.onStateChanged(oldState, newState);
+        
+        console.log(`[MapTile] 地块 ${this.tileName} 状态变更: ${oldState} -> ${newState}`);
+    }
+    
+    /**
+     * 设置高亮状态
+     * @param highlighted 是否高亮
+     */
+    public setHighlighted(highlighted: boolean): void {
+        if (this._renderState.isHighlighted !== highlighted) {
+            this._renderState.isHighlighted = highlighted;
+            this.updateVisualAppearance();
+            
+            // 播放高亮动画
+            if (highlighted) {
+                this.playHighlightAnimation();
+            }
+        }
+    }
+    
+    /**
+     * 设置选中状态
+     * @param selected 是否选中
+     */
+    public setSelected(selected: boolean): void {
+        if (this._renderState.isSelected !== selected) {
+            this._renderState.isSelected = selected;
+            this.updateVisualAppearance();
+            
+            // 播放选中动画
+            if (selected) {
+                this.playSelectionAnimation();
+            }
+        }
+    }
+    
+    // ========================= 抽象方法（子类必须实现） =========================
+    
+    /**
+     * 子类初始化回调
+     * 子类可以重写此方法来执行特定的初始化逻辑
+     * @param tileData 地块数据
+     */
+    protected abstract onTileInitialized(tileData: MapTileData): void;
+    
+    /**
+     * 玩家停留处理
+     * 子类必须实现具体的停留逻辑
+     * @param player 停留的玩家
+     */
+    protected abstract onPlayerLandOn(player: PlayerData): Promise<TileInteractionResult>;
+    
+    /**
+     * 玩家经过处理
+     * 子类可以重写此方法来处理玩家经过的逻辑
+     * @param player 经过的玩家
+     */
+    protected onPlayerPassThrough(player: PlayerData): Promise<TileInteractionResult> {
+        // 默认实现：经过不触发特殊效果
+        return Promise.resolve({
+            success: true,
+            message: `玩家经过 ${this.tileName}`,
+            events: []
+        });
+    }
+    
+    /**
+     * 玩家离开处理
+     * 子类可以重写此方法来处理玩家离开的逻辑
+     * @param player 离开的玩家
+     */
+    protected onPlayerLeave(player: PlayerData): void {
+        // 默认实现：无特殊处理
+    }
+    
+    /**
+     * 状态变化回调
+     * 子类可以重写此方法来响应状态变化
+     * @param oldState 旧状态
+     * @param newState 新状态
+     */
+    protected onStateChanged(oldState: TileState, newState: TileState): void {
+        // 默认实现：无特殊处理
+    }
+    
+    // ========================= 事件处理方法 =========================
+    
+    /**
+     * 鼠标点击处理
+     */
+    protected onMouseClick(event: any): void {
+        console.log(`[MapTile] 点击地块: ${this.tileName}`);
+        
+        // 触发地块点击事件
+        this.emitGameEvent('tile_click', {
+            tileId: this._tileData?.id,
+            tileName: this.tileName,
+            tileType: this.tileType,
+            clickPosition: event.getLocation()
+        });
+        
+        // 调用子类的点击处理
+        this.onTileClicked(event);
+    }
+    
+    /**
+     * 鼠标进入处理
+     */
+    protected onMouseEnter(event: any): void {
+        if (this.enableHoverEffect) {
+            this.setHighlighted(true);
+        }
+        
+        // 调用子类的悬停处理
+        this.onTileHoverEnter(event);
+    }
+    
+    /**
+     * 鼠标离开处理
+     */
+    protected onMouseLeave(event: any): void {
+        if (this.enableHoverEffect) {
+            this.setHighlighted(false);
+        }
+        
+        // 调用子类的悬停处理
+        this.onTileHoverLeave(event);
+    }
+    
+    /**
+     * 地块点击回调（子类可重写）
+     */
+    protected onTileClicked(event: any): void {
+        // 默认实现：无特殊处理
+    }
+    
+    /**
+     * 鼠标悬停进入回调（子类可重写）
+     */
+    protected onTileHoverEnter(event: any): void {
+        // 默认实现：无特殊处理
+    }
+    
+    /**
+     * 鼠标悬停离开回调（子类可重写）
+     */
+    protected onTileHoverLeave(event: any): void {
+        // 默认实现：无特殊处理
+    }
+    
+    // ========================= 渲染和动画方法 =========================
+    
+    /**
+     * 更新视觉表现
+     * 根据当前状态更新地块的视觉效果
+     */
+    protected updateVisualAppearance(): void {
+        if (!this._meshRenderer || !this._isInitialized) {
+            return;
+        }
+        
+        // 计算当前显示颜色
+        let currentColor = this._renderState.baseColor.clone();
+        
+        // 应用高亮效果
+        if (this._renderState.isHighlighted || this._renderState.isSelected) {
+            currentColor = this._renderState.highlightColor.clone();
+        }
+        
+        // 应用状态效果
+        switch (this._currentState) {
+            case TileState.BLOCKED:
+                // 被阻挡的地块变暗
+                currentColor.r *= 0.5;
+                currentColor.g *= 0.5;
+                currentColor.b *= 0.5;
+                break;
+            case TileState.SELECTED:
+                // 被选中的地块更亮
+                currentColor.r = Math.min(255, currentColor.r * 1.2);
+                currentColor.g = Math.min(255, currentColor.g * 1.2);
+                currentColor.b = Math.min(255, currentColor.b * 1.2);
+                break;
+        }
+        
+        // 应用透明度
+        currentColor.a = this._renderState.opacity * 255;
+        
+        // 更新材质颜色
+        // TODO: 这里需要根据具体的材质类型来设置颜色
+        // 目前假设使用的是有albedo属性的材质
+        const material = this._meshRenderer.getMaterial(0);
+        if (material) {
+            // material.setProperty('albedo', currentColor); // 实际实现时需要确认属性名
+            console.log(`[MapTile] 更新地块 ${this.tileName} 颜色:`, currentColor);
+        }
+    }
+    
+    /**
+     * 播放高亮动画
+     */
+    protected playHighlightAnimation(): void {
+        // 简单的缩放动画
+        tween(this.node)
+            .to(0.1, { scale: new Vec3(1.05, 1.05, 1.05) })
+            .to(0.1, { scale: new Vec3(1, 1, 1) })
+            .start();
+    }
+    
+    /**
+     * 播放选中动画
+     */
+    protected playSelectionAnimation(): void {
+        // 简单的上下浮动动画
+        const originalY = this.node.position.y;
+        tween(this.node)
+            .to(0.2, { position: new Vec3(this.node.position.x, originalY + 0.1, this.node.position.z) })
+            .to(0.2, { position: new Vec3(this.node.position.x, originalY, this.node.position.z) })
+            .start();
+    }
+    
+    // ========================= 工具方法 =========================
+    
+    /**
+     * 发射游戏事件
+     * @param eventType 事件类型
+     * @param eventData 事件数据
+     */
+    protected emitGameEvent(eventType: GameEventType | string, eventData: any): void {
+        // TODO: 这里需要与GameManager集成来发射事件
+        // 当前只是记录日志，实际实现时需要通过事件系统通知其他组件
+        console.log(`[MapTile] 发射游戏事件: ${eventType}`, eventData);
+        
+        // 示例：通过节点事件系统发射（需要在MapManager中监听）
+        this.node.emit('game-event', {
+            type: eventType,
+            data: eventData,
+            source: this
+        });
+    }
+    
+    /**
+     * 获取地块数据
+     */
+    public getTileData(): MapTileData | null {
+        return this._tileData;
+    }
+    
+    /**
+     * 获取当前状态
+     */
+    public getCurrentState(): TileState {
+        return this._currentState;
+    }
+    
+    /**
+     * 获取当前停留的玩家列表
+     */
+    public getPlayersOnTile(): PlayerData[] {
+        return [...this._playersOnTile];
+    }
+    
+    /**
+     * 检查是否有玩家停留
+     */
+    public hasPlayersOnTile(): boolean {
+        return this._playersOnTile.length > 0;
+    }
+    
+    /**
+     * 检查特定玩家是否停留在此地块
+     */
+    public hasPlayer(playerId: string): boolean {
+        return this._playersOnTile.some(p => p.id === playerId);
+    }
+    
+    /**
+     * 获取地块描述信息（用于UI显示）
+     */
+    public getTileInfo(): { name: string; description: string; type: TileType; state: TileState } {
+        return {
+            name: this.tileName,
+            description: this.description,
+            type: this.tileType,
+            state: this._currentState
+        };
+    }
+}

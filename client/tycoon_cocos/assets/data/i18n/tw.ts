@@ -1,0 +1,36 @@
+import { I18nData } from '../types';
+
+const tw: I18nData = {
+"appname": "數字華容道",
+"levelselect": "選擇關卡",
+"levelInfo_levelnumber": "第%{p0}關",
+"levelname": "還原錯亂的數字",
+"besttime": "歷史最佳",
+"start": "開始",
+"setting": "設置",
+"share": "分享",
+"grade": "好評",
+"feedback": "反饋",
+"language": "語言",
+"language_cn": "简体中文",
+"language_en": "English",
+"language_tw": "繁體中文",
+"language_jp": "日本語",
+"usedtime": "用時",
+"target_pattern": "目標圖案",
+"pause": "暫停",
+"home": "主頁",
+"reset": "重來",
+"resume": "繼續",
+"mission_complete": "挑戰成功",
+"award_levelnumber": "恭喜通過第%{p0}關",
+"next": "下一關",
+"tap_tip": "點擊屏幕進入遊戲",
+"loading": "載入中. . .",
+"preload_ok": "載入完成",
+"quit": "再點一次退出遊戲",
+"challenge": "發起挑戰",
+"levelnumber": "第%{p0}關",
+}
+
+export default tw;

@@ -1,0 +1,11 @@
+[
+{"round_num": 1, "spawn_elite": 0, "spawn_elite_id": 0, "monster": 100, "monster_percentage": 100, "monster_min": 1, "monster_max": 1, "item": 5001, "item_percentage": 100, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 4, "spawn_elite": 0, "spawn_elite_id": 0, "monster": 0, "monster_percentage": 0, "monster_min": 2, "monster_max": 2, "item": 0, "item_percentage": 0, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 6, "spawn_elite": 0, "spawn_elite_id": 0, "monster": 0, "monster_percentage": 0, "monster_min": 2, "monster_max": 3, "item": 5002, "item_percentage": 100, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 9, "spawn_elite": 0, "spawn_elite_id": 0, "monster": 0, "monster_percentage": 0, "monster_min": 2, "monster_max": 3, "item": 0, "item_percentage": 0, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 11, "spawn_elite": 1, "spawn_elite_id": 101, "monster": 101, "monster_percentage": 40, "monster_min": 2, "monster_max": 3, "item": 5003, "item_percentage": 50, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 16, "spawn_elite": 0, "spawn_elite_id": 0, "monster": 0, "monster_percentage": 0, "monster_min": 2, "monster_max": 4, "item": 5005, "item_percentage": 100, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 21, "spawn_elite": 1, "spawn_elite_id": 102, "monster": 102, "monster_percentage": 35, "monster_min": 3, "monster_max": 4, "item": 5006, "item_percentage": 100, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 26, "spawn_elite": 0, "spawn_elite_id": 0, "monster": 0, "monster_percentage": 0, "monster_min": 3, "monster_max": 5, "item": 0, "item_percentage": 0, "skill": 0, "skill_percentage": 0}, 
+{"round_num": 31, "spawn_elite": 1, "spawn_elite_id": 103, "monster": 103, "monster_percentage": 30, "monster_min": 3, "monster_max": 5, "item": 0, "item_percentage": 0, "skill": 0, "skill_percentage": 0}
+]

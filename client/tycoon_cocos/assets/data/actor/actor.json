@@ -1,0 +1,16 @@
+[
+{"actor_id": 100, "name": "普通怪物", "type": "monster", "hp": 3, "hp_rate": 1, "size": 1, "rebounce": 1, "eliminate_damage": 0, "speed": 1, "drop": {"money": 10}, "pic_url": ["100_1", "100_2", "100_3"]}, 
+{"actor_id": 101, "name": "护盾怪", "type": "elite", "hp": 5, "hp_rate": 1, "size": 1, "rebounce": 1, "eliminate_damage": 1, "speed": 1, "drop": {"money": 50}, "pic_url": ["101"]}, 
+{"actor_id": 102, "name": "死亡分裂", "type": "elite", "hp": 5, "hp_rate": 1, "size": 1, "rebounce": 1, "eliminate_damage": 0, "speed": 1, "drop": {"money": 50, "actor": [105,105]}, "pic_url": ["102"]}, 
+{"actor_id": 103, "name": "跳跃怪", "type": "elite", "hp": 5, "hp_rate": 1, "size": 1, "rebounce": 1, "eliminate_damage": 0, "speed": 2, "drop": {"money": 50}, "pic_url": ["103"]}, 
+{"actor_id": 104, "name": "boss", "type": "boss", "hp": 150, "hp_rate": 1, "size": 2, "rebounce": 1, "eliminate_damage": 0, "speed": 1, "drop": {"money": 500, "actor": [6001,6002,5004,5002]}, "pic_url": ["104"]}, 
+{"actor_id": 105, "name": "分裂小怪", "type": "monster", "hp": 5, "hp_rate": 0.5, "size": 1, "rebounce": 1, "eliminate_damage": 0, "speed": 1, "drop": {"money": 10}, "pic_url": ["105"]}, 
+{"actor_id": 5001, "name": "加子弹", "type": "item", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["5001"]}, 
+{"actor_id": 5002, "name": "威能弹", "type": "item", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["5002"]}, 
+{"actor_id": 5003, "name": "核装飞弹(横)", "type": "item", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["5003"]}, 
+{"actor_id": 5004, "name": "炮台", "type": "item", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["5004"]}, 
+{"actor_id": 5005, "name": "炸弹", "type": "item", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["5005"]}, 
+{"actor_id": 5006, "name": "核装飞弹(竖)", "type": "item", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["5006"]}, 
+{"actor_id": 6001, "name": "火焰冲击", "type": "skill", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["6001"]}, 
+{"actor_id": 6002, "name": "冰封万里", "type": "skill", "hp": 1, "hp_rate": 1, "size": 1, "rebounce": 0, "eliminate_damage": 0, "speed": 1, "drop": null, "pic_url": ["6002"]}
+]

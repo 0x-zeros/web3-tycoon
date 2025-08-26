@@ -1,0 +1,36 @@
+import { I18nData } from '../types';
+
+const jp: I18nData = {
+"appname": "数字華容道",
+"levelselect": "チャレンジ",
+"levelInfo_levelnumber": "チャレンジ %{p0}",
+"levelname": "ターゲットマッチ",
+"besttime": "ベスト",
+"start": "スタート",
+"setting": "オプション",
+"share": "シェア",
+"grade": "グレード",
+"feedback": "フィードバック",
+"language": "言語",
+"language_cn": "简体中文",
+"language_en": "English",
+"language_tw": "繁體中文",
+"language_jp": "日本語",
+"usedtime": "今回",
+"target_pattern": "ターゲット",
+"pause": "ポーズ",
+"home": "ホーム",
+"reset": "リセット",
+"resume": "続け",
+"mission_complete": "クリア",
+"award_levelnumber": "チャレンジ %{p0}",
+"next": "次に",
+"tap_tip": "タップしてゲームをスタート",
+"loading": "loading. . .",
+"preload_ok": "Loaded",
+"quit": "もう一度押すとゲームが終了します",
+"challenge": "挑戦を起こす",
+"levelnumber": "チャレンジ %{p0}",
+}
+
+export default jp;

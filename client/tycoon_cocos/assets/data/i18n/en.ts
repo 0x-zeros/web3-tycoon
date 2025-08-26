@@ -1,0 +1,36 @@
+import { I18nData } from '../types';
+
+const en: I18nData = {
+"appname": "Number Place",
+"levelselect": "Level",
+"levelInfo_levelnumber": "Level %{p0}",
+"levelname": "Match target",
+"besttime": "Best",
+"start": "Start",
+"setting": "Settings",
+"share": "Share",
+"grade": "Grade",
+"feedback": "Feedback",
+"language": "Language",
+"language_cn": "简体中文",
+"language_en": "English",
+"language_tw": "繁體中文",
+"language_jp": "日本語",
+"usedtime": "Current",
+"target_pattern": "Target",
+"pause": "Pause",
+"home": "Home",
+"reset": "Reset",
+"resume": "Continue",
+"mission_complete": "Succeed",
+"award_levelnumber": "Level %{p0}",
+"next": "Next",
+"tap_tip": "Tap to start game",
+"loading": "loading. . .",
+"preload_ok": "Loaded",
+"quit": "tap again to exit the game",
+"challenge": "challenge",
+"levelnumber": "Level %{p0}",
+}
+
+export default en;

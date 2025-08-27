@@ -103,3 +103,4 @@ When fixing migration issues, look for:
 
 This is an active migration project where the 2.x version serves as reference but all development should target the 3.x TypeScript version in `sjdr_cocos_v3/`. The migration plan and known issues are documented in `bug_fix_plan_fixed.md`.
 - 该项目目前是一个黑客松的参赛项目，时间非常紧张，还剩1个半月。所以只实现最核心的功能
+- git commit message 尽量写的简洁一点

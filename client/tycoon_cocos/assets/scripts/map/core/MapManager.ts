@@ -244,6 +244,8 @@ export class MapManager extends Component {
      */
     private async loadMapData(): Promise<void> {
         return new Promise((resolve, reject) => {
+
+            //resources.load 只能加载在resources目录下的资源，所以需要把data/maps/test_map.json 放到resources目录下
             resources.load(this.mapDataPath, JsonAsset, (err, jsonAsset) => {
                 if (err) {
                     console.error('[MapManager] 加载地图数据失败:', err);

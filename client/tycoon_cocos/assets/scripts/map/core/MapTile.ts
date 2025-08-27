@@ -11,6 +11,7 @@
 import { _decorator, Component, Node, Vec3, Color, Material, MeshRenderer, BoxCollider, tween, Vec4, resources } from 'cc';
 import { MapTileData, TileType, TileState, Position3D } from '../types/MapTypes';
 import { PlayerData, GameEvent, GameEventType } from '../types/GameTypes';
+import { randomRangeInt } from 'cc';
 
 const { ccclass, property } = _decorator;
 
@@ -437,61 +438,39 @@ export abstract class MapTile extends Component {
      * @param color 要设置的颜色
      */
     private updateMaterialColor(color: Color): void {
+        
+        //https://docs.cocos.com/creator/3.8/manual/zh/shader/pass-parameter-list.html
+        //在 TypeScript 中可以使用 Material 类的 setProperty 方法以及 Pass 的 setUniform 方法进行设置，代码示例如下：
+        //mat.setProperty('emissive', Color.GREY); // 直接设置对应的 Uniform 变量
+        // mat.setProperty('albedo', Color.RED); 
+        // mat.setProperty('roughness', 0.2); // 仅设置对应的分量
+        // const h = mat.passes[0].getHandle('offset'); // 获取对应的 Uniform 的句柄
+        // mat.passes[0].setUniform(h, new Vec2(0.5, 0.5)); // 使用 ‘Pass.setUniform’ 设置 Uniform 属性
+
+        //在 Shader 中定义的 uniform 也可以使用上述代码进行设置，即使没有在 properties 中定义。
+        //未指定的 uniform，引擎将会在运行时根据自动分析出的数据类型给予默认值。更多关于默认值的内容，请参考下文说明。
+
+
         if (!this._meshRenderer) {
             console.warn(`[MapTile] 地块 ${this.tileName} 没有MeshRenderer组件`);
             return;
         }
 
-        const material = this._meshRenderer.getMaterialInstance(0);
-        if (!material) {
-            console.warn(`[MapTile] 地块 ${this.tileName} 没有材质实例，尝试创建默认材质`);
-            this.ensureMaterialInstance();
-            return;
-        }
-
-        // 转换为Vec4格式，范围 0-1
-        const colorVec4 = new Vec4(
-            color.r / 255.0,
-            color.g / 255.0, 
-            color.b / 255.0,
-            color.a / 255.0
-        );
+        const material = this._meshRenderer.materials[0];//getMaterialInstance(0);
 
         // 尝试常见的颜色属性名
-        const propertyNames = ['albedo', 'mainColor', 'baseColor', 'diffuse', 'u_color'];
-        let success = false;
+        const propertyNames = 'mainColor' //['albedo', 'mainColor', 'baseColor', 'diffuse', 'u_color'];
 
-        for (const propName of propertyNames) {
-            try {
-                material.setProperty(propName, colorVec4);
-                console.log(`[MapTile] 成功设置地块 ${this.tileName} 颜色属性 '${propName}'`, {
-                    r: colorVec4.x.toFixed(2),
-                    g: colorVec4.y.toFixed(2),
-                    b: colorVec4.z.toFixed(2),
-                    a: colorVec4.w.toFixed(2)
-                });
-                success = true;
-                break;
-            } catch (error) {
-                // 继续尝试下一个
-                continue;
-            }
-        }
+        // material.setProperty(propName, colorVec4);
+        color = new Color(randomRangeInt(0, 255), randomRangeInt(0, 255), randomRangeInt(0, 255), 255);
+        material.setProperty(propertyNames, color);
+        console.log(`[MapTile] 成功设置地块 ${this.tileName} 颜色属性 '${propertyNames}' 为 ${color}`);
 
-        if (!success) {
-            // 如果所有属性名都失败，记录材质信息供调试
-            console.warn(`[MapTile] 无法设置地块 ${this.tileName} 颜色，材质信息:`);
-            console.log('Material:', {
-                name: material.name,
-                effectName: material.effectAsset?.name,
-                passCount: material.passes?.length
-            });
-            
-            // 显示可用的材质属性
-            if (material.passes && material.passes[0]) {
-                const pass = material.passes[0];
-                console.log('Available properties:', Object.keys(pass.properties || {}));
-            }
+
+        // 显示可用的材质属性
+        if (material.passes && material.passes[0]) {
+            const pass = material.passes[0];
+            console.log('Available properties:', Object.keys(pass.properties || {}));
         }
     }
 

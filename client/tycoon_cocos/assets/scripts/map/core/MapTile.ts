@@ -176,8 +176,6 @@ export abstract class MapTile extends Component {
      */
     protected registerEventHandlers(): void {
 
-        this.node.on(Node.EventType.TOUCH_END, this.onMouseClick, this);
-
         // if (this.enableClickInteraction) {
         //     // TODO: 这里需要根据Cocos Creator的具体版本调整事件处理方式
         //     // 当前版本的射线检测和鼠标事件需要在场景级别处理
@@ -476,17 +474,16 @@ export abstract class MapTile extends Component {
         // 尝试常见的颜色属性名
         const propertyNames = 'mainColor' //['albedo', 'mainColor', 'baseColor', 'diffuse', 'u_color'];
 
-        // material.setProperty(propName, colorVec4);
-        color = new Color(randomRangeInt(0, 255), randomRangeInt(0, 255), randomRangeInt(0, 255), 255);
+        // color = new Color(randomRangeInt(0, 255), randomRangeInt(0, 255), randomRangeInt(0, 255), 255);
         material.setProperty(propertyNames, color);
         console.log(`[MapTile] 成功设置地块 ${this.tileName} 颜色属性 '${propertyNames}' 为 ${color}`);
 
 
-        // 显示可用的材质属性
-        if (material.passes && material.passes[0]) {
-            const pass = material.passes[0];
-            console.log('Available properties:', Object.keys(pass.properties || {}));
-        }
+        // // debug: 显示可用的材质属性
+        // if (material.passes && material.passes[0]) {
+        //     const pass = material.passes[0];
+        //     console.log('Available properties:', Object.keys(pass.properties || {}));
+        // }
     }
 
     /**

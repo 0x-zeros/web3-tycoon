@@ -30,82 +30,14 @@
 - API 文档使用中文, 可以混合英文，比如专有术语等使用英文
 
 ## Git 提交规范
-- 所有 commit message 必须使用中文
-- 格式：`类型(范围): 详细描述`
-- 类型包括：
-  - feat(新功能): 添加新功能或特性
-  - fix(修复): 修复bug或问题
-  - docs(文档): 更新文档、注释或README
-  - style(格式): 代码格式调整，不影响功能
-  - refactor(重构): 代码重构，不改变功能
-  - test(测试): 添加或修改测试代码
-  - chore(构建): 构建过程或辅助工具的变动
-  - perf(性能): 性能优化
-  - ci(持续集成): CI/CD相关变更
-  - revert(回滚): 回滚之前的提交
-
-- commit message 详细规范：
-  - 第一行：`类型(范围): 主要变更描述`
-  - 空一行
-  - 详细描述（可选）：
-    - 变更的具体内容
-    - 解决的问题
-    - 影响的功能模块
-    - 技术实现要点
-  - 空一行
-  - 相关链接（可选）：
-    - 关联的issue编号
-    - 相关文档链接
-
-- 示例格式：
-```
-feat(map-system): 实现地图管理器和地块交互功能
-
-- 添加 MapManager 类，负责地图数据加载和地块管理
-- 实现地块类型系统：起点、地产、机会、空白、监狱
-- 添加玩家移动路径计算和动画播放
-- 支持鼠标控制和摄像机操作
-- 集成射线检测和地块高亮功能
-
-- 新增文件：MapManager.ts, MapTile.ts, MapTypes.ts
-- 修改文件：SelectLevel.ts 优化关卡选择逻辑
-
-Closes #123
-```
-
-- 其他示例：
-```
-fix(ui-system): 修复关卡选择界面按钮点击无响应问题
-
-- 问题：SelectLevel.ts 中的按钮事件监听器未正确绑定
-- 解决：在 onLoad() 方法中添加正确的事件监听器
-- 影响：关卡选择功能恢复正常
-
-- 修改文件：client/tycoon_cocos/assets/scripts/scene/selectLevel/SelectLevel.ts
-
-Fixes #456
-```
-
-```
-refactor(code-structure): 重构地图管理器代码，提升可维护性
-
-- 将 MapManager 类拆分为更小的功能模块
-- 提取公共方法到工具类中
-- 优化事件处理机制
-- 改进错误处理和日志记录
-
-- 新增文件：MapUtils.ts, MapEventManager.ts
-- 修改文件：MapManager.ts 重构核心逻辑
-
-Related to #789
-```
-
-- 注意事项：
-  - 描述要具体明确，避免使用"修复bug"、"优化代码"等模糊描述
-  - 范围标识要准确，使用英文，如(map-system)、(ui-system)、(network-communication)等
-  - 详细描述要分点列出，便于阅读和理解
-  - 涉及的文件变更要明确列出
-  - 关联的issue或PR要正确引用
+- 格式：`类型(范围): 简洁描述`
+- 类型：feat(新功能)、fix(修复)、docs(文档)、style(格式)、refactor(重构)、test(测试)、chore(构建)、perf(性能)
+- 示例：
+  ```
+  feat(map-system): 实现地图管理器和地块交互功能
+  fix(ui-system): 修复关卡选择界面按钮点击无响应问题
+  refactor(code-structure): 重构地图管理器代码提升可维护性
+  ```
 
 ## 对话交互规则
 - 与用户对话时始终使用中文

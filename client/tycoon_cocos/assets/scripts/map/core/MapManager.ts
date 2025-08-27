@@ -12,6 +12,8 @@ import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, res
 import { MapData, MapTileData, TileType, PathResult } from '../types/MapTypes';
 import { PlayerData } from '../types/GameTypes';
 import { MapTile, TileInteractionResult } from './MapTile';
+import { input } from 'cc';
+import { Input } from 'cc';
 
 const { ccclass, property } = _decorator;
 
@@ -200,12 +202,18 @@ export class MapManager extends Component {
             return;
         }
         
+
         // TODO: 根据Cocos Creator版本调整事件处理方式
         // 这里需要在Canvas或者其他合适的节点上监听全局鼠标事件
+        
+        //bug
         // this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
         // this.node.on(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
         // this.node.on(Node.EventType.MOUSE_UP, this.onMouseUp, this);
         // this.node.on(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
+
+        //如果你要在 3D Node 上做点击交互，要走 射线检测（Raycast），而不是直接监听 Node 的鼠标事件。
+        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
     }
     
     /**
@@ -628,20 +636,28 @@ export class MapManager extends Component {
     
     /**
      * 设置选中的地块
-     * @param tileId 地块ID
+     * @param tile 地块ID
      */
-    public setSelectedTile(tileId: number | null): void {
+    public setSelectedTile(tile: number | MapTile | null): void {
+
+        let newTile: MapTile | null = null;
+        if (tile !== null) {
+            if (tile instanceof MapTile) {
+                newTile = tile;
+            } else {
+                newTile = this.getTile(tile);
+            }
+        }
+
         // 清除之前的选中状态
-        if (this._selectedTile) {
+        if (this._selectedTile && this._selectedTile !== newTile) {
             this._selectedTile.setSelected(false);
         }
         
         // 设置新的选中状态
-        if (tileId !== null) {
-            this._selectedTile = this.getTile(tileId);
-            if (this._selectedTile) {
-                this._selectedTile.setSelected(true);
-            }
+        if (newTile !== null) {
+            this._selectedTile = newTile;
+            this._selectedTile.setSelected(true);
         } else {
             this._selectedTile = null;
         }
@@ -707,7 +723,22 @@ export class MapManager extends Component {
         // 这里需要根据Cocos Creator的物理系统API来实现
         // 基本流程是：鼠标位置 -> 世界坐标射线 -> 与地块碰撞检测
         
-        console.log('[MapManager] 射线检测功能待实现');
+        // console.log('[MapManager] 射线检测功能待实现');
+
+        // 将屏幕坐标转成射线
+        const ray = this.mainCamera.screenPointToRay(event.getLocationX(), event.getLocationY());
+
+        // 用物理系统射线检测
+        if (PhysicsSystem.instance.raycastClosest(ray)) {
+            const result = PhysicsSystem.instance.raycastClosestResult;
+            // console.log('点击到了:', result.collider.node.name);
+
+            //如果点击到了map tile
+            const mapTile = result.collider.node.parent?.getComponent(MapTile)
+            if (mapTile) {
+                this.setSelectedTile(mapTile);
+            }
+        }
     }
     
     /**
@@ -807,6 +838,8 @@ export class MapManager extends Component {
         //     this.node.off(Node.EventType.MOUSE_UP, this.onMouseUp, this);
         //     this.node.off(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
         // }
+
+        input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
         
         console.log('[MapManager] 资源清理完成');
     }

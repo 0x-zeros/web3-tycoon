@@ -49,6 +49,7 @@ export class ModeSelect extends Scene {
         // console.log("btnDanren clicked")
 
         game.audioManager.playEffect('click');
+
         game.loadScene(game.sceneNames.play);
     }
 

@@ -62,11 +62,13 @@ class AIAssetGenerator {
             // 构建完整的prompt
             const fullPrompt = this.buildPrompt(description, category);
             
+            const quality = process.env.IMAGE_QUALITY || 'standard';
+            
             const response = await this.openai.images.generate({
                 model: "dall-e-3",
                 prompt: fullPrompt,
                 size: "1024x1024",
-                quality: "standard",
+                quality: quality,
                 n: 1,
             });
 
@@ -76,7 +78,9 @@ class AIAssetGenerator {
             await this.downloadImage(imageUrl, filepath);
             
             this.stats.success++;
-            this.stats.cost += 0.04; // DALL-E 3标准质量成本
+            // 根据质量设置计算成本
+            const cost = quality === 'hd' ? 0.08 : 0.04;
+            this.stats.cost += cost;
             
             console.log(`✅ 完成: ${filename}`);
             this.logSuccess(description, filename, fullPrompt);

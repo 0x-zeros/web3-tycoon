@@ -31,13 +31,7 @@
 
 ## Git 提交规范
 - 格式：`类型(范围): 简洁描述`
-- 类型：feat(新功能)、fix(修复)、docs(文档)、style(格式)、refactor(重构)、test(测试)、chore(构建)、perf(性能)
-- 示例：
-  ```
-  feat(map-system): 实现地图管理器和地块交互功能
-  fix(ui-system): 修复关卡选择界面按钮点击无响应问题
-  refactor(code-structure): 重构地图管理器代码提升可维护性
-  ```
+- 示例：`feat(map): 实现地图管理器` `fix(ui): 修复按钮响应问题`
 
 ## 对话交互规则
 - 与用户对话时始终使用中文

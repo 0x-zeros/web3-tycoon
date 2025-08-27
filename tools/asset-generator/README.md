@@ -15,8 +15,9 @@ npm install
 # 复制环境变量模板
 cp .env.example .env
 
-# 编辑.env文件，添加你的OpenAI API Key
-# OPENAI_API_KEY=your-api-key-here
+# 编辑.env文件:
+# OPENAI_API_KEY=your-openai-api-key-here  
+# IMAGE_QUALITY=standard  # 或 hd (高清质量)
 ```
 
 ### 3. 开始生成
@@ -73,27 +74,27 @@ asset-generator/
 
 ### 美术风格设定
 项目采用统一的美术风格：
-- **整体风格**: Low Poly卡通渲染
-- **色彩方案**: 蓝紫科技色 + 金黄财富色
-- **设计原则**: 简洁、明亮、易识别
+- **整体风格**: 吉卜力风格 (Studio Ghibli)
+- **色彩方案**: 温暖自然色调 + 梦幻魔法色彩
+- **设计原则**: 温馨、童话、富有情感
 
 ### 提示词模板
 ```javascript
-// 地块建筑模板
-const buildingTemplate = {
-  base: "大富翁游戏建筑，等距视角，卡通风格，白色背景",
-  level1: "简单小房子，木制结构",
-  level2: "两层砖房，红色屋顶", 
-  level3: "现代公寓，玻璃外墙",
-  level4: "高档酒店，豪华设计",
-  level5: "摩天大楼，未来科技"
+// 吉卜力风格地块建筑模板
+const ghibliTemplate = {
+  base: "Studio Ghibli style, 吉卜力风格，温暖水彩画风",
+  lighting: "soft warm lighting, pastoral countryside",
+  level1: "童话小屋，木质结构，烟囱冒烟",
+  level2: "乡村别墅，石径花园，窗台花箱", 
+  level3: "魔法庄园，藤蔓覆盖，梦幻色彩",
+  level4: "童话城堡，塔楼旗帜，浪漫设计",
+  level5: "天空之城，悬浮建筑，云朵环绕"
 };
 
 // UI元素模板  
 const uiTemplate = {
-  base: "游戏UI元素，扁平设计，Web3风格",
-  colors: "紫色渐变 #6B46C1 到 #9333EA",
-  style: "现代简约，发光效果，透明背景"
+  base: "手绘UI元素，自然曲线设计",
+  style: "有机形状，柔和渐变，温馨质感"
 };
 ```
 
@@ -118,13 +119,16 @@ graph LR
 ## 📊 成本估算
 
 ### API成本
-- **DALL-E 3标准质量**: $0.04/张
+- **DALL-E 3 Standard**: $0.04/张 (速度快，质量好)
+- **DALL-E 3 HD**: $0.08/张 (最高细节)
 - **预计总资源**: 100-150张
-- **总成本**: $4-6 (完全可控)
+- **总成本**: $4-12 (根据质量选择)
 
 ### 时间成本
 - **设置时间**: 5分钟
-- **批量生成**: 20-30分钟 (100张)
+- **批量生成**: 
+  - Standard质量: 20-30分钟 (100张)
+  - HD质量: 30-40分钟 (100张)
 - **手工筛选**: 30-60分钟
 - **集成到项目**: 15分钟
 

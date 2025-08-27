@@ -181,7 +181,8 @@ export class MapManager extends Component {
         if (!this.mainCamera) {
             this.mainCamera = this.node.getComponentInChildren(Camera);
             if (!this.mainCamera) {
-                console.warn('[MapManager] 未找到主摄像机，某些功能可能无法正常工作');
+                console.warn('[MapManager] 未找到主摄像机，尝试自动创建');
+                this.createDefaultCamera();
             }
         }
         
@@ -189,6 +190,40 @@ export class MapManager extends Component {
         this._moveConfig.moveSpeed = this.playerMoveSpeed;
         
         console.log('[MapManager] 组件初始化完成');
+    }
+    
+    /**
+     * 创建默认摄像机
+     */
+    private createDefaultCamera(): void {
+        const cameraNode = new Node('Main Camera');
+        this.mainCamera = cameraNode.addComponent(Camera);
+        
+        // 设置摄像机属性
+        this.mainCamera.priority = 0;
+        this.mainCamera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
+        this.mainCamera.backgroundColor.set(50/255, 90/255, 120/255, 1.0);
+        this.mainCamera.projection = Camera.ProjectionType.PERSPECTIVE;
+        this.mainCamera.fov = 45;
+        this.mainCamera.near = 1;
+        this.mainCamera.far = 1000;
+        
+        // 设置摄像机位置（俯视角度，适合查看地图）
+        cameraNode.setPosition(3, 8, 8);
+        cameraNode.setRotationFromEuler(-30, 0, 0);
+        
+        // 添加到场景根节点
+        const scene = this.node.scene;
+        if (scene) {
+            scene.addChild(cameraNode);
+        } else {
+            // 如果找不到场景，添加到当前节点的父级
+            if (this.node.parent) {
+                this.node.parent.addChild(cameraNode);
+            }
+        }
+        
+        console.log('[MapManager] 已自动创建默认摄像机');
     }
     
     /**

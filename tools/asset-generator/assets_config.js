@@ -72,6 +72,7 @@ const UI_CONFIG = [
     { name: '主菜单背景', description: 'Web3 Tycoon主菜单背景，科技城市天际线，紫色渐变天空，区块链元素' },
     { name: '游戏界面背景', description: '游戏中界面背景，棋盘桌面质感，木纹纹理，温馨照明效果' },
     { name: '设置界面背景', description: '设置菜单背景，深色科技风格，几何图案，现代简约' },
+    { name: 'Web3棋盘格背景', description: '蓝色渐变棋盘格背景，半透明方格阵列，包含问号图标、SUI coin图标（蓝色圆形，白色水滴logo）和BTC coin图标（橙色圆形，白色₿符号）随机分布在格子中，深蓝到浅蓝渐变色调，类似大富翁游戏选择界面，吉卜力柔和风格，适合作为游戏UI背景使用' },
     
     // 面板和框架
     { name: '信息面板框架', description: '游戏信息面板，半透明背景，圆角边框，现代UI设计' },
@@ -100,6 +101,8 @@ const ICONS_CONFIG = [
     { name: '钻石图标', description: 'premium钻石图标，多面切割，彩虹反光，稀有感' },
     { name: '代币图标', description: 'Web3代币图标，区块链风格，加密货币，科技感' },
     { name: 'NFT徽章图标', description: 'NFT收藏品徽章，独特标识，数字资产，认证感' },
+    { name: 'BTC coin图标', description: 'Bitcoin标准图标，橙色圆形背景，白色₿符号，现代简洁设计，官方品牌色彩' },
+    { name: 'SUI coin图标', description: 'Sui Network标准图标，蓝色圆形背景，白色水滴形logo，流畅优雅设计，品牌识别度高' },
     
     // 游戏功能
     { name: '骰子图标', description: '游戏骰子图标，六面骰子，动态感，游戏核心元素' },
@@ -178,12 +181,12 @@ const DICE_CONFIG = [
     { name: '骰子UV展开贴图', description: '完整骰子六面UV展开贴图，用BTC和SUI图标代替传统点数，温暖奶油色背景，吉卜力手绘风格，适合3D Cube贴图使用' },
     
     // 单独骰子面（用于精细控制）
-    { name: '骰子面1-SUI', description: '骰子1点面贴图，中央一个大的SUI logo，柔和蓝色渐变背景，温暖光照，手绘质感' },
-    { name: '骰子面2-BTC', description: '骰子2点面贴图，对角两个BTC图标，金色温暖渐变，比特币橙色调，柔和阴影' },
-    { name: '骰子面3-SUI', description: '骰子3点面贴图，三个SUI logo斜线排列，海洋蓝渐变背景，清新自然' },
-    { name: '骰子面4-BTC', description: '骰子4点面贴图，四个BTC图标四角方形排列，金币质感，暖黄色调' },
-    { name: '骰子面5-SUI', description: '骰子5点面贴图，五个SUI logo梅花形排列（四角+中心），深蓝渐变，星空感' },
-    { name: '骰子面6-BTC', description: '骰子6点面贴图，六个BTC图标两列三行排列，丰富金色质感，财富象征' }
+    { name: '骰子面1-SUI', description: '骰子1点面贴图，中央一个大的SUI coin图标（蓝色圆形背景，白色水滴形logo），柔和蓝色渐变背景，温暖光照，手绘质感' },
+    { name: '骰子面2-BTC', description: '骰子2点面贴图，对角两个BTC coin图标（橙色圆形背景，白色₿符号），金色温暖渐变，比特币橙色调，柔和阴影' },
+    { name: '骰子面3-SUI', description: '骰子3点面贴图，三个SUI coin图标（蓝色圆形，白色水滴logo）斜线排列，海洋蓝渐变背景，清新自然' },
+    { name: '骰子面4-BTC', description: '骰子4点面贴图，四个BTC coin图标（橙色圆形，白色₿符号）四角方形排列，金币质感，暖黄色调' },
+    { name: '骰子面5-SUI', description: '骰子5点面贴图，五个SUI coin图标（蓝色圆形，白色水滴logo）梅花形排列（四角+中心），深蓝渐变，星空感' },
+    { name: '骰子面6-BTC', description: '骰子6点面贴图，六个BTC coin图标（橙色圆形，白色₿符号）两列三行排列，丰富金色质感，财富象征' }
 ];
 
 // 导出配置

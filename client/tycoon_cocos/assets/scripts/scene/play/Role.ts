@@ -17,6 +17,12 @@ interface BufItem {
     skillData: any;
 }
 
+//（可操作的）角色类，包括玩家操作的叫的，ai操作的角色
+// 该类作为camera的跟随对象
+
+// 随机在地图上刷新的财神，福神，土地神 以及 恶狗，地雷（包括玩家丢的）用actor就行了
+// 属于有外观，能以一定规则拾取的
+
 
 @ccclass('Role')
 export default class Role extends Component {

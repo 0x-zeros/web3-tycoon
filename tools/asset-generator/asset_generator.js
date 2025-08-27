@@ -19,17 +19,18 @@ class AIAssetGenerator {
             apiKey: process.env.OPENAI_API_KEY
         });
         
-        this.baseOutputDir = './output';
-        this.logDir = './logs';
-        this.modelOutputDir = path.join(this.baseOutputDir, this.model);
-        
-        // 模型与生成参数（可通过CLI或ENV覆盖）
+        // 模型与生成参数（可通过CLI或ENV覆盖）- 先定义这些参数
         this.model = options.model || process.env.IMAGE_MODEL || 'dall-e-3';
         this.size = options.size || process.env.IMAGE_SIZE || '1024x1024';
         this.quality = options.quality || process.env.IMAGE_QUALITY || 'standard';
         this.responseFormat = options.responseFormat || process.env.IMAGE_RESPONSE_FORMAT || 'url';
         this.background = options.background || process.env.IMAGE_BACKGROUND; // e.g., 'transparent'
         this.style = options.style || process.env.IMAGE_STYLE; // e.g., 'vivid' | 'natural'
+        
+        // 然后定义依赖于 this.model 的路径
+        this.baseOutputDir = './output';
+        this.logDir = './logs';
+        this.modelOutputDir = path.join(this.baseOutputDir, this.model);
         
         // 成本估算（可通过ENV或CLI覆盖），默认根据模型与质量给出估算值
         this.modelCosts = {

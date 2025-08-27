@@ -113,11 +113,12 @@ class AIAssetGenerator {
         
         // 根据类别添加特定的风格指导
         const categoryStyles = {
-            tiles: "isometric view, Monopoly game tile, Howl's Moving Castle architecture, Spirited Away buildings",
+            tiles: "isometric view, 2D sprite for game use, Monopoly game tile, complete building exterior, Howl's Moving Castle architecture style",
             ui: "hand-drawn UI elements, organic curves, nature-inspired design, soft gradients",
             icons: "cute icon design, Totoro-style simplicity, natural materials, 128x128 suitable",
             cards: "magical card design, fairy tale borders, enchanted forest themes, mystical glow",
-            characters: "Ghibli character design, friendly expressions, countryside clothing, endearing personalities"
+            characters: "Ghibli character design, friendly expressions, countryside clothing, endearing personalities",
+            dice: "dice texture for 3D cube, cryptocurrency icons as dots, seamless UV mapping, cube texture layout"
         };
 
         const categoryStyle = categoryStyles[category] || "";

@@ -26,9 +26,10 @@ cp .env.example .env
 npm run generate
 
 # 生成特定类型资源
-npm run generate:tiles    # 地图瓦片
-npm run generate:ui       # UI元素  
-npm run generate:icons    # 图标集
+npm run generate:tiles      # 地图瓦片
+npm run generate:ui         # UI元素  
+npm run generate:icons      # 图标集
+npm run generate:dice       # 骰子贴图 🎲
 ```
 
 ## 📁 工具结构
@@ -44,7 +45,8 @@ asset-generator/
 │   ├── tiles/           # 地图瓦片
 │   ├── ui/              # UI元素
 │   ├── icons/           # 图标集
-│   └── cards/           # 卡片资源
+│   ├── cards/           # 卡片资源
+│   └── dice/            # 骰子贴图 🎲
 └── logs/                # 生成日志
 ```
 
@@ -69,6 +71,12 @@ asset-generator/
 - **粒子纹理**: 升级特效、购买特效
 - **光效贴图**: 发光、闪烁效果
 - **动画序列**: 金币飞行、骰子滚动
+
+### 骰子贴图 🎲
+- **Web3创意骰子**: 用BTC和SUI图标代替传统点数
+- **3D Cube贴图**: 完整UV展开贴图，可直接应用到Cocos Creator的Cube上
+- **单面贴图**: 每个面单独生成，便于精细控制
+- **吉卜力风格**: 温暖手绘质感，与游戏整体风格统一
 
 ## 🔧 配置说明
 
@@ -134,13 +142,15 @@ graph LR
 
 ## 🛠️ 进阶功能
 
-### 批量变体生成
+### 批量等级变体生成
 ```javascript
-// 生成同一建筑的多个角度
-const variants = [
-  "正面视角，主入口",
-  "侧面视角，展示深度", 
-  "斜角视角，等距效果"
+// 生成同一建筑的不同等级版本
+const buildingLevels = [
+  "等级1，简单小屋，木质结构",
+  "等级2，中型建筑，砖石结构", 
+  "等级3，大型建筑，现代设计",
+  "等级4，豪华建筑，精美装饰",
+  "等级5，地标建筑，标志性设计"
 ];
 ```
 
@@ -177,7 +187,7 @@ const cocosConfig = {
 
 ## 📋 资源清单
 
-### 必需资源 (核心40张)
+### 必需资源 (核心45张)
 ```javascript
 const coreAssets = [
   // 基础地块 (8张)
@@ -193,8 +203,12 @@ const coreAssets = [
   "暂停按钮", "播放按钮", "关闭按钮",
   "确认按钮", "取消按钮", "帮助按钮",
   
-  // 玩家棋子 (10张)
-  "棋子1-10: 不同颜色和造型"
+  // 玩家棋子 (8张)
+  "棋子1-8: 不同颜色和造型",
+  
+  // Web3骰子贴图 (7张) 🎲
+  "骰子UV展开贴图", "骰子面1-6单独贴图",
+  "BTC和SUI图标代替传统点数"
 ];
 ```
 

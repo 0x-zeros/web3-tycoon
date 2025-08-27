@@ -11,6 +11,7 @@
     "generate:icons": "node asset_generator.js category icons",
     "generate:cards": "node asset_generator.js category cards",
     "generate:characters": "node asset_generator.js category characters",
+    "generate:dice": "node asset_generator.js category dice",
     "generate:fast": "node asset_generator.js core 10",
     "test": "node -e \"console.log('Asset generator ready!')\"",
     "clean": "rm -rf output/* logs/*",

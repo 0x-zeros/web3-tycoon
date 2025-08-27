@@ -9,7 +9,8 @@ const CATEGORIES = {
     ui: '用户界面元素', 
     icons: '图标和小型UI元素',
     cards: '卡片和特效',
-    characters: '角色和棋子'
+    characters: '角色和棋子',
+    dice: '骰子贴图'
 };
 
 // 地图瓦片和建筑资源
@@ -171,13 +172,28 @@ const CHARACTERS_CONFIG = [
     { name: '建筑师NPC', description: 'Q版建筑师角色，设计师气质，创造力强，建筑专家' }
 ];
 
+// 骰子贴图
+const DICE_CONFIG = [
+    // 完整骰子贴图
+    { name: '骰子UV展开贴图', description: '完整骰子六面UV展开贴图，用BTC和SUI图标代替传统点数，温暖奶油色背景，吉卜力手绘风格，适合3D Cube贴图使用' },
+    
+    // 单独骰子面（用于精细控制）
+    { name: '骰子面1-SUI', description: '骰子1点面贴图，中央一个大的SUI logo，柔和蓝色渐变背景，温暖光照，手绘质感' },
+    { name: '骰子面2-BTC', description: '骰子2点面贴图，对角两个BTC图标，金色温暖渐变，比特币橙色调，柔和阴影' },
+    { name: '骰子面3-SUI', description: '骰子3点面贴图，三个SUI logo斜线排列，海洋蓝渐变背景，清新自然' },
+    { name: '骰子面4-BTC', description: '骰子4点面贴图，四个BTC图标四角方形排列，金币质感，暖黄色调' },
+    { name: '骰子面5-SUI', description: '骰子5点面贴图，五个SUI logo梅花形排列（四角+中心），深蓝渐变，星空感' },
+    { name: '骰子面6-BTC', description: '骰子6点面贴图，六个BTC图标两列三行排列，丰富金色质感，财富象征' }
+];
+
 // 导出配置
 const ASSET_CONFIGS = {
     tiles: TILES_CONFIG,
     ui: UI_CONFIG, 
     icons: ICONS_CONFIG,
     cards: CARDS_CONFIG,
-    characters: CHARACTERS_CONFIG
+    characters: CHARACTERS_CONFIG,
+    dice: DICE_CONFIG
 };
 
 module.exports = {
@@ -189,5 +205,6 @@ module.exports = {
     UI_CONFIG,
     ICONS_CONFIG,
     CARDS_CONFIG,
-    CHARACTERS_CONFIG
+    CHARACTERS_CONFIG,
+    DICE_CONFIG
 };

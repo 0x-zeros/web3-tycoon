@@ -102,22 +102,23 @@ class AIAssetGenerator {
      * 构建完整的提示词
      */
     buildPrompt(description, category) {
-        const baseStyle = "游戏美术资源，卡通风格，Web3 Tycoon大富翁游戏";
-        const backgroundStyle = "干净的白色背景，专业游戏资产";
-        const qualityModifiers = "高质量，细节丰富，色彩鲜艳";
+        const baseStyle = "Studio Ghibli style game asset, 吉卜力风格游戏美术资源";
+        const ghibliStyle = "soft watercolor painting, warm lighting, pastoral countryside, magical realism";
+        const backgroundStyle = "clean white background, professional game asset";
+        const qualityModifiers = "highly detailed, dreamy atmosphere, cozy and inviting";
         
         // 根据类别添加特定的风格指导
         const categoryStyles = {
-            tiles: "等距视角，大富翁地块，蓝紫色和金色配色方案",
-            ui: "现代UI设计，扁平风格，紫色渐变效果，发光边框",
-            icons: "图标设计，立体感，128x128像素适用，简洁明了",
-            cards: "卡牌游戏风格，装饰性边框，魔法光效，稀有度展示",
-            characters: "Q版角色设计，友好表情，多彩服装，识别度高"
+            tiles: "isometric view, Monopoly game tile, Howl's Moving Castle architecture, Spirited Away buildings",
+            ui: "hand-drawn UI elements, organic curves, nature-inspired design, soft gradients",
+            icons: "cute icon design, Totoro-style simplicity, natural materials, 128x128 suitable",
+            cards: "magical card design, fairy tale borders, enchanted forest themes, mystical glow",
+            characters: "Ghibli character design, friendly expressions, countryside clothing, endearing personalities"
         };
 
         const categoryStyle = categoryStyles[category] || "";
         
-        return `${baseStyle}，${description}，${categoryStyle}，${qualityModifiers}，${backgroundStyle}`;
+        return `${baseStyle}, ${description}, ${categoryStyle}, ${ghibliStyle}, ${qualityModifiers}, ${backgroundStyle}`;
     }
 
     /**

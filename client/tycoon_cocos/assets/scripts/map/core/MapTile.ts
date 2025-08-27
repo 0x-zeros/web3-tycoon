@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import { _decorator, Component, Node, Vec3, Color, Material, MeshRenderer, BoxCollider, tween } from 'cc';
+import { _decorator, Component, Node, Vec3, Color, Material, MeshRenderer, BoxCollider, tween, Vec4, resources } from 'cc';
 import { MapTileData, TileType, TileState, Position3D } from '../types/MapTypes';
 import { PlayerData, GameEvent, GameEventType } from '../types/GameTypes';
 
@@ -149,16 +149,23 @@ export abstract class MapTile extends Component {
         // 获取或创建MeshRenderer组件
         this._meshRenderer = this.getComponent(MeshRenderer);
         if (!this._meshRenderer) {
-            this._meshRenderer = this.addComponent(MeshRenderer);
-            console.warn(`[MapTile] 地块 ${this.node.name} 缺少MeshRenderer组件，已自动添加`);
+            //从第一个子节点里获取
+            this._meshRenderer = this.node.children[0].getComponent(MeshRenderer);
+            if (!this._meshRenderer) {
+                this._meshRenderer = this.addComponent(MeshRenderer);
+                console.warn(`[MapTile] 地块 ${this.node.name} 缺少MeshRenderer组件，已自动添加`);
+            }
         }
         
         // 获取或创建BoxCollider组件（用于点击检测）
         this._collider = this.getComponent(BoxCollider);
         if (!this._collider && this.enableClickInteraction) {
-            this._collider = this.addComponent(BoxCollider);
+            this._collider = this.node.children[0].getComponent(BoxCollider);
+            if (!this._collider) {
+                this._collider = this.addComponent(BoxCollider);
+                console.warn(`[MapTile] 地块 ${this.node.name} 缺少BoxCollider组件，已自动添加`);
+            }
             this._collider.isTrigger = true; // 设置为触发器，用于检测点击
-            console.warn(`[MapTile] 地块 ${this.node.name} 缺少BoxCollider组件，已自动添加`);
         }
     }
     
@@ -425,6 +432,94 @@ export abstract class MapTile extends Component {
         // 默认实现：无特殊处理
     }
     
+    /**
+     * 更新材质颜色
+     * @param color 要设置的颜色
+     */
+    private updateMaterialColor(color: Color): void {
+        if (!this._meshRenderer) {
+            console.warn(`[MapTile] 地块 ${this.tileName} 没有MeshRenderer组件`);
+            return;
+        }
+
+        const material = this._meshRenderer.getMaterialInstance(0);
+        if (!material) {
+            console.warn(`[MapTile] 地块 ${this.tileName} 没有材质实例，尝试创建默认材质`);
+            this.ensureMaterialInstance();
+            return;
+        }
+
+        // 转换为Vec4格式，范围 0-1
+        const colorVec4 = new Vec4(
+            color.r / 255.0,
+            color.g / 255.0, 
+            color.b / 255.0,
+            color.a / 255.0
+        );
+
+        // 尝试常见的颜色属性名
+        const propertyNames = ['albedo', 'mainColor', 'baseColor', 'diffuse', 'u_color'];
+        let success = false;
+
+        for (const propName of propertyNames) {
+            try {
+                material.setProperty(propName, colorVec4);
+                console.log(`[MapTile] 成功设置地块 ${this.tileName} 颜色属性 '${propName}'`, {
+                    r: colorVec4.x.toFixed(2),
+                    g: colorVec4.y.toFixed(2),
+                    b: colorVec4.z.toFixed(2),
+                    a: colorVec4.w.toFixed(2)
+                });
+                success = true;
+                break;
+            } catch (error) {
+                // 继续尝试下一个
+                continue;
+            }
+        }
+
+        if (!success) {
+            // 如果所有属性名都失败，记录材质信息供调试
+            console.warn(`[MapTile] 无法设置地块 ${this.tileName} 颜色，材质信息:`);
+            console.log('Material:', {
+                name: material.name,
+                effectName: material.effectAsset?.name,
+                passCount: material.passes?.length
+            });
+            
+            // 显示可用的材质属性
+            if (material.passes && material.passes[0]) {
+                const pass = material.passes[0];
+                console.log('Available properties:', Object.keys(pass.properties || {}));
+            }
+        }
+    }
+
+    /**
+     * 确保有材质实例
+     */
+    private ensureMaterialInstance(): void {
+        if (!this._meshRenderer) return;
+
+        let material = this._meshRenderer.getMaterialInstance(0);
+        if (!material) {
+            // 尝试创建默认材质
+            console.log(`[MapTile] 地块 ${this.tileName} 没有材质，尝试创建默认材质`);
+            
+            // 加载默认材质 - 使用内置标准材质
+            resources.load('effects/builtin-standard', Material, (err, mat) => {
+                if (!err && mat && this._meshRenderer) {
+                    this._meshRenderer.materials = [mat];
+                    console.log(`[MapTile] 地块 ${this.tileName} 已设置默认材质`);
+                    // 重新设置颜色
+                    this.updateVisualAppearance();
+                } else {
+                    console.error(`[MapTile] 无法加载默认材质:`, err);
+                }
+            });
+        }
+    }
+
     // ========================= 事件处理方法 =========================
     
     /**
@@ -472,21 +567,21 @@ export abstract class MapTile extends Component {
     /**
      * 地块点击回调（子类可重写）
      */
-    protected onTileClicked(event: any): void {
+    protected onTileClicked(_event: any): void {
         // 默认实现：无特殊处理
     }
     
     /**
      * 鼠标悬停进入回调（子类可重写）
      */
-    protected onTileHoverEnter(event: any): void {
+    protected onTileHoverEnter(_event: any): void {
         // 默认实现：无特殊处理
     }
     
     /**
      * 鼠标悬停离开回调（子类可重写）
      */
-    protected onTileHoverLeave(event: any): void {
+    protected onTileHoverLeave(_event: any): void {
         // 默认实现：无特殊处理
     }
     
@@ -528,14 +623,8 @@ export abstract class MapTile extends Component {
         // 应用透明度
         currentColor.a = this._renderState.opacity * 255;
         
-        // 更新材质颜色
-        // TODO: 这里需要根据具体的材质类型来设置颜色
-        // 目前假设使用的是有albedo属性的材质
-        const material = this._meshRenderer.getMaterial(0);
-        if (material) {
-            // material.setProperty('albedo', currentColor); // 实际实现时需要确认属性名
-            console.log(`[MapTile] 更新地块 ${this.tileName} 颜色:`, currentColor);
-        }
+        // 更新材质颜色 - 修复版本
+        this.updateMaterialColor(currentColor);
     }
     
     /**

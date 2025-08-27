@@ -90,6 +90,9 @@ export class Loading extends Component {
         this.loadingStatus.node.active = false;
 
         game.loadScene(game.sceneNames.modeSelect);
+
+        // 隐藏loading界面
+        this.node.active = false;
     }
 
     initJsonData() {

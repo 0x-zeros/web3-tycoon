@@ -3,18 +3,19 @@
     "__type__": "cc.Prefab",
     "_name": "eliteHalo",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "_native": "",
     "data": {
       "__id__": 1
     },
     "optimizationPolicy": 0,
-    "asyncLoadAssets": false,
     "persistent": false
   },
   {
     "__type__": "cc.Node",
     "_name": "eliteHalo",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "_parent": null,
     "_children": [],
     "_active": true,
@@ -51,36 +52,31 @@
       "y": 1.1487,
       "z": 1
     },
-    "_layer": 1,
+    "_mobility": 0,
+    "_layer": 33554432,
     "_euler": {
       "__type__": "cc.Vec3",
       "x": 0,
       "y": 0,
       "z": 0
     },
-    "_level": 1,
-    "_quat": {
-      "__type__": "cc.Quat",
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "w": 1
-    },
-    "_skewX": 0,
-    "_skewY": 0,
-    "_zIndex": 0,
     "_id": ""
   },
   {
     "__type__": "0873awZMlBIlqC5a1SGit/t",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },
     "_enabled": true,
+    "__prefab": {
+      "__id__": 3
+    },
     "atlas": {
-      "__uuid__": "068ed4a2-e4f8-4a3a-b9d2-307ae9570604"
+      "__uuid__": "068ed4a2-e4f8-4a3a-b9d2-307ae9570604",
+      "__expectedType__": "cc.SpriteAtlas"
     },
     "loop": true,
     "speed": 1,
@@ -88,10 +84,7 @@
     "playOnLoad": false,
     "autoDestroy": false,
     "autoActive": false,
-    "_id": "",
-    "__prefab": {
-      "__id__": 3
-    }
+    "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -101,6 +94,7 @@
     "__type__": "cc.UIOpacity",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },
@@ -108,7 +102,8 @@
     "__prefab": {
       "__id__": 5
     },
-    "_opacity": 255
+    "_opacity": 255,
+    "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -118,6 +113,7 @@
     "__type__": "cc.UITransform",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },
@@ -125,7 +121,6 @@
     "__prefab": {
       "__id__": 7
     },
-    "_priority": 0,
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 0,
@@ -135,7 +130,8 @@
       "__type__": "cc.Vec2",
       "x": 0.5,
       "y": 0.5
-    }
+    },
+    "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -149,6 +145,8 @@
     "asset": {
       "__id__": 0
     },
-    "fileId": "b8JLCB9HxNgI2w3NsuAzLg"
+    "fileId": "b8JLCB9HxNgI2w3NsuAzLg",
+    "instance": null,
+    "targetOverrides": null
   }
 ]

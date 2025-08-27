@@ -181,8 +181,8 @@ export class MapManager extends Component {
         if (!this.mainCamera) {
             this.mainCamera = this.node.getComponentInChildren(Camera);
             if (!this.mainCamera) {
-                console.warn('[MapManager] 未找到主摄像机，尝试自动创建');
-                this.createDefaultCamera();
+                console.error('[MapManager] 未找到主摄像机，尝试自动创建');
+                // this.createDefaultCamera();
             }
         }
         
@@ -190,40 +190,6 @@ export class MapManager extends Component {
         this._moveConfig.moveSpeed = this.playerMoveSpeed;
         
         console.log('[MapManager] 组件初始化完成');
-    }
-    
-    /**
-     * 创建默认摄像机
-     */
-    private createDefaultCamera(): void {
-        const cameraNode = new Node('Main Camera');
-        this.mainCamera = cameraNode.addComponent(Camera);
-        
-        // 设置摄像机属性
-        this.mainCamera.priority = 0;
-        this.mainCamera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
-        this.mainCamera.backgroundColor.set(50/255, 90/255, 120/255, 1.0);
-        this.mainCamera.projection = Camera.ProjectionType.PERSPECTIVE;
-        this.mainCamera.fov = 45;
-        this.mainCamera.near = 1;
-        this.mainCamera.far = 1000;
-        
-        // 设置摄像机位置（俯视角度，适合查看地图）
-        cameraNode.setPosition(3, 8, 8);
-        cameraNode.setRotationFromEuler(-30, 0, 0);
-        
-        // 添加到场景根节点
-        const scene = this.node.scene;
-        if (scene) {
-            scene.addChild(cameraNode);
-        } else {
-            // 如果找不到场景，添加到当前节点的父级
-            if (this.node.parent) {
-                this.node.parent.addChild(cameraNode);
-            }
-        }
-        
-        console.log('[MapManager] 已自动创建默认摄像机');
     }
     
     /**
@@ -236,10 +202,10 @@ export class MapManager extends Component {
         
         // TODO: 根据Cocos Creator版本调整事件处理方式
         // 这里需要在Canvas或者其他合适的节点上监听全局鼠标事件
-        this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        this.node.on(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
-        this.node.on(Node.EventType.MOUSE_UP, this.onMouseUp, this);
-        this.node.on(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
+        // this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
+        // this.node.on(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
+        // this.node.on(Node.EventType.MOUSE_UP, this.onMouseUp, this);
+        // this.node.on(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
     }
     
     /**
@@ -382,21 +348,21 @@ export class MapManager extends Component {
      * 设置摄像机
      */
     private setupCamera(): void {
-        if (!this.mainCamera || !this._mapData) {
-            return;
-        }
+        // if (!this.mainCamera || !this._mapData) {
+        //     return;
+        // }
         
-        // 如果地图数据中有摄像机配置，使用配置的位置
-        if (this._mapData.cameraConfig?.defaultPosition) {
-            this.mainCamera.node.setPosition(this._mapData.cameraConfig.defaultPosition);
-        } else {
-            // 否则计算地图中心位置
-            const center = this.calculateMapCenter();
-            this.mainCamera.node.setPosition(center.x, 8, center.z + 5); // 45度俯视角度
-            this.mainCamera.node.setRotationFromEuler(45, 0, 0);
-        }
+        // // 如果地图数据中有摄像机配置，使用配置的位置
+        // if (this._mapData.cameraConfig?.defaultPosition) {
+        //     this.mainCamera.node.setPosition(this._mapData.cameraConfig.defaultPosition);
+        // } else {
+        //     // 否则计算地图中心位置
+        //     const center = this.calculateMapCenter();
+        //     this.mainCamera.node.setPosition(center.x, 8, center.z + 5); // 45度俯视角度
+        //     this.mainCamera.node.setRotationFromEuler(45, 0, 0);
+        // }
         
-        console.log('[MapManager] 摄像机设置完成');
+        // console.log('[MapManager] 摄像机设置完成');
     }
     
     /**

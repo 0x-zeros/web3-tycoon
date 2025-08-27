@@ -348,21 +348,24 @@ export class MapManager extends Component {
      * 设置摄像机
      */
     private setupCamera(): void {
-        // if (!this.mainCamera || !this._mapData) {
-        //     return;
-        // }
+        if (!this.mainCamera || !this._mapData) {
+            return;
+        }
         
-        // // 如果地图数据中有摄像机配置，使用配置的位置
-        // if (this._mapData.cameraConfig?.defaultPosition) {
-        //     this.mainCamera.node.setPosition(this._mapData.cameraConfig.defaultPosition);
-        // } else {
-        //     // 否则计算地图中心位置
-        //     const center = this.calculateMapCenter();
-        //     this.mainCamera.node.setPosition(center.x, 8, center.z + 5); // 45度俯视角度
-        //     this.mainCamera.node.setRotationFromEuler(45, 0, 0);
-        // }
+        // 如果地图数据中有摄像机配置，使用配置的位置
+        if (this._mapData.cameraConfig?.defaultPosition) {
+            // this.mainCamera.node.setPosition(this._mapData.cameraConfig.defaultPosition);
+
+            //defaultRotation
+            // this.mainCamera.node.setRotationFromEuler(45, 0, 0);
+        } else {
+            // 否则计算地图中心位置
+            const center = this.calculateMapCenter();
+            // this.mainCamera.node.setPosition(center.x, 8, center.z + 5); // 45度俯视角度
+            // this.mainCamera.node.setRotationFromEuler(45, 0, 0);
+        }
         
-        // console.log('[MapManager] 摄像机设置完成');
+        console.log('[MapManager] 摄像机设置完成');
     }
     
     /**
@@ -798,12 +801,12 @@ export class MapManager extends Component {
         this._tileNodes.clear();
         
         // 移除事件监听
-        if (this.node.isValid) {
-            this.node.off(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
-            this.node.off(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
-            this.node.off(Node.EventType.MOUSE_UP, this.onMouseUp, this);
-            this.node.off(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
-        }
+        // if (this.node.isValid) {
+        //     this.node.off(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
+        //     this.node.off(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
+        //     this.node.off(Node.EventType.MOUSE_UP, this.onMouseUp, this);
+        //     this.node.off(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
+        // }
         
         console.log('[MapManager] 资源清理完成');
     }

@@ -175,25 +175,40 @@ export abstract class MapTile extends Component {
      * 设置鼠标交互事件
      */
     protected registerEventHandlers(): void {
-        if (this.enableClickInteraction) {
-            // TODO: 这里需要根据Cocos Creator的具体版本调整事件处理方式
-            // 当前版本的射线检测和鼠标事件需要在场景级别处理
-            // 这里预留接口，具体实现需要配合MapManager
-            this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
-            this.node.on(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
-            this.node.on(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
-        }
+
+        this.node.on(Node.EventType.TOUCH_END, this.onMouseClick, this);
+
+        // if (this.enableClickInteraction) {
+        //     // TODO: 这里需要根据Cocos Creator的具体版本调整事件处理方式
+        //     // 当前版本的射线检测和鼠标事件需要在场景级别处理
+        //     // 这里预留接口，具体实现需要配合MapManager
+        //     this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
+        //     this.node.on(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
+        //     this.node.on(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
+        // }
     }
     
     /**
      * 取消注册事件处理器
      */
     protected unregisterEventHandlers(): void {
-        if (this.node.isValid) {
-            this.node.off(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
-            this.node.off(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
-            this.node.off(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
-        }
+
+    //重要：
+    //在 Cocos Creator 3.x 里，Node.EventType.MOUSE_DOWN / TOUCH_START 这类事件系统，其实是基于 UI Canvas 系统 + UI Camera 实现的，不会直接作用到 3D 世界里的 Mesh 或 3D 节点。
+    // 如果你在 3D Node 上直接写：
+    //this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
+    //	•	事件系统会尝试通过 PointerEventDispatcher 去找相机
+	// •	但 3D Camera 并不是 UI Camera，它在内部没有 cameraPriority，于是就变成了 null → 报错。
+    //error: [Window] Cannot read properties of null (reading 'cameraPriority')TypeError: Cannot read properties of null (reading 'cameraPriority')
+
+    //解决思路
+    //如果你要在 3D Node 上做点击交互，要走 射线检测（Raycast），而不是直接监听 Node 的鼠标事件。
+
+        // if (this.node.isValid) {
+        //     this.node.off(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
+        //     this.node.off(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
+        //     this.node.off(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
+        // }
     }
     
     /**
@@ -507,16 +522,16 @@ export abstract class MapTile extends Component {
     protected onMouseClick(event: any): void {
         console.log(`[MapTile] 点击地块: ${this.tileName}`);
         
-        // 触发地块点击事件
-        this.emitGameEvent('tile_click', {
-            tileId: this._tileData?.id,
-            tileName: this.tileName,
-            tileType: this.tileType,
-            clickPosition: event.getLocation()
-        });
+        // // 触发地块点击事件
+        // this.emitGameEvent('tile_click', {
+        //     tileId: this._tileData?.id,
+        //     tileName: this.tileName,
+        //     tileType: this.tileType,
+        //     clickPosition: event.getLocation()
+        // });
         
-        // 调用子类的点击处理
-        this.onTileClicked(event);
+        // // 调用子类的点击处理
+        // this.onTileClicked(event);
     }
     
     /**

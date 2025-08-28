@@ -8,6 +8,7 @@
     "generate:core": "node asset_generator.js core 20",
     "generate:sample": "node asset_generator.js sample",
     "generate:single-sample": "node asset_generator.js single-sample",
+    "print:prompts": "node asset_generator.js print-prompts --save true",
     "generate:tiles": "node asset_generator.js category tiles",
     "generate:ui": "node asset_generator.js category ui",
     "generate:icons": "node asset_generator.js category icons",

@@ -44,6 +44,16 @@ npm run generate:gpt:tiles
 node asset_generator.js --model gpt-image-1 --size 1024x1024 --quality medium --responseFormat url --background transparent --style vivid
 ```
 
+### 无法申请 API Key 时如何测试
+
+```bash
+# 打印所有类别提示词并保存到 logs/prompts_*.json
+npm run print:prompts
+
+# 仅打印 tiles 前 10 条到控制台（不保存）
+node asset_generator.js print-prompts --category tiles --limit 10 --save false
+```
+
 ## 📁 工具结构
 
 ```

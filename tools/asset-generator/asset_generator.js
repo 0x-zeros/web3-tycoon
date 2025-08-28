@@ -466,6 +466,53 @@ class AIAssetGenerator {
     }
 
     /**
+     * 导出提示词，便于手工在其他工具中使用
+     */
+    async printPrompts(options = {}) {
+        const { category, limit, save, model, size, quality } = options;
+        const categories = category ? [category] : Object.keys(ASSET_CONFIGS);
+        const entries = [];
+        console.log('📝 Prompts export');
+        console.log('='.repeat(50));
+        for (const cat of categories) {
+            const list = ASSET_CONFIGS[cat] || [];
+            if (list.length === 0) continue;
+            const take = limit ? Math.min(Number(limit) || 0, list.length) : list.length;
+            console.log(`\n[Category] ${cat}  (count: ${take}/${list.length})`);
+            for (let i = 0; i < take; i++) {
+                const item = list[i];
+                const slug = this.toEnglishSlug(item.name, cat);
+                const prompt = this.buildPrompt(item.description, cat);
+                const indexStr = String(i + 1).padStart(3, '0');
+                console.log(`\n# ${cat}_${indexStr}_${slug}`);
+                console.log(prompt);
+                entries.push({
+                    category: cat,
+                    index: i + 1,
+                    name_cn: item.name,
+                    name_en: slug,
+                    prompt,
+                    model: model || this.model,
+                    size: size || this.size,
+                    quality: quality || this.quality
+                });
+            }
+        }
+        if (save) {
+            const out = {
+                timestamp: new Date().toISOString(),
+                defaultModel: this.model,
+                defaultSize: this.size,
+                defaultQuality: this.quality,
+                entries
+            };
+            const outPath = path.join(this.logDir, `prompts_${Date.now()}.json`);
+            fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
+            console.log(`\n📄 已保存到: ${outPath}`);
+        }
+    }
+
+    /**
      * 批量生成指定类别的资源
      */
     async generateCategory(categoryName) {
@@ -675,6 +722,17 @@ async function main() {
         } else if (args[0] === 'single-sample') {
             // 单模型采样：每类别最多2张，使用当前模型设置
             await generator.generateSamplePerModel();
+        } else if (args[0] === 'print-prompts') {
+            // 导出提示词到控制台或JSON
+            const flagsForPrint = {
+                category: flags.category,
+                limit: flags.limit,
+                save: flags.save === 'true' || flags.save === true,
+                model: flags.model,
+                size: flags.size,
+                quality: flags.quality
+            };
+            await generator.printPrompts(flagsForPrint);
         } else if (args[0] === 'category') {
             // 生成特定类别
             const categoryName = args[1];
@@ -690,6 +748,7 @@ async function main() {
             console.log('  node asset_generator.js core [数量]                      # 生成核心资源 (默认20张)');
             console.log('  node asset_generator.js sample                           # 每类别采样2张 (dall-e-3 standard + gpt-image-1 low)');
             console.log('  node asset_generator.js single-sample                    # 每类别采样2张（单一模型与质量）');
+            console.log('  node asset_generator.js print-prompts [--category tiles] [--limit 10] [--save true]');
             console.log('  node asset_generator.js category [类别名]                # 生成特定类别');
             console.log('');
             console.log('可选参数:');

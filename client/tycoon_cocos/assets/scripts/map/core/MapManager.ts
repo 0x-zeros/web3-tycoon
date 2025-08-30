@@ -105,6 +105,15 @@ export class MapManager extends Component {
     @property({ displayName: "监狱地块预制件", type: Prefab })
     public jailTilePrefab: Prefab | null = null;
     
+    @property({ displayName: "费用地块预制件", type: Prefab })
+    public feeTilePrefab: Prefab | null = null;
+    
+    @property({ displayName: "奖励地块预制件", type: Prefab })
+    public bonusTilePrefab: Prefab | null = null;
+    
+    @property({ displayName: "卡片站预制件", type: Prefab })
+    public cardStationTilePrefab: Prefab | null = null;
+    
     // ========================= 私有属性 =========================
     
     /** 当前地图数据 */
@@ -346,6 +355,12 @@ export class MapManager extends Component {
                 return this.emptyTilePrefab;
             case TileType.JAIL:
                 return this.jailTilePrefab;
+            case TileType.TAX:
+                return this.feeTilePrefab;
+            case TileType.FREE_PARKING:
+                return this.bonusTilePrefab;
+            case TileType.CARD_STATION:
+                return this.cardStationTilePrefab;
             default:
                 console.warn(`[MapManager] 未支持的地块类型: ${tileType}`);
                 return this.emptyTilePrefab; // 默认使用空白地块

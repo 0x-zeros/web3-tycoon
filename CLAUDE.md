@@ -17,36 +17,39 @@ The project is currently in Phase 1 (basic architecture) with an active Cocos Cr
 
 ## Development Commands
 
-### Move Contract Development
-```bash
-# Navigate to contracts directory
-cd move/
-# Build Move contracts
-sui move build
-# Test contracts  
-sui move test
-# Deploy to testnet
-sui move publish --gas-budget 20000000
-```
-
-### Cocos Creator Client
+### Cocos Creator Client (Primary Development)
 ```bash
 # Navigate to main Cocos project
 cd client/tycoon_cocos
-# Install dependencies
-npm install
-# Open in Cocos Creator 3.8+
-# Or run development commands through Creator's interface
+npm install                   # Install @tweenjs/tween.js dependency
+# Development through Cocos Creator 3.8+ GUI - no build scripts
 ```
 
-### Backend Services
+### Asset Generation Tool (Active)
 ```bash
-# Navigate to server directory
-cd server/
-# Install dependencies (when implemented)
+# Navigate to asset generator
+cd tools/asset-generator
 npm install
-# Start matchmaking server (when implemented)
-npm run dev
+
+# Generation commands
+npm run generate              # Generate all assets (~100+ items)
+npm run generate:tiles        # Map tiles and buildings  
+npm run generate:ui           # UI elements and backgrounds
+npm run generate:icons        # Game icons
+npm run generate:dice         # Web3 dice with BTC/SUI symbols
+npm run generate:cards        # Chance/Community cards
+npm run generate:characters   # Player characters
+
+# Cost-effective options
+npm run generate:gpt          # Use cheaper gpt-image-1 model
+npm run generate:sample       # Sample from each category
+npm run generate:fast         # Quick 10-asset generation
+npm run print:prompts         # Export prompts without generating
+
+# Utility commands
+npm run clean                 # Clean output and logs
+npm run setup                 # Initialize directories and .env
+npm test                      # Verify tool readiness
 ```
 
 ### Development Tools
@@ -56,9 +59,24 @@ cd tools/md-paste-image-extension
 npm install
 npm run lint
 npm run test
+```
 
-# Map editor (when it exists)
-cd tools/map-editor
+### Move Contract Development (Planned)
+```bash
+# Navigate to contracts directory (when implemented)
+cd move/
+# Build Move contracts
+sui move build
+# Test contracts  
+sui move test
+# Deploy to testnet
+sui move publish --gas-budget 20000000
+```
+
+### Backend Services (Planned)
+```bash
+# Navigate to server directory (when implemented)
+cd server/
 npm install
 npm run dev
 ```
@@ -87,10 +105,13 @@ The repository follows this structure:
 
 Based on `.cursorrules` file:
 - **Code Language**: All code must be written in English
-- **Comments**: Primarily Chinese, with English for technical terms
+- **Comments**: Primarily Chinese, with English for technical terms and APIs
 - **Strings/Messages**: English for error messages and string literals
 - **File Naming**: English with kebab_case convention
-- **Git Commits**: Chinese format: `类型: 简短描述`
+- **Documentation**: Chinese with English for technical terms (README, API docs)
+- **Git Commits**: Chinese format: `类型(范围): 简洁描述`
+  - Example: `feat(map): 实现地图管理器`, `fix(ui): 修复按钮响应问题`
+- **Conversation**: Always use Chinese when communicating with users
 - **Move Code**: Follow Sui Move best practices (when implemented)
 - **TypeScript**: Follow Cocos Creator 3.x development standards
 
@@ -114,11 +135,17 @@ The active Cocos project (`client/tycoon_cocos/`) contains:
 
 ## Development Phases
 
-8-week development cycle as documented in `docs/development-plan.md`:
+8-week hackathon development cycle (1.5 months remaining):
 - **Weeks 1-2**: Basic architecture and Move contract framework ← *Current Phase*
 - **Weeks 3-4**: Multiplayer system and core game mechanics  
 - **Weeks 5-6**: DeFi protocol integrations
 - **Weeks 7-8**: Cocos Creator client refinement and final optimizations
+
+**Time-Critical Development Notes:**
+- 该项目目前是一个黑客松的参赛项目，时间非常紧张，还剩1个半月
+- 只实现最核心的功能，优先级：游戏逻辑 > 用户界面 > 区块链集成 > DeFi功能
+- Git commit message 尽量写的简洁一点
+- 每次做修改后，不需要直接帮我commit，我自己还需要修改
 
 ## DeFi Integration Strategy
 
@@ -178,3 +205,11 @@ This CLAUDE.md file should be kept in sync with project changes. See `CLAUDE-UPD
 - After each development phase (Weeks 2, 4, 6, 8)
 - When major architecture changes occur  
 - When new commands or workflows are added
+
+## Important Communication Protocol
+
+**For Claude Code instances:**
+- **ALWAYS** use Chinese (中文) when communicating with users
+- Code should be in English, but explanations and discussions in Chinese
+- This follows the project's `.cursorrules` configuration
+- 请使用中文和我对话

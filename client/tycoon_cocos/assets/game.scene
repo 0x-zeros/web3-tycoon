@@ -178,7 +178,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 960,
+      "x": 959.9999999999999,
       "y": 540,
       "z": 0
     },
@@ -866,7 +866,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920,
+      "width": 1919.9999999999998,
       "height": 1080
     },
     "_anchorPoint": {
@@ -1851,6 +1851,18 @@
     },
     "jailTilePrefab": {
       "__uuid__": "85340b4d-f094-44dc-8d34-e63e99b10ae7",
+      "__expectedType__": "cc.Prefab"
+    },
+    "feeTilePrefab": {
+      "__uuid__": "bab1db48-3c38-48c6-a104-ef37f8eb181b",
+      "__expectedType__": "cc.Prefab"
+    },
+    "bonusTilePrefab": {
+      "__uuid__": "7a5a3747-e4f2-4c06-9695-eee7830c5a3a",
+      "__expectedType__": "cc.Prefab"
+    },
+    "cardStationTilePrefab": {
+      "__uuid__": "2fa08d55-aa03-4c47-a163-6f46a28e033a",
       "__expectedType__": "cc.Prefab"
     },
     "_id": "daj6Czxn1LOaQGTEvR/zw4"

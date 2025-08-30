@@ -4,104 +4,182 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains a shooting game called "射击达人" (Shooting Expert) that is being migrated from Cocos Creator 2.x to 3.x. There are two main directories:
+Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board game mechanics with modern DeFi protocols. This is an 8-week hackathon project currently in Phase 1 (basic architecture) with an active Cocos Creator client prototype.
 
-- `fyf_cocos/` - Original game source code using Cocos Creator 2.x (JavaScript)
-- `sjdr_cocos_v3/` - Migrated version using Cocos Creator 3.8 (TypeScript) - **this is the active project**
+**Primary Development Focus**: The active Cocos Creator 3.8.7 TypeScript client in `client/tycoon_cocos/` serves as the main deliverable, with blockchain integration planned for later phases.
 
-The migration from 2.x to 3.x involves significant API changes and language migration from JavaScript to TypeScript.
+## Key Technologies
 
-## Development Environment
+- **Frontend**: Cocos Creator 3.8.7 with TypeScript
+- **Asset Generation**: OpenAI DALL-E 3 / GPT-Image-1 with custom AIGC pipeline
+- **Planned Blockchain**: Sui Network + Move language for smart contracts
+- **Planned Backend**: Node.js/TypeScript for multiplayer matchmaking  
+- **Planned DeFi**: Bucket Protocol (data storage), Scallop Protocol (lending), Navi Protocol (liquidity mining)
 
-**Primary Project**: Always work in `sjdr_cocos_v3/` directory unless specifically asked to reference the original code in `fyf_cocos/`.
+## Development Commands
 
-The project uses:
-- Cocos Creator 3.8.7
-- TypeScript
-- Import-2x plugin for migration assistance
+### Cocos Creator Client (Primary)
+```bash
+# Navigate to main project
+cd client/tycoon_cocos
+npm install                   # Install @tweenjs/tween.js dependency
 
-## Critical API Migration Patterns
+# Development through Cocos Creator 3.8+ GUI
+# No build scripts - uses Creator interface for compilation and builds
+```
 
-When working with this codebase, be aware of these key API changes from Cocos 2.x to 3.x:
+### Asset Generation Tool
+```bash
+# Navigate to asset generator
+cd tools/asset-generator
+npm install
 
-### Import System
-- **2.x**: `const config = require('config')` and global `cc` namespace  
-- **3.x**: `import { _decorator, Component, find, director } from 'cc'`
+# Generate game assets
+npm run generate              # All assets (~100+ items)
+npm run generate:tiles        # Map tiles and buildings  
+npm run generate:ui           # UI elements and backgrounds
+npm run generate:icons        # Game icons
+npm run generate:dice         # Web3 dice with BTC/SUI symbols
 
-### Component Definition
-- **2.x**: `cc.Class({ extends: cc.Component })`
-- **3.x**: `@ccclass('ClassName') export class ClassName extends Component`
+# Cost-effective options
+npm run generate:gpt          # Use cheaper gpt-image-1 model
+npm run generate:sample       # Sample from each category
+npm run print:prompts         # Export prompts without generating
+```
 
-### Node Properties
-- **2.x**: `this.node.width`, `this.node.height`
-- **3.x**: `this.node.getContentSize().width`, `this.node.getContentSize().height`
+### Supporting Tools
+```bash
+# VS Code markdown extension
+cd tools/md-paste-image-extension
+npm run lint && npm run test
 
-### Vector Creation
-- **2.x**: `cc.v2(x, y)`
-- **3.x**: `v2(x, y)` (must import from 'cc')
+# Clean asset outputs
+cd tools/asset-generator  
+npm run clean
+```
 
-### Node Finding
-- **2.x**: `cc.find(path, parent)`
-- **3.x**: `find(path, parent)` (must import from 'cc')
+## Code Architecture
 
-### Game Director
-- **2.x**: `cc.game.addPersistRootNode()`
-- **3.x**: `director.addPersistRootNode()`
+### Component-Based Game System (Cocos Creator)
 
-## Project Architecture
+The game follows a hierarchical component architecture:
 
-### Core System Components
-- `Game.ts` - Main game controller and global initialization
-- `Player.ts` - Player data and progression management  
-- `PlayScene.ts` - Main gameplay scene controller
+```typescript
+// Global game state
+window.game = {
+    config: config,           // From assets/data/config.ts
+    player: new Player(),     // Player data management
+    asset: new Asset(),       // Resource loading
+    pool: new Pool(),         // Object pooling
+    eventTarget: EventTarget  // Global event system
+};
 
-### Scene Management
-The game uses a scene-based architecture located in `assets/scripts/scene/`:
-- `Scene.ts` - Base scene management
-- `play/` - Gameplay scenes (Play, Playground, Actor management)
-- `Award.ts`, `Pause.ts`, `Setting.ts` - UI scenes
-- `loading/Loading.ts` - Loading screen
+// Main controllers
+@ccclass('Game') extends Component      // Global initialization
+@ccclass('MapManager') extends Component // Map and tile management  
+@ccclass('Player') extends Component    // Player logic and movement
+```
 
-### Game Systems
-- **Actor System**: `scene/play/Actor.ts` + `actorManager.ts` - Enemy/object management
-- **Skill System**: `scene/play/skill.ts` + `skillManager.ts` - Player abilities
-- **Physics**: `common/physics.ts` + `common/math.ts` - Custom physics and math utilities
-- **Audio**: `common/AudioManager.ts` - Sound management
-- **Assets**: `common/Asset.ts` + `common/Pool.ts` - Resource loading and pooling
+### Map System Architecture
 
-### Global Game State
-The project uses a global `game` object (defined in `Game.ts`) that contains:
-- Configuration data
-- Scene management
-- Asset management  
-- Audio system references
-- Player data
+The map system uses a tile-based architecture with JSON configuration:
 
-## Language and Localization
+```typescript
+// Map data flow: JSON → MapManager → Individual Tiles
+// Located in: assets/resources/data/maps/test_map.json
+interface MapConfig {
+    mapId: string;
+    mapSize: { width: number; height: number; tileCount: number };
+    gameRules: { startingMoney: number; passingStartBonus: number };
+    tiles: TileData[];        // 20 tiles with positions and properties
+    propertyGroups: PropertyGroup[]; // Color-coded property groups
+}
+```
 
-The project includes Chinese language support with:
-- Comments and commit messages should be in Chinese
-- Code should be in English
-- Internationalization system in `assets/scripts/i18n/`
+### Event-Driven Communication
 
-## Common Issues and Patterns
+```typescript
+// Events bubble up: Tile → MapManager → Game → UI
+this.node.emit('tile-event', { type: 'property-purchase', data, source });
 
-When fixing migration issues, look for:
-1. Incorrect node size access (`node.width` vs `getContentSize().width`)
-2. Missing imports from 'cc' module
-3. Old `cc.*` API usage that needs updating
-4. Component references that need TypeScript typing
+// Global event system for cross-component communication
+game.eventTarget.dispatchEvent(new CustomEvent('game-state-change'));
+```
 
-## File Structure Notes
+## Key Configuration Files
 
-- Game configuration: `assets/data/config.ts`
-- Third-party libraries: `assets/scripts/3rd/` (Tween, underscore)
-- Shader system: `assets/scripts/shader/`
-- Common utilities: `assets/scripts/common/`
+### Game Configuration
+- **`assets/data/config.ts`** - Global game settings and project configuration
+- **`assets/data/types.ts`** - TypeScript interfaces for GameJsonData and ConfigData
+- **`assets/resources/data/maps/test_map.json`** - Complete 20-tile test map with properties
 
-## Development Context
+### Asset Generation Configuration  
+- **`tools/asset-generator/assets_config.js`** - 100+ AIGC prompt templates
+- **`tools/asset-generator/.env`** - OpenAI API configuration
+- Art style: Studio Ghibli with 温暖水彩画风, Web3 elements (BTC/SUI icons)
 
-This is an active migration project where the 2.x version serves as reference but all development should target the 3.x TypeScript version in `sjdr_cocos_v3/`. The migration plan and known issues are documented in `bug_fix_plan_fixed.md`.
+## Current Implementation Status
+
+### ✅ Completed Systems
+- **Cocos Creator Project** - Fully functional 3.8.7 setup with TypeScript
+- **Map System MVP** - MapManager with complete 20-tile test map
+- **Card System Framework** - TypeScript interfaces and base classes  
+- **AIGC Pipeline** - Asset generation with 100+ curated prompts
+- **Game Object Architecture** - Component hierarchy and event system
+
+### 🔄 Active Development
+- **Game Logic** - Property ownership, rent calculation, player turns
+- **UI System** - Game interface, property cards, player status  
+- **Player Movement** - Pathfinding and animation on the board
+- **Card Interactions** - Chance/Community cards with Web3 themes
+
+### ⏳ Planned Integration (Later Phases)
+- **Sui Smart Contracts** - Move language for game logic and NFTs
+- **Multiplayer Backend** - Node.js for real-time game rooms
+- **DeFi Features** - Integration with Bucket, Scallop, Navi protocols
+
+## Development Workflow
+
+### Primary Development Path
+1. **Use Cocos Creator 3.8+ IDE** for main game development
+2. **Test with existing map data** (`test_map.json`) 
+3. **Generate assets as needed** using AIGC tool
+4. **Iterate on TypeScript game logic** within Creator environment
+
+### Code Conventions
+- **Language**: Code in English, comments in Chinese for domain context
+- **Files**: English naming with kebab_case convention
+- **Types**: Use provided interfaces from `assets/data/types.ts`
+- **Events**: Follow component hierarchy for event bubbling
+- **Assets**: Import generated assets from `tools/asset-generator/output/`
+
+### Integration Points
+- **Map Loading**: JSON configuration → MapManager component
+- **Event Flow**: Tile interactions → MapManager → Game controller  
+- **Asset Pipeline**: AIGC tool → Cocos Creator import
+- **Global State**: Access via `window.game` object
+
+## Special Considerations
+
+### Web3 Integration (Future)
+- Property ownership will be represented as Sui NFTs
+- Game state stored on Sui blockchain via Move contracts  
+- DeFi features enable property lending/borrowing mechanics
+
+### Performance Guidelines  
+- Use object pooling (`game.pool`) for frequently created/destroyed objects
+- Leverage existing texture atlases and sprite sheets
+- Follow Cocos Creator 3.x performance best practices
+
+### Art Asset Integration
+- Generated assets use 1024x1024 resolution
+- Ghibli art style maintains visual consistency
+- BTC and SUI coin icons replace traditional Monopoly symbols
+
+### Development Context
 - 该项目目前是一个黑客松的参赛项目，时间非常紧张，还剩1个半月。所以只实现最核心的功能
 - git commit message 尽量写的简洁一点
 - 每次做修改后，不需要直接帮我commit，我自己还需要修改
+
+This project demonstrates a well-architected hackathon approach: solid client foundation with AIGC-assisted development, clear separation of concerns, and phased blockchain integration strategy.
+- 请使用中文和我对话

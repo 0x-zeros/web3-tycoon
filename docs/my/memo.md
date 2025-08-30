@@ -6,6 +6,11 @@
 
 
 
+
+## 多人联网，pc 玩家（自动操作的角色）
+自动操作的一开始最简单的完全随机就行了，问题不大。测试网gas费不用担心。正式游戏考虑gas可以去掉，就正式玩家对战，或者玩家付费请ai和自己组局。
+
+
 ## sui 性能， gas费
 
 计划把所有后端逻辑都用move实现，不只是单纯的一些nft之类的。
@@ -21,36 +26,7 @@ defi:
 
 
 
-1。
-对游戏的现有地图分析，需要一个地图编辑器， 可以策划手动编辑，也可以ai生成的那种； 不考虑web3因素，在一般的游戏里，怎么做这个地图编辑器，以及地图的数据结构
 
-
-2. 去掉web3因素，咨询ai下面的问题
-
-直接用cocoscreator开发一个2d的大富翁？
-地图编辑器
-
-
-
-九、美术风格参考
-视觉风格
-
-整体风格：Low Poly + 卡通渲染
-色彩方案：明亮鲜艳，高饱和度
-UI设计：扁平化 + 微动效
-
-AI生成Prompt示例
-地产建筑：
-"Cute low poly house, cartoon style, bright colors, 
-isometric view, simple geometry, game asset"
-
-角色设计：
-"Chibi character, businessman outfit, cartoon style, 
-3D render, bright lighting, game character"
-
-卡片设计：
-"Magic card frame, fantasy style, golden border, 
-game UI element, transparent background"
 
 
 参照黑客松的说明，赛道可以多选。sui赛道是必选的，另外三个赛道 Bucket、Scallop、Navi， 我也想打上勾（使成功概率大一些），你帮我想想怎么在项目里加上要素。 黑客松的说明如下（https://mp.weixin.qq.com/s/uMz2GaKeuwX0VgiHiYs1Pw?scene=1&click_id=2）： 

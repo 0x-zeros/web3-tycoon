@@ -36,7 +36,10 @@ export enum TileType {
     TAX = 'tax',
     
     /** 免费停车 - 安全的休息地块 */
-    FREE_PARKING = 'free_parking'
+    FREE_PARKING = 'free_parking',
+    
+    /** 卡片站 - 经过时获得卡片的特殊地块 */
+    CARD_STATION = 'card_station'
 }
 
 /**
@@ -147,6 +150,40 @@ export interface TaxData {
     taxName: string;
 }
 
+/**
+ * 卡片站数据接口
+ * 定义卡片站地块的属性
+ */
+export interface CardStationData {
+    /** 卡片掉落概率 (0-1) */
+    cardDropRate: number;
+    /** 是否在经过时触发 */
+    triggerOnPass: boolean;
+    /** 是否在停留时触发 */
+    triggerOnLand: boolean;
+    /** 单次触发最大卡片数 */
+    maxCardsPerTrigger: number;
+    /** 卡片稀有度权重配置 */
+    cardRarityWeights: {
+        common: number;
+        rare: number;
+        epic: number;
+    };
+}
+
+/**
+ * 免费停车数据接口
+ * 定义免费停车地块的属性
+ */
+export interface FreeParkingData {
+    /** 奖励金额 */
+    bonusAmount: number;
+    /** 奖励描述 */
+    description: string;
+    /** 欢迎消息 */
+    welcomeMessage: string;
+}
+
 // ========================= 核心地块接口 =========================
 
 /**
@@ -185,6 +222,12 @@ export interface MapTileData {
     
     /** 税收数据（仅当type为TAX时有效） */
     taxData?: TaxData;
+    
+    /** 卡片站数据（仅当type为CARD_STATION时有效） */
+    cardStationData?: CardStationData;
+    
+    /** 免费停车数据（仅当type为FREE_PARKING时有效） */
+    freeParkingData?: FreeParkingData;
     
     /** 起点薪水（仅当type为START时有效） */
     salaryAmount?: number;
@@ -388,6 +431,8 @@ export type {
     MapConfig,
     PropertyData,
     TaxData,
+    CardStationData,
+    FreeParkingData,
     Position3D,
     RenderConfig,
     PathConnection,

@@ -139,21 +139,17 @@
     {
       "id": 4,
       "name": "税务局",
-      "type": "empty",
-      "description": "需要缴纳税费的地方",
+      "type": "tax",
+      "description": "需要缴纳固定税费的地方",
       "position": { "x": 4, "y": 0, "z": 0 },
       "baseColor": { "r": 128, "g": 128, "b": 128, "a": 255 },
       "isSpecial": true,
       "isCorner": false,
       "allowBuilding": false,
-      "emptyConfig": {
-        "welcomeMessage": "欢迎来到税务局，请缴纳所得税。",
-        "providesRest": false,
-        "restAmount": 0,
-        "trackPassage": true,
-        "decorationTheme": "government",
-        "specialEffect": "tax_payment",
-        "taxAmount": 100
+      "taxData": {
+        "amount": 200,
+        "type": "fixed",
+        "taxName": "所得税"
       },
       "interactionEvents": ["tax_payment"],
       "visualConfig": {
@@ -164,31 +160,30 @@
     },
     {
       "id": 5,
-      "name": "北站",
-      "type": "property",
-      "description": "重要的交通枢纽，客流量大",
+      "name": "卡片站",
+      "type": "card_station",
+      "description": "经过时可以获得游戏卡片的地点",
       "position": { "x": 5, "y": 0, "z": 0 },
-      "baseColor": { "r": 128, "g": 128, "b": 128, "a": 255 },
+      "baseColor": { "r": 255, "g": 215, "b": 0, "a": 255 },
       "isSpecial": true,
       "isCorner": false,
       "allowBuilding": false,
-      "propertyData": {
-        "group": "station",
-        "groupName": "车站",
-        "price": 200,
-        "rent": [25, 50, 100, 200],
-        "houseCost": 0,
-        "hotelCost": 0,
-        "mortgageValue": 100,
-        "canUpgrade": false,
-        "maxLevel": 0,
-        "isUtility": false,
-        "isStation": true
+      "cardStationData": {
+        "cardDropRate": 1.0,
+        "triggerOnPass": true,
+        "triggerOnLand": true,
+        "maxCardsPerTrigger": 1,
+        "cardRarityWeights": {
+          "common": 70,
+          "rare": 25,
+          "epic": 5
+        }
       },
-      "interactionEvents": ["station_rent"],
+      "interactionEvents": ["card_acquisition"],
       "visualConfig": {
-        "modelPath": "models/tiles/station_tile",
-        "iconPath": "icons/station",
+        "modelPath": "models/tiles/card_station_tile",
+        "iconPath": "icons/card_station",
+        "effectPath": "effects/card_sparkle",
         "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
       }
     },
@@ -424,31 +419,30 @@
     },
     {
       "id": 14,
-      "name": "南站",
-      "type": "property",
-      "description": "南部交通枢纽，连接各地",
+      "name": "幸运卡站",
+      "type": "card_station",
+      "description": "另一个获得游戏卡片的地点",
       "position": { "x": 2, "y": 0, "z": 4 },
-      "baseColor": { "r": 128, "g": 128, "b": 128, "a": 255 },
+      "baseColor": { "r": 255, "g": 215, "b": 0, "a": 255 },
       "isSpecial": true,
       "isCorner": false,
       "allowBuilding": false,
-      "propertyData": {
-        "group": "station",
-        "groupName": "车站",
-        "price": 200,
-        "rent": [25, 50, 100, 200],
-        "houseCost": 0,
-        "hotelCost": 0,
-        "mortgageValue": 100,
-        "canUpgrade": false,
-        "maxLevel": 0,
-        "isUtility": false,
-        "isStation": true
+      "cardStationData": {
+        "cardDropRate": 1.0,
+        "triggerOnPass": true,
+        "triggerOnLand": true,
+        "maxCardsPerTrigger": 1,
+        "cardRarityWeights": {
+          "common": 70,
+          "rare": 25,
+          "epic": 5
+        }
       },
-      "interactionEvents": ["station_rent"],
+      "interactionEvents": ["card_acquisition"],
       "visualConfig": {
-        "modelPath": "models/tiles/station_tile",
-        "iconPath": "icons/station",
+        "modelPath": "models/tiles/card_station_tile",
+        "iconPath": "icons/card_station",
+        "effectPath": "effects/card_sparkle",
         "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
       }
     },
@@ -484,27 +478,23 @@
     {
       "id": 16,
       "name": "免费停车",
-      "type": "empty",
-      "description": "安全的休息区域，没有任何费用",
+      "type": "free_parking",
+      "description": "停留时获得固定奖励的安全地块",
       "position": { "x": 0, "y": 0, "z": 4 },
       "baseColor": { "r": 144, "g": 238, "b": 144, "a": 255 },
       "isSpecial": true,
       "isCorner": true,
       "allowBuilding": false,
-      "emptyConfig": {
-        "welcomeMessage": "欢迎来到免费停车区，在这里可以安全休息。",
-        "providesRest": true,
-        "restAmount": 50,
-        "trackPassage": true,
-        "decorationTheme": "park",
-        "specialEffect": "free_parking",
-        "bonusChance": 0.2
+      "freeParkingData": {
+        "bonusAmount": 200,
+        "description": "停留时获得200游戏币奖励",
+        "welcomeMessage": "欢迎来到免费停车区！获得200游戏币奖励。"
       },
-      "interactionEvents": ["free_parking", "rest_bonus"],
+      "interactionEvents": ["free_parking_bonus"],
       "visualConfig": {
         "modelPath": "models/tiles/parking_tile",
         "iconPath": "icons/parking",
-        "effectPath": "effects/rest_glow",
+        "effectPath": "effects/bonus_glow",
         "scale": { "x": 1.2, "y": 1.0, "z": 1.2 }
       }
     },
@@ -631,13 +621,13 @@
       "description": "高端地产，投资价值极高"
     },
     {
-      "groupId": "station",
-      "groupName": "车站",
-      "color": { "r": 128, "g": 128, "b": 128, "a": 255 },
+      "groupId": "card_station",
+      "groupName": "卡片站",
+      "color": { "r": 255, "g": 215, "b": 0, "a": 255 },
       "tileIds": [5, 14],
       "monopolyBonus": 1.0,
       "buildingCost": 0,
-      "description": "交通枢纽，不可建设但收益稳定"
+      "description": "经过时获得卡片的特殊地块"
     },
     {
       "groupId": "utility",

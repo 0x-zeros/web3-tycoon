@@ -5,6 +5,8 @@ CCEffect %{
     passes:
     - vert: voxel-block-vs
       frag: voxel-block-fs
+      rasterizerState:
+        cullMode: back
       properties:
         mainTexture:      { value: white }
         skyTexture:       { value: white }

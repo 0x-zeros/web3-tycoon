@@ -111,9 +111,10 @@ export class VoxelMeshGenerator {
                 vertices.push(vertex);
             }
             
+            // 调整为顺时针顺序，适应Cocos Creator的面剔除
             indices.push(
-                vertexIndex, vertexIndex + 1, vertexIndex + 2,
-                vertexIndex, vertexIndex + 2, vertexIndex + 3
+                vertexIndex, vertexIndex + 2, vertexIndex + 1,
+                vertexIndex, vertexIndex + 3, vertexIndex + 2
             );
             
             vertexIndex += 4;
@@ -196,9 +197,10 @@ export class VoxelMeshGenerator {
             vertices.push(vertex);
         }
         
+        // 调整为顺时针顺序，适应Cocos Creator的面剔除
         indices.push(
-            0, 1, 2, 0, 2, 3,  // first cross
-            4, 5, 6, 4, 6, 7   // second cross
+            0, 2, 1, 0, 3, 2,  // first cross
+            4, 6, 5, 4, 7, 6   // second cross
         );
         
         return { vertices, indices };

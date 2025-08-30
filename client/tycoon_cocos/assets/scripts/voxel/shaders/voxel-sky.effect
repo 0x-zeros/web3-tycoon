@@ -5,6 +5,8 @@ CCEffect %{
     passes:
     - vert: voxel-sky-vs
       frag: voxel-sky-fs
+      rasterizerState:
+        cullMode: front
       properties:
         skyTexture:       { value: white }
         timer:            { value: 0.0 }

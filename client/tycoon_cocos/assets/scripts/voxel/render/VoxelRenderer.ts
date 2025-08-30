@@ -376,6 +376,35 @@ export class VoxelRenderer extends Component {
         }
     }
 
+    public debugToggleCullMode(): void {
+        console.log('[VoxelRenderer] 面剔除调试信息:');
+        console.log('- 顶点索引已调整为顺时针（CW）顺序');
+        console.log('- effect文件中设置了cullMode: back');
+        console.log('- 如果面朝向仍有问题，请在Inspector中调整Material设置');
+        console.log('可选值: front, back, none');
+    }
+
+    public debugPrintMeshInfo(): void {
+        console.log('[VoxelRenderer] 网格调试信息:');
+        console.log(`已渲染区块数量: ${this.chunkNodes.size}`);
+        
+        this.chunkNodes.forEach((node, key) => {
+            const meshRenderer = node.getComponent(MeshRenderer);
+            if (meshRenderer && meshRenderer.mesh) {
+                const mesh = meshRenderer.mesh;
+                try {
+                    const positions = mesh.readAttribute(0, 'a_position');
+                    const indices = mesh.readIndices(0);
+                    const vertexCount = positions ? positions.length / 3 : 0;
+                    const indexCount = indices ? indices.length : 0;
+                    console.log(`区块 ${key}: 顶点=${vertexCount}, 三角形=${indexCount/3}`);
+                } catch (e) {
+                    console.log(`区块 ${key}: 无法读取mesh数据`);
+                }
+            }
+        });
+    }
+
     protected onDestroy(): void {
         this.clearWorld();
     }

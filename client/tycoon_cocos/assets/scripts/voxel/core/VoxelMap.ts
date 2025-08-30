@@ -1,4 +1,5 @@
 import { VoxelMap, VoxelMapEntry } from "./VoxelTypes";
+import { VoxelConfig } from "./VoxelConfig";
 
 export class VoxelMapUtils {
     
@@ -47,8 +48,10 @@ export class VoxelMapUtils {
         const localY = y - map.dy;
         const localZ = z - map.dz;
         
+        // Y 轴不使用 mask 限制，应允许 0..MAX_HEIGHT-1
+        const yOutOfRange = (localY < 0) || (localY >= this.getMaxHeight());
         if (localX < 0 || localX > map.mask || 
-            localY < 0 || localY > map.mask || 
+            yOutOfRange || 
             localZ < 0 || localZ > map.mask) {
             return false;
         }
@@ -75,8 +78,9 @@ export class VoxelMapUtils {
         const localY = y - map.dy;
         const localZ = z - map.dz;
         
+        const yOutOfRange = (localY < 0) || (localY >= this.getMaxHeight());
         if (localX < 0 || localX > map.mask || 
-            localY < 0 || localY > map.mask || 
+            yOutOfRange || 
             localZ < 0 || localZ > map.mask) {
             return 0;
         }
@@ -84,6 +88,10 @@ export class VoxelMapUtils {
         const key = this.makeKey(localX, localY, localZ);
         const entry = map.data.get(key);
         return entry ? entry.w : 0;
+    }
+
+    private static getMaxHeight(): number {
+        return VoxelConfig.MAX_HEIGHT;
     }
 
     private static makeKey(x: number, y: number, z: number): string {

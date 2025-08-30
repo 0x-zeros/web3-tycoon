@@ -104,7 +104,10 @@ export class VoxelRenderer extends Component {
             return this.worldManager.getBlock(x, y, z);
         };
         
-        const meshData = VoxelMeshGenerator.generateChunkMesh(blocks, getBlockAt);
+        // 以区块基准坐标为原点，网格使用区块本地坐标，避免重复位移
+        const baseX = chunk.p * VoxelConfig.CHUNK_SIZE;
+        const baseZ = chunk.q * VoxelConfig.CHUNK_SIZE;
+        const meshData = VoxelMeshGenerator.generateChunkMesh(blocks, getBlockAt, baseX, baseZ);
         
         if (meshData.vertices.length === 0) {
             this.removeChunkNode(chunk.p, chunk.q);
@@ -312,11 +315,9 @@ export class VoxelRenderer extends Component {
         
         this.clearWorld();
         
+        // 先重建 worldManager，再应用模式下的半径等设置，避免被覆盖
+        this.worldManager = new VoxelWorldManager();
         this.applyWorldModeSettings(mode);
-        
-        if (this.worldManager) {
-            this.worldManager = new VoxelWorldManager();
-        }
     }
 
     private applyWorldModeSettings(mode: VoxelWorldMode): void {

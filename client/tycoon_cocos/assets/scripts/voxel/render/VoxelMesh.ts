@@ -126,24 +126,25 @@ export class VoxelMeshGenerator {
         const texturesPerRow = 16;
         const uvSize = 1.0 / texturesPerRow;  // 0.0625
         
-        // 边界偏移，避免纹理渗透（参考 Craft 实现）
-        const offset = 1.0 / 2048.0;      // 0.00048828125
-        const a = offset;                  // 左上角偏移
-        const b = uvSize - offset;         // 右下角偏移
+        // 边界偏移，避免纹理渗透：按UV单元比例给出，避免依赖固定像素
+        const offset = uvSize * 0.5 * 0.01;   // 相当于每格的1%的一半
+        const a = offset;                      // 左上角偏移
+        const b = uvSize - offset;             // 右下角偏移
         
         const col = textureIndex % texturesPerRow;
         const row = Math.floor(textureIndex / texturesPerRow);
         
         const du = col * uvSize;
-        const dv = row * uvSize;
+        // OpenGL/GLSL 的 (0,0) 在左下，通常图集索引的 row=0 表示顶行，需要翻转
+        const flippedRow = (texturesPerRow - 1) - row;
+        const dv = flippedRow * uvSize;
         
-        // 正确的 UV 坐标顺序（与 Craft 一致）
-        // 注意：Cocos 的 Y 轴与 OpenGL 可能不同，这里保持与原始实现一致
+        // UV 顺序：左上、右上、右下、左下
         return [
-            { x: du + a, y: dv + a },  // 左上角
-            { x: du + b, y: dv + a },  // 右上角  
-            { x: du + b, y: dv + b },  // 右下角
-            { x: du + a, y: dv + b }   // 左下角
+            { x: du + a, y: dv + b },  // 左上（注意y使用b）
+            { x: du + b, y: dv + b },  // 右上
+            { x: du + b, y: dv + a },  // 右下
+            { x: du + a, y: dv + a }   // 左下
         ];
     }
 
@@ -301,7 +302,9 @@ export class VoxelMeshGenerator {
 
     static generateChunkMesh(
         blocks: { x: number, y: number, z: number, type: VoxelBlockType }[],
-        getBlockAt: (x: number, y: number, z: number) => VoxelBlockType
+        getBlockAt: (x: number, y: number, z: number) => VoxelBlockType,
+        baseX: number = 0,
+        baseZ: number = 0
     ): VoxelMeshData {
         const meshes: VoxelMeshData[] = [];
         
@@ -310,11 +313,13 @@ export class VoxelMeshGenerator {
             
             if (VoxelBlockRegistry.isPlant(block.type)) {
                 const plantMesh = this.makePlant(
-                    block.x, block.y, block.z, 1.0, block.type
+                    // 使用区块本地坐标生成顶点，避免与区块节点位移叠加
+                    block.x - baseX, block.y, block.z - baseZ, 1.0, block.type
                 );
                 meshes.push(plantMesh);
             } else {
                 const neighbors = {
+                    // 邻居查询保持世界坐标，保证跨区块相邻面的可见性判断正确
                     left: getBlockAt(block.x - 1, block.y, block.z),
                     right: getBlockAt(block.x + 1, block.y, block.z),
                     top: getBlockAt(block.x, block.y + 1, block.z),
@@ -330,9 +335,10 @@ export class VoxelMeshGenerator {
                     bottom: neighbors.bottom,
                     front: neighbors.front,
                     back: neighbors.back,
-                    x: block.x,
+                    // 使用本地坐标生成几何体
+                    x: block.x - baseX,
                     y: block.y,
-                    z: block.z,
+                    z: block.z - baseZ,
                     size: 1.0,
                     blockType: block.type
                 };

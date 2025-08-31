@@ -6,6 +6,9 @@ import { VoxelBlockType } from '../core/VoxelBlock';
 import { VoxelWorldManager } from '../world/VoxelWorld';
 import { VoxelConfig, VoxelRenderMode } from '../core/VoxelConfig';
 import { VoxelWorldConfig, VoxelWorldMode } from '../core/VoxelWorldConfig';
+import { VoxelInteractionManager, VoxelInteractionEvents } from '../interaction/VoxelInteractionManager';
+import { VoxelCameraController, CameraMode } from '../interaction/VoxelCameraController';
+import { VoxelCollisionSystem } from '../interaction/VoxelCollisionSystem';
 
 const { ccclass, property } = _decorator;
 
@@ -27,6 +30,9 @@ export class VoxelRenderer extends Component {
     @property({ type: Enum(VoxelRenderMode), displayName: "渲染模式" })
     public renderMode: VoxelRenderMode = VoxelRenderMode.MERGED_CHUNK;
     
+    @property(VoxelInteractionManager)
+    public interactionManager: VoxelInteractionManager | null = null;
+    
     private worldManager: VoxelWorldManager | null = null;
     private chunkNodes: Map<string, Node> = new Map();
     private blockNodes: Map<string, Node> = new Map(); // 独立模式下存储block节点
@@ -41,6 +47,62 @@ export class VoxelRenderer extends Component {
         }
         
         this.worldManager = new VoxelWorldManager();
+        
+        this.initializeInteractionSystem();
+    }
+    
+    private initializeInteractionSystem(): void {
+        if (!this.interactionManager) {
+            this.interactionManager = this.getComponent(VoxelInteractionManager);
+        }
+        
+        if (!this.interactionManager) {
+            console.warn('[VoxelRenderer] 未找到VoxelInteractionManager组件，交互功能将不可用');
+            return;
+        }
+        
+        const interactionEvents: VoxelInteractionEvents = {
+            onBlockClick: (hitResult) => {
+                console.log('[VoxelRenderer] 方块点击:', hitResult);
+            },
+            onBlockHover: (hitResult) => {
+                if (hitResult) {
+                    console.log('[VoxelRenderer] 方块悬停:', hitResult.position);
+                }
+            },
+            onBlockPlace: (position, blockType) => {
+                console.log('[VoxelRenderer] 方块放置:', position, blockType);
+                this.markChunkForUpdate(position);
+            },
+            onBlockBreak: (position) => {
+                console.log('[VoxelRenderer] 方块破坏:', position);
+                this.markChunkForUpdate(position);
+            },
+            onModeChange: (mode) => {
+                console.log('[VoxelRenderer] 摄像机模式切换:', mode);
+            }
+        };
+        
+        this.interactionManager.initialize(this.worldManager, interactionEvents);
+    }
+    
+    private markChunkForUpdate(blockPosition: Vec3): void {
+        if (!this.worldManager) return;
+        
+        const { p, q } = VoxelChunkManager.getChunkCoords(blockPosition.x, blockPosition.z);
+        const chunk = this.worldManager.getChunk(p, q);
+        
+        if (chunk) {
+            VoxelChunkManager.markChunkDirty(chunk);
+            
+            const neighbors = VoxelChunkManager.getNeighborChunkCoords(p, q);
+            neighbors.forEach(({ p: np, q: nq }) => {
+                const neighborChunk = this.worldManager.getChunk(np, nq);
+                if (neighborChunk) {
+                    VoxelChunkManager.markChunkDirty(neighborChunk);
+                }
+            });
+        }
     }
 
     protected update(deltaTime: number): void {
@@ -652,6 +714,81 @@ export class VoxelRenderer extends Component {
                 }
             }
         });
+    }
+
+    public getInteractionManager(): VoxelInteractionManager | null {
+        return this.interactionManager;
+    }
+
+    public setSelectedBlockType(blockType: VoxelBlockType): void {
+        if (this.interactionManager) {
+            this.interactionManager.setSelectedBlockType(blockType);
+        }
+    }
+
+    public getSelectedBlockType(): VoxelBlockType | null {
+        return this.interactionManager ? this.interactionManager.getSelectedBlockType() : null;
+    }
+
+    public toggleCameraMode(): void {
+        if (this.interactionManager) {
+            this.interactionManager.toggleCameraMode();
+        }
+    }
+
+    public setCameraMode(mode: CameraMode): void {
+        if (this.interactionManager) {
+            this.interactionManager.setCameraMode(mode);
+        }
+    }
+
+    public getCurrentCameraMode(): CameraMode | null {
+        return this.interactionManager ? this.interactionManager.getCurrentCameraMode() : null;
+    }
+
+    public performRaycast(): any {
+        return this.interactionManager ? this.interactionManager.performRaycast() : { hit: false };
+    }
+
+    public placeBlock(position: Vec3, blockType?: VoxelBlockType): boolean {
+        if (!this.interactionManager) return false;
+        return this.interactionManager.placeBlock(position, blockType);
+    }
+
+    public breakBlock(position: Vec3): boolean {
+        if (!this.interactionManager) return false;
+        return this.interactionManager.breakBlock(position);
+    }
+
+    public setInteractionEventCallbacks(events: VoxelInteractionEvents): void {
+        if (this.interactionManager) {
+            this.interactionManager.setEventCallbacks(events);
+        }
+    }
+
+    public debugPrintInteractionInfo(): void {
+        console.log('[VoxelRenderer] 交互系统调试信息:');
+        
+        if (!this.interactionManager) {
+            console.log('交互管理器: 未初始化');
+            return;
+        }
+        
+        const cameraMode = this.getCurrentCameraMode();
+        const selectedBlock = this.getSelectedBlockType();
+        const lastHover = this.interactionManager.getLastHoverResult();
+        
+        console.log(`摄像机模式: ${cameraMode}`);
+        console.log(`选中方块类型: ${selectedBlock}`);
+        console.log(`悬停结果:`, lastHover);
+        
+        if (this.camera) {
+            const cameraPos = this.camera.node.getWorldPosition();
+            console.log(`摄像机位置: (${cameraPos.x.toFixed(2)}, ${cameraPos.y.toFixed(2)}, ${cameraPos.z.toFixed(2)})`);
+        }
+        
+        const raycastResult = this.performRaycast();
+        console.log('射线投射结果:', raycastResult);
     }
 
     protected onDestroy(): void {

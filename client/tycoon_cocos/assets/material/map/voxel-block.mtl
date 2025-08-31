@@ -14,7 +14,9 @@
   ],
   "_states": [
     {
-      "rasterizerState": {},
+      "rasterizerState": {
+        "polygonMode": 2
+      },
       "depthStencilState": {},
       "blendState": {
         "targets": [

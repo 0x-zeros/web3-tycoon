@@ -1,5 +1,10 @@
 import { VoxelWorldConfig } from "./VoxelWorldConfig";
 
+export enum VoxelRenderMode {
+    MERGED_CHUNK = "merged",           // 合并模式：一个chunk一个mesh（性能优化）
+    INDIVIDUAL_BLOCK = "individual"    // 独立模式：每个block一个独立Node（便于调试）
+}
+
 export class VoxelConfig {
     static readonly DEBUG = false;
     

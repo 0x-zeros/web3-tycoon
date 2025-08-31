@@ -270,7 +270,7 @@
     "_priority": 1,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 637.5,
+    "_orthoHeight": 540,
     "_near": 1,
     "_far": 1000,
     "_color": {
@@ -1619,7 +1619,6 @@
       "__uuid__": "54b4a120-91ee-4bd1-aacb-66dbdae02823",
       "__expectedType__": "cc.Material"
     },
-    "useDebugTechnique": true,
     "skyMaterial": {
       "__uuid__": "de243f8f-3f34-427f-82e4-b995d9f56077",
       "__expectedType__": "cc.Material"
@@ -1630,6 +1629,7 @@
     "worldRoot": {
       "__id__": 50
     },
+    "renderMode": "individual",
     "_id": "88+Fn0lHJGy4okaVNvtrux"
   },
   {

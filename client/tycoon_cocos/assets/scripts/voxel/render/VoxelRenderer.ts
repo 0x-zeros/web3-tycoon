@@ -1,10 +1,10 @@
-import { _decorator, Component, Node, MeshRenderer, Material, utils, Vec3, Camera } from 'cc';
+import { _decorator, Component, Node, MeshRenderer, Material, utils, Vec3, Camera, Enum } from 'cc';
 import { VoxelChunk } from '../core/VoxelTypes';
 import { VoxelMeshGenerator } from './VoxelMesh';
 import { VoxelChunkManager } from '../world/VoxelChunk';
 import { VoxelBlockType } from '../core/VoxelBlock';
 import { VoxelWorldManager } from '../world/VoxelWorld';
-import { VoxelConfig } from '../core/VoxelConfig';
+import { VoxelConfig, VoxelRenderMode } from '../core/VoxelConfig';
 import { VoxelWorldConfig, VoxelWorldMode } from '../core/VoxelWorldConfig';
 
 const { ccclass, property } = _decorator;
@@ -24,8 +24,12 @@ export class VoxelRenderer extends Component {
     @property(Node)
     public worldRoot: Node | null = null;
     
+    @property({ type: Enum(VoxelRenderMode), displayName: "渲染模式" })
+    public renderMode: VoxelRenderMode = VoxelRenderMode.MERGED_CHUNK;
+    
     private worldManager: VoxelWorldManager | null = null;
     private chunkNodes: Map<string, Node> = new Map();
+    private blockNodes: Map<string, Node> = new Map(); // 独立模式下存储block节点
     private timer: number = 0;
     private daylight: number = 1.0;
     private fogDistance: number = VoxelConfig.FOG_DISTANCE_DEFAULT;
@@ -96,25 +100,29 @@ export class VoxelRenderer extends Component {
         
         if (blocks.length === 0) {
             this.removeChunkNode(chunk.p, chunk.q);
+            this.removeChunkBlockNodes(chunk.p, chunk.q);
             return;
         }
         
+        // 根据渲染模式选择不同的更新方法
+        if (this.renderMode === VoxelRenderMode.MERGED_CHUNK) {
+            this.updateChunkMeshMerged(chunk, blocks);
+        } else {
+            this.updateChunkMeshIndividual(chunk, blocks);
+        }
+    }
+
+    private updateChunkMeshMerged(chunk: VoxelChunk, blocks: { x: number, y: number, z: number, type: VoxelBlockType }[]): void {
         const getBlockAt = (x: number, y: number, z: number): VoxelBlockType => {
             if (!this.worldManager) return VoxelBlockType.EMPTY;
             return this.worldManager.getBlock(x, y, z);
         };
         
-        // 以区块基准坐标为原点，网格使用区块本地坐标，避免重复位移
         const baseX = chunk.p * VoxelConfig.CHUNK_SIZE;
         const baseZ = chunk.q * VoxelConfig.CHUNK_SIZE;
         const meshData = VoxelMeshGenerator.generateChunkMesh(blocks, getBlockAt, baseX, baseZ);
         
         if (meshData.vertices.length === 0) {
-            this.removeChunkNode(chunk.p, chunk.q);
-            return;
-        }
-        
-        if (meshData.vertices.length === 0 || meshData.indices.length === 0) {
             this.removeChunkNode(chunk.p, chunk.q);
             return;
         }
@@ -129,6 +137,81 @@ export class VoxelRenderer extends Component {
         }
         
         chunk.faces = meshData.indices.length / 3;
+        
+        // 在合并模式下清理可能存在的独立block节点
+        this.removeChunkBlockNodes(chunk.p, chunk.q);
+    }
+
+    private updateChunkMeshIndividual(chunk: VoxelChunk, blocks: { x: number, y: number, z: number, type: VoxelBlockType }[]): void {
+        const getBlockAt = (x: number, y: number, z: number): VoxelBlockType => {
+            if (!this.worldManager) return VoxelBlockType.EMPTY;
+            return this.worldManager.getBlock(x, y, z);
+        };
+        
+        // 清理现有该chunk的所有block节点
+        this.removeChunkBlockNodes(chunk.p, chunk.q);
+        
+        // 为每个block创建独立节点
+        blocks.forEach(block => {
+            // 为单个block生成mesh
+            const neighbors = {
+                left: getBlockAt(block.x - 1, block.y, block.z),
+                right: getBlockAt(block.x + 1, block.y, block.z),
+                top: getBlockAt(block.x, block.y + 1, block.z),
+                bottom: getBlockAt(block.x, block.y - 1, block.z),
+                front: getBlockAt(block.x, block.y, block.z + 1),
+                back: getBlockAt(block.x, block.y, block.z - 1)
+            };
+            
+            const cubeParams = {
+                left: neighbors.left,
+                right: neighbors.right,
+                top: neighbors.top,
+                bottom: neighbors.bottom,
+                front: neighbors.front,
+                back: neighbors.back,
+                x: 0, y: 0, z: 0, // 使用本地坐标原点
+                size: 1.0,
+                blockType: block.type
+            };
+            
+            const lightData = {
+                ao: Array(6).fill([1, 1, 1, 1]),
+                light: Array(6).fill([0, 0, 0, 0])
+            };
+            
+            const cubeMesh = VoxelMeshGenerator.makeCube(cubeParams, lightData);
+            
+            if (cubeMesh.vertices.length > 0) {
+                const geometry = VoxelMeshGenerator.createCocosMesh(cubeMesh);
+                const mesh = utils.MeshUtils.createMesh(geometry);
+                
+                const blockNode = this.getOrCreateBlockNode(block.x, block.y, block.z, block.type);
+                const meshRenderer = blockNode.getComponent(MeshRenderer);
+                if (meshRenderer) {
+                    meshRenderer.mesh = mesh;
+                }
+            }
+        });
+        
+        let totalFaces = 0;
+        blocks.forEach(block => {
+            const blockKey = this.getBlockKey(block.x, block.y, block.z);
+            const blockNode = this.blockNodes.get(blockKey);
+            if (blockNode) {
+                const meshRenderer = blockNode.getComponent(MeshRenderer);
+                if (meshRenderer?.mesh) {
+                    try {
+                        const indices = meshRenderer.mesh.readIndices(0);
+                        totalFaces += indices ? indices.length / 3 : 0;
+                    } catch (e) {
+                        // 读取索引失败，忽略
+                    }
+                }
+            }
+        });
+        
+        chunk.faces = totalFaces;
     }
 
     private ensureChunkNode(chunk: VoxelChunk): void {
@@ -195,6 +278,106 @@ export class VoxelRenderer extends Component {
         return `${p}_${q}`;
     }
 
+    private getBlockKey(x: number, y: number, z: number): string {
+        return `${x}_${y}_${z}`;
+    }
+
+    private getOrCreateBlockNode(x: number, y: number, z: number, blockType: VoxelBlockType): Node {
+        const blockKey = this.getBlockKey(x, y, z);
+        let blockNode = this.blockNodes.get(blockKey);
+        
+        if (!blockNode) {
+            blockNode = new Node(`Block_${x}_${y}_${z}_${blockType}`);
+            
+            // 计算所属的chunk坐标
+            const chunkP = Math.floor(x / VoxelConfig.CHUNK_SIZE);
+            const chunkQ = Math.floor(z / VoxelConfig.CHUNK_SIZE);
+            
+            // 获取或创建chunk容器节点（用于独立模式的层级管理）
+            const chunkContainerNode = this.getOrCreateChunkContainerNode(chunkP, chunkQ);
+            chunkContainerNode.addChild(blockNode);
+            
+            // 计算相对于chunk的本地坐标
+            const localX = x - chunkP * VoxelConfig.CHUNK_SIZE;
+            const localZ = z - chunkQ * VoxelConfig.CHUNK_SIZE;
+            blockNode.setPosition(localX, y, localZ);
+            
+            const meshRenderer = blockNode.addComponent(MeshRenderer);
+            if (this.blockMaterial) {
+                meshRenderer.material = this.blockMaterial;
+            }
+            
+            this.blockNodes.set(blockKey, blockNode);
+        }
+        
+        return blockNode;
+    }
+
+    private getOrCreateChunkContainerNode(p: number, q: number): Node {
+        const chunkKey = this.getChunkKey(p, q);
+        let chunkContainer = this.chunkNodes.get(chunkKey);
+        
+        if (!chunkContainer) {
+            chunkContainer = new Node(`ChunkContainer_${p}_${q}`);
+            
+            if (this.worldRoot) {
+                this.worldRoot.addChild(chunkContainer);
+            }
+            
+            // 设置chunk的世界坐标位置
+            const chunkWorldX = p * VoxelConfig.CHUNK_SIZE;
+            const chunkWorldZ = q * VoxelConfig.CHUNK_SIZE;
+            chunkContainer.setPosition(chunkWorldX, 0, chunkWorldZ);
+            
+            this.chunkNodes.set(chunkKey, chunkContainer);
+        }
+        
+        return chunkContainer;
+    }
+
+    private removeBlockNode(x: number, y: number, z: number): void {
+        const blockKey = this.getBlockKey(x, y, z);
+        const blockNode = this.blockNodes.get(blockKey);
+        
+        if (blockNode) {
+            blockNode.destroy();
+            this.blockNodes.delete(blockKey);
+        }
+    }
+
+    private removeChunkBlockNodes(p: number, q: number): void {
+        const chunkMinX = p * VoxelConfig.CHUNK_SIZE;
+        const chunkMaxX = (p + 1) * VoxelConfig.CHUNK_SIZE;
+        const chunkMinZ = q * VoxelConfig.CHUNK_SIZE;
+        const chunkMaxZ = (q + 1) * VoxelConfig.CHUNK_SIZE;
+        
+        const keysToRemove: string[] = [];
+        
+        this.blockNodes.forEach((node, key) => {
+            const [x, , z] = key.split('_').map(Number);
+            
+            if (x >= chunkMinX && x < chunkMaxX && z >= chunkMinZ && z < chunkMaxZ) {
+                keysToRemove.push(key);
+            }
+        });
+        
+        keysToRemove.forEach(key => {
+            const node = this.blockNodes.get(key);
+            if (node) {
+                node.destroy();
+                this.blockNodes.delete(key);
+            }
+        });
+        
+        // 如果chunk容器节点没有子节点了，也删除它
+        const chunkKey = this.getChunkKey(p, q);
+        const chunkContainer = this.chunkNodes.get(chunkKey);
+        if (chunkContainer && chunkContainer.children.length === 0) {
+            chunkContainer.destroy();
+            this.chunkNodes.delete(chunkKey);
+        }
+    }
+
     public setBlock(x: number, y: number, z: number, blockType: VoxelBlockType): boolean {
         if (!this.worldManager) return false;
         return this.worldManager.setBlock(x, y, z, blockType);
@@ -253,10 +436,17 @@ export class VoxelRenderer extends Component {
     }
 
     public clearWorld(): void {
+        // 清理chunk节点
         this.chunkNodes.forEach(node => {
             node.destroy();
         });
         this.chunkNodes.clear();
+        
+        // 清理独立block节点
+        this.blockNodes.forEach(node => {
+            node.destroy();
+        });
+        this.blockNodes.clear();
         
         if (this.worldManager) {
             this.worldManager.clear();
@@ -269,16 +459,20 @@ export class VoxelRenderer extends Component {
                 totalChunks: 0,
                 loadedChunks: 0,
                 renderedChunks: 0,
+                renderedBlocks: 0,
                 createRadius: 0,
                 renderRadius: 0,
-                deleteRadius: 0
+                deleteRadius: 0,
+                renderMode: this.renderMode
             };
         }
         
         const stats = this.worldManager.getStatistics();
         return {
             ...stats,
-            renderedChunks: this.chunkNodes.size
+            renderedChunks: this.chunkNodes.size,
+            renderedBlocks: this.blockNodes.size,
+            renderMode: this.renderMode
         };
     }
 
@@ -376,6 +570,63 @@ export class VoxelRenderer extends Component {
         }
     }
 
+    public setRenderMode(mode: VoxelRenderMode): void {
+        if (this.renderMode === mode) return;
+        
+        const oldMode = this.renderMode;
+        this.renderMode = mode;
+        
+        console.log(`[VoxelRenderer] 切换渲染模式: ${oldMode} → ${mode}`);
+        
+        // 重新渲染所有已加载的chunk
+        if (this.worldManager) {
+            const loadedChunks = this.worldManager.getLoadedChunks();
+            loadedChunks.forEach(chunk => {
+                VoxelChunkManager.markChunkDirty(chunk);
+            });
+        }
+    }
+
+    public getCurrentRenderMode(): VoxelRenderMode {
+        return this.renderMode;
+    }
+
+    public getRenderModeInfo(): string {
+        const chunkCount = this.chunkNodes.size;
+        const blockCount = this.blockNodes.size;
+        
+        return `渲染模式: ${this.renderMode}\n` +
+               `Chunk节点数: ${chunkCount}\n` +
+               `Block节点数: ${blockCount}\n` +
+               `总节点数: ${chunkCount + blockCount}`;
+    }
+
+    public debugPrintNodeHierarchy(): void {
+        console.log('[VoxelRenderer] 节点层级结构:');
+        console.log(`渲染模式: ${this.renderMode}`);
+        
+        if (this.renderMode === VoxelRenderMode.MERGED_CHUNK) {
+            console.log('合并模式结构: WorldRoot → ChunkNode (with MeshRenderer)');
+            this.chunkNodes.forEach((chunkNode, key) => {
+                const meshRenderer = chunkNode.getComponent(MeshRenderer);
+                const hasMesh = meshRenderer && meshRenderer.mesh ? '✓' : '✗';
+                console.log(`  └─ Chunk_${key} [Mesh: ${hasMesh}]`);
+            });
+        } else {
+            console.log('独立模式结构: WorldRoot → ChunkContainer → BlockNode (with MeshRenderer)');
+            this.chunkNodes.forEach((chunkNode, key) => {
+                console.log(`  └─ ChunkContainer_${key} (${chunkNode.children.length} blocks)`);
+                chunkNode.children.forEach(blockNode => {
+                    const meshRenderer = blockNode.getComponent(MeshRenderer);
+                    const hasMesh = meshRenderer && meshRenderer.mesh ? '✓' : '✗';
+                    console.log(`    └─ ${blockNode.name} [Mesh: ${hasMesh}]`);
+                });
+            });
+        }
+        
+        console.log(`总计: ${this.chunkNodes.size} chunk节点, ${this.blockNodes.size} block节点`);
+    }
+
     public debugToggleCullMode(): void {
         console.log('[VoxelRenderer] 面剔除调试信息:');
         console.log('- 顶点索引已调整为顺时针（CW）顺序');
@@ -393,11 +644,9 @@ export class VoxelRenderer extends Component {
             if (meshRenderer && meshRenderer.mesh) {
                 const mesh = meshRenderer.mesh;
                 try {
-                    const positions = mesh.readAttribute(0, 'a_position');
                     const indices = mesh.readIndices(0);
-                    const vertexCount = positions ? positions.length / 3 : 0;
                     const indexCount = indices ? indices.length : 0;
-                    console.log(`区块 ${key}: 顶点=${vertexCount}, 三角形=${indexCount/3}`);
+                    console.log(`区块 ${key}: 三角形=${indexCount/3}`);
                 } catch (e) {
                     console.log(`区块 ${key}: 无法读取mesh数据`);
                 }

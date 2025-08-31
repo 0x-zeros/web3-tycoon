@@ -202,8 +202,18 @@ export class VoxelInteractionManager extends Component {
             return;
         }
         
-        const mouseX = event.getLocationX();
-        const mouseY = event.getLocationY();
+        //在 Cocos Creator 3.x 下如果 Canvas 使用了设计分辨率和适配（Fit Height/Width、Retina 等），这两个值与 camera.screenPointToRay() 期望的 UI 坐标会有偏差，典型表现就是“有偏移”。
+        // const mouseX = event.getLocationX();
+        // const mouseY = event.getLocationY();
+        const ui = event.getUILocation(); // 使用UI坐标，自动适配分辨率与视口
+        const mouseX = ui.x;
+        const mouseY = ui.y;
+
+        //debug event.getLocationX() 与 event.getUILocation() 的差异
+        const locX = event.getLocationX();
+        const locY = event.getLocationY();
+        console.log('[VoxelInteraction] event.getLocation 与 event.getUILocation() 的差异:', locX-mouseX, locY-mouseY);
+
         
         const hitResult = this.performRaycast(mouseX, mouseY);
         console.log('[VoxelInteraction] 射线投射结果:', hitResult);

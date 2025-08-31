@@ -18,8 +18,9 @@ export interface VoxelRayData {
 export class VoxelRayCaster {
     
     // 算法切换开关: true=DDA算法(推荐), false=简单步进算法
-    private static USE_DDA_ALGORITHM = true;
-    // private static USE_DDA_ALGORITHM = false;
+    // 修复版本: 已修复DDA算法的距离更新和面判断问题
+    // private static USE_DDA_ALGORITHM = true;
+    private static USE_DDA_ALGORITHM = false;
     
     raycast(
         origin: Vec3, 
@@ -157,23 +158,23 @@ export class VoxelRayCaster {
         while (!hit && distance < maxDistance) {
             // 选择最近的边界
             if (sideDistX < sideDistY && sideDistX < sideDistZ) {
-                // X边界最近
-                sideDistX += deltaDistX;
-                mapX += stepX;
+                // X边界最近 - 先记录击中距离，再更新到下一个边界
+                distance = sideDistX;  // 击中当前边界的距离
+                sideDistX += deltaDistX; // 更新到下一个边界
+                mapX += stepX;      // 进入新方块
                 side = 0;
-                distance = sideDistX;
             } else if (sideDistY < sideDistZ) {
                 // Y边界最近
+                distance = sideDistY;
                 sideDistY += deltaDistY;
                 mapY += stepY;
                 side = 1;
-                distance = sideDistY;
             } else {
                 // Z边界最近
+                distance = sideDistZ;
                 sideDistZ += deltaDistZ;
                 mapZ += stepZ;
                 side = 2;
-                distance = sideDistZ;
             }
             
             // 检查当前方块
@@ -195,12 +196,13 @@ export class VoxelRayCaster {
             if (blockType !== VoxelBlockType.EMPTY) {
                 hit = true;
                 
-                // 计算击中点
-                const hitDistance = distance - (side === 0 ? deltaDistX : side === 1 ? deltaDistY : deltaDistZ) / 2;
+                // 计算击中点 - distance已经是正确的击中边界距离
+                const hitDistance = distance;
                 const hitPos = origin.clone().add(normalizedDir.clone().multiplyScalar(hitDistance));
                 
                 const blockPos = new Vec3(mapX, mapY, mapZ);
-                const face = this.calculateHitFace(hitPos, blockPos);
+                // 根据DDA的side值直接确定击中面，更精确
+                const face = this.calculateHitFaceFromSide(side, stepX, stepY, stepZ);
                 const normal = this.getFaceNormal(face);
                 const worldPos = this.blockToWorldPosition(blockPos);
                 
@@ -246,6 +248,21 @@ export class VoxelRayCaster {
         return `${x},${y},${z}`;
     }
 
+    // 根据DDA的side和步进方向直接确定击中面（更精确）
+    private calculateHitFaceFromSide(side: number, stepX: number, stepY: number, stepZ: number): number {
+        if (side === 0) {
+            // X轴边界
+            return stepX > 0 ? 5 : 4; // 射线向右击中左面(5) : 射线向左击中右面(4)
+        } else if (side === 1) {
+            // Y轴边界  
+            return stepY > 0 ? 1 : 0; // 射线向上击中底面(1) : 射线向下击中顶面(0)
+        } else {
+            // Z轴边界
+            return stepZ > 0 ? 3 : 2; // 射线向前击中后面(3) : 射线向后击中前面(2)
+        }
+    }
+
+    // 保留原有的面判断方法作为备用（用于简单步进算法）
     private calculateHitFace(hitPos: Vec3, blockPos: Vec3): number {
         const localPos = hitPos.clone().subtract(blockPos);
         

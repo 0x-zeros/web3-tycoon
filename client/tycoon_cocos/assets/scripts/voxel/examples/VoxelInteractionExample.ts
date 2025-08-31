@@ -4,7 +4,7 @@ import { VoxelInteractionManager, VoxelInteractionEvents } from "../interaction/
 import { VoxelCameraController, CameraMode } from "../interaction/VoxelCameraController";
 import { VoxelCollisionSystem } from "../interaction/VoxelCollisionSystem";
 import { VoxelBlockType } from "../core/VoxelBlock";
-import { VoxelWorldMode } from "../core/VoxelWorldConfig";
+import { VoxelWorldMode, VoxelWorldConfig } from "../core/VoxelWorldConfig";
 import { VoxelRenderMode } from "../core/VoxelConfig";
 
 const { ccclass, property } = _decorator;
@@ -23,6 +23,11 @@ export class VoxelInteractionExample extends Component {
     protected onLoad() {
         this.initializeVoxelSystem();
         this.setupEventCallbacks();
+        
+        // 延迟一秒后测试交互系统
+        this.scheduleOnce(() => {
+            this.testInteractionSystem();
+        }, 1.0);
     }
 
     protected onEnable() {
@@ -49,6 +54,9 @@ export class VoxelInteractionExample extends Component {
 
         // 在玩家周围生成地形
         this.voxelRenderer.generateAroundPosition(spawnPos.x, spawnPos.z, 5);
+        
+        // 手动放置一些测试方块
+        this.createTestBlocks(spawnPos);
 
         console.log('[VoxelInteractionExample] 体素交互系统初始化完成');
         console.log('键位控制:');
@@ -59,6 +67,8 @@ export class VoxelInteractionExample extends Component {
         console.log('  T: 切换世界模式');
         console.log('  G: 重新生成世界');
         console.log('  I: 打印调试信息');
+        console.log('  P: 在前方放置测试方块');
+        console.log('  O: 检查摄像机位置和前方方块');
         console.log('  鼠标左键: 破坏方块');
         console.log('  鼠标右键: 放置方块');
     }
@@ -110,7 +120,7 @@ export class VoxelInteractionExample extends Component {
                 this.setBlockType(VoxelBlockType.LEAVES);
                 break;
             case KeyCode.DIGIT_6:
-                this.setBlockType(VoxelBlockType.WATER);
+                this.setBlockType(VoxelBlockType.GLASS);
                 break;
             case KeyCode.KEY_R:
                 this.toggleRenderMode();
@@ -123,6 +133,12 @@ export class VoxelInteractionExample extends Component {
                 break;
             case KeyCode.KEY_I:
                 this.printDebugInfo();
+                break;
+            case KeyCode.KEY_P:
+                this.placeTestBlock();
+                break;
+            case KeyCode.KEY_O:
+                this.printCameraAndBlocks();
                 break;
         }
     }
@@ -275,5 +291,150 @@ export class VoxelInteractionExample extends Component {
         this.manualBreakBlock(baseX + 1, baseY, baseZ);
         
         console.log('[交互] 房子建造完成！');
+    }
+
+    private testInteractionSystem(): void {
+        console.log('=== 交互系统测试开始 ===');
+        
+        if (!this.voxelRenderer) {
+            console.error('[测试] VoxelRenderer未设置！');
+            return;
+        }
+        
+        const interactionManager = this.voxelRenderer.getInteractionManager();
+        if (!interactionManager) {
+            console.error('[测试] 交互管理器未初始化！');
+            console.log('[测试] 请确保在VoxelRenderer节点上添加了以下组件:');
+            console.log('  - VoxelInteractionManager');
+            console.log('  - VoxelCameraController'); 
+            console.log('  - VoxelCollisionSystem');
+            return;
+        }
+        
+        console.log('[测试] 交互管理器已初始化 ✓');
+        
+        // 测试射线投射
+        console.log('[测试] 执行射线投射测试（屏幕中心）...');
+        const rayResult = this.voxelRenderer.performRaycast();
+        console.log('[测试] 射线投射结果:', rayResult);
+        
+        // 测试摄像机位置
+        const cameraPos = this.getCameraPosition();
+        console.log(`[测试] 摄像机位置: (${cameraPos.x.toFixed(2)}, ${cameraPos.y.toFixed(2)}, ${cameraPos.z.toFixed(2)})`);
+        
+        // 测试世界中是否有方块
+        console.log('[测试] 检查摄像机周围的方块...');
+        let foundBlocks = 0;
+        for (let dx = -3; dx <= 3; dx++) {
+            for (let dy = -3; dy <= 3; dy++) {
+                for (let dz = -3; dz <= 3; dz++) {
+                    const x = Math.floor(cameraPos.x) + dx;
+                    const y = Math.floor(cameraPos.y) + dy;
+                    const z = Math.floor(cameraPos.z) + dz;
+                    
+                    const blockType = this.getBlockAt(x, y, z);
+                    if (blockType !== VoxelBlockType.EMPTY) {
+                        foundBlocks++;
+                        if (foundBlocks <= 10) { // 只打印前10个
+                            console.log(`[测试] 发现方块 (${x}, ${y}, ${z}): ${blockType}`);
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log(`[测试] 在7x7x7范围内发现 ${foundBlocks} 个方块`);
+        
+        if (foundBlocks === 0) {
+            console.warn('[测试] 警告：摄像机周围没有方块！请尝试:');
+            console.warn('  1. 按T键切换到TINY_DEBUG世界模式');
+            console.warn('  2. 按G键重新生成世界');
+            console.warn('  3. 移动摄像机到地面附近');
+        } else {
+            console.log('[测试] 交互系统基础功能正常 ✓');
+            console.log('[测试] 现在可以尝试点击方块进行交互');
+        }
+        
+        console.log('=== 交互系统测试完成 ===');
+    }
+
+    private createTestBlocks(spawnPos: Vec3): void {
+        console.log('[VoxelInteractionExample] 创建测试方块...');
+        
+        const worldMode = this.voxelRenderer.getCurrentWorldMode();
+        const baseX = Math.floor(spawnPos.x);
+        const baseZ = Math.floor(spawnPos.z);
+        
+        if (worldMode === VoxelWorldMode.SMALL_FLAT) {
+            // SMALL_FLAT模式：在单层平面上放置测试方块
+            console.log('[测试方块] SMALL_FLAT模式 - 在y=1层放置测试方块');
+            
+            // 在前方放置一个石头方块用于测试点击
+            this.voxelRenderer.setBlock(baseX, 1, baseZ - 2, VoxelBlockType.STONE);
+            console.log(`[测试方块] 放置石头方块 (${baseX}, 1, ${baseZ - 2}) 用于点击测试`);
+            
+            // 放置一些不同类型的方块在地面上方
+            this.voxelRenderer.setBlock(baseX - 2, 1, baseZ, VoxelBlockType.WOOD);
+            this.voxelRenderer.setBlock(baseX + 2, 1, baseZ, VoxelBlockType.DIRT);
+            this.voxelRenderer.setBlock(baseX, 1, baseZ + 2, VoxelBlockType.LEAVES);
+            
+            console.log('[测试提示] SMALL_FLAT模式：地面在y=0，测试方块在y=1');
+        } else {
+            // 其他模式：保持原来的逻辑
+            const baseY = Math.floor(spawnPos.y) - 3; // 在脚下放置方块
+            
+            // 创建一个3x3的地面
+            for (let x = -1; x <= 1; x++) {
+                for (let z = -1; z <= 1; z++) {
+                    this.voxelRenderer.setBlock(baseX + x, baseY, baseZ + z, VoxelBlockType.GRASS);
+                    console.log(`[测试方块] 放置草方块 (${baseX + x}, ${baseY}, ${baseZ + z})`);
+                }
+            }
+            
+            // 在前方放置一个石头方块用于测试点击
+            this.voxelRenderer.setBlock(baseX, baseY + 1, baseZ - 2, VoxelBlockType.STONE);
+            console.log(`[测试方块] 放置石头方块 (${baseX}, ${baseY + 1}, ${baseZ - 2}) 用于点击测试`);
+            
+            // 放置一些不同类型的方块
+            this.voxelRenderer.setBlock(baseX - 2, baseY + 1, baseZ, VoxelBlockType.WOOD);
+            this.voxelRenderer.setBlock(baseX + 2, baseY + 1, baseZ, VoxelBlockType.DIRT);
+            this.voxelRenderer.setBlock(baseX, baseY + 1, baseZ + 2, VoxelBlockType.LEAVES);
+        }
+        
+        console.log('[VoxelInteractionExample] 测试方块创建完成');
+        console.log('[测试提示] 请朝向前方的石头方块点击鼠标进行测试');
+    }
+
+    private placeTestBlock(): void {
+        const cameraPos = this.getCameraPosition();
+        const x = Math.floor(cameraPos.x);
+        const y = Math.floor(cameraPos.y) - 1;
+        const z = Math.floor(cameraPos.z) - 2;
+        
+        console.log(`[测试] 在 (${x}, ${y}, ${z}) 放置测试方块`);
+        const success = this.voxelRenderer.setBlock(x, y, z, VoxelBlockType.STONE);
+        console.log(`[测试] 放置结果: ${success ? '成功' : '失败'}`);
+    }
+
+    private printCameraAndBlocks(): void {
+        const cameraPos = this.getCameraPosition();
+        console.log(`[调试] 摄像机位置: (${cameraPos.x.toFixed(2)}, ${cameraPos.y.toFixed(2)}, ${cameraPos.z.toFixed(2)})`);
+        
+        console.log('[调试] 检查摄像机前方的方块:');
+        for (let dist = 1; dist <= 8; dist++) {
+            const checkX = Math.floor(cameraPos.x);
+            const checkY = Math.floor(cameraPos.y);
+            const checkZ = Math.floor(cameraPos.z) - dist;
+            
+            const blockType = this.getBlockAt(checkX, checkY, checkZ);
+            if (blockType !== VoxelBlockType.EMPTY) {
+                console.log(`[调试] 距离${dist}: (${checkX}, ${checkY}, ${checkZ}) = ${blockType}`);
+            }
+        }
+        
+        // 执行一次射线投射测试（使用屏幕中心）
+        console.log('[调试] 执行射线投射测试（屏幕中心）...');
+        const rayResult = this.voxelRenderer.performRaycast();
+        console.log('[调试] 射线投射结果:', rayResult);
     }
 }

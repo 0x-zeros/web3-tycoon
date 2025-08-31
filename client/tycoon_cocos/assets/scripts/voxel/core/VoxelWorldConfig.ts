@@ -20,7 +20,7 @@ export interface VoxelWorldConfiguration {
 }
 
 export class VoxelWorldConfig {
-    private static mode: VoxelWorldMode = VoxelWorldMode.TINY_DEBUG; //NORMAL;//VoxelWorldMode.SMALL_FLAT;
+    private static mode: VoxelWorldMode = VoxelWorldMode.SMALL_FLAT;
     
     private static configurations: Map<VoxelWorldMode, VoxelWorldConfiguration> = new Map([
         [VoxelWorldMode.NORMAL, {

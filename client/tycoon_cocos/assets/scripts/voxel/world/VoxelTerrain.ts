@@ -79,30 +79,62 @@ export class VoxelTerrain {
         const chunkSize = VoxelConfig.CHUNK_SIZE;
         const pad = 1;
         
-        const flatHeight = Math.max(3, VoxelConfig.SEA_LEVEL - 1);
-        const grassHeight = flatHeight + 1;
+        const worldMode = VoxelWorldConfig.getMode();
         
-        for (let dx = -pad; dx < chunkSize + pad; dx++) {
-            for (let dz = -pad; dz < chunkSize + pad; dz++) {
-                let flag = 1;
-                if (dx < 0 || dz < 0 || dx >= chunkSize || dz >= chunkSize) {
-                    flag = -1;
+        if (worldMode === VoxelWorldMode.SMALL_FLAT) {
+            // SMALL_FLAT模式：只生成1层完全平坦的草方块
+            const flatHeight = 0; // 只在y=0层生成
+            
+            for (let dx = -pad; dx < chunkSize + pad; dx++) {
+                for (let dz = -pad; dz < chunkSize + pad; dz++) {
+                    let flag = 1;
+                    if (dx < 0 || dz < 0 || dx >= chunkSize || dz >= chunkSize) {
+                        flag = -1;
+                    }
+                    
+                    const x = p * chunkSize + dx;
+                    const z = q * chunkSize + dz;
+                    
+                    // 只生成1层草方块
+                    func(x, flatHeight, z, VoxelBlockType.GRASS * flag, arg);
+                    
+                    // 可选：在某些位置生成花朵作为装饰
+                    if (VoxelConfig.SHOW_PLANTS && flag > 0) {
+                        const flowerChance = VoxelNoise.simplex2(x * 0.1, z * 0.1, 4, 0.8, 2);
+                        if (flowerChance > 0.8) { // 降低花朵密度
+                            const flowerType = VoxelBlockType.YELLOW_FLOWER + Math.floor(Math.abs(flowerChance) * 3) % 3;
+                            func(x, flatHeight + 1, z, flowerType * flag, arg);
+                        }
+                    }
                 }
-                
-                const x = p * chunkSize + dx;
-                const z = q * chunkSize + dz;
-                
-                for (let y = 0; y < flatHeight; y++) {
-                    func(x, y, z, VoxelBlockType.STONE * flag, arg);
-                }
-                
-                func(x, flatHeight, z, VoxelBlockType.GRASS * flag, arg);
-                
-                if (VoxelConfig.SHOW_PLANTS && flag > 0) {
-                    const flowerChance = VoxelNoise.simplex2(x * 0.1, z * 0.1, 4, 0.8, 2);
-                    if (flowerChance > 0.7) {
-                        const flowerType = VoxelBlockType.YELLOW_FLOWER + Math.floor(Math.abs(flowerChance) * 3) % 3;
-                        func(x, grassHeight, z, flowerType * flag, arg);
+            }
+        } else {
+            // TINY_DEBUG模式：保留原来的多层逻辑
+            const flatHeight = Math.max(3, VoxelConfig.SEA_LEVEL - 1);
+            const grassHeight = flatHeight + 1;
+            
+            for (let dx = -pad; dx < chunkSize + pad; dx++) {
+                for (let dz = -pad; dz < chunkSize + pad; dz++) {
+                    let flag = 1;
+                    if (dx < 0 || dz < 0 || dx >= chunkSize || dz >= chunkSize) {
+                        flag = -1;
+                    }
+                    
+                    const x = p * chunkSize + dx;
+                    const z = q * chunkSize + dz;
+                    
+                    for (let y = 0; y < flatHeight; y++) {
+                        func(x, y, z, VoxelBlockType.STONE * flag, arg);
+                    }
+                    
+                    func(x, flatHeight, z, VoxelBlockType.GRASS * flag, arg);
+                    
+                    if (VoxelConfig.SHOW_PLANTS && flag > 0) {
+                        const flowerChance = VoxelNoise.simplex2(x * 0.1, z * 0.1, 4, 0.8, 2);
+                        if (flowerChance > 0.7) {
+                            const flowerType = VoxelBlockType.YELLOW_FLOWER + Math.floor(Math.abs(flowerChance) * 3) % 3;
+                            func(x, grassHeight, z, flowerType * flag, arg);
+                        }
                     }
                 }
             }
@@ -210,7 +242,9 @@ export class VoxelTerrain {
     static getHeightAt(x: number, z: number): number {
         const worldMode = VoxelWorldConfig.getMode();
         
-        if (worldMode === VoxelWorldMode.SMALL_FLAT || worldMode === VoxelWorldMode.TINY_DEBUG) {
+        if (worldMode === VoxelWorldMode.SMALL_FLAT) {
+            return 1; // SMALL_FLAT模式：地面高度为1（y=0是地面）
+        } else if (worldMode === VoxelWorldMode.TINY_DEBUG) {
             return Math.max(3, VoxelConfig.SEA_LEVEL - 1) + 1;
         }
         
@@ -238,7 +272,20 @@ export class VoxelTerrain {
     static getBlockTypeAt(x: number, y: number, z: number): VoxelBlockType {
         const worldMode = VoxelWorldConfig.getMode();
         
-        if (worldMode === VoxelWorldMode.SMALL_FLAT || worldMode === VoxelWorldMode.TINY_DEBUG) {
+        if (worldMode === VoxelWorldMode.SMALL_FLAT) {
+            // SMALL_FLAT模式：只有y=0层是草方块
+            if (y === 0) {
+                return VoxelBlockType.GRASS;
+            } else if (y === 1 && VoxelConfig.SHOW_PLANTS) {
+                const flowerChance = VoxelNoise.simplex2(x * 0.1, z * 0.1, 4, 0.8, 2);
+                if (flowerChance > 0.8) { // 降低花朵密度
+                    const flowerType = VoxelBlockType.YELLOW_FLOWER + Math.floor(Math.abs(flowerChance) * 3) % 3;
+                    return flowerType;
+                }
+            }
+            
+            return VoxelBlockType.EMPTY;
+        } else if (worldMode === VoxelWorldMode.TINY_DEBUG) {
             const flatHeight = Math.max(3, VoxelConfig.SEA_LEVEL - 1);
             const grassHeight = flatHeight + 1;
             

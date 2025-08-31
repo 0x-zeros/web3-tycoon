@@ -52,38 +52,62 @@ export class VoxelRenderer extends Component {
     }
     
     private initializeInteractionSystem(): void {
+        console.log('[VoxelRenderer] 开始初始化交互系统...');
+        
         if (!this.interactionManager) {
+            console.log('[VoxelRenderer] 在节点上查找VoxelInteractionManager组件...');
             this.interactionManager = this.getComponent(VoxelInteractionManager);
         }
         
         if (!this.interactionManager) {
             console.warn('[VoxelRenderer] 未找到VoxelInteractionManager组件，交互功能将不可用');
+            console.warn('[VoxelRenderer] 请在同一节点上添加VoxelInteractionManager、VoxelCameraController、VoxelCollisionSystem组件');
             return;
         }
         
+        console.log('[VoxelRenderer] 找到VoxelInteractionManager组件，设置事件回调...');
+        
         const interactionEvents: VoxelInteractionEvents = {
             onBlockClick: (hitResult) => {
-                console.log('[VoxelRenderer] 方块点击:', hitResult);
+                console.log('[VoxelRenderer] 方块点击事件:', hitResult);
             },
             onBlockHover: (hitResult) => {
-                if (hitResult) {
-                    console.log('[VoxelRenderer] 方块悬停:', hitResult.position);
-                }
+                // 悬停事件太频繁，暂时禁用
+                // if (hitResult) {
+                //     console.log('[VoxelRenderer] 方块悬停:', hitResult.position);
+                // }
             },
             onBlockPlace: (position, blockType) => {
-                console.log('[VoxelRenderer] 方块放置:', position, blockType);
+                console.log(`[VoxelRenderer] 方块放置事件: 位置(${position.x}, ${position.y}, ${position.z}) 类型:${blockType}`);
                 this.markChunkForUpdate(position);
             },
             onBlockBreak: (position) => {
-                console.log('[VoxelRenderer] 方块破坏:', position);
+                console.log(`[VoxelRenderer] 方块破坏事件: 位置(${position.x}, ${position.y}, ${position.z})`);
                 this.markChunkForUpdate(position);
             },
             onModeChange: (mode) => {
-                console.log('[VoxelRenderer] 摄像机模式切换:', mode);
+                console.log(`[VoxelRenderer] 摄像机模式切换事件: ${mode}`);
             }
         };
         
+        if (!this.worldManager) {
+            console.error('[VoxelRenderer] 世界管理器未初始化，无法完成交互系统初始化');
+            return;
+        }
+        
         this.interactionManager.initialize(this.worldManager, interactionEvents);
+        console.log('[VoxelRenderer] 交互系统初始化完成');
+        
+        // 调试信息：打印组件状态
+        const cameraController = this.interactionManager.getCameraController();
+        const collisionSystem = this.interactionManager.getCollisionSystem();
+        
+        console.log(`[VoxelRenderer] 交互系统状态:`);
+        console.log(`  - InteractionManager: ${this.interactionManager ? '✓' : '✗'}`);
+        console.log(`  - CameraController: ${cameraController ? '✓' : '✗'}`);
+        console.log(`  - CollisionSystem: ${collisionSystem ? '✓' : '✗'}`);
+        console.log(`  - WorldManager: ${this.worldManager ? '✓' : '✗'}`);
+        console.log(`  - Camera: ${this.camera ? '✓' : '✗'}`);
     }
     
     private markChunkForUpdate(blockPosition: Vec3): void {
@@ -312,8 +336,12 @@ export class VoxelRenderer extends Component {
         const chunkKey = this.getChunkKey(p, q);
         const chunkNode = this.chunkNodes.get(chunkKey);
         
-        if (chunkNode) {
-            chunkNode.destroy();
+        if (chunkNode && chunkNode.isValid) {
+            try {
+                chunkNode.destroy();
+            } catch (e) {
+                console.warn(`[VoxelRenderer] 移除chunk节点时出错: ${chunkKey}`, e);
+            }
             this.chunkNodes.delete(chunkKey);
         }
     }
@@ -329,8 +357,12 @@ export class VoxelRenderer extends Component {
         
         keysToRemove.forEach(key => {
             const node = this.chunkNodes.get(key);
-            if (node) {
-                node.destroy();
+            if (node && node.isValid) {
+                try {
+                    node.destroy();
+                } catch (e) {
+                    console.warn(`[VoxelRenderer] 移除未使用chunk节点时出错: ${key}`, e);
+                }
                 this.chunkNodes.delete(key);
             }
         });
@@ -348,28 +380,38 @@ export class VoxelRenderer extends Component {
         const blockKey = this.getBlockKey(x, y, z);
         let blockNode = this.blockNodes.get(blockKey);
         
-        if (!blockNode) {
-            blockNode = new Node(`Block_${x}_${y}_${z}_${blockType}`);
-            
-            // 计算所属的chunk坐标
-            const chunkP = Math.floor(x / VoxelConfig.CHUNK_SIZE);
-            const chunkQ = Math.floor(z / VoxelConfig.CHUNK_SIZE);
-            
-            // 获取或创建chunk容器节点（用于独立模式的层级管理）
-            const chunkContainerNode = this.getOrCreateChunkContainerNode(chunkP, chunkQ);
-            chunkContainerNode.addChild(blockNode);
-            
-            // 计算相对于chunk的本地坐标
-            const localX = x - chunkP * VoxelConfig.CHUNK_SIZE;
-            const localZ = z - chunkQ * VoxelConfig.CHUNK_SIZE;
-            blockNode.setPosition(localX, y, localZ);
-            
-            const meshRenderer = blockNode.addComponent(MeshRenderer);
-            if (this.blockMaterial) {
-                meshRenderer.material = this.blockMaterial;
+        if (!blockNode || !blockNode.isValid) {
+            // 如果节点无效，先从映射中删除
+            if (blockNode && !blockNode.isValid) {
+                this.blockNodes.delete(blockKey);
             }
             
-            this.blockNodes.set(blockKey, blockNode);
+            try {
+                blockNode = new Node(`Block_${x}_${y}_${z}_${blockType}`);
+                
+                // 计算所属的chunk坐标
+                const chunkP = Math.floor(x / VoxelConfig.CHUNK_SIZE);
+                const chunkQ = Math.floor(z / VoxelConfig.CHUNK_SIZE);
+                
+                // 获取或创建chunk容器节点（用于独立模式的层级管理）
+                const chunkContainerNode = this.getOrCreateChunkContainerNode(chunkP, chunkQ);
+                chunkContainerNode.addChild(blockNode);
+                
+                // 计算相对于chunk的本地坐标
+                const localX = x - chunkP * VoxelConfig.CHUNK_SIZE;
+                const localZ = z - chunkQ * VoxelConfig.CHUNK_SIZE;
+                blockNode.setPosition(localX, y, localZ);
+                
+                const meshRenderer = blockNode.addComponent(MeshRenderer);
+                if (this.blockMaterial) {
+                    meshRenderer.material = this.blockMaterial;
+                }
+                
+                this.blockNodes.set(blockKey, blockNode);
+            } catch (e) {
+                console.error(`[VoxelRenderer] 创建块节点失败: ${blockKey}`, e);
+                throw e;
+            }
         }
         
         return blockNode;
@@ -379,19 +421,29 @@ export class VoxelRenderer extends Component {
         const chunkKey = this.getChunkKey(p, q);
         let chunkContainer = this.chunkNodes.get(chunkKey);
         
-        if (!chunkContainer) {
-            chunkContainer = new Node(`ChunkContainer_${p}_${q}`);
-            
-            if (this.worldRoot) {
-                this.worldRoot.addChild(chunkContainer);
+        if (!chunkContainer || !chunkContainer.isValid) {
+            // 如果节点无效，先从映射中删除
+            if (chunkContainer && !chunkContainer.isValid) {
+                this.chunkNodes.delete(chunkKey);
             }
             
-            // 设置chunk的世界坐标位置
-            const chunkWorldX = p * VoxelConfig.CHUNK_SIZE;
-            const chunkWorldZ = q * VoxelConfig.CHUNK_SIZE;
-            chunkContainer.setPosition(chunkWorldX, 0, chunkWorldZ);
-            
-            this.chunkNodes.set(chunkKey, chunkContainer);
+            try {
+                chunkContainer = new Node(`ChunkContainer_${p}_${q}`);
+                
+                if (this.worldRoot) {
+                    this.worldRoot.addChild(chunkContainer);
+                }
+                
+                // 设置chunk的世界坐标位置
+                const chunkWorldX = p * VoxelConfig.CHUNK_SIZE;
+                const chunkWorldZ = q * VoxelConfig.CHUNK_SIZE;
+                chunkContainer.setPosition(chunkWorldX, 0, chunkWorldZ);
+                
+                this.chunkNodes.set(chunkKey, chunkContainer);
+            } catch (e) {
+                console.error(`[VoxelRenderer] 创建chunk容器节点失败: ${chunkKey}`, e);
+                throw e;
+            }
         }
         
         return chunkContainer;
@@ -401,8 +453,12 @@ export class VoxelRenderer extends Component {
         const blockKey = this.getBlockKey(x, y, z);
         const blockNode = this.blockNodes.get(blockKey);
         
-        if (blockNode) {
-            blockNode.destroy();
+        if (blockNode && blockNode.isValid) {
+            try {
+                blockNode.destroy();
+            } catch (e) {
+                console.warn(`[VoxelRenderer] 节点已被销毁或无效: ${blockKey}`, e);
+            }
             this.blockNodes.delete(blockKey);
         }
     }
@@ -425,8 +481,12 @@ export class VoxelRenderer extends Component {
         
         keysToRemove.forEach(key => {
             const node = this.blockNodes.get(key);
-            if (node) {
-                node.destroy();
+            if (node && node.isValid) {
+                try {
+                    node.destroy();
+                } catch (e) {
+                    console.warn(`[VoxelRenderer] 块节点已被销毁或无效: ${key}`, e);
+                }
                 this.blockNodes.delete(key);
             }
         });
@@ -434,8 +494,12 @@ export class VoxelRenderer extends Component {
         // 如果chunk容器节点没有子节点了，也删除它
         const chunkKey = this.getChunkKey(p, q);
         const chunkContainer = this.chunkNodes.get(chunkKey);
-        if (chunkContainer && chunkContainer.children.length === 0) {
-            chunkContainer.destroy();
+        if (chunkContainer && chunkContainer.isValid && chunkContainer.children.length === 0) {
+            try {
+                chunkContainer.destroy();
+            } catch (e) {
+                console.warn(`[VoxelRenderer] 区块容器节点已被销毁或无效: ${chunkKey}`, e);
+            }
             this.chunkNodes.delete(chunkKey);
         }
     }
@@ -499,14 +563,26 @@ export class VoxelRenderer extends Component {
 
     public clearWorld(): void {
         // 清理chunk节点
-        this.chunkNodes.forEach(node => {
-            node.destroy();
+        this.chunkNodes.forEach((node, key) => {
+            if (node && node.isValid) {
+                try {
+                    node.destroy();
+                } catch (e) {
+                    console.warn(`[VoxelRenderer] 清理chunk节点时出错: ${key}`, e);
+                }
+            }
         });
         this.chunkNodes.clear();
         
         // 清理独立block节点
-        this.blockNodes.forEach(node => {
-            node.destroy();
+        this.blockNodes.forEach((node, key) => {
+            if (node && node.isValid) {
+                try {
+                    node.destroy();
+                } catch (e) {
+                    console.warn(`[VoxelRenderer] 清理block节点时出错: ${key}`, e);
+                }
+            }
         });
         this.blockNodes.clear();
         
@@ -557,10 +633,21 @@ export class VoxelRenderer extends Component {
 
     public findSpawnLocation(): Vec3 {
         if (!this.worldManager) {
+            const worldMode = VoxelWorldConfig.getMode();
+            if (worldMode === VoxelWorldMode.SMALL_FLAT) {
+                return new Vec3(0, 3, 0); // SMALL_FLAT模式：摄像机在y=3，可以看到地面
+            }
             return new Vec3(0, 10, 0);
         }
         
         const spawn = this.worldManager.findSpawnLocation();
+        const worldMode = VoxelWorldConfig.getMode();
+        
+        if (worldMode === VoxelWorldMode.SMALL_FLAT) {
+            // SMALL_FLAT模式：调整摄像机高度
+            return new Vec3(spawn.x, 3, spawn.z);
+        }
+        
         return new Vec3(spawn.x, spawn.y, spawn.z);
     }
 
@@ -746,8 +833,8 @@ export class VoxelRenderer extends Component {
         return this.interactionManager ? this.interactionManager.getCurrentCameraMode() : null;
     }
 
-    public performRaycast(): any {
-        return this.interactionManager ? this.interactionManager.performRaycast() : { hit: false };
+    public performRaycast(mouseX?: number, mouseY?: number): any {
+        return this.interactionManager ? this.interactionManager.performRaycast(mouseX, mouseY) : { hit: false };
     }
 
     public placeBlock(position: Vec3, blockType?: VoxelBlockType): boolean {
@@ -788,10 +875,16 @@ export class VoxelRenderer extends Component {
         }
         
         const raycastResult = this.performRaycast();
-        console.log('射线投射结果:', raycastResult);
+        console.log('射线投射结果（屏幕中心）:', raycastResult);
     }
 
     protected onDestroy(): void {
-        this.clearWorld();
+        console.log('[VoxelRenderer] 销毁中...');
+        try {
+            this.clearWorld();
+        } catch (e) {
+            console.warn('[VoxelRenderer] 销毁时出错:', e);
+        }
+        console.log('[VoxelRenderer] 销毁完成');
     }
 }

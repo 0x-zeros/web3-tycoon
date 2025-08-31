@@ -120,7 +120,7 @@ export class VoxelCollisionSystem extends Component {
 
     private isBlockSolid(blockType: VoxelBlockType): boolean {
         return blockType !== VoxelBlockType.EMPTY && 
-               blockType !== VoxelBlockType.WATER;
+               blockType !== VoxelBlockType.CLOUD;
     }
 
     public checkGroundContact(

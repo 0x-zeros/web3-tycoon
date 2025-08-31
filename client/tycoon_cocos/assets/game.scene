@@ -1660,7 +1660,9 @@
       "__id__": 51
     },
     "renderMode": "individual",
-    "interactionManager": null,
+    "interactionManager": {
+      "__id__": 53
+    },
     "_id": "88+Fn0lHJGy4okaVNvtrux"
   },
   {

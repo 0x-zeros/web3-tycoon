@@ -57,6 +57,99 @@ Blackboard.watch("playerName", name => { nameLabel.text = name; }, this);
 	•	自动解绑目标，防止内存泄漏。
 ```ts
 
+
+// EventBus.ts
+import { EventTarget, _decorator, Component } from "cc";
+
+class EventBusClass extends EventTarget {
+    private static _instance: EventBusClass;
+    public static get instance() {
+        if (!this._instance) this._instance = new EventBusClass();
+        return this._instance;
+    }
+
+    // 包一层 emit/on，方便扩展日志
+    emitEvent<T>(event: string, arg?: T) {
+        this.emit(event, arg);
+    }
+
+    onEvent<T>(event: string, callback: (arg: T) => void, target?: any) {
+        this.on(event, callback, target);
+    }
+
+    offEvent<T>(event: string, callback: (arg: T) => void, target?: any) {
+        this.off(event, callback, target);
+    }
+}
+
+export const EventBus = EventBusClass.instance;
+
+
+
+
+export const EventTypes = {
+    UI: {
+        StartGame: "ui_startGame",
+        OpenBag: "ui_openBag"
+    },
+    Game: {
+        PlayerDead: "game_playerDead",
+        EnemyKilled: "game_enemyKilled"
+    }
+}
+
+
+// 逻辑发事件
+EventBus.emitEvent(EventTypes.Game.PlayerDead, { id: 123 });
+
+// UI 监听
+EventBus.onEvent<{ id: number }>(EventTypes.Game.PlayerDead, (data) => {
+    console.log("敌人死亡:", data.id);
+}, this);
+
+
+
+```
+
+
+### 2.5 blackboard 参考代码
+```ts
+// blackboard.ts
+import { EventTarget } from "cc";
+
+export class Blackboard extends EventTarget {
+    private static _instance: Blackboard;
+    public static get instance() {
+        if (!this._instance) this._instance = new Blackboard();
+        return this._instance;
+    }
+
+    private _data: Record<string, any> = {};
+
+    set(key: string, value: any) {
+        this._data[key] = value;
+        this.emit(key, value);
+    }
+
+    get<T>(key: string): T {
+        return this._data[key];
+    }
+
+    watch<T>(key: string, callback: (val: T) => void, target?: any) {
+        this.on(key, callback, target);
+    }
+}
+
+
+//使用
+// 游戏逻辑
+Blackboard.instance.set("playerHp", 80);
+
+// UI
+Blackboard.instance.watch<number>("playerHp", (hp) => {
+    this.hpLabel.string = hp.toString();
+}, this);
+
 ```
 
 ## fairygui 相关链接：

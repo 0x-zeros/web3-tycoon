@@ -178,7 +178,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 960,
+      "x": 960.0000000000001,
       "y": 540,
       "z": 0
     },
@@ -866,7 +866,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920,
+      "width": 1920.0000000000002,
       "height": 1080
     },
     "_anchorPoint": {
@@ -1504,7 +1504,7 @@
     },
     "enableMouseControl": true,
     "playerMoveSpeed": 3,
-    "debugMode": true,
+    "debugMode": false,
     "startTilePrefab": {
       "__uuid__": "640d860a-c78a-4832-8cfd-46a1c848450a",
       "__expectedType__": "cc.Prefab"
@@ -1686,6 +1686,9 @@
     },
     "maxRaycastDistance": 8,
     "selectedBlockType": 3,
+    "enableDebugVisualization": false,
+    "enableHitMarkers": true,
+    "debugDisplayDuration": 3,
     "_id": "86ZPPYxKxMWJyI7KSw6UMW"
   },
   {

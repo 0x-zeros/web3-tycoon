@@ -15,12 +15,27 @@ export interface VoxelRayData {
     getBlockAt?: (x: number, y: number, z: number) => VoxelBlockType;
 }
 
+// 射线投射算法类型
+export enum RaycastAlgorithm {
+    SIMPLE = 0,           // 简单步进算法（原始方法，增加了步数）
+    DDA = 1,              // DDA算法（修复版本）
+    AMANATIDES_WOO = 2    // Amanatides-Woo算法（1987年论文标准实现）
+}
+
 export class VoxelRayCaster {
     
-    // 算法切换开关: true=DDA算法(推荐), false=简单步进算法
-    // 修复版本: 已修复DDA算法的距离更新和面判断问题
-    // private static USE_DDA_ALGORITHM = true;
-    private static USE_DDA_ALGORITHM = false;
+    // 算法切换：可通过静态方法修改，默认保持用户当前设置
+    private static currentAlgorithm: RaycastAlgorithm = RaycastAlgorithm.SIMPLE;
+    
+    // 静态方法用于切换算法
+    public static setAlgorithm(algorithm: RaycastAlgorithm): void {
+        VoxelRayCaster.currentAlgorithm = algorithm;
+        console.log(`[VoxelRayCaster] 切换到算法: ${RaycastAlgorithm[algorithm]}`);
+    }
+    
+    public static getAlgorithm(): RaycastAlgorithm {
+        return VoxelRayCaster.currentAlgorithm;
+    }
     
     raycast(
         origin: Vec3, 
@@ -28,11 +43,17 @@ export class VoxelRayCaster {
         maxDistance: number,
         voxelData: VoxelRayData
     ): VoxelHitResult {
-        // 通过静态变量切换算法
-        if (VoxelRayCaster.USE_DDA_ALGORITHM) {
-            return this.raycastDDA(origin, direction, maxDistance, voxelData);
-        } else {
-            return this.raycastSimple(origin, direction, maxDistance, voxelData);
+        // 根据当前算法设置调用对应方法
+        switch (VoxelRayCaster.currentAlgorithm) {
+            case RaycastAlgorithm.SIMPLE:
+                return this.raycastSimple(origin, direction, maxDistance, voxelData);
+            case RaycastAlgorithm.DDA:
+                return this.raycastDDA(origin, direction, maxDistance, voxelData);
+            case RaycastAlgorithm.AMANATIDES_WOO:
+                return this.raycastAmanatidesWoo(origin, direction, maxDistance, voxelData);
+            default:
+                console.warn(`[VoxelRayCaster] 未知算法类型: ${VoxelRayCaster.currentAlgorithm}，使用简单算法`);
+                return this.raycastSimple(origin, direction, maxDistance, voxelData);
         }
     }
 
@@ -223,6 +244,151 @@ export class VoxelRayCaster {
         return { hit: false };
     }
 
+    // 方法3: Amanatides-Woo算法（1987年论文标准实现）
+    private raycastAmanatidesWoo(
+        origin: Vec3,
+        direction: Vec3,
+        maxDistance: number,
+        voxelData: VoxelRayData
+    ): VoxelHitResult {
+        const normalizedDir = direction.clone().normalize();
+        
+        console.log(`[VoxelRayCaster-AW] 开始Amanatides-Woo射线投射: 起点(${origin.x.toFixed(2)}, ${origin.y.toFixed(2)}, ${origin.z.toFixed(2)})`);
+        console.log(`[VoxelRayCaster-AW] 方向(${normalizedDir.x.toFixed(2)}, ${normalizedDir.y.toFixed(2)}, ${normalizedDir.z.toFixed(2)})`);
+        
+        // 当前体素坐标
+        let X = Math.floor(origin.x);
+        let Y = Math.floor(origin.y);
+        let Z = Math.floor(origin.z);
+        
+        // 步进方向（+1 或 -1）
+        const stepX = normalizedDir.x >= 0 ? 1 : -1;
+        const stepY = normalizedDir.y >= 0 ? 1 : -1;
+        const stepZ = normalizedDir.z >= 0 ? 1 : -1;
+        
+        // 计算tMax：到达下一个X、Y、Z边界的参数化距离
+        let tMaxX, tMaxY, tMaxZ;
+        let tDeltaX, tDeltaY, tDeltaZ;
+        
+        // X轴
+        if (normalizedDir.x === 0) {
+            tMaxX = Number.POSITIVE_INFINITY;
+            tDeltaX = Number.POSITIVE_INFINITY;
+        } else {
+            if (stepX > 0) {
+                tMaxX = (X + 1 - origin.x) / normalizedDir.x;
+            } else {
+                tMaxX = (origin.x - X) / normalizedDir.x;
+            }
+            tDeltaX = Math.abs(1.0 / normalizedDir.x);
+        }
+        
+        // Y轴
+        if (normalizedDir.y === 0) {
+            tMaxY = Number.POSITIVE_INFINITY;
+            tDeltaY = Number.POSITIVE_INFINITY;
+        } else {
+            if (stepY > 0) {
+                tMaxY = (Y + 1 - origin.y) / normalizedDir.y;
+            } else {
+                tMaxY = (origin.y - Y) / normalizedDir.y;
+            }
+            tDeltaY = Math.abs(1.0 / normalizedDir.y);
+        }
+        
+        // Z轴
+        if (normalizedDir.z === 0) {
+            tMaxZ = Number.POSITIVE_INFINITY;
+            tDeltaZ = Number.POSITIVE_INFINITY;
+        } else {
+            if (stepZ > 0) {
+                tMaxZ = (Z + 1 - origin.z) / normalizedDir.z;
+            } else {
+                tMaxZ = (origin.z - Z) / normalizedDir.z;
+            }
+            tDeltaZ = Math.abs(1.0 / normalizedDir.z);
+        }
+        
+        // 主遍历循环
+        let checkedBlocks = 0;
+        let currentT = 0;
+        let hitNormal = new Vec3(0, 1, 0);
+        
+        while (currentT < maxDistance) {
+            // 检查当前体素
+            checkedBlocks++;
+            let blockType: VoxelBlockType;
+            
+            if (voxelData.getBlockAt) {
+                blockType = voxelData.getBlockAt(X, Y, Z);
+            } else {
+                const blockPos = new Vec3(X, Y, Z);
+                blockType = this.getBlockFromMap(blockPos, voxelData.voxelMap);
+            }
+            
+            // 只显示前5个检查的方块或非空方块
+            if (checkedBlocks <= 5 || blockType !== VoxelBlockType.EMPTY) {
+                console.log(`[VoxelRayCaster-AW] 检查方块(${X}, ${Y}, ${Z}) = ${blockType}, t=${currentT.toFixed(3)}`);
+            }
+            
+            if (blockType !== VoxelBlockType.EMPTY) {
+                // 击中！
+                const hitPos = origin.clone().add(normalizedDir.clone().multiplyScalar(currentT));
+                const blockPos = new Vec3(X, Y, Z);
+                
+                // 根据进入的面确定法向量和面ID
+                let face: number;
+                if (tMaxX - tDeltaX <= tMaxY - tDeltaY && tMaxX - tDeltaX <= tMaxZ - tDeltaZ) {
+                    // 从X面进入
+                    hitNormal = new Vec3(-stepX, 0, 0);
+                    face = stepX > 0 ? 5 : 4; // 射线向右击中左面(5) : 射线向左击中右面(4)
+                } else if (tMaxY - tDeltaY <= tMaxZ - tDeltaZ) {
+                    // 从Y面进入
+                    hitNormal = new Vec3(0, -stepY, 0);
+                    face = stepY > 0 ? 1 : 0; // 射线向上击中底面(1) : 射线向下击中顶面(0)
+                } else {
+                    // 从Z面进入
+                    hitNormal = new Vec3(0, 0, -stepZ);
+                    face = stepZ > 0 ? 3 : 2; // 射线向前击中后面(3) : 射线向后击中前面(2)
+                }
+                
+                const worldPos = this.blockToWorldPosition(blockPos);
+                
+                console.log(`[VoxelRayCaster-AW] ✓ 击中方块! 位置:(${X}, ${Y}, ${Z}), 面:${face}, 类型:${blockType}, t:${currentT.toFixed(3)}`);
+                
+                return {
+                    hit: true,
+                    position: blockPos,
+                    worldPosition: worldPos,
+                    blockType: blockType,
+                    face: face,
+                    normal: hitNormal
+                };
+            }
+            
+            // 移动到下一个体素
+            if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+                // X方向的边界最近
+                currentT = tMaxX;
+                tMaxX += tDeltaX;
+                X += stepX;
+            } else if (tMaxY < tMaxZ) {
+                // Y方向的边界最近
+                currentT = tMaxY;
+                tMaxY += tDeltaY;
+                Y += stepY;
+            } else {
+                // Z方向的边界最近
+                currentT = tMaxZ;
+                tMaxZ += tDeltaZ;
+                Z += stepZ;
+            }
+        }
+        
+        console.log(`[VoxelRayCaster-AW] ✗ Amanatides-Woo射线投射完成: 检查了${checkedBlocks}个方块，未击中任何目标，最大t:${currentT.toFixed(3)}`);
+        return { hit: false };
+    }
+
     private worldToBlockPosition(worldPos: Vec3): Vec3 {
         return new Vec3(
             Math.floor(worldPos.x),
@@ -301,5 +467,22 @@ export class VoxelRayCaster {
             voxelMap: new Map(), 
             getBlockAt 
         });
+    }
+    
+    // 便捷方法：设置和获取算法
+    public static setSimpleAlgorithm(): void {
+        this.setAlgorithm(RaycastAlgorithm.SIMPLE);
+    }
+    
+    public static setDDAAlgorithm(): void {
+        this.setAlgorithm(RaycastAlgorithm.DDA);
+    }
+    
+    public static setAmanatidesWooAlgorithm(): void {
+        this.setAlgorithm(RaycastAlgorithm.AMANATIDES_WOO);
+    }
+    
+    public static getCurrentAlgorithmName(): string {
+        return RaycastAlgorithm[this.currentAlgorithm];
     }
 }

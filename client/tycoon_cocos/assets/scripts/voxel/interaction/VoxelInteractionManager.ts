@@ -1,5 +1,5 @@
-import { _decorator, Component, Node, Vec3, Camera, input, Input, EventMouse } from "cc";
-import { VoxelRayCaster, VoxelHitResult } from "./VoxelRayCaster";
+import { _decorator, Component, Node, Vec3, Camera, input, Input, EventMouse, MeshRenderer, Material, primitives, Mesh, Color, view, UITransform, Canvas, utils } from "cc";
+import { VoxelRayCaster, VoxelHitResult, RaycastAlgorithm } from "./VoxelRayCaster";
 import { VoxelCameraController, CameraMode } from "./VoxelCameraController";
 import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
 import { VoxelWorldManager } from "../world/VoxelWorld";
@@ -34,11 +34,24 @@ export class VoxelInteractionManager extends Component {
     @property
     selectedBlockType: VoxelBlockType = VoxelBlockType.STONE;
 
+    @property({ tooltip: "启用射线可视化调试" })
+    enableDebugVisualization: boolean = true;
+
+    @property({ tooltip: "启用击中点标记" })
+    enableHitMarkers: boolean = true;
+
+    @property({ tooltip: "调试信息保持时间（秒）" })
+    debugDisplayDuration: number = 3.0;
+
     private rayCaster: VoxelRayCaster = new VoxelRayCaster();
     private worldManager: VoxelWorldManager = null;
     private events: VoxelInteractionEvents = {};
     
     private lastHoverResult: VoxelHitResult | null = null;
+    
+    // 调试可视化相关
+    private debugRayNodes: Node[] = [];
+    private debugMarkerNodes: Node[] = [];
 
     protected onLoad() {
         if (!this.camera) {
@@ -156,6 +169,28 @@ export class VoxelInteractionManager extends Component {
         );
 
         console.log(`[VoxelRaycast] 射线投射结果: hit=${result.hit}`, result.hit ? `pos=(${result.position.x}, ${result.position.y}, ${result.position.z})` : '');
+        
+        // 调试可视化
+        if (mouseX !== undefined && mouseY !== undefined) {
+            // 输出调试信息
+            this.outputDebugInfo(mouseX, mouseY);
+            
+            // 清理之前的调试节点
+            this.clearDebugNodes();
+            
+            // 创建射线可视化
+            if (this.enableDebugVisualization) {
+                this.createDebugRay(rayOrigin, rayDirection, castDistance);
+            }
+            
+            // 创建击中点标记
+            if (result.hit && result.position && this.enableHitMarkers) {
+                this.createHitMarker(result.position, Color.GREEN, "击中点");
+            }
+            
+            // 计划清理调试节点
+            this.scheduleDebugCleanup();
+        }
         
         return result;
     }
@@ -350,5 +385,170 @@ export class VoxelInteractionManager extends Component {
 
     public update(deltaTime: number): void {
 
+    }
+
+    // === 调试可视化功能 ===
+    
+    private createDebugRay(origin: Vec3, direction: Vec3, distance: number): Node {
+        if (!this.enableDebugVisualization) return null;
+        
+        const rayNode = new Node('DebugRay');
+        // 将调试节点挂在当前节点，保证层级/可见性一致
+        rayNode.setParent(this.node);
+        // 匹配渲染层，避免被相机可见性剔除
+        rayNode.layer = this.node.layer;
+        
+        // 计算射线终点
+        const endPoint = origin.clone().add(direction.clone().multiplyScalar(distance));
+        
+        // 使用简单的方式：创建一个细长的立方体表示射线
+        const meshRenderer = rayNode.addComponent(MeshRenderer);
+        
+        // 创建线段网格（使用更粗的立方体便于观察）
+        const lineLength = Vec3.distance(origin, endPoint);
+        const geometryData = primitives.box({ width: 0.1, height: 0.1, length: lineLength });
+        const mesh = utils.MeshUtils.createMesh(geometryData);
+        meshRenderer.mesh = mesh;
+        
+        // 创建红色材质
+        try {
+            const material = new Material();
+            // 使用内置无光材质，避免缺少灯光导致不可见
+            material.initialize({ effectName: 'builtin-unlit' });
+            // 设置为红色，便于观察
+            try { material.setProperty('mainColor', new Color(0, 0, 255, 255)); } catch {}
+            try { material.setProperty('albedo', new Color(0, 0, 255, 255)); } catch {}
+            meshRenderer.material = material;
+        } catch (e) {
+            console.warn('[调试] 无法设置射线材质:', e);
+        }
+        
+        // 设置位置和旋转
+        const center = Vec3.lerp(new Vec3(), origin, endPoint, 0.5);
+        rayNode.setWorldPosition(center);
+        
+        // 计算旋转让立方体指向射线方向
+        const forward = direction.clone().normalize();
+        const up = new Vec3(0, 1, 0);
+        
+        // 使用lookAt让立方体指向终点
+        rayNode.lookAt(endPoint, up);
+        
+        // 详细调试信息
+        console.log(`[调试] 射线可视化详情:`);
+        console.log(`  起点: (${origin.x.toFixed(2)}, ${origin.y.toFixed(2)}, ${origin.z.toFixed(2)})`);
+        console.log(`  终点: (${endPoint.x.toFixed(2)}, ${endPoint.y.toFixed(2)}, ${endPoint.z.toFixed(2)})`);
+        console.log(`  中心: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`);
+        console.log(`  长度: ${lineLength.toFixed(2)}`);
+        console.log(`  方向: (${forward.x.toFixed(2)}, ${forward.y.toFixed(2)}, ${forward.z.toFixed(2)})`);
+        
+        this.debugRayNodes.push(rayNode);
+
+        // 额外：在射线上撒点，增强可见性
+        const dotSteps = Math.max(12, Math.floor(lineLength / 0.5));
+        const dotLen = lineLength / dotSteps;
+        for (let i = 0; i <= dotSteps; i++) {
+            const t = i * dotLen;
+            const p = origin.clone().add(direction.clone().normalize().multiplyScalar(t));
+            const dot = new Node('RayDot');
+            dot.setParent(this.node);
+            dot.layer = this.node.layer;
+            const mr = dot.addComponent(MeshRenderer);
+            const geo = primitives.box({ width: 0.08, height: 0.08, length: 0.08 });
+            mr.mesh = utils.MeshUtils.createMesh(geo);
+            try {
+                const mat = new Material();
+                mat.initialize({ effectName: 'builtin-unlit' });
+                const col = i === dotSteps ? new Color(255, 200, 40, 255) : new Color(240, 240, 240, 220);
+                try { mat.setProperty('mainColor', col); } catch {}
+                try { mat.setProperty('albedo', col); } catch {}
+                mr.material = mat;
+            } catch {}
+            dot.setWorldPosition(p);
+            this.debugRayNodes.push(dot);
+        }
+        return rayNode;
+    }
+    
+    private createHitMarker(position: Vec3, color: Color, label: string): Node {
+        if (!this.enableHitMarkers) return null;
+        
+        const markerNode = new Node(`HitMarker_${label}`);
+        markerNode.setParent(this.node);
+        markerNode.layer = this.node.layer;
+        
+        const meshRenderer = markerNode.addComponent(MeshRenderer);
+        const geometryData = primitives.box({ width: 0.2, height: 0.2, length: 0.2 });
+        const mesh = utils.MeshUtils.createMesh(geometryData);
+        meshRenderer.mesh = mesh;
+        
+        // 为标记设置材质和颜色
+        try {
+            const material = new Material();
+            material.initialize({ effectName: 'builtin-unlit' });
+            // 根据标记类型设置颜色
+            const c = (label === "击中点") ? new Color(0, 255, 0, 255) : color;
+            try { material.setProperty('mainColor', c); } catch {}
+            try { material.setProperty('albedo', c); } catch {}
+            meshRenderer.material = material;
+        } catch (e) {
+            console.warn('[调试] 无法设置标记材质:', e);
+        }
+        
+        // 设置位置（方块中心）
+        markerNode.setWorldPosition(new Vec3(position.x + 0.5, position.y + 0.5, position.z + 0.5));
+        
+        console.log(`[调试] 创建${label}标记: 位置(${position.x}, ${position.y}, ${position.z})`);
+        
+        this.debugMarkerNodes.push(markerNode);
+        return markerNode;
+    }
+    
+    private clearDebugNodes(): void {
+        // 清理射线可视化
+        this.debugRayNodes.forEach(node => {
+            if (node && node.isValid) {
+                node.destroy();
+            }
+        });
+        this.debugRayNodes = [];
+        
+        // 清理标记
+        this.debugMarkerNodes.forEach(node => {
+            if (node && node.isValid) {
+                node.destroy();
+            }
+        });
+        this.debugMarkerNodes = [];
+    }
+    
+    private scheduleDebugCleanup(): void {
+        this.scheduleOnce(() => {
+            this.clearDebugNodes();
+        }, this.debugDisplayDuration);
+    }
+    
+    private outputDebugInfo(mouseX: number, mouseY: number): void {
+        console.log('=== 射线检测调试信息 ===');
+        
+        // Canvas和视口信息
+        const canvas = this.camera.node.scene.getComponentInChildren(Canvas);
+        if (canvas) {
+            const canvasTransform = canvas.node.getComponent(UITransform);
+            console.log(`Canvas信息: 设计尺寸(${canvasTransform.width}, ${canvasTransform.height})`);
+        }
+        
+        // 视图信息
+        const visibleSize = view.getVisibleSize();
+        const designSize = view.getDesignResolutionSize();
+        console.log(`视图信息: 可见尺寸(${visibleSize.width}, ${visibleSize.height}), 设计分辨率(${designSize.width}, ${designSize.height})`);
+        
+        // 相机信息
+        console.log(`相机信息: FOV=${this.camera.fov}, Near=${this.camera.near}, Far=${this.camera.far}`);
+        
+        // 鼠标坐标信息
+        console.log(`鼠标坐标: UI(${mouseX}, ${mouseY})`);
+        
+        console.log('=== 调试信息结束 ===');
     }
 }

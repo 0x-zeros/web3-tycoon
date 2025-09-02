@@ -2,6 +2,7 @@ import { warn, error } from "cc";
 import { UIBase } from "./UIBase";
 import { EventBus } from "../events/EventBus";
 import { EventTypes } from "../events/EventTypes";
+import { UI3DInteractionManager } from "../events/UI3DInteractionManager";
 import * as fgui from "fairygui-cc";
 
 /**
@@ -125,6 +126,8 @@ export class UIManager {
                 designResolution: this._config.designResolution
             });
         }
+
+        this._groot.node.addComponent(UI3DInteractionManager);
     }
 
     /**
@@ -637,7 +640,8 @@ export class UIManager {
             uiInstance.setUIName(uiName);
             uiInstance.setPanel(fguiComponent.asCom);
 
-            // // 关键：设置触摸穿透，让空白区域不拦截鼠标事件
+            // 关键：设置触摸穿透，让空白区域不拦截鼠标事件
+            // 不需要了，各个panel单独在编辑器里设置，不要在这儿修改。
             // const panel = fguiComponent.asCom;
             // if (panel) {
             //     //true表示不可穿透，false表示可穿透。

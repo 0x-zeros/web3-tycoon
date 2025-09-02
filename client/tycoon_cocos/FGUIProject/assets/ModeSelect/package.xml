@@ -5,5 +5,5 @@
     <image id="mumq5" name="bg.png" path="/images/"/>
     <image id="mumq7" name="logo.png" path="/images/"/>
   </resources>
-  <publish name=""/>
+  <publish name="" genCode="true"/>
 </packageDescription>

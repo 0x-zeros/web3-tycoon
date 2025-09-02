@@ -627,6 +627,9 @@ export class UIManager {
                 return null;
             }
 
+            //修改node的name为uiName
+            fguiComponent.node.name = uiName;
+
             // 创建UI逻辑实例，添加到FairyGUI节点上
             const uiInstance = fguiComponent.node.addComponent(constructor as any) as unknown as T;
             

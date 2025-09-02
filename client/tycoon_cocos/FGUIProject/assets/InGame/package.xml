@@ -19,5 +19,5 @@
     <component id="ue83k" name="PlayerInfoList.xml" path="/images/"/>
     <component id="ue83l" name="PlayerInfoWrap.xml" path="/components/"/>
   </resources>
-  <publish name=""/>
+  <publish name="" genCode="true"/>
 </packageDescription>

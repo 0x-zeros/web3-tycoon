@@ -35,6 +35,9 @@ import { UIInGame } from "./game/UIInGame";
 
 const PRELOAD_PACKAGES = ["Common", "ModeSelect", "InGame"];
 
+// 防止重复注册全局事件监听
+let _globalListenersSetup = false;
+
 /**
  * FairyGUI UI系统初始化函数
  * 在游戏启动时调用此函数来初始化UI系统
@@ -57,6 +60,12 @@ export async function initUISystem(config?: any): Promise<boolean> {
         if (config?.debug) {
             EventBus.setDebug(true);
             Blackboard.instance.setDebug(true);
+        }
+
+        // 提前注册全局事件监听（去重保护）
+        if (!_globalListenersSetup) {
+            _setupGlobalUIEventListeners();
+            _globalListenersSetup = true;
         }
         
         console.log("[UISystem] FairyGUI UI system initialized successfully");
@@ -161,7 +170,7 @@ export async function initializeGameUI(): Promise<void> {
         const initialized = await initUISystem({
             debug: true,
             enableCache: true,
-            designResolution: { width: 1136, height: 640 }
+            designResolution: { width: 1920, height: 1080 }
         });
         
         if (!initialized) {
@@ -177,9 +186,6 @@ export async function initializeGameUI(): Promise<void> {
 
         // 4. 显示初始界面
         await showModeSelect();
-
-        // 5. 设置事件监听器
-        _setupGlobalUIEventListeners();
 
         console.log("[UISystem] Game UI system initialized completely");
 
@@ -197,6 +203,13 @@ function _setupGlobalUIEventListeners(): void {
     EventBus.onEvent(EventTypes.UI.ShowMainMenu, async (data) => {
         console.log("[UISystem] ShowMainMenu event received:", data);
         await showModeSelect();
+    });
+
+    EventBus.onEvent(EventTypes.Game.GameStart, async (data) => {
+        console.log("[UISystem] Game.GameStart event received:", data);
+
+        //todo 开始选地图等
+        await showInGame();
     });
 
     // 监听其他全局UI事件

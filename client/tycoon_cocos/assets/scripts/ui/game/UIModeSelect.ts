@@ -25,6 +25,10 @@ export class UIModeSelect extends UIBase {
     /** 版本文本 */
     private _versionText: fgui.GTextField | null = null;
 
+
+    public m_btn_start:fgui.GButton;
+	public m_btn1:fgui.GButton;
+
     /**
      * 初始化回调
      */
@@ -37,6 +41,10 @@ export class UIModeSelect extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
+
+        this.m_btn_start = this.getButton("btn_start");
+        this.m_btn1 = this.getButton("btn1");
+
         // 获取按钮组件
         this._singlePlayerBtn = this.getButton("btnSinglePlayer");
         this._multiPlayerBtn = this.getButton("btnMultiPlayer");
@@ -70,6 +78,14 @@ export class UIModeSelect extends UIBase {
      */
     protected bindEvents(): void {
         // 绑定按钮点击事件
+        if (this.m_btn_start) {
+            this.m_btn_start.onClick(this._onSinglePlayerClick, this);
+        }
+
+        if (this.m_btn1) {
+            this.m_btn1.onClick(this._onBtn1Click, this);
+        }
+
         if (this._singlePlayerBtn) {
             this._singlePlayerBtn.onClick(this._onSinglePlayerClick, this);
         }
@@ -175,7 +191,17 @@ export class UIModeSelect extends UIBase {
 
         // 保存游戏模式
         Blackboard.instance.set("gameMode", "single_player", true);
+
+        this.hide();
     }
+
+
+    private _onBtn1Click(): void {
+        console.log("[UIModeSelect] btn1 clicked");
+       
+    }
+
+
 
     /**
      * 多人游戏按钮点击

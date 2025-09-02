@@ -162,3 +162,7 @@ https://www.fairygui.com/cocos-demo/
 sdk 源码和例子：
 https://github.com/fairygui/FairyGUI-cocoscreator?utm_source=chatgpt.com
 
+
+安装：
+npm install --save fairygui-cc
+

@@ -1,14 +1,14 @@
-import { director, Node, warn, error } from "cc";
+import { warn, error } from "cc";
 import { UIBase } from "./UIBase";
 import { EventBus } from "../events/EventBus";
 import { EventTypes } from "../events/EventTypes";
 import * as fgui from "fairygui-cc";
 
 /**
- * UI构造函数接口
+ * UI构造函数接口 - Component类构造函数
  */
 export interface UIConstructor<T extends UIBase = UIBase> {
-    new (panel: fgui.GComponent, uiName: string): T;
+    new (): T;
 }
 
 /**
@@ -48,6 +48,10 @@ export class UIManager {
     
     /** FairyGUI根节点 */
     private _groot: fgui.GRoot | null = null;
+    /** 在resources目录下的UI目录 */
+    private static readonly UI_DIR = 'ui/';
+    /** 公共依赖包列表 */
+    private static readonly COMMON_PACKAGES = ["Common"];
     /** 已注册的UI配置 */
     private _uiConfigs: Map<string, UIConfig> = new Map();
     /** UI构造函数 */
@@ -106,14 +110,14 @@ export class UIManager {
      * 初始化FairyGUI
      */
     private _initFairyGUI(): void {
-        // 获取或创建GRoot实例
+        // 先创建GRoot实例
+        fgui.GRoot.create();
+        
+        // 然后获取实例
         this._groot = fgui.GRoot.inst;
         
-        // 设置设计分辨率
-        if (this._config.designResolution) {
-            const { width, height } = this._config.designResolution;
-            this._groot.setContentScaleFactor(width, height);
-        }
+        // FairyGUI会自动处理设计分辨率
+        // 不需要手动调用setContentScaleFactor
 
         if (this._config.debug) {
             console.log("[UIManager] FairyGUI initialized", {
@@ -124,7 +128,7 @@ export class UIManager {
     }
 
     /**
-     * 加载UI包
+     * 加载UI包 - 使用FairyGUI第一种方式（从resources加载）
      */
     public async loadPackage(packageName: string): Promise<boolean> {
         if (this._loadedPackages.has(packageName)) {
@@ -134,30 +138,141 @@ export class UIManager {
             return true;
         }
 
-        try {
-            // 使用FairyGUI加载包
-            await new Promise<void>((resolve, reject) => {
-                fgui.UIPackage.loadPackage(packageName, (err: any) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
+        // 先确保公共依赖包已加载
+        await this._ensureCommonPackagesLoaded();
 
-            this._loadedPackages.add(packageName);
+        return this._loadSinglePackage(packageName);
+    }
+
+    /**
+     * 确保公共依赖包已加载
+     */
+    private async _ensureCommonPackagesLoaded(): Promise<void> {
+        for (const commonPackage of UIManager.COMMON_PACKAGES) {
+            if (!this._loadedPackages.has(commonPackage)) {
+                if (this._config.debug) {
+                    console.log(`[UIManager] Loading required common package: ${commonPackage}`);
+                }
+                const loaded = await this._loadSinglePackage(commonPackage);
+                if (!loaded) {
+                    throw new Error(`Failed to load required common package: ${commonPackage}`);
+                }
+            }
+        }
+    }
+
+    /**
+     * 加载单个包的内部实现
+     */
+    private _loadSinglePackage(packageName: string): Promise<boolean> {
+        if (this._loadedPackages.has(packageName)) {
+            return Promise.resolve(true);
+        }
+
+        return new Promise<boolean>((resolve) => {
+            if (this._config.debug) {
+                console.log(`[UIManager] Loading package: ${packageName}`);
+            }
+
+            // import { resources } from "cc";
+            // import * as fgui from "fairygui-cc";
+
+            // resources.load("ui/MainUI", fgui.AssetType, (err, pkg) => {
+            //     if (err) {
+            //         console.error(err);
+            //         return;
+            //     }
+            //     fgui.UIPackage.addPackage(pkg);
+            //     console.log("手动加载成功:", pkg);
+
+            //     const view = fgui.UIPackage.createObject("MainUI", "MainPanel").asCom;
+            //     fgui.GRoot.inst.addChild(view);
+            // });
+            
+            // 从resources目录加载
+            fgui.UIPackage.loadPackage(UIManager.UI_DIR + packageName, (err: any) => {
+                if (err) {
+                    error(`[UIManager] Failed to load package ${packageName}:`, err);
+                    resolve(false);
+                } else {
+                    this._loadedPackages.add(packageName);
+                    
+                    if (this._config.debug) {
+                        console.log(`[UIManager] Package ${packageName} loaded successfully`);
+                    }
+                    
+                    resolve(true);
+                }
+            });
+        });
+    }
+
+    /**
+     * 预加载公共依赖包
+     */
+    public async loadCommonPackages(): Promise<boolean> {
+        try {
+            await this._ensureCommonPackagesLoaded();
+            return true;
+        } catch (e) {
+            error(`[UIManager] Failed to load common packages:`, e);
+            return false;
+        }
+    }
+
+    /**
+     * 卸载UI包
+     */
+    public unloadPackage(packageName: string): boolean {
+        if (!this._loadedPackages.has(packageName)) {
+            if (this._config.debug) {
+                console.log(`[UIManager] Package ${packageName} not loaded`);
+            }
+            return false;
+        }
+
+        try {
+            fgui.UIPackage.removePackage(packageName);
+            this._loadedPackages.delete(packageName);
             
             if (this._config.debug) {
-                console.log(`[UIManager] Package ${packageName} loaded successfully`);
+                console.log(`[UIManager] Package ${packageName} unloaded`);
             }
             
             return true;
-
         } catch (e) {
-            error(`[UIManager] Failed to load package ${packageName}:`, e);
+            error(`[UIManager] Error unloading package ${packageName}:`, e);
             return false;
         }
+    }
+
+    /**
+     * 卸载所有UI包
+     */
+    public unloadAllPackages(): void {
+        const packageNames = Array.from(this._loadedPackages);
+        
+        for (const packageName of packageNames) {
+            this.unloadPackage(packageName);
+        }
+
+        if (this._config.debug) {
+            console.log(`[UIManager] Unloaded ${packageNames.length} packages`);
+        }
+    }
+
+    /**
+     * 检查包是否已加载
+     */
+    public isPackageLoaded(packageName: string): boolean {
+        return this._loadedPackages.has(packageName);
+    }
+
+    /**
+     * 获取已加载的包列表
+     */
+    public getLoadedPackages(): string[] {
+        return Array.from(this._loadedPackages);
     }
 
     /**
@@ -196,6 +311,22 @@ export class UIManager {
         if (!config || !constructor) {
             error(`[UIManager] UI ${uiName} not registered!`);
             return null;
+        }
+
+        // 检查UI是否已经激活
+        const existingUI = this._activeUIs.get(uiName);
+        if (existingUI && existingUI.node && existingUI.node.isValid) {
+            if (this._config.debug) {
+                console.log(`[UIManager] UI ${uiName} already exists and is valid, returning existing instance`);
+            }
+            // 刷新现有UI的数据
+            existingUI.refresh(data);
+            return existingUI as T;
+        } else if (existingUI) {
+            if (this._config.debug) {
+                console.log(`[UIManager] UI ${uiName} exists but node is invalid, removing from active list`);
+            }
+            this._activeUIs.delete(uiName);
         }
 
         try {
@@ -325,7 +456,7 @@ export class UIManager {
         const promises: Promise<void>[] = [];
         
         for (const uiName of this._activeUIs.keys()) {
-            if (except && except.includes(uiName)) {
+            if (except && except.indexOf(uiName) !== -1) {
                 continue;
             }
             promises.push(this.hideUI(uiName));
@@ -345,7 +476,7 @@ export class UIManager {
                 this._uiCache.delete(uiName);
             }
         } else {
-            for (const [name, ui] of this._uiCache) {
+            for (const [, ui] of this._uiCache) {
                 ui.destroy();
             }
             this._uiCache.clear();
@@ -357,6 +488,83 @@ export class UIManager {
      */
     public getActiveUIs(): string[] {
         return Array.from(this._activeUIs.keys());
+    }
+
+    /**
+     * 创建UI对象（便捷方法）
+     */
+    public createObject(packageName: string, componentName: string): fgui.GObject | null {
+        if (!this.isPackageLoaded(packageName)) {
+            error(`[UIManager] Package ${packageName} not loaded, cannot create object ${componentName}`);
+            return null;
+        }
+
+        try {
+            return fgui.UIPackage.createObject(packageName, componentName);
+        } catch (e) {
+            error(`[UIManager] Error creating object ${packageName}.${componentName}:`, e);
+            return null;
+        }
+    }
+
+    /**
+     * 异步创建UI对象
+     */
+    public async createObjectAsync(
+        packageName: string, 
+        componentName: string
+    ): Promise<fgui.GObject | null> {
+        // 确保包已加载
+        if (!this.isPackageLoaded(packageName)) {
+            const loaded = await this.loadPackage(packageName);
+            if (!loaded) {
+                return null;
+            }
+        }
+
+        return this.createObject(packageName, componentName);
+    }
+
+    /**
+     * 获取包中的资源
+     */
+    public getPackageItem(packageName: string, itemName: string): fgui.PackageItem | null {
+        if (!this.isPackageLoaded(packageName)) {
+            warn(`[UIManager] Package ${packageName} not loaded`);
+            return null;
+        }
+
+        try {
+            const pkg = fgui.UIPackage.getByName(packageName);
+            return pkg ? pkg.getItemByName(itemName) : null;
+        } catch (e) {
+            error(`[UIManager] Error getting package item ${packageName}.${itemName}:`, e);
+            return null;
+        }
+    }
+
+    /**
+     * 检查资源是否存在
+     */
+    public hasResource(packageName: string, resourceName: string): boolean {
+        return this.getPackageItem(packageName, resourceName) !== null;
+    }
+
+    /**
+     * 获取加载统计信息
+     */
+    public getStats(): {
+        loadedCount: number;
+        loadedPackages: string[];
+        activeUIs: string[];
+        cachedUIs: number;
+    } {
+        return {
+            loadedCount: this._loadedPackages.size,
+            loadedPackages: Array.from(this._loadedPackages),
+            activeUIs: Array.from(this._activeUIs.keys()),
+            cachedUIs: this._uiCache.size
+        };
     }
 
     /**
@@ -419,8 +627,12 @@ export class UIManager {
                 return null;
             }
 
-            // 创建UI逻辑实例
-            const uiInstance = new constructor(fguiComponent.asCom, uiName);
+            // 创建UI逻辑实例，添加到FairyGUI节点上
+            const uiInstance = fguiComponent.node.addComponent(constructor as any) as unknown as T;
+            
+            // 设置UI名称和面板引用
+            uiInstance.setUIName(uiName);
+            uiInstance.setPanel(fguiComponent.asCom);
             
             return uiInstance;
 

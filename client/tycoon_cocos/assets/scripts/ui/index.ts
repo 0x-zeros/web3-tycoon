@@ -19,30 +19,52 @@ export { UIInGame } from "./game/UIInGame";
 
 // 工具类
 export { UIHelper } from "./utils/UIHelper";
-export { UILoader } from "./utils/UILoader";
 
 // 导出FairyGUI类型
 import * as fgui from "fairygui-cc";
 export { fgui };
 
+// 导入核心类以便在函数中使用
+import { UIManager } from "./core/UIManager";
+import { EventBus } from "./events/EventBus";
+import { EventTypes } from "./events/EventTypes";
+import { Blackboard } from "./events/Blackboard";
+import { UIModeSelect } from "./game/UIModeSelect";
+import { UIInGame } from "./game/UIInGame";
+
+
+const PRELOAD_PACKAGES = ["Common", "ModeSelect", "InGame"];
+
 /**
  * FairyGUI UI系统初始化函数
  * 在游戏启动时调用此函数来初始化UI系统
  */
-export function initUISystem(config?: any): void {
+export async function initUISystem(config?: any): Promise<boolean> {
     console.log("[UISystem] Initializing FairyGUI UI system...");
     
-    // 初始化UI管理器
-    UIManager.instance.init(config);
-    
-    // 设置事件总线调试模式
-    if (config?.debug) {
-        EventBus.setDebug(true);
-        Blackboard.instance.setDebug(true);
-        UILoader.setDebug(true);
+    try {
+        // 初始化UI管理器
+        UIManager.instance.init(config);
+        
+        // 预加载公共依赖包
+        const loaded = await UIManager.instance.loadCommonPackages();
+        if (!loaded) {
+            console.error("[UISystem] Failed to load common packages");
+            return false;
+        }
+        
+        // 设置事件总线调试模式
+        if (config?.debug) {
+            EventBus.setDebug(true);
+            Blackboard.instance.setDebug(true);
+        }
+        
+        console.log("[UISystem] FairyGUI UI system initialized successfully");
+        return true;
+    } catch (error) {
+        console.error("[UISystem] Failed to initialize UI system:", error);
+        return false;
     }
-    
-    console.log("[UISystem] FairyGUI UI system initialized successfully");
 }
 
 /**
@@ -61,16 +83,13 @@ export function cleanupUISystem(): void {
     // 清理黑板
     Blackboard.instance.destroy();
     
-    // 清理资源加载器
-    UILoader.unloadAllPackages();
-    
     console.log("[UISystem] FairyGUI UI system cleaned up successfully");
 }
 
 /**
  * 便捷注册方法 - 注册模式选择UI
  */
-export function registerModeSelectUI(packageName: string = "Common", componentName: string = "ModeSelect"): void {
+export function registerModeSelectUI(packageName: string, componentName: string="Main"): void {
     UIManager.instance.registerUI("ModeSelect", {
         packageName,
         componentName,
@@ -82,7 +101,7 @@ export function registerModeSelectUI(packageName: string = "Common", componentNa
 /**
  * 便捷注册方法 - 注册游戏内UI
  */
-export function registerInGameUI(packageName: string = "Game", componentName: string = "InGame"): void {
+export function registerInGameUI(packageName: string, componentName: string="Main"): void {
     UIManager.instance.registerUI("InGame", {
         packageName,
         componentName,
@@ -97,10 +116,15 @@ export function registerInGameUI(packageName: string = "Game", componentName: st
 export async function preloadUIPackages(packageNames: string[]): Promise<void> {
     console.log("[UISystem] Preloading UI packages:", packageNames);
     
-    await UILoader.preloadPackages(packageNames, (finished, total, packageName) => {
-        const progress = (finished / total) * 100;
-        console.log(`[UISystem] Loading progress: ${progress.toFixed(1)}% (${packageName})`);
-    });
+    // 过滤掉已经在初始化时加载的公共包
+    const packagesToLoad = packageNames.filter(name => !UIManager.instance.isPackageLoaded(name));
+    
+    for (const packageName of packagesToLoad) {
+        const loaded = await UIManager.instance.loadPackage(packageName);
+        if (!loaded) {
+            console.warn(`[UISystem] Failed to load package: ${packageName}`);
+        }
+    }
     
     console.log("[UISystem] UI packages preloaded successfully");
 }
@@ -134,21 +158,28 @@ export async function initializeGameUI(): Promise<void> {
     
     try {
         // 1. 初始化UI系统
-        initUISystem({
+        const initialized = await initUISystem({
             debug: true,
             enableCache: true,
             designResolution: { width: 1136, height: 640 }
         });
+        
+        if (!initialized) {
+            throw new Error("UI system initialization failed");
+        }
 
         // 2. 预加载UI包
-        await preloadUIPackages(["Common", "Game"]);
+        await preloadUIPackages(PRELOAD_PACKAGES);
 
         // 3. 注册UI界面
-        registerModeSelectUI();
-        registerInGameUI();
+        registerModeSelectUI(PRELOAD_PACKAGES[1]);
+        registerInGameUI(PRELOAD_PACKAGES[2]);
 
         // 4. 显示初始界面
         await showModeSelect();
+
+        // 5. 设置事件监听器
+        _setupGlobalUIEventListeners();
 
         console.log("[UISystem] Game UI system initialized completely");
 
@@ -156,4 +187,18 @@ export async function initializeGameUI(): Promise<void> {
         console.error("[UISystem] Failed to initialize game UI system:", error);
         throw error;
     }
+}
+
+/**
+ * 设置全局UI事件监听器
+ */
+function _setupGlobalUIEventListeners(): void {
+    // 监听显示主菜单事件
+    EventBus.onEvent(EventTypes.UI.ShowMainMenu, async (data) => {
+        console.log("[UISystem] ShowMainMenu event received:", data);
+        await showModeSelect();
+    });
+
+    // 监听其他全局UI事件
+    // TODO: 添加更多UI事件监听器
 }

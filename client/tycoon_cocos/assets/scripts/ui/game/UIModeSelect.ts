@@ -3,10 +3,14 @@ import { EventBus } from "../events/EventBus";
 import { EventTypes } from "../events/EventTypes";
 import { Blackboard } from "../events/Blackboard";
 import * as fgui from "fairygui-cc";
+import { _decorator } from 'cc';
+
+const { ccclass } = _decorator;
 
 /**
  * 模式选择界面 - 玩家选择游戏模式
  */
+@ccclass('UIModeSelect')
 export class UIModeSelect extends UIBase {
     /** 单人游戏按钮 */
     private _singlePlayerBtn: fgui.GButton | null = null;
@@ -237,8 +241,10 @@ export class UIModeSelect extends UIBase {
     private _onGameEnd(data: any): void {
         console.log("[UIModeSelect] Game ended:", data);
         
-        // 显示模式选择界面
-        this.show();
+        // 通过事件系统请求显示模式选择界面，而不是直接调用show()
+        EventBus.emitEvent(EventTypes.UI.ShowMainMenu, {
+            source: "game_end"
+        });
     }
 
     /**

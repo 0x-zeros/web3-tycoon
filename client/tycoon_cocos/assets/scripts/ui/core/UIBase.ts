@@ -1,16 +1,20 @@
+import { Component, _decorator } from 'cc';
 import { EventBus } from "../events/EventBus";
 import { Blackboard } from "../events/Blackboard";
 import * as fgui from "fairygui-cc";
 
+const { ccclass, property } = _decorator;
+
 /**
- * UI基类 - 采用组合模式，持有FairyGUI组件引用
+ * UI基类 - 继承Component，可挂载到FairyGUI节点上
  * 所有游戏UI逻辑类都应该继承此类
  */
-export abstract class UIBase {
+@ccclass('UIBase')
+export abstract class UIBase extends Component {
     /** FairyGUI组件引用 */
-    protected _panel: fgui.GComponent;
+    protected _panel: fgui.GComponent | null = null;
     /** UI名称 */
-    protected _uiName: string;
+    protected _uiName: string = '';
     /** 是否已初始化 */
     protected _inited: boolean = false;
     /** 是否已显示 */
@@ -19,11 +23,78 @@ export abstract class UIBase {
     protected _data: any = null;
 
     /**
-     * 构造函数
+     * Cocos组件生命周期 - 加载
      */
-    constructor(panel: fgui.GComponent, uiName: string) {
-        this._panel = panel;
+    protected onLoad(): void {
+        // 在我们的架构中，panel引用是通过UIManager的setPanel方法设置的
+        // 初始化逻辑在setPanel中执行，这里不需要做任何事情
+    }
+
+    /**
+     * Cocos组件生命周期 - 启用
+     */
+    protected onEnable(): void {
+        if (!this._inited) return;
+        
+        this.bindEvents();
+        this._isShowing = true;
+        this.onShow(this._data);
+    }
+
+    /**
+     * Cocos组件生命周期 - 禁用  
+     */
+    protected onDisable(): void {
+        if (!this._inited) return;
+        
+        this.unbindEvents();
+        this._isShowing = false;
+        this.onHide();
+    }
+
+    /**
+     * Cocos组件生命周期 - 销毁
+     */
+    protected onDestroy(): void {
+        if (this._inited) {
+            this.unbindEvents();
+            this._inited = false;
+        }
+    }
+
+    /**
+     * 设置UI名称（由UIManager调用）
+     */
+    public setUIName(uiName: string): void {
         this._uiName = uiName;
+    }
+
+    /**
+     * 设置FairyGUI面板引用（由UIManager调用）
+     */
+    public setPanel(panel: fgui.GComponent): void {
+        this._panel = panel;
+        
+        // 设置面板后立即初始化UI
+        if (!this._inited) {
+            this._initComponent();
+        }
+    }
+
+    /**
+     * 初始化组件
+     */
+    private _initComponent(): void {
+        if (this._inited || !this._panel) {
+            return;
+        }
+
+        try {
+            this.onInit();
+            this._inited = true;
+        } catch (e) {
+            console.error(`[UIBase] Error initializing UI ${this._uiName}:`, e);
+        }
     }
 
     /**
@@ -36,7 +107,7 @@ export abstract class UIBase {
     /**
      * 获取FairyGUI面板引用
      */
-    get panel(): fgui.GComponent {
+    get panel(): fgui.GComponent | null {
         return this._panel;
     }
 
@@ -69,56 +140,23 @@ export abstract class UIBase {
     }
 
     /**
-     * 显示UI
+     * 显示UI（通过激活节点）
      */
     public show(data?: any): void {
         this._data = data;
-        this._isShowing = true;
-
-        // 确保已初始化
-        if (!this._inited) {
-            this.init();
-        }
-
-        // 显示面板
-        if (this._panel && !this._panel.visible) {
-            this._panel.visible = true;
-        }
-
-        this.onShow(data);
+        
+        // 激活节点（会触发onEnable生命周期）
+        this.node.active = true;
     }
 
     /**
-     * 隐藏UI
+     * 隐藏UI（通过停用节点）
      */
     public hide(): void {
-        this._isShowing = false;
-
-        // 隐藏面板
-        if (this._panel) {
-            this._panel.visible = false;
-        }
-
-        this.onHide();
+        // 停用节点（会触发onDisable生命周期）
+        this.node.active = false;
     }
 
-    /**
-     * 销毁UI
-     */
-    public destroy(): void {
-        this.unbindEvents();
-        this.onDestroy();
-
-        // 清理FairyGUI组件
-        if (this._panel) {
-            this._panel.dispose();
-            this._panel = null as any;
-        }
-
-        this._data = null;
-        this._inited = false;
-        this._isShowing = false;
-    }
 
     /**
      * 刷新UI显示
@@ -142,7 +180,7 @@ export abstract class UIBase {
     /**
      * 获取子组件
      */
-    protected getComponent(name: string): fgui.GComponent | null {
+    protected getFGuiComponent(name: string): fgui.GComponent | null {
         const child = this.getChild(name);
         return child ? child.asCom : null;
     }
@@ -152,7 +190,7 @@ export abstract class UIBase {
      */
     protected getButton(name: string): fgui.GButton | null {
         const child = this.getChild(name);
-        return child ? child.asButton : null;
+        return child ? child as fgui.GButton : null;
     }
 
     /**
@@ -160,7 +198,7 @@ export abstract class UIBase {
      */
     protected getText(name: string): fgui.GTextField | null {
         const child = this.getChild(name);
-        return child ? child.asTextField : null;
+        return child ? child as fgui.GTextField : null;
     }
 
     /**
@@ -168,7 +206,7 @@ export abstract class UIBase {
      */
     protected getImage(name: string): fgui.GImage | null {
         const child = this.getChild(name);
-        return child ? child.asImage : null;
+        return child ? child as fgui.GImage : null;
     }
 
     /**
@@ -176,7 +214,7 @@ export abstract class UIBase {
      */
     protected getList(name: string): fgui.GList | null {
         const child = this.getChild(name);
-        return child ? child.asList : null;
+        return child ? child as fgui.GList : null;
     }
 
     /**
@@ -184,7 +222,7 @@ export abstract class UIBase {
      */
     protected getProgressBar(name: string): fgui.GProgressBar | null {
         const child = this.getChild(name);
-        return child ? child.asProgress : null;
+        return child ? child as fgui.GProgressBar : null;
     }
 
     /**
@@ -192,7 +230,7 @@ export abstract class UIBase {
      */
     protected getSlider(name: string): fgui.GSlider | null {
         const child = this.getChild(name);
-        return child ? child.asSlider : null;
+        return child ? child as fgui.GSlider : null;
     }
 
     /**
@@ -238,7 +276,7 @@ export abstract class UIBase {
     /**
      * 显示回调 - 子类重写
      */
-    protected onShow(data?: any): void {
+    protected onShow(_data?: any): void {
         // 子类重写
     }
 
@@ -250,16 +288,9 @@ export abstract class UIBase {
     }
 
     /**
-     * 销毁回调 - 子类重写
-     */
-    protected onDestroy(): void {
-        // 子类重写
-    }
-
-    /**
      * 刷新回调 - 子类重写
      */
-    protected onRefresh(data?: any): void {
+    protected onRefresh(_data?: any): void {
         // 子类重写
     }
 }

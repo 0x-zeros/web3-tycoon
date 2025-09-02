@@ -136,7 +136,8 @@ class EventBusClass extends EventTarget {
      * 检查是否有事件监听器
      */
     public hasEventListener(event: string): boolean {
-        return this.hasEventTarget(event);
+        const listeners = this._listenerMap.get(event);
+        return listeners ? listeners.length > 0 : false;
     }
 
     /**

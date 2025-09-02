@@ -3,10 +3,14 @@ import { EventBus } from "../events/EventBus";
 import { EventTypes } from "../events/EventTypes";
 import { Blackboard } from "../events/Blackboard";
 import * as fgui from "fairygui-cc";
+import { _decorator } from 'cc';
+
+const { ccclass } = _decorator;
 
 /**
  * 游戏内UI界面 - 管理游戏中的HUD和交互界面
  */
+@ccclass('UIInGame')
 export class UIInGame extends UIBase {
     // ================ 玩家信息组件 ================
     /** 玩家名称文本 */

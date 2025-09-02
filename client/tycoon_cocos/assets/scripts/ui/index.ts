@@ -9,7 +9,7 @@ export { UIBase } from "./core/UIBase";
 export * from "./core/UITypes";
 
 // 事件系统
-export { EventBus, EventBusHelpers } from "./events/EventBus";
+export { EventBus } from "./events/EventBus";
 export { EventTypes } from "./events/EventTypes";
 export { Blackboard } from "./events/Blackboard";
 

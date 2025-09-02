@@ -271,48 +271,4 @@ export const EventBus = EventBusClass.instance;
 /**
  * 事件总线便捷方法
  */
-export const EventBusHelpers = {
-    /**
-     * 发送UI事件
-     */
-    emitUIEvent: <T>(event: string, data?: T) => {
-        EventBus.emitEvent(`ui_${event}`, data);
-    },
-
-    /**
-     * 监听UI事件
-     */
-    onUIEvent: <T>(event: string, callback: EventListener<T>, target?: any) => {
-        EventBus.onEvent(`ui_${event}`, callback, target);
-    },
-
-    /**
-     * 发送游戏事件
-     */
-    emitGameEvent: <T>(event: string, data?: T) => {
-        EventBus.emitEvent(`game_${event}`, data);
-    },
-
-    /**
-     * 监听游戏事件
-     */
-    onGameEvent: <T>(event: string, callback: EventListener<T>, target?: any) => {
-        EventBus.onEvent(`game_${event}`, callback, target);
-    },
-
-    /**
-     * 批量取消监听
-     */
-    offEvents: (events: string[], target?: any) => {
-        events.forEach(event => EventBus.offEvent(event, undefined, target));
-    },
-
-    /**
-     * 延迟发送事件
-     */
-    emitEventDelayed: <T>(event: string, data: T, delay: number) => {
-        setTimeout(() => {
-            EventBus.emitEvent(event, data);
-        }, delay * 1000);
-    }
-};
+// 已移除 EventBusHelpers 以避免与 EventTypes 命名规则混淆

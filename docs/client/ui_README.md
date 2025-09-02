@@ -1,351 +1,381 @@
-# UI系统实现文档
+# FairyGUI UI系统技术文档
 
-## 📁 文件结构
+## 📁 项目结构
+
+基于FairyGUI的UI系统，采用组合模式设计，充分利用FairyGUI的强大功能。
 
 ```
 assets/scripts/ui/
 ├── core/                    # 核心框架
 │   ├── UITypes.ts          # UI类型定义和枚举
-│   ├── UIBase.ts           # UI基类，所有UI界面的基类
-│   └── UIManager.ts        # UI管理器，单例管理UI生命周期
-├── events/                 # 事件系统  
+│   ├── UIBase.ts           # UI基类，采用组合模式持有FairyGUI组件
+│   └── UIManager.ts        # UI管理器，FairyGUI的封装层
+├── events/                 # 事件系统（保留）
 │   ├── EventTypes.ts       # 事件类型定义，统一管理所有事件
 │   ├── EventBus.ts         # 事件总线，全局事件通信机制
 │   └── Blackboard.ts       # 黑板系统，响应式数据共享
-├── components/             # 基础UI组件
-│   ├── UIButton.ts         # 扩展按钮，支持防重复点击、音效、动画
-│   ├── UIPanel.ts          # 基础面板，支持遮罩、拖拽
-│   └── UIDialog.ts         # 对话框组件，支持多种类型
 ├── game/                   # 游戏UI界面
-│   ├── MainMenuUI.ts       # 主菜单界面
-│   └── GameHUD.ts          # 游戏HUD界面，显示玩家信息
+│   ├── UIModeSelect.ts     # 模式选择界面（继承UIBase）
+│   └── UIInGame.ts         # 游戏内HUD界面（继承UIBase）
 ├── utils/                  # 工具类
 │   ├── UIHelper.ts         # UI辅助工具，提供常用UI操作
-│   └── UILoader.ts         # 资源加载器，智能缓存和批量加载
-└── index.ts                # 统一入口，导出所有UI相关类
+│   └── UILoader.ts         # FairyGUI资源加载器，专门用于包管理
+└── index.ts                # 统一入口，导出所有UI相关类和便捷方法
 ```
 
-## 🎯 核心功能特性
+## 🎯 核心设计理念
 
-### UI管理器 (UIManager)
-- **单例模式**: 全局统一管理所有UI界面
-- **层级管理**: 5层UI层级（背景/普通/弹窗/顶层/系统）
-- **生命周期**: 完整的显示/隐藏/销毁管理
-- **对象池**: 内存优化的UI复用机制
-- **独占显示**: 支持同层UI互斥显示
+### 1. 组合模式 vs 继承模式
+- **UIBase不继承GComponent**，而是持有`fgui.GComponent`引用
+- **避免过度封装**，直接使用FairyGUI原生API
+- **灵活性更高**，可以访问FairyGUI的所有功能
 
-### 事件系统
-- **EventBus**: 全局事件总线，跨模块通信
-- **EventTypes**: 统一的事件类型定义
-- **自动解绑**: 防止内存泄漏的目标对象自动解绑
+### 2. FairyGUI原生功能
+- 使用FairyGUI的**UIPackage**管理资源包
+- 使用FairyGUI的**GRoot**作为UI根节点
+- 使用FairyGUI的**Window**系统管理弹窗
+- 使用FairyGUI的**Controller**和**Transition**
 
-### 黑板系统 (Blackboard)
-- **响应式数据**: 数据变化自动通知UI更新
-- **持久化存储**: 支持数据本地存储
-- **深度监听**: 支持对象内部变化监听
-- **立即触发**: 支持监听时立即获取当前值
-
-### 基础组件
-- **UIButton**: 防重复点击、音效、点击动画
-- **UIPanel**: 背景遮罩、拖拽功能、边界检查
-- **UIDialog**: 多种对话框类型、静态便捷方法
-
-### 工具类
-- **UIHelper**: 坐标转换、动画效果、数值格式化
-- **UILoader**: 资源加载、智能缓存、批量加载
+### 3. 保留的价值模块
+- **EventBus**: 全局事件通信，补充FairyGUI事件系统
+- **Blackboard**: 响应式数据绑定，自动UI更新
+- **UIHelper**: 通用UI工具函数
+- **UILoader**: FairyGUI包管理的便捷封装
 
 ## 🚀 快速开始
 
 ### 1. 系统初始化
 
 ```typescript
-import { initUISystem } from "./ui/index";
+import { initUISystem, initializeGameUI } from "./ui/index";
 
-// 在游戏启动时初始化UI系统
+// 基础初始化
 initUISystem({
-    debug: true,                    // 启用调试模式
-    enablePool: true,              // 启用对象池
-    poolMaxSize: 5,                // 对象池最大数量
-    defaultAnimationDuration: 0.3   // 默认动画时长
-});
-```
-
-### 2. 注册UI界面
-
-```typescript
-import { UIManager, UILayer } from "./ui/index";
-import { MainMenuUI } from "./ui/game/MainMenuUI";
-
-// 注册主菜单UI
-UIManager.instance.registerUI("MainMenu", {
-    prefabPath: "prefabs/ui/MainMenuUI",  // 预制体路径
-    layer: UILayer.Normal,                // UI层级
-    cache: true,                          // 启用缓存
-    showAnimation: UIAnimationType.Scale, // 显示动画
-    hideAnimation: UIAnimationType.Fade   // 隐藏动画
-}, MainMenuUI);
-```
-
-### 3. 显示和隐藏UI
-
-```typescript
-// 显示UI
-const ui = await UIManager.instance.showUI("MainMenu", {
-    data: { playerName: "玩家1" },        // 传递数据
-    animation: UIAnimationType.Scale,      // 显示动画
-    onComplete: () => console.log("显示完成")
+    debug: true,
+    enableCache: true,
+    designResolution: { width: 1136, height: 640 }
 });
 
-// 隐藏UI
-await UIManager.instance.hideUI("MainMenu", {
-    animation: UIAnimationType.Fade,       // 隐藏动画
-    onComplete: () => console.log("隐藏完成")
-});
+// 完整初始化（推荐）
+await initializeGameUI(); // 自动完成包加载、UI注册、界面显示
 ```
 
-### 4. 事件通信
-
-```typescript
-import { EventBus, EventTypes } from "./ui/index";
-
-// 发送事件
-EventBus.emitEvent(EventTypes.UI.StartGame, { 
-    gameMode: "single_player" 
-});
-
-// 监听事件
-EventBus.onEvent(EventTypes.Game.PlayerMove, (data) => {
-    console.log("玩家移动:", data);
-}, this);
-
-// 取消监听
-EventBus.offTarget(this); // 取消目标对象的所有监听
-```
-
-### 5. 数据绑定
-
-```typescript
-import { Blackboard } from "./ui/index";
-
-// 设置数据
-Blackboard.instance.set("playerMoney", 1000);
-Blackboard.instance.set("playerLevel", 5, true); // 持久化存储
-
-// 监听数据变化
-Blackboard.instance.watch("playerMoney", (newValue, oldValue) => {
-    console.log(`金钱从 ${oldValue} 变为 ${newValue}`);
-    // 更新UI显示
-    this.updateMoneyDisplay(newValue);
-}, this);
-
-// 立即触发监听（如果数据已存在）
-Blackboard.instance.watchImmediate("playerHp", (hp) => {
-    this.updateHpBar(hp);
-}, this);
-```
-
-## 🎨 创建自定义UI界面
-
-### 1. 继承UIBase
+### 2. 创建UI界面
 
 ```typescript
 import { UIBase } from "./ui/core/UIBase";
-import { UIButton } from "./ui/components/UIButton";
+import * as fgui from "fairygui-cc";
 
-@ccclass('CustomUI')
-export class CustomUI extends UIBase {
-    @property(UIButton)
-    confirmButton: UIButton | null = null;
+export class UICustom extends UIBase {
+    private _button: fgui.GButton | null = null;
 
-    // 初始化UI（只调用一次）
     protected onInit(): void {
-        // 设置默认值
-        if (this.confirmButton) {
-            this.confirmButton.text = "确认";
-            this.confirmButton.buttonId = "confirm";
-        }
-    }
-
-    // 绑定事件
-    protected bindEvents(): void {
-        if (this.confirmButton) {
-            this.confirmButton.setClickCallback(() => this.onConfirmClick());
-        }
+        // 通过便捷方法获取FairyGUI组件
+        this._button = this.getButton("btnConfirm");
         
-        // 监听数据变化
-        Blackboard.instance.watch("gameData", this.onGameDataChange, this);
+        // 或直接访问panel
+        const text = this.panel.getChild("txtTitle").asTextField;
     }
 
-    // 解绑事件
-    protected unbindEvents(): void {
-        if (this.confirmButton) {
-            this.confirmButton.setClickCallback(null);
+    protected bindEvents(): void {
+        if (this._button) {
+            // 使用FairyGUI原生事件
+            this._button.onClick(this._onButtonClick, this);
         }
-        Blackboard.instance.unwatchTarget(this);
     }
 
-    // 显示前回调
-    protected onBeforeShow(data: any): void {
-        console.log("UI即将显示:", data);
-        // 更新UI内容
-        this.updateUI(data);
-    }
-
-    // 显示后回调
-    protected onAfterShow(data: any): void {
-        console.log("UI显示完成");
-        // 播放显示动画等
-    }
-
-    // 按钮点击处理
-    private onConfirmClick(): void {
-        EventBus.emitEvent(EventTypes.UI.ButtonClick, {
-            buttonId: "confirm",
-            source: this.uiId
-        });
-        this.hide(); // 隐藏UI
+    private _onButtonClick(): void {
+        // 通过EventBus发送事件
+        EventBus.emitEvent("custom_action", { data: "test" });
     }
 }
 ```
 
-### 2. 注册和使用
+### 3. 注册和显示UI
 
 ```typescript
-// 注册UI
-UIManager.instance.registerUI("CustomUI", {
-    prefabPath: "prefabs/ui/CustomUI",
-    layer: UILayer.Popup,
-    cache: true
-}, CustomUI);
+// 注册UI配置
+UIManager.instance.registerUI("Custom", {
+    packageName: "Game",        // FairyGUI包名
+    componentName: "CustomPanel", // 组件名
+    cache: true,                // 是否缓存
+    isWindow: false             // 是否作为窗口显示
+}, UICustom);
 
 // 显示UI
-const customUI = await UIManager.instance.showUI("CustomUI", {
-    data: { title: "自定义标题", message: "自定义内容" }
-});
+const ui = await UIManager.instance.showUI<UICustom>("Custom");
 ```
 
-## 🔧 高级功能
+## 🔧 核心组件详解
 
-### 1. 自定义动画
+### UIManager - FairyGUI管理器
+
+负责FairyGUI的初始化和UI生命周期管理：
 
 ```typescript
-import { UIHelper } from "./ui/utils/UIHelper";
-
-// 节点弹跳动画
-await UIHelper.bounceNode(this.titleNode, 0.2, 0.8);
-
-// 数字计数动画
-await UIHelper.animateNumber(0, 1000, 2.0, (value) => {
-    this.scoreLabel.string = value.toString();
+// 初始化FairyGUI
+UIManager.instance.init({
+    designResolution: { width: 1136, height: 640 }
 });
 
-// 摇摆动画
-await UIHelper.shakeNode(this.errorNode, 15, 0.6);
+// 加载FairyGUI包
+await UIManager.instance.loadPackage("Common");
+
+// 显示UI（自动创建GComponent和UIBase实例）
+await UIManager.instance.showUI("ModeSelect");
 ```
 
-### 2. 资源预加载
+### UIBase - 组合模式基类
+
+持有FairyGUI组件引用，提供生命周期和便捷方法：
 
 ```typescript
-import { UILoader } from "./ui/utils/UILoader";
-
-// 预加载UI资源
-const assetPaths = [
-    "prefabs/ui/MainMenuUI",
-    "prefabs/ui/GameHUD", 
-    "textures/ui/background",
-    "audio/ui/button_click"
-];
-
-await UILoader.preloadUIAssets(assetPaths, (finished, total) => {
-    const progress = (finished / total) * 100;
-    console.log(`加载进度: ${progress}%`);
-});
+export class UIExample extends UIBase {
+    protected onInit(): void {
+        // 便捷方法获取各类组件
+        const btn = this.getButton("btnStart");
+        const txt = this.getText("txtTitle");
+        const img = this.getImage("imgIcon");
+        const list = this.getList("listItems");
+        const progress = this.getProgressBar("progressHP");
+        const controller = this.getController("ctrlState");
+        const transition = this.getTransition("animShow");
+        
+        // 直接访问FairyGUI面板
+        this.panel.width = 500;
+        this.panel.height = 300;
+    }
+}
 ```
 
-### 3. 批量操作
+### UILoader - 包管理
+
+专门管理FairyGUI包的加载：
 
 ```typescript
-// 批量隐藏UI
-await UIManager.instance.hideAllUI(UILayer.Popup, ["ImportantDialog"]);
+// 加载单个包
+await UILoader.loadPackage("Common");
 
-// 批量加载精灵帧
-const result = await UILoader.loadSpriteFrameBatch([
-    "textures/icons/coin",
-    "textures/icons/gem", 
-    "textures/icons/star"
-]);
+// 批量加载
+const result = await UILoader.loadPackageBatch(["Common", "Game"]);
 
-console.log(`成功: ${result.successCount}, 失败: ${result.failureCount}`);
+// 预加载（静默，不抛错）
+await UILoader.preloadPackages(["Common", "Game"]);
+
+// 创建UI对象
+const obj = UILoader.createObject("Game", "ItemIcon");
+
+// 异步创建（自动加载包）
+const obj = await UILoader.createObjectAsync("Game", "ItemIcon");
 ```
 
-## 📋 最佳实践
+## 📋 使用模式
 
-### 1. UI生命周期管理
-- 在 `onInit()` 中进行一次性初始化
-- 在 `bindEvents()` 和 `unbindEvents()` 中管理事件监听
-- 在 `onBeforeShow()` 中更新UI数据
-- 在 `onAfterHide()` 中清理临时状态
+### 1. 基础UI界面
 
-### 2. 内存管理
-- 使用 `UIManager` 的对象池功能复用UI
-- 及时调用 `EventBus.offTarget(this)` 解绑事件
-- 使用 `Blackboard.instance.unwatchTarget(this)` 解绑数据监听
-- 对于一次性UI设置 `cache: false`
+```typescript
+export class UIModeSelect extends UIBase {
+    private _singleBtn: fgui.GButton | null = null;
+    private _multiBtn: fgui.GButton | null = null;
 
-### 3. 事件通信
-- 优先使用 `EventBus` 进行跨模块通信
-- 使用 `Blackboard` 进行数据共享和响应式更新
-- 避免直接持有其他UI的引用
-- 使用事件类型常量避免字符串硬编码
+    protected onInit(): void {
+        this._singleBtn = this.getButton("btnSingle");
+        this._multiBtn = this.getButton("btnMulti");
+    }
 
-### 4. 性能优化
-- 启用UI缓存减少重复加载
-- 使用对象池复用频繁创建的UI
-- 合理设置UI层级避免不必要的渲染
-- 预加载常用UI资源
+    protected bindEvents(): void {
+        this._singleBtn?.onClick(this._onSingleClick, this);
+        this._multiBtn?.onClick(this._onMultiClick, this);
+        
+        // 监听系统事件
+        EventBus.onEvent("network_change", this._onNetworkChange, this);
+        Blackboard.instance.watch("playerData", this._onDataChange, this);
+    }
+
+    protected onShow(data?: any): void {
+        // 更新UI显示
+        this._updateButtonStates();
+    }
+
+    private _onSingleClick(): void {
+        EventBus.emitEvent("game_start", { mode: "single" });
+    }
+}
+```
+
+### 2. HUD界面
+
+```typescript
+export class UIInGame extends UIBase {
+    private _moneyText: fgui.GTextField | null = null;
+    private _hpBar: fgui.GProgressBar | null = null;
+    private _rollBtn: fgui.GButton | null = null;
+
+    protected onInit(): void {
+        this._moneyText = this.getText("txtMoney");
+        this._hpBar = this.getProgressBar("progressHP");
+        this._rollBtn = this.getButton("btnRoll");
+    }
+
+    protected bindEvents(): void {
+        // 监听数据变化，自动更新UI
+        Blackboard.instance.watch("playerMoney", (money) => {
+            if (this._moneyText) {
+                this._moneyText.text = this._formatMoney(money);
+            }
+        }, this);
+
+        Blackboard.instance.watch("playerHP", (hp, maxHP) => {
+            if (this._hpBar) {
+                this._hpBar.value = (hp / maxHP) * 100;
+            }
+        }, this);
+    }
+}
+```
+
+### 3. 弹窗界面
+
+```typescript
+// 注册为窗口模式
+UIManager.instance.registerUI("ConfirmDialog", {
+    packageName: "Common",
+    componentName: "ConfirmDialog",
+    isWindow: true,    // 作为窗口显示
+    modal: true        // 模态窗口
+}, UIConfirmDialog);
+
+// FairyGUI自动处理窗口显示逻辑
+await UIManager.instance.showUI("ConfirmDialog");
+```
+
+## 🎨 FairyGUI功能利用
+
+### 1. Controller控制状态
+
+```typescript
+protected onInit(): void {
+    const stateCtrl = this.getController("ctrlState");
+    if (stateCtrl) {
+        stateCtrl.selectedIndex = 1; // 切换状态
+        stateCtrl.onChanged(() => {
+            console.log("状态改变:", stateCtrl.selectedPage);
+        });
+    }
+}
+```
+
+### 2. Transition动画
+
+```typescript
+protected onShow(): void {
+    const showAnim = this.getTransition("animShow");
+    if (showAnim) {
+        showAnim.play(); // 播放入场动画
+    }
+}
+
+private _playHideAnimation(): Promise<void> {
+    return new Promise((resolve) => {
+        const hideAnim = this.getTransition("animHide");
+        if (hideAnim) {
+            hideAnim.play(() => resolve());
+        } else {
+            resolve();
+        }
+    });
+}
+```
+
+### 3. 列表和虚拟列表
+
+```typescript
+protected onInit(): void {
+    const list = this.getList("listItems");
+    if (list) {
+        list.itemRenderer = this._renderListItem.bind(this);
+        list.setVirtual(); // 启用虚拟列表
+        list.numItems = 1000; // 设置数据量
+    }
+}
+
+private _renderListItem(index: number, item: fgui.GObject): void {
+    const data = this._getItemData(index);
+    const itemComp = item.asCom;
+    itemComp.getChild("txtName").text = data.name;
+    itemComp.getChild("imgIcon").url = data.iconUrl;
+}
+```
+
+## 📊 性能优化
+
+### 1. UI缓存
+
+```typescript
+// 频繁显示的UI启用缓存
+UIManager.instance.registerUI("HUD", {
+    packageName: "Game",
+    componentName: "HUD",
+    cache: true  // 缓存UI实例
+}, UIInGame);
+```
+
+### 2. 包管理
+
+```typescript
+// 预加载常用包
+await UILoader.preloadPackages(["Common", "Game"]);
+
+// 及时卸载不用的包
+UILoader.unloadPackage("Tutorial");
+```
+
+### 3. 事件清理
+
+```typescript
+protected unbindEvents(): void {
+    // UIBase会自动清理EventBus和Blackboard监听
+    super.unbindEvents();
+    
+    // 只需清理FairyGUI事件
+    this._button?.offClick(this._onClick, this);
+}
+```
 
 ## 🐛 调试和诊断
 
-### 1. 启用调试模式
-
 ```typescript
-// 初始化时启用调试
+// 启用调试模式
 initUISystem({ debug: true });
 
-// 或运行时启用
-EventBus.setDebug(true);
-Blackboard.instance.setDebug(true);
+// 查看系统状态
+console.log("活动UI:", UIManager.instance.getActiveUIs());
+console.log("已加载包:", UILoader.getLoadedPackages());
+console.log("事件系统:", EventBus.getDebugInfo());
+console.log("数据系统:", Blackboard.instance.getDebugInfo());
 ```
 
-### 2. 获取系统状态
+## 🔄 与原系统对比
 
-```typescript
-// 获取当前显示的UI
-const activeUIs = UIManager.instance.getActiveUIs();
-console.log("当前显示的UI:", activeUIs);
+| 功能 | 原系统 | FairyGUI系统 |
+|------|--------|-------------|
+| UI组件 | 自定义UIButton/UIPanel/UIDialog | 使用FairyGUI原生组件 |
+| UI基类 | 继承Component | 组合模式持有GComponent |
+| 资源管理 | 手动Prefab加载 | UIPackage自动管理 |
+| 动画系统 | Tween.js | FairyGUI Transition |
+| 窗口管理 | 自定义层级 | FairyGUI Window系统 |
+| 事件系统 | 保留EventBus | 保留+FairyGUI事件 |
+| 数据绑定 | 保留Blackboard | 保留响应式绑定 |
 
-// 获取事件总线调试信息
-const eventInfo = EventBus.getDebugInfo();
-console.log("事件总线状态:", eventInfo);
+## 🎯 最佳实践
 
-// 获取黑板数据
-const blackboardInfo = Blackboard.instance.getDebugInfo();
-console.log("黑板数据:", blackboardInfo);
-
-// 获取资源加载器缓存信息
-const cacheInfo = UILoader.getCacheInfo();
-console.log("资源缓存:", cacheInfo);
-```
-
-## 🔄 系统清理
-
-```typescript
-import { cleanupUISystem } from "./ui/index";
-
-// 在游戏退出时清理UI系统
-cleanupUISystem();
-```
+1. **充分利用FairyGUI编辑器**设计UI，减少代码工作量
+2. **合理组织包结构**，按功能模块分包
+3. **使用组合模式**，不过度封装FairyGUI功能
+4. **保留EventBus/Blackboard**，补充FairyGUI事件系统
+5. **启用UI缓存**，优化频繁显示的界面
+6. **及时清理事件**，避免内存泄漏
 
 ---
 
-这个UI系统为Web3 Tycoon提供了企业级的UI管理能力，完全兼容Cocos Creator 3.8，支持现代化的事件驱动架构和响应式数据绑定。
+这个基于FairyGUI的UI系统既保持了FairyGUI的强大功能，又提供了便捷的管理层和事件系统，为Web3 Tycoon提供了专业的UI解决方案。

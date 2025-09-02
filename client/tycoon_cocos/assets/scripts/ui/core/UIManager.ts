@@ -1,24 +1,63 @@
-import { Node, instantiate, resources, Prefab, director, Canvas, warn, error } from "cc";
+import { director, Node, warn, error } from "cc";
 import { UIBase } from "./UIBase";
-import { UIConfig, UILayer, UIShowOptions, UIHideOptions, UIConstructor, UIManagerConfig, UIEventType, UIEventData } from "./UITypes";
+import { EventBus } from "../events/EventBus";
+import { EventTypes } from "../events/EventTypes";
+import * as fgui from "fairygui-cc";
 
 /**
- * UI管理器 - 单例模式
- * 负责UI的注册、显示、隐藏、层级管理和对象池管理
+ * UI构造函数接口
+ */
+export interface UIConstructor<T extends UIBase = UIBase> {
+    new (panel: fgui.GComponent, uiName: string): T;
+}
+
+/**
+ * UI配置接口
+ */
+export interface UIConfig {
+    /** 包名 */
+    packageName: string;
+    /** 组件名 */
+    componentName: string;
+    /** 是否缓存 */
+    cache?: boolean;
+    /** 是否作为弹窗显示 */
+    isWindow?: boolean;
+    /** 弹窗是否模态 */
+    modal?: boolean;
+}
+
+/**
+ * UI管理器配置
+ */
+export interface UIManagerConfig {
+    /** 是否启用调试模式 */
+    debug?: boolean;
+    /** 是否启用UI缓存 */
+    enableCache?: boolean;
+    /** 设计分辨率 */
+    designResolution?: { width: number; height: number };
+}
+
+/**
+ * UI管理器 - FairyGUI版本
+ * 负责FairyGUI的初始化、UI包管理和UI生命周期管理
  */
 export class UIManager {
     private static _instance: UIManager | null = null;
     
-    /** UI根节点 */
-    private _uiRoot: Node | null = null;
-    /** 各层级节点 */
-    private _layerNodes: Map<UILayer, Node> = new Map();
+    /** FairyGUI根节点 */
+    private _groot: fgui.GRoot | null = null;
     /** 已注册的UI配置 */
     private _uiConfigs: Map<string, UIConfig> = new Map();
+    /** UI构造函数 */
+    private _uiConstructors: Map<string, UIConstructor> = new Map();
     /** 当前显示的UI实例 */
     private _activeUIs: Map<string, UIBase> = new Map();
-    /** UI对象池 */
-    private _uiPool: Map<string, UIBase[]> = new Map();
+    /** UI缓存池 */
+    private _uiCache: Map<string, UIBase> = new Map();
+    /** 已加载的包 */
+    private _loadedPackages: Set<string> = new Set();
     /** 管理器配置 */
     private _config: UIManagerConfig = {};
     /** 是否已初始化 */
@@ -44,115 +83,167 @@ export class UIManager {
      */
     public init(config: UIManagerConfig = {}): void {
         if (this._inited) {
-            warn("UIManager already initialized!");
+            warn("[UIManager] Already initialized!");
             return;
         }
 
         this._config = {
-            defaultAnimationDuration: 0.3,
-            enablePool: true,
-            poolMaxSize: 3,
             debug: false,
+            enableCache: true,
+            designResolution: { width: 1136, height: 640 },
             ...config
         };
 
-        this._setupUIRoot();
-        this._createLayerNodes();
+        this._initFairyGUI();
         this._inited = true;
 
         if (this._config.debug) {
-            console.log("[UIManager] Initialized with config:", this._config);
+            console.log("[UIManager] Initialized with FairyGUI");
+        }
+    }
+
+    /**
+     * 初始化FairyGUI
+     */
+    private _initFairyGUI(): void {
+        // 获取或创建GRoot实例
+        this._groot = fgui.GRoot.inst;
+        
+        // 设置设计分辨率
+        if (this._config.designResolution) {
+            const { width, height } = this._config.designResolution;
+            this._groot.setContentScaleFactor(width, height);
+        }
+
+        if (this._config.debug) {
+            console.log("[UIManager] FairyGUI initialized", {
+                groot: this._groot,
+                designResolution: this._config.designResolution
+            });
+        }
+    }
+
+    /**
+     * 加载UI包
+     */
+    public async loadPackage(packageName: string): Promise<boolean> {
+        if (this._loadedPackages.has(packageName)) {
+            if (this._config.debug) {
+                console.log(`[UIManager] Package ${packageName} already loaded`);
+            }
+            return true;
+        }
+
+        try {
+            // 使用FairyGUI加载包
+            await new Promise<void>((resolve, reject) => {
+                fgui.UIPackage.loadPackage(packageName, (err: any) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+
+            this._loadedPackages.add(packageName);
+            
+            if (this._config.debug) {
+                console.log(`[UIManager] Package ${packageName} loaded successfully`);
+            }
+            
+            return true;
+
+        } catch (e) {
+            error(`[UIManager] Failed to load package ${packageName}:`, e);
+            return false;
         }
     }
 
     /**
      * 注册UI配置
      */
-    public registerUI<T extends UIBase>(uiId: string, config: UIConfig, uiClass: UIConstructor<T>): void {
-        if (this._uiConfigs.has(uiId)) {
-            warn(`UI [${uiId}] already registered!`);
+    public registerUI<T extends UIBase>(
+        uiName: string, 
+        config: UIConfig, 
+        uiClass: UIConstructor<T>
+    ): void {
+        if (this._uiConfigs.has(uiName)) {
+            warn(`[UIManager] UI ${uiName} already registered!`);
             return;
         }
 
-        // 添加UI类到配置中
-        (config as any).uiClass = uiClass;
-        this._uiConfigs.set(uiId, config);
+        this._uiConfigs.set(uiName, config);
+        this._uiConstructors.set(uiName, uiClass);
 
         if (this._config.debug) {
-            console.log(`[UIManager] Registered UI: ${uiId}`, config);
+            console.log(`[UIManager] Registered UI: ${uiName}`, config);
         }
     }
 
     /**
      * 显示UI
      */
-    public async showUI(uiId: string, options: UIShowOptions = {}): Promise<UIBase | null> {
+    public async showUI<T extends UIBase>(uiName: string, data?: any): Promise<T | null> {
         if (!this._inited) {
             error("[UIManager] Not initialized!");
             return null;
         }
 
-        const config = this._uiConfigs.get(uiId);
-        if (!config) {
-            error(`[UIManager] UI [${uiId}] not registered!`);
+        const config = this._uiConfigs.get(uiName);
+        const constructor = this._uiConstructors.get(uiName);
+
+        if (!config || !constructor) {
+            error(`[UIManager] UI ${uiName} not registered!`);
             return null;
         }
 
-        // 检查是否已经显示
-        let uiInstance = this._activeUIs.get(uiId);
-        if (uiInstance && uiInstance.isVisible) {
-            warn(`[UIManager] UI [${uiId}] already visible!`);
-            return uiInstance;
-        }
-
         try {
-            // 获取UI实例（从池中或新创建）
-            uiInstance = await this._getUIInstance(uiId, config);
+            // 确保包已加载
+            if (!this._loadedPackages.has(config.packageName)) {
+                const loaded = await this.loadPackage(config.packageName);
+                if (!loaded) {
+                    error(`[UIManager] Failed to load package for UI ${uiName}`);
+                    return null;
+                }
+            }
+
+            // 尝试从缓存获取
+            let uiInstance = this._tryGetFromCache<T>(uiName);
+
+            // 如果没有缓存，创建新实例
             if (!uiInstance) {
-                error(`[UIManager] Failed to create UI instance: ${uiId}`);
-                return null;
+                uiInstance = await this._createUIInstance<T>(uiName, config, constructor);
+                if (!uiInstance) {
+                    return null;
+                }
             }
-
-            // 设置UI属性
-            uiInstance.uiId = uiId;
-
-            // 添加到对应层级
-            const layerNode = this._layerNodes.get(config.layer);
-            if (layerNode) {
-                layerNode.addChild(uiInstance.node);
-            }
-
-            // 如果是独占显示，隐藏同层其他UI
-            if (config.exclusive) {
-                await this._hideUIsByLayer(config.layer, uiId);
-            }
-
-            // 发送显示前事件
-            this._emitUIEvent(UIEventType.BeforeShow, uiId, uiInstance, options.data);
 
             // 显示UI
-            const showOptions: UIShowOptions = {
-                animation: options.animation || config.showAnimation,
-                animationDuration: options.animationDuration || config.animationDuration || this._config.defaultAnimationDuration,
-                data: options.data,
-                immediate: options.immediate,
-                onComplete: () => {
-                    this._emitUIEvent(UIEventType.AfterShow, uiId, uiInstance!, options.data);
-                    options.onComplete?.();
-                }
-            };
+            if (config.isWindow) {
+                await this._showAsWindow(uiInstance, config);
+            } else {
+                await this._showAsComponent(uiInstance);
+            }
 
-            await uiInstance.show(showOptions);
-            this._activeUIs.set(uiId, uiInstance);
+            uiInstance.show(data);
+            this._activeUIs.set(uiName, uiInstance);
+
+            // 发送显示事件
+            EventBus.emitEvent(EventTypes.UI.ManagerStateChange, {
+                action: "show",
+                uiName: uiName,
+                ui: uiInstance
+            });
 
             if (this._config.debug) {
-                console.log(`[UIManager] Showed UI: ${uiId}`);
+                console.log(`[UIManager] Showed UI: ${uiName}`);
             }
 
             return uiInstance;
 
         } catch (e) {
-            error(`[UIManager] Error showing UI [${uiId}]:`, e);
+            error(`[UIManager] Error showing UI ${uiName}:`, e);
             return null;
         }
     }
@@ -160,124 +251,109 @@ export class UIManager {
     /**
      * 隐藏UI
      */
-    public async hideUI(uiId: string, options: UIHideOptions = {}): Promise<void> {
-        const uiInstance = this._activeUIs.get(uiId);
+    public async hideUI(uiName: string): Promise<void> {
+        const uiInstance = this._activeUIs.get(uiName);
         if (!uiInstance) {
-            warn(`[UIManager] UI [${uiId}] not found or not active!`);
+            warn(`[UIManager] UI ${uiName} not active!`);
             return;
         }
 
-        const config = this._uiConfigs.get(uiId);
+        const config = this._uiConfigs.get(uiName);
         if (!config) {
-            error(`[UIManager] UI config [${uiId}] not found!`);
+            error(`[UIManager] UI config ${uiName} not found!`);
             return;
         }
 
         try {
-            // 发送隐藏前事件
-            this._emitUIEvent(UIEventType.BeforeHide, uiId, uiInstance);
-
             // 隐藏UI
-            const hideOptions: UIHideOptions = {
-                animation: options.animation || config.hideAnimation,
-                animationDuration: options.animationDuration || config.animationDuration || this._config.defaultAnimationDuration,
-                immediate: options.immediate,
-                destroy: options.destroy || !config.cache,
-                onComplete: () => {
-                    this._emitUIEvent(UIEventType.AfterHide, uiId, uiInstance);
-                    options.onComplete?.();
+            uiInstance.hide();
+
+            // 从激活列表移除
+            this._activeUIs.delete(uiName);
+
+            // 处理FairyGUI显示
+            if (config.isWindow && uiInstance.panel.parent) {
+                // 如果是窗口，从GRoot移除
+                const window = uiInstance.panel.parent as fgui.Window;
+                if (window && window.hide) {
+                    window.hide();
                 }
-            };
-
-            await uiInstance.hide(hideOptions);
-
-            // 从激活列表中移除
-            this._activeUIs.delete(uiId);
-
-            // 从父节点移除
-            if (uiInstance.node.parent) {
-                uiInstance.node.removeFromParent();
             }
 
-            // 根据配置决定销毁还是回收到池中
-            if (hideOptions.destroy || !config.cache) {
-                this._destroyUIInstance(uiId, uiInstance);
+            // 缓存或销毁
+            if (config.cache && this._config.enableCache) {
+                this._uiCache.set(uiName, uiInstance);
             } else {
-                this._recycleUIInstance(uiId, uiInstance);
+                uiInstance.destroy();
             }
+
+            // 发送隐藏事件
+            EventBus.emitEvent(EventTypes.UI.ManagerStateChange, {
+                action: "hide",
+                uiName: uiName,
+                ui: uiInstance
+            });
 
             if (this._config.debug) {
-                console.log(`[UIManager] Hidden UI: ${uiId}`);
+                console.log(`[UIManager] Hidden UI: ${uiName}`);
             }
 
         } catch (e) {
-            error(`[UIManager] Error hiding UI [${uiId}]:`, e);
+            error(`[UIManager] Error hiding UI ${uiName}:`, e);
         }
     }
 
     /**
      * 获取UI实例
      */
-    public getUI(uiId: string): UIBase | null {
-        return this._activeUIs.get(uiId) || null;
+    public getUI<T extends UIBase>(uiName: string): T | null {
+        return (this._activeUIs.get(uiName) as T) || null;
     }
 
     /**
      * 检查UI是否显示
      */
-    public isUIVisible(uiId: string): boolean {
-        const ui = this._activeUIs.get(uiId);
-        return ui ? ui.isVisible : false;
+    public isUIShowing(uiName: string): boolean {
+        const ui = this._activeUIs.get(uiName);
+        return ui ? ui.isShowing : false;
     }
 
     /**
      * 隐藏所有UI
      */
-    public async hideAllUI(layer?: UILayer, except?: string[]): Promise<void> {
+    public async hideAllUI(except?: string[]): Promise<void> {
         const promises: Promise<void>[] = [];
         
-        for (const [uiId, uiInstance] of this._activeUIs) {
-            if (except?.includes(uiId)) continue;
-            
-            if (layer !== undefined) {
-                const config = this._uiConfigs.get(uiId);
-                if (config && config.layer !== layer) continue;
+        for (const uiName of this._activeUIs.keys()) {
+            if (except && except.includes(uiName)) {
+                continue;
             }
-            
-            promises.push(this.hideUI(uiId));
+            promises.push(this.hideUI(uiName));
         }
 
         await Promise.all(promises);
     }
 
     /**
-     * 清理UI池
+     * 清理缓存
      */
-    public clearPool(uiId?: string): void {
-        if (uiId) {
-            const pool = this._uiPool.get(uiId);
-            if (pool) {
-                pool.forEach(ui => {
-                    if (ui.node && ui.node.isValid) {
-                        ui.node.destroy();
-                    }
-                });
-                this._uiPool.delete(uiId);
+    public clearCache(uiName?: string): void {
+        if (uiName) {
+            const cached = this._uiCache.get(uiName);
+            if (cached) {
+                cached.destroy();
+                this._uiCache.delete(uiName);
             }
         } else {
-            for (const [id, pool] of this._uiPool) {
-                pool.forEach(ui => {
-                    if (ui.node && ui.node.isValid) {
-                        ui.node.destroy();
-                    }
-                });
+            for (const [name, ui] of this._uiCache) {
+                ui.destroy();
             }
-            this._uiPool.clear();
+            this._uiCache.clear();
         }
     }
 
     /**
-     * 获取当前显示的UI列表
+     * 获取当前活动的UI列表
      */
     public getActiveUIs(): string[] {
         return Array.from(this._activeUIs.keys());
@@ -290,187 +366,99 @@ export class UIManager {
         // 隐藏所有UI
         this.hideAllUI();
         
-        // 清理池
-        this.clearPool();
+        // 清理缓存
+        this.clearCache();
         
         // 清理数据
         this._uiConfigs.clear();
+        this._uiConstructors.clear();
         this._activeUIs.clear();
-        this._layerNodes.clear();
+        this._loadedPackages.clear();
         
-        this._uiRoot = null;
+        this._groot = null;
         this._inited = false;
         UIManager._instance = null;
     }
 
-    /**
-     * 设置UI根节点
-     */
-    private _setupUIRoot(): void {
-        if (this._config.uiRoot) {
-            this._uiRoot = this._config.uiRoot;
-        } else {
-            // 查找Canvas节点
-            const scene = director.getScene();
-            const canvas = scene?.getComponentInChildren(Canvas);
-            if (canvas) {
-                this._uiRoot = canvas.node;
-            } else {
-                error("[UIManager] No Canvas found in scene!");
-            }
-        }
-    }
+    // ================== 私有方法 ==================
 
     /**
-     * 创建层级节点
+     * 尝试从缓存获取UI
      */
-    private _createLayerNodes(): void {
-        if (!this._uiRoot) return;
-
-        const layers = [
-            UILayer.Background,
-            UILayer.Normal, 
-            UILayer.Popup,
-            UILayer.Top,
-            UILayer.System
-        ];
-
-        for (const layer of layers) {
-            const layerNode = new Node(`UILayer_${UILayer[layer]}`);
-            layerNode.setSiblingIndex(layer);
-            this._uiRoot.addChild(layerNode);
-            this._layerNodes.set(layer, layerNode);
-        }
-    }
-
-    /**
-     * 获取UI实例（从池中或新创建）
-     */
-    private async _getUIInstance(uiId: string, config: UIConfig): Promise<UIBase | null> {
-        // 尝试从池中获取
-        if (this._config.enablePool && config.cache) {
-            const pool = this._uiPool.get(uiId);
-            if (pool && pool.length > 0) {
-                return pool.pop()!;
-            }
+    private _tryGetFromCache<T extends UIBase>(uiName: string): T | null {
+        if (!this._config.enableCache) {
+            return null;
         }
 
-        // 创建新实例
-        return this._createUIInstance(uiId, config);
+        const cached = this._uiCache.get(uiName) as T;
+        if (cached) {
+            this._uiCache.delete(uiName);
+            return cached;
+        }
+
+        return null;
     }
 
     /**
      * 创建UI实例
      */
-    private async _createUIInstance(uiId: string, config: UIConfig): Promise<UIBase | null> {
+    private async _createUIInstance<T extends UIBase>(
+        uiName: string, 
+        config: UIConfig, 
+        constructor: UIConstructor<T>
+    ): Promise<T | null> {
         try {
-            // 加载预制体
-            const prefab = await this._loadPrefab(config.prefabPath);
-            if (!prefab) {
-                error(`[UIManager] Failed to load prefab: ${config.prefabPath}`);
+            // 使用FairyGUI创建组件
+            const fguiComponent = fgui.UIPackage.createObject(
+                config.packageName, 
+                config.componentName
+            );
+
+            if (!fguiComponent) {
+                error(`[UIManager] Failed to create FGUI component: ${config.packageName}.${config.componentName}`);
                 return null;
             }
 
-            // 实例化节点
-            const node = instantiate(prefab);
+            // 创建UI逻辑实例
+            const uiInstance = new constructor(fguiComponent.asCom, uiName);
             
-            // 添加UI组件
-            const uiClass = (config as any).uiClass;
-            let uiComponent = node.getComponent(uiClass);
-            if (!uiComponent) {
-                uiComponent = node.addComponent(uiClass);
-            }
-
-            return uiComponent as UIBase;
+            return uiInstance;
 
         } catch (e) {
-            error(`[UIManager] Error creating UI instance [${uiId}]:`, e);
+            error(`[UIManager] Error creating UI instance ${uiName}:`, e);
             return null;
         }
     }
 
     /**
-     * 加载预制体
+     * 作为窗口显示
      */
-    private _loadPrefab(path: string): Promise<Prefab | null> {
-        return new Promise((resolve) => {
-            resources.load(path, Prefab, (err, prefab) => {
-                if (err) {
-                    error(`[UIManager] Failed to load prefab: ${path}`, err);
-                    resolve(null);
-                } else {
-                    resolve(prefab);
-                }
-            });
-        });
-    }
-
-    /**
-     * 回收UI实例到池中
-     */
-    private _recycleUIInstance(uiId: string, uiInstance: UIBase): void {
-        if (!this._config.enablePool) {
-            this._destroyUIInstance(uiId, uiInstance);
-            return;
+    private async _showAsWindow(uiInstance: UIBase, config: UIConfig): Promise<void> {
+        if (!this._groot) {
+            throw new Error("GRoot not initialized");
         }
 
-        let pool = this._uiPool.get(uiId);
-        if (!pool) {
-            pool = [];
-            this._uiPool.set(uiId, pool);
-        }
-
-        // 检查池大小限制
-        if (pool.length >= (this._config.poolMaxSize || 3)) {
-            this._destroyUIInstance(uiId, pool.shift()!);
-        }
-
-        pool.push(uiInstance);
-    }
-
-    /**
-     * 销毁UI实例
-     */
-    private _destroyUIInstance(uiId: string, uiInstance: UIBase): void {
-        this._emitUIEvent(UIEventType.BeforeDestroy, uiId, uiInstance);
+        // 创建窗口
+        const window = new fgui.Window();
+        window.contentPane = uiInstance.panel;
         
-        if (uiInstance.node && uiInstance.node.isValid) {
-            uiInstance.node.destroy();
+        if (config.modal) {
+            window.modal = true;
         }
+
+        // 显示窗口
+        this._groot.showWindow(window);
     }
 
     /**
-     * 隐藏指定层级的UI
+     * 作为组件显示
      */
-    private async _hideUIsByLayer(layer: UILayer, except: string): Promise<void> {
-        const promises: Promise<void>[] = [];
-        
-        for (const [uiId, uiInstance] of this._activeUIs) {
-            if (uiId === except) continue;
-            
-            const config = this._uiConfigs.get(uiId);
-            if (config && config.layer === layer) {
-                promises.push(this.hideUI(uiId));
-            }
+    private async _showAsComponent(uiInstance: UIBase): Promise<void> {
+        if (!this._groot) {
+            throw new Error("GRoot not initialized");
         }
 
-        await Promise.all(promises);
-    }
-
-    /**
-     * 发送UI事件
-     */
-    private _emitUIEvent(eventType: UIEventType, uiId: string, uiComponent?: UIBase, data?: any): void {
-        const eventData: UIEventData = {
-            uiId,
-            uiComponent,
-            eventType,
-            data
-        };
-
-        // 这里可以通过EventBus发送事件，暂时使用console输出
-        if (this._config.debug) {
-            console.log(`[UIManager] Event: ${eventType}`, eventData);
-        }
+        // 直接添加到GRoot
+        this._groot.addChild(uiInstance.panel);
     }
 }

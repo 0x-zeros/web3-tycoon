@@ -1,25 +1,20 @@
-import { resources, Prefab, SpriteFrame, AudioClip, instantiate, Node, error, warn } from "cc";
+import { warn, error } from "cc";
+import { PackageLoadResult, FGUIResourceType } from "../core/UITypes";
+import * as fgui from "fairygui-cc";
 
 /**
- * 资源加载结果接口
+ * 资源加载进度回调类型
  */
-export interface LoadResult<T> {
-    /** 是否成功 */
-    success: boolean;
-    /** 资源对象 */
-    asset?: T;
-    /** 错误信息 */
-    error?: string;
-}
+export type LoadProgressCallback = (finished: number, total: number, packageName: string) => void;
 
 /**
  * 批量加载结果接口
  */
-export interface BatchLoadResult<T> {
-    /** 成功加载的资源 */
-    loaded: { [key: string]: T };
-    /** 加载失败的资源 */
-    failed: { [key: string]: string };
+export interface BatchLoadResult {
+    /** 成功加载的包 */
+    loaded: string[];
+    /** 加载失败的包 */
+    failed: { [packageName: string]: string };
     /** 加载成功数量 */
     successCount: number;
     /** 加载失败数量 */
@@ -27,429 +22,318 @@ export interface BatchLoadResult<T> {
 }
 
 /**
- * 加载进度回调类型
- */
-export type LoadProgressCallback = (finished: number, total: number, item: any) => void;
-
-/**
- * UI资源加载器 - 提供UI相关资源的加载功能
+ * FairyGUI资源加载器 - 专门用于FairyGUI资源加载
  */
 export class UILoader {
-    /** 资源缓存 */
-    private static _cache: Map<string, any> = new Map();
-    /** 是否启用缓存 */
-    private static _enableCache: boolean = true;
-    /** 加载中的资源 */
-    private static _loading: Set<string> = new Set();
+    /** 已加载的包列表 */
+    private static _loadedPackages: Set<string> = new Set();
+    /** 正在加载的包列表 */
+    private static _loadingPackages: Map<string, Promise<PackageLoadResult>> = new Map();
+    /** 是否启用调试模式 */
+    private static _debug: boolean = false;
 
     /**
-     * 设置是否启用缓存
+     * 设置调试模式
      */
-    public static setEnableCache(enable: boolean): void {
-        this._enableCache = enable;
-        if (!enable) {
-            this.clearCache();
-        }
+    public static setDebug(debug: boolean): void {
+        this._debug = debug;
     }
 
     /**
-     * 清理缓存
+     * 加载单个UI包
      */
-    public static clearCache(path?: string): void {
-        if (path) {
-            this._cache.delete(path);
-        } else {
-            this._cache.clear();
-        }
-    }
-
-    /**
-     * 检查资源是否在缓存中
-     */
-    public static isInCache(path: string): boolean {
-        return this._cache.has(path);
-    }
-
-    /**
-     * 从缓存获取资源
-     */
-    public static getFromCache<T>(path: string): T | null {
-        return this._cache.get(path) || null;
-    }
-
-    /**
-     * 加载预制体
-     */
-    public static async loadPrefab(path: string, useCache: boolean = true): Promise<LoadResult<Prefab>> {
-        // 检查缓存
-        if (useCache && this._enableCache && this.isInCache(path)) {
-            const cached = this.getFromCache<Prefab>(path);
-            if (cached) {
-                return { success: true, asset: cached };
+    public static async loadPackage(packageName: string): Promise<PackageLoadResult> {
+        // 检查是否已加载
+        if (this._loadedPackages.has(packageName)) {
+            if (this._debug) {
+                console.log(`[UILoader] Package ${packageName} already loaded`);
             }
+            return { success: true, packageName };
         }
 
         // 检查是否正在加载
-        if (this._loading.has(path)) {
-            return new Promise((resolve) => {
-                const checkLoaded = () => {
-                    if (!this._loading.has(path)) {
-                        if (this.isInCache(path)) {
-                            resolve({ success: true, asset: this.getFromCache<Prefab>(path)! });
-                        } else {
-                            resolve({ success: false, error: "Load failed during wait" });
-                        }
-                    } else {
-                        setTimeout(checkLoaded, 10);
-                    }
-                };
-                checkLoaded();
-            });
+        const loadingPromise = this._loadingPackages.get(packageName);
+        if (loadingPromise) {
+            if (this._debug) {
+                console.log(`[UILoader] Package ${packageName} is loading, waiting...`);
+            }
+            return loadingPromise;
         }
 
-        this._loading.add(path);
+        // 创建加载Promise
+        const loadPromise = this._doLoadPackage(packageName);
+        this._loadingPackages.set(packageName, loadPromise);
 
         try {
-            const prefab = await this._loadResource<Prefab>(path, Prefab);
+            const result = await loadPromise;
+            this._loadingPackages.delete(packageName);
             
-            if (useCache && this._enableCache) {
-                this._cache.set(path, prefab);
+            if (result.success) {
+                this._loadedPackages.add(packageName);
             }
 
-            this._loading.delete(path);
-            return { success: true, asset: prefab };
+            return result;
 
         } catch (e) {
-            this._loading.delete(path);
-            const errorMsg = `Failed to load prefab: ${path}, ${e}`;
-            error(errorMsg);
-            return { success: false, error: errorMsg };
+            this._loadingPackages.delete(packageName);
+            throw e;
         }
     }
 
     /**
-     * 加载精灵帧
+     * 批量加载UI包
      */
-    public static async loadSpriteFrame(path: string, useCache: boolean = true): Promise<LoadResult<SpriteFrame>> {
-        if (useCache && this._enableCache && this.isInCache(path)) {
-            const cached = this.getFromCache<SpriteFrame>(path);
-            if (cached) {
-                return { success: true, asset: cached };
-            }
-        }
-
-        if (this._loading.has(path)) {
-            return new Promise((resolve) => {
-                const checkLoaded = () => {
-                    if (!this._loading.has(path)) {
-                        if (this.isInCache(path)) {
-                            resolve({ success: true, asset: this.getFromCache<SpriteFrame>(path)! });
-                        } else {
-                            resolve({ success: false, error: "Load failed during wait" });
-                        }
-                    } else {
-                        setTimeout(checkLoaded, 10);
-                    }
-                };
-                checkLoaded();
-            });
-        }
-
-        this._loading.add(path);
-
-        try {
-            const spriteFrame = await this._loadResource<SpriteFrame>(path, SpriteFrame);
-            
-            if (useCache && this._enableCache) {
-                this._cache.set(path, spriteFrame);
-            }
-
-            this._loading.delete(path);
-            return { success: true, asset: spriteFrame };
-
-        } catch (e) {
-            this._loading.delete(path);
-            const errorMsg = `Failed to load sprite frame: ${path}, ${e}`;
-            error(errorMsg);
-            return { success: false, error: errorMsg };
-        }
-    }
-
-    /**
-     * 加载音频剪辑
-     */
-    public static async loadAudioClip(path: string, useCache: boolean = true): Promise<LoadResult<AudioClip>> {
-        if (useCache && this._enableCache && this.isInCache(path)) {
-            const cached = this.getFromCache<AudioClip>(path);
-            if (cached) {
-                return { success: true, asset: cached };
-            }
-        }
-
-        if (this._loading.has(path)) {
-            return new Promise((resolve) => {
-                const checkLoaded = () => {
-                    if (!this._loading.has(path)) {
-                        if (this.isInCache(path)) {
-                            resolve({ success: true, asset: this.getFromCache<AudioClip>(path)! });
-                        } else {
-                            resolve({ success: false, error: "Load failed during wait" });
-                        }
-                    } else {
-                        setTimeout(checkLoaded, 10);
-                    }
-                };
-                checkLoaded();
-            });
-        }
-
-        this._loading.add(path);
-
-        try {
-            const audioClip = await this._loadResource<AudioClip>(path, AudioClip);
-            
-            if (useCache && this._enableCache) {
-                this._cache.set(path, audioClip);
-            }
-
-            this._loading.delete(path);
-            return { success: true, asset: audioClip };
-
-        } catch (e) {
-            this._loading.delete(path);
-            const errorMsg = `Failed to load audio clip: ${path}, ${e}`;
-            error(errorMsg);
-            return { success: false, error: errorMsg };
-        }
-    }
-
-    /**
-     * 批量加载预制体
-     */
-    public static async loadPrefabBatch(
-        paths: string[], 
-        useCache: boolean = true,
+    public static async loadPackageBatch(
+        packageNames: string[], 
         onProgress?: LoadProgressCallback
-    ): Promise<BatchLoadResult<Prefab>> {
-        const result: BatchLoadResult<Prefab> = {
-            loaded: {},
+    ): Promise<BatchLoadResult> {
+        const result: BatchLoadResult = {
+            loaded: [],
             failed: {},
             successCount: 0,
             failureCount: 0
         };
 
-        const total = paths.length;
+        const total = packageNames.length;
         let finished = 0;
 
-        for (const path of paths) {
+        // 并行加载所有包
+        const loadPromises = packageNames.map(async (packageName) => {
             try {
-                const loadResult = await this.loadPrefab(path, useCache);
+                const loadResult = await this.loadPackage(packageName);
                 
-                if (loadResult.success && loadResult.asset) {
-                    result.loaded[path] = loadResult.asset;
+                if (loadResult.success) {
+                    result.loaded.push(packageName);
                     result.successCount++;
                 } else {
-                    result.failed[path] = loadResult.error || "Unknown error";
+                    result.failed[packageName] = loadResult.error || "Unknown error";
                     result.failureCount++;
                 }
 
             } catch (e) {
-                result.failed[path] = e instanceof Error ? e.message : String(e);
+                result.failed[packageName] = e instanceof Error ? e.message : String(e);
                 result.failureCount++;
-            }
-
-            finished++;
-            onProgress?.(finished, total, path);
-        }
-
-        return result;
-    }
-
-    /**
-     * 批量加载精灵帧
-     */
-    public static async loadSpriteFrameBatch(
-        paths: string[], 
-        useCache: boolean = true,
-        onProgress?: LoadProgressCallback
-    ): Promise<BatchLoadResult<SpriteFrame>> {
-        const result: BatchLoadResult<SpriteFrame> = {
-            loaded: {},
-            failed: {},
-            successCount: 0,
-            failureCount: 0
-        };
-
-        const total = paths.length;
-        let finished = 0;
-
-        for (const path of paths) {
-            try {
-                const loadResult = await this.loadSpriteFrame(path, useCache);
-                
-                if (loadResult.success && loadResult.asset) {
-                    result.loaded[path] = loadResult.asset;
-                    result.successCount++;
-                } else {
-                    result.failed[path] = loadResult.error || "Unknown error";
-                    result.failureCount++;
-                }
-
-            } catch (e) {
-                result.failed[path] = e instanceof Error ? e.message : String(e);
-                result.failureCount++;
-            }
-
-            finished++;
-            onProgress?.(finished, total, path);
-        }
-
-        return result;
-    }
-
-    /**
-     * 实例化预制体
-     */
-    public static async instantiatePrefab(path: string, parent?: Node): Promise<Node | null> {
-        const loadResult = await this.loadPrefab(path);
-        
-        if (!loadResult.success || !loadResult.asset) {
-            warn(`[UILoader] Failed to load prefab for instantiation: ${path}`);
-            return null;
-        }
-
-        try {
-            const node = instantiate(loadResult.asset);
-            
-            if (parent) {
-                parent.addChild(node);
-            }
-
-            return node;
-
-        } catch (e) {
-            error(`[UILoader] Failed to instantiate prefab: ${path}`, e);
-            return null;
-        }
-    }
-
-    /**
-     * 预加载UI资源
-     */
-    public static async preloadUIAssets(assetPaths: string[], onProgress?: LoadProgressCallback): Promise<void> {
-        const total = assetPaths.length;
-        let finished = 0;
-
-        const promises = assetPaths.map(async (path) => {
-            try {
-                // 根据路径后缀判断资源类型
-                if (path.endsWith('.prefab')) {
-                    await this.loadPrefab(path);
-                } else if (path.match(/\.(png|jpg|jpeg)$/i)) {
-                    await this.loadSpriteFrame(path);
-                } else if (path.match(/\.(mp3|wav|ogg)$/i)) {
-                    await this.loadAudioClip(path);
-                }
-            } catch (e) {
-                warn(`[UILoader] Failed to preload asset: ${path}`, e);
             } finally {
                 finished++;
-                onProgress?.(finished, total, path);
+                onProgress?.(finished, total, packageName);
+            }
+        });
+
+        await Promise.all(loadPromises);
+
+        if (this._debug) {
+            console.log(`[UILoader] Batch load completed: ${result.successCount} success, ${result.failureCount} failed`);
+        }
+
+        return result;
+    }
+
+    /**
+     * 预加载UI包（静默加载，不抛出错误）
+     */
+    public static async preloadPackages(packageNames: string[], onProgress?: LoadProgressCallback): Promise<void> {
+        const total = packageNames.length;
+        let finished = 0;
+
+        const promises = packageNames.map(async (packageName) => {
+            try {
+                await this.loadPackage(packageName);
+            } catch (e) {
+                if (this._debug) {
+                    warn(`[UILoader] Failed to preload package: ${packageName}`, e);
+                }
+            } finally {
+                finished++;
+                onProgress?.(finished, total, packageName);
             }
         });
 
         await Promise.all(promises);
-        console.log(`[UILoader] Preloaded ${finished} assets`);
+
+        if (this._debug) {
+            console.log(`[UILoader] Preloaded ${finished} packages`);
+        }
     }
 
     /**
-     * 通用资源加载方法
+     * 卸载UI包
      */
-    private static _loadResource<T>(path: string, type: any): Promise<T> {
-        return new Promise((resolve, reject) => {
-            resources.load(path, type, (err, asset) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(asset as T);
-                }
-            });
-        });
-    }
-
-    /**
-     * 获取缓存信息
-     */
-    public static getCacheInfo(): { size: number; keys: string[] } {
-        return {
-            size: this._cache.size,
-            keys: Array.from(this._cache.keys())
-        };
-    }
-
-    /**
-     * 获取正在加载的资源
-     */
-    public static getLoadingAssets(): string[] {
-        return Array.from(this._loading);
-    }
-
-    /**
-     * 释放资源
-     */
-    public static releaseAsset(path: string): void {
-        // 从缓存中移除
-        const asset = this._cache.get(path);
-        if (asset) {
-            this._cache.delete(path);
-            
-            // 释放资源
-            if (asset.destroy && typeof asset.destroy === 'function') {
-                asset.destroy();
-            }
+    public static unloadPackage(packageName: string): boolean {
+        if (!this._loadedPackages.has(packageName)) {
+            warn(`[UILoader] Package ${packageName} not loaded`);
+            return false;
         }
 
-        // 通知resources管理器释放
-        resources.release(path);
-    }
-
-    /**
-     * 释放所有缓存资源
-     */
-    public static releaseAll(): void {
-        // 释放缓存中的所有资源
-        for (const [path, asset] of this._cache) {
-            if (asset.destroy && typeof asset.destroy === 'function') {
-                asset.destroy();
-            }
-            resources.release(path);
-        }
-
-        this.clearCache();
-        this._loading.clear();
-    }
-
-    /**
-     * 检查资源是否存在
-     */
-    public static async checkAssetExists(path: string): Promise<boolean> {
         try {
-            const info = resources.getInfoWithPath(path);
-            return info !== null;
+            // 使用FairyGUI卸载包
+            fgui.UIPackage.removePackage(packageName);
+            
+            this._loadedPackages.delete(packageName);
+
+            if (this._debug) {
+                console.log(`[UILoader] Package ${packageName} unloaded`);
+            }
+
+            return true;
+
         } catch (e) {
+            error(`[UILoader] Error unloading package ${packageName}:`, e);
             return false;
         }
     }
 
     /**
-     * 获取资源大小信息（如果可用）
+     * 卸载所有UI包
      */
-    public static getAssetSize(path: string): number {
-        try {
-            const info = resources.getInfoWithPath(path);
-            return info?.size || 0;
-        } catch (e) {
-            return 0;
+    public static unloadAllPackages(): void {
+        const packageNames = Array.from(this._loadedPackages);
+        
+        for (const packageName of packageNames) {
+            this.unloadPackage(packageName);
         }
+
+        if (this._debug) {
+            console.log(`[UILoader] Unloaded ${packageNames.length} packages`);
+        }
+    }
+
+    /**
+     * 检查包是否已加载
+     */
+    public static isPackageLoaded(packageName: string): boolean {
+        return this._loadedPackages.has(packageName);
+    }
+
+    /**
+     * 检查包是否正在加载
+     */
+    public static isPackageLoading(packageName: string): boolean {
+        return this._loadingPackages.has(packageName);
+    }
+
+    /**
+     * 获取已加载的包列表
+     */
+    public static getLoadedPackages(): string[] {
+        return Array.from(this._loadedPackages);
+    }
+
+    /**
+     * 获取正在加载的包列表
+     */
+    public static getLoadingPackages(): string[] {
+        return Array.from(this._loadingPackages.keys());
+    }
+
+    /**
+     * 创建UI对象（便捷方法）
+     */
+    public static createObject(packageName: string, componentName: string): fgui.GObject | null {
+        if (!this.isPackageLoaded(packageName)) {
+            error(`[UILoader] Package ${packageName} not loaded, cannot create object ${componentName}`);
+            return null;
+        }
+
+        try {
+            return fgui.UIPackage.createObject(packageName, componentName);
+        } catch (e) {
+            error(`[UILoader] Error creating object ${packageName}.${componentName}:`, e);
+            return null;
+        }
+    }
+
+    /**
+     * 异步创建UI对象
+     */
+    public static async createObjectAsync(
+        packageName: string, 
+        componentName: string
+    ): Promise<fgui.GObject | null> {
+        // 确保包已加载
+        if (!this.isPackageLoaded(packageName)) {
+            const loadResult = await this.loadPackage(packageName);
+            if (!loadResult.success) {
+                return null;
+            }
+        }
+
+        return this.createObject(packageName, componentName);
+    }
+
+    /**
+     * 获取包中的资源
+     */
+    public static getPackageItem(packageName: string, itemName: string): fgui.PackageItem | null {
+        if (!this.isPackageLoaded(packageName)) {
+            warn(`[UILoader] Package ${packageName} not loaded`);
+            return null;
+        }
+
+        try {
+            const pkg = fgui.UIPackage.getByName(packageName);
+            return pkg ? pkg.getItem(itemName) : null;
+        } catch (e) {
+            error(`[UILoader] Error getting package item ${packageName}.${itemName}:`, e);
+            return null;
+        }
+    }
+
+    /**
+     * 检查资源是否存在
+     */
+    public static hasResource(packageName: string, resourceName: string): boolean {
+        return this.getPackageItem(packageName, resourceName) !== null;
+    }
+
+    /**
+     * 获取加载统计信息
+     */
+    public static getStats(): {
+        loadedCount: number;
+        loadingCount: number; 
+        loadedPackages: string[];
+        loadingPackages: string[];
+    } {
+        return {
+            loadedCount: this._loadedPackages.size,
+            loadingCount: this._loadingPackages.size,
+            loadedPackages: Array.from(this._loadedPackages),
+            loadingPackages: Array.from(this._loadingPackages.keys())
+        };
+    }
+
+    // ================== 私有方法 ==================
+
+    /**
+     * 执行包加载
+     */
+    private static _doLoadPackage(packageName: string): Promise<PackageLoadResult> {
+        return new Promise((resolve) => {
+            if (this._debug) {
+                console.log(`[UILoader] Loading package: ${packageName}`);
+            }
+
+            fgui.UIPackage.loadPackage(packageName, (err: any) => {
+                if (err) {
+                    const errorMsg = `Failed to load package ${packageName}: ${err}`;
+                    error(`[UILoader] ${errorMsg}`);
+                    resolve({ success: false, packageName, error: errorMsg });
+                } else {
+                    if (this._debug) {
+                        console.log(`[UILoader] Package loaded successfully: ${packageName}`);
+                    }
+                    resolve({ success: true, packageName });
+                }
+            });
+        });
+    }
+
+    /**
+     * 清理加载器状态（用于测试或重置）
+     */
+    public static _reset(): void {
+        this._loadedPackages.clear();
+        this._loadingPackages.clear();
+        this._debug = false;
     }
 }

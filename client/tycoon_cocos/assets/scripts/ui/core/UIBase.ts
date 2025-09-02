@@ -1,328 +1,265 @@
-import { Component, Node, _decorator, tween, Vec3 } from "cc";
-import { UIState, UIAnimationType, UIShowOptions, UIHideOptions } from "./UITypes";
-
-const { ccclass } = _decorator;
+import { EventBus } from "../events/EventBus";
+import { Blackboard } from "../events/Blackboard";
+import * as fgui from "fairygui-cc";
 
 /**
- * UI基类 - 所有UI界面都应该继承此类
- * 提供完整的UI生命周期管理和动画支持
+ * UI基类 - 采用组合模式，持有FairyGUI组件引用
+ * 所有游戏UI逻辑类都应该继承此类
  */
-@ccclass('UIBase')
-export abstract class UIBase extends Component {
-    /** UI唯一标识 */
-    protected _uiId: string = "";
-    /** 当前UI状态 */
-    protected _state: UIState = UIState.Hidden;
-    /** UI显示数据 */
-    protected _showData: any = null;
-    /** 是否已经初始化 */
+export abstract class UIBase {
+    /** FairyGUI组件引用 */
+    protected _panel: fgui.GComponent;
+    /** UI名称 */
+    protected _uiName: string;
+    /** 是否已初始化 */
     protected _inited: boolean = false;
+    /** 是否已显示 */
+    protected _isShowing: boolean = false;
+    /** UI数据 */
+    protected _data: any = null;
 
     /**
-     * 获取UI标识
+     * 构造函数
      */
-    get uiId(): string {
-        return this._uiId;
+    constructor(panel: fgui.GComponent, uiName: string) {
+        this._panel = panel;
+        this._uiName = uiName;
     }
 
     /**
-     * 设置UI标识
+     * 获取UI名称
      */
-    set uiId(value: string) {
-        this._uiId = value;
+    get uiName(): string {
+        return this._uiName;
     }
 
     /**
-     * 获取当前状态
+     * 获取FairyGUI面板引用
      */
-    get state(): UIState {
-        return this._state;
+    get panel(): fgui.GComponent {
+        return this._panel;
+    }
+
+    /**
+     * 是否已显示
+     */
+    get isShowing(): boolean {
+        return this._isShowing;
     }
 
     /**
      * 获取显示数据
      */
-    get showData(): any {
-        return this._showData;
+    get data(): any {
+        return this._data;
     }
 
     /**
-     * 是否处于显示状态
+     * 初始化UI
+     * 只会调用一次，用于设置UI的默认状态
      */
-    get isVisible(): boolean {
-        return this._state === UIState.Shown || this._state === UIState.Showing;
-    }
-
-    /**
-     * 是否已初始化
-     */
-    get isInited(): boolean {
-        return this._inited;
-    }
-
-    /**
-     * 组件加载时调用
-     */
-    protected onLoad(): void {
-        if (!this._inited) {
-            this.onInit();
-            this._inited = true;
+    public init(): void {
+        if (this._inited) {
+            return;
         }
-    }
 
-    /**
-     * 初始化UI - 子类重写此方法进行UI初始化
-     * 只会调用一次
-     */
-    protected onInit(): void {
-        // 子类实现
-    }
-
-    /**
-     * 绑定UI事件 - 子类重写此方法绑定UI交互事件
-     */
-    protected bindEvents(): void {
-        // 子类实现
-    }
-
-    /**
-     * 解绑UI事件 - 子类重写此方法解绑UI交互事件
-     */
-    protected unbindEvents(): void {
-        // 子类实现
+        this.onInit();
+        this.bindEvents();
+        this._inited = true;
     }
 
     /**
      * 显示UI
      */
-    public show(options: UIShowOptions = {}): Promise<void> {
-        return new Promise((resolve) => {
-            if (this._state === UIState.Shown || this._state === UIState.Showing) {
-                resolve();
-                return;
-            }
+    public show(data?: any): void {
+        this._data = data;
+        this._isShowing = true;
 
-            this._state = UIState.Showing;
-            this._showData = options.data;
+        // 确保已初始化
+        if (!this._inited) {
+            this.init();
+        }
 
-            // 确保节点激活
-            if (!this.node.active) {
-                this.node.active = true;
-            }
+        // 显示面板
+        if (this._panel && !this._panel.visible) {
+            this._panel.visible = true;
+        }
 
-            // 调用显示前回调
-            this.onBeforeShow(this._showData);
-
-            // 绑定事件
-            this.bindEvents();
-
-            const animation = options.animation || UIAnimationType.None;
-            const duration = options.animationDuration || 0.3;
-
-            if (options.immediate || animation === UIAnimationType.None) {
-                this._onShowComplete();
-                options.onComplete?.();
-                resolve();
-            } else {
-                this._playShowAnimation(animation, duration, () => {
-                    this._onShowComplete();
-                    options.onComplete?.();
-                    resolve();
-                });
-            }
-        });
+        this.onShow(data);
     }
 
     /**
      * 隐藏UI
      */
-    public hide(options: UIHideOptions = {}): Promise<void> {
-        return new Promise((resolve) => {
-            if (this._state === UIState.Hidden || this._state === UIState.Hiding) {
-                resolve();
-                return;
-            }
+    public hide(): void {
+        this._isShowing = false;
 
-            this._state = UIState.Hiding;
+        // 隐藏面板
+        if (this._panel) {
+            this._panel.visible = false;
+        }
 
-            // 调用隐藏前回调
-            this.onBeforeHide();
-
-            // 解绑事件
-            this.unbindEvents();
-
-            const animation = options.animation || UIAnimationType.None;
-            const duration = options.animationDuration || 0.3;
-
-            if (options.immediate || animation === UIAnimationType.None) {
-                this._onHideComplete();
-                options.onComplete?.();
-                resolve();
-            } else {
-                this._playHideAnimation(animation, duration, () => {
-                    this._onHideComplete();
-                    options.onComplete?.();
-                    resolve();
-                });
-            }
-        });
+        this.onHide();
     }
 
     /**
-     * 刷新UI显示 - 子类重写此方法
+     * 销毁UI
+     */
+    public destroy(): void {
+        this.unbindEvents();
+        this.onDestroy();
+
+        // 清理FairyGUI组件
+        if (this._panel) {
+            this._panel.dispose();
+            this._panel = null as any;
+        }
+
+        this._data = null;
+        this._inited = false;
+        this._isShowing = false;
+    }
+
+    /**
+     * 刷新UI显示
      */
     public refresh(data?: any): void {
         if (data !== undefined) {
-            this._showData = data;
+            this._data = data;
         }
-        this.onRefresh(this._showData);
+        this.onRefresh(this._data);
     }
 
+    // ================== 便捷方法 ==================
+
     /**
-     * 显示前回调 - 子类重写
+     * 获取子对象
      */
-    protected onBeforeShow(data: any): void {
-        // 子类实现
+    protected getChild(name: string): fgui.GObject | null {
+        return this._panel ? this._panel.getChild(name) : null;
     }
 
     /**
-     * 显示后回调 - 子类重写  
+     * 获取子组件
      */
-    protected onAfterShow(data: any): void {
-        // 子类实现
+    protected getComponent(name: string): fgui.GComponent | null {
+        const child = this.getChild(name);
+        return child ? child.asCom : null;
     }
 
     /**
-     * 隐藏前回调 - 子类重写
+     * 获取按钮
      */
-    protected onBeforeHide(): void {
-        // 子类实现
+    protected getButton(name: string): fgui.GButton | null {
+        const child = this.getChild(name);
+        return child ? child.asButton : null;
     }
 
     /**
-     * 隐藏后回调 - 子类重写
+     * 获取文本
      */
-    protected onAfterHide(): void {
-        // 子类实现
+    protected getText(name: string): fgui.GTextField | null {
+        const child = this.getChild(name);
+        return child ? child.asTextField : null;
     }
 
     /**
-     * 刷新UI回调 - 子类重写
+     * 获取图片
      */
-    protected onRefresh(data: any): void {
-        // 子类实现
+    protected getImage(name: string): fgui.GImage | null {
+        const child = this.getChild(name);
+        return child ? child.asImage : null;
     }
 
     /**
-     * 播放显示动画
+     * 获取列表
      */
-    private _playShowAnimation(animation: UIAnimationType, duration: number, callback: () => void): void {
-        this.node.stopAllActions();
-
-        switch (animation) {
-            case UIAnimationType.Fade:
-                this.node.opacity = 0;
-                tween(this.node)
-                    .to(duration, { opacity: 255 })
-                    .call(callback)
-                    .start();
-                break;
-
-            case UIAnimationType.Scale:
-                this.node.scale = Vec3.ZERO;
-                tween(this.node)
-                    .to(duration, { scale: Vec3.ONE }, { easing: "backOut" })
-                    .call(callback)
-                    .start();
-                break;
-
-            case UIAnimationType.SlideUp:
-                const originalY = this.node.position.y;
-                this.node.setPosition(this.node.position.x, originalY - 500, this.node.position.z);
-                tween(this.node)
-                    .to(duration, { position: new Vec3(this.node.position.x, originalY, this.node.position.z) }, { easing: "quartOut" })
-                    .call(callback)
-                    .start();
-                break;
-
-            case UIAnimationType.SlideDown:
-                const originalY2 = this.node.position.y;
-                this.node.setPosition(this.node.position.x, originalY2 + 500, this.node.position.z);
-                tween(this.node)
-                    .to(duration, { position: new Vec3(this.node.position.x, originalY2, this.node.position.z) }, { easing: "quartOut" })
-                    .call(callback)
-                    .start();
-                break;
-
-            default:
-                callback();
-                break;
-        }
+    protected getList(name: string): fgui.GList | null {
+        const child = this.getChild(name);
+        return child ? child.asList : null;
     }
 
     /**
-     * 播放隐藏动画
+     * 获取进度条
      */
-    private _playHideAnimation(animation: UIAnimationType, duration: number, callback: () => void): void {
-        this.node.stopAllActions();
-
-        switch (animation) {
-            case UIAnimationType.Fade:
-                tween(this.node)
-                    .to(duration, { opacity: 0 })
-                    .call(callback)
-                    .start();
-                break;
-
-            case UIAnimationType.Scale:
-                tween(this.node)
-                    .to(duration, { scale: Vec3.ZERO }, { easing: "backIn" })
-                    .call(callback)
-                    .start();
-                break;
-
-            case UIAnimationType.SlideUp:
-                tween(this.node)
-                    .to(duration, { position: new Vec3(this.node.position.x, this.node.position.y + 500, this.node.position.z) }, { easing: "quartIn" })
-                    .call(callback)
-                    .start();
-                break;
-
-            case UIAnimationType.SlideDown:
-                tween(this.node)
-                    .to(duration, { position: new Vec3(this.node.position.x, this.node.position.y - 500, this.node.position.z) }, { easing: "quartIn" })
-                    .call(callback)
-                    .start();
-                break;
-
-            default:
-                callback();
-                break;
-        }
+    protected getProgressBar(name: string): fgui.GProgressBar | null {
+        const child = this.getChild(name);
+        return child ? child.asProgress : null;
     }
 
     /**
-     * 显示完成
+     * 获取滑动条
      */
-    private _onShowComplete(): void {
-        this._state = UIState.Shown;
-        this.onAfterShow(this._showData);
+    protected getSlider(name: string): fgui.GSlider | null {
+        const child = this.getChild(name);
+        return child ? child.asSlider : null;
     }
 
     /**
-     * 隐藏完成
+     * 获取控制器
      */
-    private _onHideComplete(): void {
-        this._state = UIState.Hidden;
-        this.node.active = false;
-        this.onAfterHide();
+    protected getController(name: string): fgui.Controller | null {
+        return this._panel ? this._panel.getController(name) : null;
     }
 
     /**
-     * 组件销毁时调用
+     * 获取过渡动画
+     */
+    protected getTransition(name: string): fgui.Transition | null {
+        return this._panel ? this._panel.getTransition(name) : null;
+    }
+
+    // ================== 生命周期回调（子类重写） ==================
+
+    /**
+     * 初始化回调 - 子类重写
+     * 只调用一次，用于初始化UI元素
+     */
+    protected onInit(): void {
+        // 子类重写
+    }
+
+    /**
+     * 绑定事件 - 子类重写
+     */
+    protected bindEvents(): void {
+        // 子类重写
+    }
+
+    /**
+     * 解绑事件 - 子类重写
+     */
+    protected unbindEvents(): void {
+        // 清理EventBus和Blackboard的监听
+        EventBus.offTarget(this);
+        Blackboard.instance.unwatchTarget(this);
+    }
+
+    /**
+     * 显示回调 - 子类重写
+     */
+    protected onShow(data?: any): void {
+        // 子类重写
+    }
+
+    /**
+     * 隐藏回调 - 子类重写
+     */
+    protected onHide(): void {
+        // 子类重写
+    }
+
+    /**
+     * 销毁回调 - 子类重写
      */
     protected onDestroy(): void {
-        this.unbindEvents();
-        this._showData = null;
+        // 子类重写
+    }
+
+    /**
+     * 刷新回调 - 子类重写
+     */
+    protected onRefresh(data?: any): void {
+        // 子类重写
     }
 }

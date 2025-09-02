@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="256,536">
+  <displayList>
+    <list id="n0_ue83" name="n0" xy="0,0" size="256,536" lineGap="8" defaultItem="ui://8z385pimue83l">
+      <item title="1"/>
+      <item title="2"/>
+      <item title="3"/>
+      <item title="4"/>
+    </list>
+  </displayList>
+</component>

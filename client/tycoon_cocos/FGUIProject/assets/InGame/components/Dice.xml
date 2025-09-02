@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="256,256" pivot="0.5,0.5" extention="Button" hitTest="n0_mumq">
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
+  <displayList>
+    <image id="n0_mumq" name="n0" src="mumq4" fileName="images/dice10.png" xy="0,0" size="256,256">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <image id="n1_ue83" name="n1" src="ue83c" fileName="images/circle.png" xy="126,127" pivot="0.5,0.5" anchor="true" size="220,223">
+      <relation target="n0_mumq" sidePair="width-width,height-height,center-center"/>
+    </image>
+  </displayList>
+  <Button downEffect="scale" downEffectValue="0.8"/>
+  <transition name="t0" autoPlay="true" autoPlayRepeat="-1">
+    <item time="0" type="Rotation" target="n1_ue83" value="0"/>
+    <item time="0" type="Scale" target="n1_ue83" tween="true" startValue="1,1" endValue="1.2,1.2" duration="9"/>
+    <item time="9" type="Scale" target="n1_ue83" tween="true" startValue="1.2,1.2" endValue="1,1" duration="3"/>
+    <item time="12" type="Rotation" target="n1_ue83" value="90"/>
+    <item time="12" type="Scale" target="n1_ue83" tween="true" startValue="1,1" endValue="1.2,1.2" duration="9"/>
+    <item time="21" type="Scale" target="n1_ue83" tween="true" startValue="1.2,1.2" endValue="1,1" duration="3"/>
+    <item time="24" type="Rotation" target="n1_ue83" value="180"/>
+  </transition>
+</component>

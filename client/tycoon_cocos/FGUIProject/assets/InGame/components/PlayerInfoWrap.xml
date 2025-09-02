@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="256,128">
+  <displayList>
+    <component id="n0_ue83" name="n0" src="ue83j" fileName="components/PlayerInfo.xml" xy="0,0" scale="0.5,0.5"/>
+  </displayList>
+</component>

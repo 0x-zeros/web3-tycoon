@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="8z385pim">
+  <resources>
+    <component id="mumq0" name="Main.xml" path="/" exported="true"/>
+    <component id="mumq1" name="TopLeftCorner.xml" path="/"/>
+    <component id="mumq2" name="DiceCorner.xml" path="/"/>
+    <image id="mumq4" name="dice10.png" path="/images/"/>
+    <component id="mumq5" name="Dice.xml" path="/components/"/>
+    <component id="mumq6" name="CardList.xml" path="/"/>
+    <image id="ue83a" name="card11.png" path="/images/"/>
+    <component id="ue83b" name="Card.xml" path="/components/"/>
+    <image id="ue83c" name="circle.png" path="/images/"/>
+    <image id="ue83d" name="rectangle.png" path="/images/"/>
+    <component id="ue83f" name="Player.xml" path="/components/"/>
+    <image id="ue83g" name="capy1.png" path="/images/player/"/>
+    <image id="ue83h" name="capy2.png" path="/images/player/"/>
+    <image id="ue83i" name="capy3.png" path="/images/player/"/>
+    <component id="ue83j" name="PlayerInfo.xml" path="/components/"/>
+    <component id="ue83k" name="PlayerInfoList.xml" path="/images/"/>
+    <component id="ue83l" name="PlayerInfoWrap.xml" path="/components/"/>
+  </resources>
+  <publish name=""/>
+</packageDescription>

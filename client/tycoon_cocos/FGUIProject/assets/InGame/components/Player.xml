@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="256,256">
+  <displayList>
+    <loader id="n1_ue83" name="n1" xy="0,0" size="256,256" url="ui://8z385pimue83g" align="center" vAlign="middle" fill="scale"/>
+  </displayList>
+</component>

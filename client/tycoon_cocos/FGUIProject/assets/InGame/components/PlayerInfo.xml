@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="512,256">
+  <displayList>
+    <graph id="n10_ue83" name="n10" xy="0,0" size="512,256" type="rect" lineColor="#ff66cccc" fillColor="#ff666768">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <loader id="n0_ue83" name="avatar" xy="21,33" size="192,192" url="ui://8z385pimue83g" fill="scale"/>
+    <text id="n1_ue83" name="title" xy="10,10" size="17,34" fontSize="24" color="#ffffff" text="1"/>
+    <text id="n2_ue83" name="n2" xy="248,33" size="52,34" fontSize="24" color="#ffffff" text="现金"/>
+    <text id="n3_ue83" name="n3" xy="247,91" size="52,34" fontSize="24" color="#ffffff" text="存款"/>
+    <text id="n4_ue83" name="cash" xy="318,33" size="84,34" fontSize="24" color="#ffffff" text="100000"/>
+    <text id="n5_ue83" name="savings" xy="318,91" size="84,34" fontSize="24" color="#ffffff" text="150000"/>
+    <text id="n6_ue83" name="cards" xy="250,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n7_ue83" name="buff0" xy="322,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n8_ue83" name="buff1" xy="373,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n9_ue83" name="buff2" xy="426,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n11_ue83" name="playerName" xy="132,196" size="80,44" fontSize="24" color="#ffffff" autoSize="none" text="capy1"/>
+  </displayList>
+</component>

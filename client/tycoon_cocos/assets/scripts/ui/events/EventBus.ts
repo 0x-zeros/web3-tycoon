@@ -159,15 +159,11 @@ class EventBusClass extends EventTarget {
      * 清理所有事件监听器
      */
     public clear(): void {
-        // 清理Cocos EventTarget的监听器
-        this.clear();
-
-        // 清理内部注册表
-        this._listenerMap.clear();
-
-        if (this._debug) {
-            console.log(`[EventBus] Cleared all listeners`);
+        // 依赖内部注册表逐事件清理
+        for (const event of this._listenerMap.keys()) {
+            this.off(event);
         }
+        this._listenerMap.clear();
     }
 
     /**

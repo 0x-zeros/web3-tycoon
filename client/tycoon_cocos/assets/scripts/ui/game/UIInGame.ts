@@ -12,6 +12,10 @@ const { ccclass } = _decorator;
  */
 @ccclass('UIInGame')
 export class UIInGame extends UIBase {
+
+
+    private m_btn_dice:fgui.GButton;
+
     // ================ 玩家信息组件 ================
     /** 玩家名称文本 */
     private _playerNameText: fgui.GTextField | null = null;
@@ -67,6 +71,11 @@ export class UIInGame extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
+
+        this.m_btn_dice = this.getChild('n1').asCom.getChild('n2') as fgui.GButton;
+
+        console.log('this.m_btn_dice', this.m_btn_dice);
+
         // 玩家信息组件
         this._playerNameText = this.getText("txtPlayerName");
         this._playerMoneyText = this.getText("txtPlayerMoney");
@@ -79,7 +88,8 @@ export class UIInGame extends UIBase {
         this._gameTimeText = this.getText("txtGameTime");
 
         // 功能按钮
-        this._rollDiceBtn = this.getButton("btnRollDice");
+        // this._rollDiceBtn = this.getButton("btnRollDice");
+        // this._rollDiceBtn = this.m_btn_dice;
         this._pauseBtn = this.getButton("btnPause");
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
@@ -98,10 +108,10 @@ export class UIInGame extends UIBase {
      */
     private _setupDefaultValues(): void {
         // 设置初始按钮状态
-        if (this._rollDiceBtn) {
-            this._rollDiceBtn.enabled = false;
-            this._rollDiceBtn.text = "等待回合";
-        }
+        // if (this._rollDiceBtn) {
+        //     this._rollDiceBtn.enabled = false;
+        //     this._rollDiceBtn.text = "等待回合";
+        // }
 
         // 初始化显示数据
         this._updatePlayerDisplay();
@@ -112,8 +122,15 @@ export class UIInGame extends UIBase {
      * 绑定事件
      */
     protected bindEvents(): void {
+
+        if(this.m_btn_dice){
+            console.log('添加 投掷骰子事件1');
+            this.m_btn_dice.onClick(this._onRollDiceClick, this);
+        }
+
         // 绑定按钮事件
         if (this._rollDiceBtn) {
+            console.log('添加 投掷骰子事件');
             this._rollDiceBtn.onClick(this._onRollDiceClick, this);
         }
 
@@ -153,6 +170,11 @@ export class UIInGame extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
+        if(this.m_btn_dice){
+            console.log('移除 投掷骰子事件1');
+            this.m_btn_dice.offClick(this._onRollDiceClick, this);
+        }
+
         // 解绑按钮事件
         if (this._rollDiceBtn) {
             this._rollDiceBtn.offClick(this._onRollDiceClick, this);
@@ -215,11 +237,11 @@ export class UIInGame extends UIBase {
      * 投掷骰子按钮点击
      */
     private _onRollDiceClick(): void {
+        console.log("[UIInGame] Roll dice clicked");
+
         if (!this._rollDiceBtn || !this._rollDiceBtn.enabled) {
             return;
         }
-
-        console.log("[UIInGame] Roll dice clicked");
 
         // 发送投掷骰子事件
         EventBus.emitEvent(EventTypes.Dice.StartRoll, {
@@ -275,11 +297,11 @@ export class UIInGame extends UIBase {
     private _onTurnStart(data: any): void {
         console.log("[UIInGame] Turn started:", data);
 
-        // 启用投掷按钮
-        if (this._rollDiceBtn) {
-            this._rollDiceBtn.enabled = true;
-            this._rollDiceBtn.text = "投掷骰子";
-        }
+        // // 启用投掷按钮
+        // if (this._rollDiceBtn) {
+        //     this._rollDiceBtn.enabled = true;
+        //     this._rollDiceBtn.text = "投掷骰子";
+        // }
     }
 
     /**
@@ -288,11 +310,11 @@ export class UIInGame extends UIBase {
     private _onTurnEnd(data: any): void {
         console.log("[UIInGame] Turn ended:", data);
 
-        // 禁用投掷按钮
-        if (this._rollDiceBtn) {
-            this._rollDiceBtn.enabled = false;
-            this._rollDiceBtn.text = "等待回合";
-        }
+        // // 禁用投掷按钮
+        // if (this._rollDiceBtn) {
+        //     this._rollDiceBtn.enabled = false;
+        //     this._rollDiceBtn.text = "等待回合";
+        // }
     }
 
     /**
@@ -325,10 +347,10 @@ export class UIInGame extends UIBase {
      * 骰子开始投掷
      */
     private _onDiceStart(): void {
-        if (this._rollDiceBtn) {
-            this._rollDiceBtn.enabled = false;
-            this._rollDiceBtn.text = "投掷中...";
-        }
+        // if (this._rollDiceBtn) {
+        //     this._rollDiceBtn.enabled = false;
+        //     this._rollDiceBtn.text = "投掷中...";
+        // }
     }
 
     /**
@@ -337,9 +359,9 @@ export class UIInGame extends UIBase {
     private _onDiceComplete(data: any): void {
         console.log("[UIInGame] Dice roll completed:", data);
 
-        if (this._rollDiceBtn) {
-            this._rollDiceBtn.text = "等待回合";
-        }
+        // if (this._rollDiceBtn) {
+        //     this._rollDiceBtn.text = "等待回合";
+        // }
     }
 
     // ================== 数据监听处理 ==================

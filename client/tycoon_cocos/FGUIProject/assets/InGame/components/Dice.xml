@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="256,256" pivot="0.5,0.5" extention="Button" hitTest="n0_mumq">
+<component size="256,256" pivot="0.5,0.5" extention="Button">
   <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
   <displayList>
-    <image id="n0_mumq" name="n0" src="mumq4" fileName="images/dice10.png" xy="0,0" size="256,256">
-      <relation target="" sidePair="width-width,height-height"/>
-    </image>
     <image id="n1_ue83" name="n1" src="ue83c" fileName="images/circle.png" xy="126,127" pivot="0.5,0.5" anchor="true" size="220,223">
       <relation target="n0_mumq" sidePair="width-width,height-height,center-center"/>
+    </image>
+    <image id="n0_mumq" name="n0" src="mumq4" fileName="images/dice10.png" xy="0,0" size="256,256">
+      <relation target="" sidePair="width-width,height-height"/>
     </image>
   </displayList>
   <Button downEffect="scale" downEffectValue="0.8"/>

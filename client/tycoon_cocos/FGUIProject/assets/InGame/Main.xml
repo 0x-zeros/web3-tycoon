@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1920,1080">
+<component size="1920,1080" opaque="false">
   <displayList>
     <component id="n0_ue83" name="n0" src="mumq6" fileName="CardList.xml" xy="286,869" scale="0.8,0.8">
       <relation target="" sidePair="middle-middle,bottom-bottom"/>

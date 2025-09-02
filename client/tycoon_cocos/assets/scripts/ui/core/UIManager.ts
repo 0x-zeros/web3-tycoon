@@ -636,6 +636,13 @@ export class UIManager {
             // 设置UI名称和面板引用
             uiInstance.setUIName(uiName);
             uiInstance.setPanel(fguiComponent.asCom);
+
+            // // 关键：设置触摸穿透，让空白区域不拦截鼠标事件
+            // const panel = fguiComponent.asCom;
+            // if (panel) {
+            //     //true表示不可穿透，false表示可穿透。
+            //     panel.opaque = false;
+            // }
             
             return uiInstance;
 

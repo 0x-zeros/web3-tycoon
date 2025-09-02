@@ -11,12 +11,12 @@ export class TestNewUI extends Component {
     async start() {
 
 
-        // 基础初始化
-        initUISystem({
-            debug: true,
-            enableCache: true,
-            designResolution: { width: 1136, height: 640 }
-        });
+        // // 基础初始化
+        // initUISystem({
+        //     debug: true,
+        //     enableCache: true,
+        //     designResolution: { width: 1136, height: 640 }
+        // });
         
         // 完整初始化（推荐）
         await initializeGameUI(); // 自动完成包加载、UI注册、界面显示

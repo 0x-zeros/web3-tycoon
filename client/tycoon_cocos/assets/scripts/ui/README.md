@@ -51,23 +51,23 @@ assets/scripts/ui/
 ### 1. 系统初始化
 
 ```typescript
-import { initUISystem, initializeGameUI } from "./ui/index";
+import { UIManager } from "./ui";
 
 // 方式1: 基础初始化
-initUISystem({
+await UIManager.initUISystem({
     debug: true,
     enableCache: true,
     designResolution: { width: 1136, height: 640 }
 });
 
 // 方式2: 完整初始化（推荐）
-await initializeGameUI(); // 自动预加载包、注册UI、显示初始界面
+await UIManager.initializeGameUI(); // 自动预加载包、注册UI、显示初始界面
 ```
 
 ### 2. 注册和显示UI
 
 ```typescript
-import { UIManager, registerModeSelectUI, showModeSelect } from "./ui/index";
+import { UIManager, UIModeSelect } from "./ui";
 
 // 注册UI配置
 UIManager.instance.registerUI("ModeSelect", {
@@ -79,32 +79,28 @@ UIManager.instance.registerUI("ModeSelect", {
 }, UIModeSelect);
 
 // 或使用便捷方法
-registerModeSelectUI("Common", "ModeSelect");
+UIManager.instance.registerModeSelectUI("Common", "ModeSelect");
 
 // 显示UI
 const ui = await UIManager.instance.showUI<UIModeSelect>("ModeSelect");
 // 或使用便捷方法
-const ui = await showModeSelect();
+const ui = await UIManager.instance.showModeSelect();
 ```
 
 ### 3. 包管理
 
 ```typescript
-import { UILoader, preloadUIPackages } from "./ui/index";
+import { UIManager } from "./ui";
 
 // 加载单个包
-await UILoader.loadPackage("Common");
-
-// 批量加载包
-const result = await UILoader.loadPackageBatch(["Common", "Game"]);
-console.log(`成功: ${result.successCount}, 失败: ${result.failureCount}`);
+await UIManager.instance.loadPackage("Common");
 
 // 预加载包（便捷方法）
-await preloadUIPackages(["Common", "Game"]);
+await UIManager.preloadUIPackages(["Common", "Game"]);
 
 // 检查包状态
-console.log("已加载:", UILoader.getLoadedPackages());
-console.log("加载中:", UILoader.getLoadingPackages());
+console.log("已加载:", UIManager.instance.getLoadedPackages());
+console.log("包状态:", UIManager.instance.getStats());
 ```
 
 ## 🎨 创建自定义UI界面
@@ -244,18 +240,18 @@ Blackboard.instance.watch("playerMoney", (newMoney) => {
 
 ```typescript
 // 创建UI对象
-const obj = UILoader.createObject("Game", "ItemIcon");
+const obj = UIManager.instance.createObject("Game", "ItemIcon");
 
 // 异步创建（自动加载包）
-const obj2 = await UILoader.createObjectAsync("Game", "ItemIcon");
+const obj2 = await UIManager.instance.createObjectAsync("Game", "ItemIcon");
 
 // 检查资源
-if (UILoader.hasResource("Game", "ItemIcon")) {
+if (UIManager.instance.hasResource("Game", "ItemIcon")) {
     console.log("资源存在");
 }
 
 // 卸载包
-UILoader.unloadPackage("Game");
+UIManager.instance.unloadPackage("Game");
 ```
 
 ## 📋 最佳实践
@@ -268,7 +264,7 @@ UILoader.unloadPackage("Game");
 
 ### 2. 内存管理
 - 启用UI缓存 `cache: true` 复用频繁显示的UI
-- 使用UILoader管理FairyGUI包的加载卸载
+- 使用UIManager管理FairyGUI包的加载卸载
 - 及时调用 `unbindEvents()` 避免内存泄漏
 - 对于一次性UI设置 `cache: false`
 
@@ -290,12 +286,11 @@ UILoader.unloadPackage("Game");
 
 ```typescript
 // 初始化时启用调试
-initUISystem({ debug: true });
+await UIManager.initUISystem({ debug: true });
 
 // 或单独启用各模块调试
 EventBus.setDebug(true);
 Blackboard.instance.setDebug(true);
-UILoader.setDebug(true);
 ```
 
 ### 2. 获取系统状态
@@ -306,7 +301,7 @@ const activeUIs = UIManager.instance.getActiveUIs();
 console.log("当前显示的UI:", activeUIs);
 
 // 获取包加载状态
-const stats = UILoader.getStats();
+const stats = UIManager.instance.getStats();
 console.log("包加载状态:", stats);
 
 // 获取事件系统状态
@@ -322,7 +317,7 @@ console.log("数据系统:", dataInfo);
 
 ```typescript
 // 检查包是否加载
-if (!UILoader.isPackageLoaded("Common")) {
+if (!UIManager.instance.isPackageLoaded("Common")) {
     console.error("包未加载");
 }
 
@@ -341,19 +336,17 @@ if (!this.getButton("btnStart")) {
 ## 🔄 系统清理
 
 ```typescript
-import { cleanupUISystem } from "./ui/index";
-
 // 在游戏退出时清理UI系统
-cleanupUISystem();
+UIManager.cleanupUISystem();
 ```
 
 ## 📦 使用示例
 
-完整的使用示例可参考 `initializeGameUI()` 函数：
+完整的使用示例可参考 `UIManager.initializeGameUI()` 函数：
 
 ```typescript
 // 一键初始化整个UI系统
-await initializeGameUI();
+await UIManager.initializeGameUI();
 
 // 系统会自动：
 // 1. 初始化UIManager和FairyGUI

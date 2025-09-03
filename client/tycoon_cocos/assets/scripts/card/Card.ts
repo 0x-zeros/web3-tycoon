@@ -1,14 +1,14 @@
 /**
  * 卡片基类
  * 
- * 所有卡片的基础类，定义卡片的通用行为和接口
- * 提供卡片使用、冷却、状态管理等核心功能
+ * 重构整合技能系统，卡牌通过技能来实现效果
+ * 卡片作为技能的包装器和使用载体
  * 
  * @author Web3 Tycoon Team
- * @version 1.0.0
+ * @version 2.0.0 - 整合技能系统
  */
 
-import { _decorator, Component, Node, Sprite, Label, Button } from 'cc';
+import { _decorator, Component, Node, Sprite, Label, Button, EventTarget } from 'cc';
 import { 
     CardData, 
     CardInstance, 
@@ -21,6 +21,10 @@ import {
     CardUsabilityCheck
 } from '../map/types/CardTypes';
 import { PlayerData, GameEventType } from '../map/types/GameTypes';
+import { Role } from '../role/Role';
+import { Skill } from '../skill/Skill';
+import { SkillManager } from '../skill/SkillManager';
+import { SkillUseResult } from '../skill/SkillTypes';
 
 const { ccclass, property } = _decorator;
 
@@ -85,6 +89,11 @@ export abstract class Card extends Component {
     @property({ displayName: "使用次数标签", type: Label, tooltip: "显示剩余使用次数" })
     public usesLabel: Label | null = null;
     
+    // ========================= 技能整合属性 =========================
+    
+    @property({ displayName: "关联技能ID", tooltip: "卡牌关联的技能ID" })
+    public skillId: number = 0;
+    
     // ========================= 私有属性 =========================
     
     /** 卡片数据 */
@@ -104,6 +113,15 @@ export abstract class Card extends Component {
     
     /** 是否正在使用中 */
     protected _isUsingCard: boolean = false;
+    
+    /** 关联的技能实例 */
+    protected _skill: Skill | null = null;
+    
+    /** 卡牌唯一ID */
+    protected _cardId: string = '';
+    
+    /** 创建时间 */
+    protected _createTime: number = 0;
     
     // ========================= 抽象属性和方法 =========================
     
@@ -159,6 +177,7 @@ export abstract class Card extends Component {
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
+        this.initializeCard();
         this.initializeUI();
         this.setupEventHandlers();
     }
@@ -172,6 +191,49 @@ export abstract class Card extends Component {
     }
     
     // ========================= 初始化方法 =========================
+    
+    /**
+     * 初始化卡牌
+     */
+    private initializeCard(): void {
+        this._cardId = this.generateCardId();
+        this._createTime = Date.now();
+        
+        // 加载关联技能
+        this.loadSkill();
+        
+        console.log(`[Card] 卡牌初始化: ${this.cardName} (技能ID: ${this.skillId})`);
+    }
+    
+    /**
+     * 加载关联技能
+     */
+    private loadSkill(): void {
+        if (this.skillId > 0 && SkillManager.instance) {
+            this._skill = SkillManager.instance.getSkill(this.skillId);
+            
+            if (this._skill) {
+                // 从技能同步一些属性
+                if (!this.cardName) {
+                    this.cardName = this._skill.getName();
+                }
+                if (!this.cardDescription) {
+                    this.cardDescription = this._skill.getDescription();
+                }
+                
+                console.log(`[Card] 加载技能成功: ${this._skill.getName()}`);
+            } else {
+                console.warn(`[Card] 技能加载失败: ${this.skillId}`);
+            }
+        }
+    }
+    
+    /**
+     * 生成卡牌ID
+     */
+    private generateCardId(): string {
+        return `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
     
     /**
      * 初始化UI组件
@@ -267,47 +329,40 @@ export abstract class Card extends Component {
     }
     
     /**
-     * 使用卡片
-     * @param context 使用上下文
+     * 使用卡片（通过技能系统）
+     * @param owner 卡片拥有者
+     * @param target 目标对象
      */
-    public async useCard(context: CardUseContext): Promise<CardUseResult> {
+    public async use(owner: Role, target?: Role): Promise<boolean> {
         if (this._isUsingCard) {
-            return {
-                success: false,
-                message: '卡片正在使用中',
-                errorCode: 'CARD_IN_USE',
-                appliedEffects: [],
-                affectedPlayerIds: [],
-                affectedTileIds: []
-            };
+            console.warn('[Card] 卡片正在使用中');
+            return false;
         }
         
         // 检查使用条件
-        const usabilityCheck = this.checkUsability(context);
-        if (!usabilityCheck.canUse) {
-            return {
-                success: false,
-                message: usabilityCheck.reasons.join('; '),
-                errorCode: 'UNUSABLE',
-                appliedEffects: [],
-                affectedPlayerIds: [],
-                affectedTileIds: []
-            };
+        if (!this.canUse(owner)) {
+            console.warn(`[Card] 卡片无法使用: ${this.cardName}`);
+            return false;
         }
         
         this._isUsingCard = true;
         
         try {
-            // 扣除使用消耗
-            if (this.useCost > 0) {
-                context.player.financialStatus.cash -= this.useCost;
-                context.player.financialStatus.expenses.other += this.useCost;
+            let success = false;
+            
+            // 如果有关联技能，通过技能系统执行
+            if (this._skill) {
+                console.log(`[Card] 通过技能执行: ${this._skill.getName()}`);
+                success = await this._skill.use(owner, target);
+            } else {
+                // 降级到原有的卡片效果系统
+                console.log(`[Card] 使用传统卡片效果: ${this.cardName}`);
+                const context = this.createLegacyContext(owner, target);
+                const result = await this.executeCardEffect(context);
+                success = result.success;
             }
             
-            // 执行卡片效果
-            const result = await this.executeCardEffect(context);
-            
-            if (result.success) {
+            if (success) {
                 // 更新使用次数
                 if (this._remainingUses > 0) {
                     this._remainingUses--;
@@ -324,9 +379,6 @@ export abstract class Card extends Component {
                     this._currentState = CardState.USED;
                 }
                 
-                // 更新统计
-                context.player.statistics.cardsUsed++;
-                
                 // 更新显示
                 this.updateCardDisplay();
                 
@@ -334,14 +386,89 @@ export abstract class Card extends Component {
                 this.playUseEffect();
                 
                 // 触发使用事件
-                this.emitCardUseEvent(context, result);
+                this.emitCardUseEvent(owner, target, success);
             }
             
-            return result;
+            return success;
             
         } finally {
             this._isUsingCard = false;
         }
+    }
+    
+    /**
+     * 检查卡片是否可以使用
+     */
+    public canUse(owner: Role): boolean {
+        // 检查卡片状态
+        if (this._currentState !== CardState.AVAILABLE) {
+            return false;
+        }
+        
+        // 检查冷却时间
+        if (this._remainingCooldown > 0) {
+            return false;
+        }
+        
+        // 检查使用次数
+        if (this._remainingUses === 0) {
+            return false;
+        }
+        
+        // 如果有关联技能，检查技能使用条件
+        if (this._skill) {
+            return this._skill.canUse(owner);
+        }
+        
+        // 检查基础消耗（降级处理）
+        if (this.useCost > 0 && owner.getAttr(0) < this.useCost) { // 假设属性0是金钱
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 创建传统上下文（向后兼容）
+     */
+    private createLegacyContext(owner: Role, target?: Role): CardUseContext {
+        return {
+            player: this.convertRoleToPlayerData(owner),
+            target: target,
+            gameState: null,
+            parameters: {}
+        };
+    }
+    
+    /**
+     * 转换Role到PlayerData（临时兼容方法）
+     */
+    private convertRoleToPlayerData(role: Role): PlayerData {
+        // 这里需要根据实际的PlayerData结构来转换
+        // 暂时返回一个模拟对象
+        return {
+            id: role.getId(),
+            name: role.getName(),
+            financialStatus: {
+                cash: role.getAttr(0), // 假设属性0是金钱
+                expenses: { other: 0 },
+            },
+            statistics: {
+                cardsUsed: 0
+            }
+        } as any;
+    }
+    
+    /**
+     * 触发卡片使用事件
+     */
+    private emitCardUseEvent(owner: Role, target?: Role, success?: boolean): void {
+        this.node.emit('card-used', {
+            card: this,
+            owner: owner,
+            target: target,
+            success: success
+        });
     }
     
     /**
@@ -504,7 +631,66 @@ export abstract class Card extends Component {
         // 默认实现：无特殊处理
     }
     
+    // ========================= 技能相关方法 =========================
+    
+    /**
+     * 获取关联的技能
+     */
+    public getSkill(): Skill | null {
+        return this._skill;
+    }
+    
+    /**
+     * 设置关联技能
+     */
+    public setSkill(skill: Skill): void {
+        this._skill = skill;
+        this.skillId = skill.getId();
+        
+        // 同步一些属性
+        if (!this.cardName) {
+            this.cardName = skill.getName();
+        }
+        if (!this.cardDescription) {
+            this.cardDescription = skill.getDescription();
+        }
+    }
+    
+    /**
+     * 获取技能ID
+     */
+    public getSkillId(): number {
+        return this.skillId;
+    }
+    
+    /**
+     * 重新加载技能
+     */
+    public reloadSkill(): void {
+        this.loadSkill();
+    }
+    
+    /**
+     * 获取卡片类型字符串（用于判断特殊卡片）
+     */
+    public getCardType(): string {
+        if (this._skill) {
+            const effects = this._skill.getEffects();
+            if (effects.length > 0) {
+                return effects[0].type;
+            }
+        }
+        return this.cardType.toString();
+    }
+    
     // ========================= 工具方法 =========================
+    
+    /**
+     * 获取卡片唯一ID
+     */
+    public getCardId(): string {
+        return this._cardId;
+    }
     
     /**
      * 获取卡片数据
@@ -539,6 +725,55 @@ export abstract class Card extends Component {
      */
     public getRemainingCooldown(): number {
         return this._remainingCooldown;
+    }
+    
+    /**
+     * 获取创建时间
+     */
+    public getCreateTime(): number {
+        return this._createTime;
+    }
+    
+    /**
+     * 导出卡片数据
+     */
+    public exportData(): any {
+        return {
+            cardId: this._cardId,
+            skillId: this.skillId,
+            cardName: this.cardName,
+            cardDescription: this.cardDescription,
+            currentState: this._currentState,
+            remainingUses: this._remainingUses,
+            remainingCooldown: this._remainingCooldown,
+            createTime: this._createTime,
+            useCost: this.useCost,
+            cooldownTurns: this.cooldownTurns,
+            maxUses: this.maxUses
+        };
+    }
+    
+    /**
+     * 从数据加载卡片
+     */
+    public loadData(data: any): void {
+        this._cardId = data.cardId || this._cardId;
+        this.skillId = data.skillId || this.skillId;
+        this.cardName = data.cardName || this.cardName;
+        this.cardDescription = data.cardDescription || this.cardDescription;
+        this._currentState = data.currentState || this._currentState;
+        this._remainingUses = data.remainingUses !== undefined ? data.remainingUses : this._remainingUses;
+        this._remainingCooldown = data.remainingCooldown || 0;
+        this._createTime = data.createTime || this._createTime;
+        this.useCost = data.useCost || this.useCost;
+        this.cooldownTurns = data.cooldownTurns || this.cooldownTurns;
+        this.maxUses = data.maxUses !== undefined ? data.maxUses : this.maxUses;
+        
+        // 重新加载技能
+        this.reloadSkill();
+        
+        // 更新显示
+        this.updateCardDisplay();
     }
     
     /**

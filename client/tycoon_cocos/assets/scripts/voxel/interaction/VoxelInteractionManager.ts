@@ -5,8 +5,8 @@ import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
 import { VoxelWorldManager } from "../world/VoxelWorld";
 import { VoxelBlockType } from "../core/VoxelBlock";
 import { VoxelWorldConfig, VoxelWorldMode } from "../core/VoxelWorldConfig";
-import { EventBus } from "../../ui/events/EventBus";
-import { EventTypes, Input3DEventData } from "../../ui/events/EventTypes";
+import { EventBus } from "../../events/EventBus";
+import { EventTypes, Input3DEventData } from "../../events/EventTypes";
 
 const { ccclass, property } = _decorator;
 

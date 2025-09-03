@@ -1,0 +1,311 @@
+[
+  {
+    "id": 1001,
+    "name": "传送术",
+    "description": "瞬间传送到指定地块，跳过其他玩家",
+    "type": "instant",
+    "iconPath": "icons/skills/teleport",
+    "level": 1,
+    "attributes": {
+      "COST": 100,
+      "COOLDOWN": 3,
+      "RANGE": 10,
+      "CAST_TIME": 0
+    },
+    "effects": [
+      {
+        "type": "teleport",
+        "value": 1,
+        "target": "self",
+        "params": {
+          "maxDistance": 10,
+          "bypassPlayers": true
+        }
+      }
+    ],
+    "requirements": {
+      "level": 5,
+      "money": 500
+    },
+    "upgradeConfig": {
+      "maxLevel": 3,
+      "upgradeCosts": [500, 1000, 2000],
+      "levelBonuses": {
+        "2": { "RANGE": 15, "COST": 80 },
+        "3": { "RANGE": 20, "COST": 60 }
+      }
+    },
+    "animationConfig": {
+      "castAnimation": "teleport_cast",
+      "effectPath": "effects/teleport_flash",
+      "effectDuration": 1.0,
+      "cameraShake": false
+    },
+    "audioConfig": {
+      "castSound": "sounds/teleport",
+      "volume": 0.8
+    }
+  },
+  {
+    "id": 1002,
+    "name": "幸运加持",
+    "description": "提升幸运值，增加获得奖励的概率",
+    "type": "active",
+    "iconPath": "icons/skills/luck_boost",
+    "level": 1,
+    "attributes": {
+      "COST": 200,
+      "COOLDOWN": 5,
+      "DURATION": 30,
+      "PROBABILITY": 0.3
+    },
+    "effects": [
+      {
+        "type": "luck",
+        "value": 20,
+        "target": "self",
+        "duration": 30,
+        "stackable": false
+      }
+    ],
+    "requirements": {
+      "level": 3,
+      "money": 300
+    },
+    "upgradeConfig": {
+      "maxLevel": 5,
+      "upgradeCosts": [300, 600, 1200, 2400],
+      "levelBonuses": {
+        "2": { "DURATION": 40, "value": 25 },
+        "3": { "DURATION": 50, "value": 30 },
+        "4": { "DURATION": 60, "value": 35 },
+        "5": { "DURATION": 75, "value": 40 }
+      }
+    }
+  },
+  {
+    "id": 1003,
+    "name": "金钱掠夺",
+    "description": "从目标玩家身上掠夺一定数量的金钱",
+    "type": "active",
+    "iconPath": "icons/skills/money_steal",
+    "level": 1,
+    "attributes": {
+      "COST": 150,
+      "COOLDOWN": 4,
+      "RANGE": 3,
+      "DAMAGE": 500
+    },
+    "effects": [
+      {
+        "type": "money",
+        "value": -500,
+        "target": "single_player",
+        "params": {
+          "transferToSelf": true,
+          "percentage": false
+        }
+      }
+    ],
+    "requirements": {
+      "level": 8,
+      "money": 800
+    }
+  },
+  {
+    "id": 1004,
+    "name": "房产保护",
+    "description": "保护自己的房产免受其他技能影响",
+    "type": "passive",
+    "iconPath": "icons/skills/property_shield",
+    "level": 1,
+    "attributes": {
+      "DURATION": 60,
+      "PROBABILITY": 0.8
+    },
+    "effects": [
+      {
+        "type": "shield",
+        "value": 1,
+        "target": "property",
+        "duration": 60,
+        "params": {
+          "protectFrom": ["property_lose", "rent_free"],
+          "blockChance": 0.8
+        }
+      }
+    ],
+    "requirements": {
+      "level": 12,
+      "money": 1500,
+      "prerequisiteSkills": [1001]
+    }
+  },
+  {
+    "id": 1005,
+    "name": "骰子控制",
+    "description": "控制下次投掷骰子的结果",
+    "type": "active",
+    "iconPath": "icons/skills/dice_control",
+    "level": 1,
+    "attributes": {
+      "COST": 300,
+      "COOLDOWN": 8,
+      "CAST_TIME": 1
+    },
+    "effects": [
+      {
+        "type": "dice_control",
+        "value": 1,
+        "target": "self",
+        "params": {
+          "minValue": 1,
+          "maxValue": 6,
+          "nextRollOnly": true
+        }
+      }
+    ],
+    "requirements": {
+      "level": 15,
+      "money": 2000
+    }
+  },
+  {
+    "id": 1006,
+    "name": "出狱卡",
+    "description": "立即从监狱中释放",
+    "type": "instant",
+    "iconPath": "icons/skills/jail_escape",
+    "level": 1,
+    "attributes": {
+      "COST": 50,
+      "COOLDOWN": 0
+    },
+    "effects": [
+      {
+        "type": "jail_escape",
+        "value": 1,
+        "target": "self",
+        "params": {
+          "instant": true
+        }
+      }
+    ],
+    "requirements": {
+      "level": 1
+    }
+  },
+  {
+    "id": 1007,
+    "name": "免租特权",
+    "description": "获得免租特权，踩到其他玩家房产不需要付租金",
+    "type": "active",
+    "iconPath": "icons/skills/rent_free",
+    "level": 1,
+    "attributes": {
+      "COST": 400,
+      "COOLDOWN": 10,
+      "DURATION": 20
+    },
+    "effects": [
+      {
+        "type": "rent_free",
+        "value": 1,
+        "target": "self",
+        "duration": 20,
+        "stackable": false
+      }
+    ],
+    "requirements": {
+      "level": 10,
+      "money": 1200
+    }
+  },
+  {
+    "id": 1008,
+    "name": "抽取卡牌",
+    "description": "从卡牌库中随机抽取一张卡牌",
+    "type": "instant",
+    "iconPath": "icons/skills/card_draw",
+    "level": 1,
+    "attributes": {
+      "COST": 100,
+      "COOLDOWN": 2
+    },
+    "effects": [
+      {
+        "type": "card_draw",
+        "value": 1,
+        "target": "self",
+        "params": {
+          "drawCount": 1,
+          "cardType": "random"
+        }
+      }
+    ],
+    "requirements": {
+      "level": 6,
+      "money": 600
+    }
+  },
+  {
+    "id": 1009,
+    "name": "偷取卡牌",
+    "description": "从目标玩家手中随机偷取一张卡牌",
+    "type": "active",
+    "iconPath": "icons/skills/card_steal",
+    "level": 1,
+    "attributes": {
+      "COST": 250,
+      "COOLDOWN": 6,
+      "RANGE": 5
+    },
+    "effects": [
+      {
+        "type": "card_steal",
+        "value": 1,
+        "target": "single_player",
+        "params": {
+          "stealCount": 1,
+          "transferToSelf": true
+        }
+      }
+    ],
+    "requirements": {
+      "level": 9,
+      "money": 900
+    }
+  },
+  {
+    "id": 1010,
+    "name": "财神召唤",
+    "description": "召唤财神NPC到指定位置，为周围玩家提供金钱奖励",
+    "type": "active",
+    "iconPath": "icons/skills/summon_fortune",
+    "level": 1,
+    "attributes": {
+      "COST": 500,
+      "COOLDOWN": 15,
+      "DURATION": 45,
+      "RANGE": 8
+    },
+    "effects": [
+      {
+        "type": "summon",
+        "value": 1,
+        "target": "tile",
+        "duration": 45,
+        "params": {
+          "npcType": "fortune_god",
+          "effectRadius": 3,
+          "bonusAmount": 200
+        }
+      }
+    ],
+    "requirements": {
+      "level": 20,
+      "money": 3000,
+      "prerequisiteSkills": [1002, 1003]
+    }
+  }
+]

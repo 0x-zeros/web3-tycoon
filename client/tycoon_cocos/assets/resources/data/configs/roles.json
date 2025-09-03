@@ -1,0 +1,217 @@
+[
+  {
+    "roleId": 1001,
+    "roleType": 1,
+    "name": "默认玩家",
+    "description": "标准玩家角色配置",
+    "attributes": {
+      "HEALTH": 1000,
+      "MAX_HEALTH": 1000,
+      "MONEY": 1500,
+      "LUCK": 0,
+      "SPEED": 100,
+      "DEFENSE": 0,
+      "ATTACK": 0,
+      "LEVEL": 1,
+      "EXPERIENCE": 0,
+      "MAX_EXPERIENCE": 1000
+    },
+    "position": { "x": 0, "y": 0, "z": 0 },
+    "tileIndex": 0,
+    "state": "idle",
+    "skillSlots": [0, 0, 0, 0, 0, 0],
+    "inventory": {
+      "maxSlots": 20,
+      "items": []
+    },
+    "properties": [],
+    "cards": [],
+    "buffs": [],
+    "debuffs": [],
+    "visualConfig": {
+      "modelPath": "models/players/default_player",
+      "scale": 1.0,
+      "animations": {
+        "idle": "player_idle",
+        "walk": "player_walk",
+        "run": "player_run",
+        "skill_cast": "player_cast"
+      }
+    },
+    "audioConfig": {
+      "footstepSound": "sounds/footsteps",
+      "skillCastSound": "sounds/player_cast",
+      "volume": 0.7
+    }
+  },
+  {
+    "roleId": 1002,
+    "roleType": 1,
+    "name": "商业大亨",
+    "description": "擅长商业投资的玩家角色",
+    "attributes": {
+      "HEALTH": 800,
+      "MAX_HEALTH": 800,
+      "MONEY": 2000,
+      "LUCK": 15,
+      "SPEED": 90,
+      "DEFENSE": 5,
+      "ATTACK": 0,
+      "LEVEL": 3,
+      "EXPERIENCE": 500,
+      "MAX_EXPERIENCE": 1500
+    },
+    "position": { "x": 0, "y": 0, "z": 0 },
+    "tileIndex": 0,
+    "state": "idle",
+    "skillSlots": [1002, 1003, 0, 0, 0, 0],
+    "inventory": {
+      "maxSlots": 25,
+      "items": []
+    },
+    "properties": [],
+    "cards": [],
+    "buffs": [],
+    "debuffs": [],
+    "specialAbilities": [
+      {
+        "name": "商业嗅觉",
+        "description": "购买房产时有20%折扣",
+        "type": "passive",
+        "effect": {
+          "type": "property_discount",
+          "value": 0.2
+        }
+      }
+    ],
+    "visualConfig": {
+      "modelPath": "models/players/businessman",
+      "scale": 1.0,
+      "animations": {
+        "idle": "businessman_idle",
+        "walk": "businessman_walk",
+        "skill_cast": "businessman_cast"
+      }
+    }
+  },
+  {
+    "roleId": 1003,
+    "roleType": 1,
+    "name": "冒险家",
+    "description": "擅长探索和战斗的玩家角色",
+    "attributes": {
+      "HEALTH": 1200,
+      "MAX_HEALTH": 1200,
+      "MONEY": 1200,
+      "LUCK": 25,
+      "SPEED": 120,
+      "DEFENSE": 10,
+      "ATTACK": 15,
+      "LEVEL": 2,
+      "EXPERIENCE": 200,
+      "MAX_EXPERIENCE": 1200
+    },
+    "position": { "x": 0, "y": 0, "z": 0 },
+    "tileIndex": 0,
+    "state": "idle",
+    "skillSlots": [1001, 1005, 1008, 0, 0, 0],
+    "inventory": {
+      "maxSlots": 30,
+      "items": []
+    },
+    "properties": [],
+    "cards": [],
+    "buffs": [],
+    "debuffs": [],
+    "specialAbilities": [
+      {
+        "name": "探险者直觉",
+        "description": "发现隐藏事件的概率提升30%",
+        "type": "passive",
+        "effect": {
+          "type": "event_discovery_bonus",
+          "value": 0.3
+        }
+      },
+      {
+        "name": "快速移动",
+        "description": "移动速度提升20%",
+        "type": "passive",
+        "effect": {
+          "type": "speed_bonus",
+          "value": 0.2
+        }
+      }
+    ],
+    "visualConfig": {
+      "modelPath": "models/players/adventurer",
+      "scale": 1.0,
+      "animations": {
+        "idle": "adventurer_idle",
+        "walk": "adventurer_walk",
+        "run": "adventurer_run",
+        "skill_cast": "adventurer_cast"
+      }
+    }
+  },
+  {
+    "roleId": 1004,
+    "roleType": 1,
+    "name": "学者",
+    "description": "擅长技能和魔法的玩家角色",
+    "attributes": {
+      "HEALTH": 700,
+      "MAX_HEALTH": 700,
+      "MONEY": 1800,
+      "LUCK": 10,
+      "SPEED": 80,
+      "DEFENSE": 0,
+      "ATTACK": 5,
+      "LEVEL": 5,
+      "EXPERIENCE": 800,
+      "MAX_EXPERIENCE": 2000
+    },
+    "position": { "x": 0, "y": 0, "z": 0 },
+    "tileIndex": 0,
+    "state": "idle",
+    "skillSlots": [1002, 1004, 1007, 1010, 0, 0],
+    "inventory": {
+      "maxSlots": 20,
+      "items": []
+    },
+    "properties": [],
+    "cards": [],
+    "buffs": [],
+    "debuffs": [],
+    "specialAbilities": [
+      {
+        "name": "博学多才",
+        "description": "技能冷却时间减少25%",
+        "type": "passive",
+        "effect": {
+          "type": "cooldown_reduction",
+          "value": 0.25
+        }
+      },
+      {
+        "name": "魔法亲和",
+        "description": "技能效果提升15%",
+        "type": "passive",
+        "effect": {
+          "type": "skill_power_bonus",
+          "value": 0.15
+        }
+      }
+    ],
+    "visualConfig": {
+      "modelPath": "models/players/scholar",
+      "scale": 1.0,
+      "animations": {
+        "idle": "scholar_idle",
+        "walk": "scholar_walk",
+        "skill_cast": "scholar_cast",
+        "study": "scholar_study"
+      }
+    }
+  }
+]

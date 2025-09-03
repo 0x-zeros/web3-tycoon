@@ -99,6 +99,66 @@ export const EventTypes = {
         GetNewCard: "card_get_new"
     },
 
+    /** 角色相关事件 */
+    Role: {
+        /** 角色创建 */
+        Created: "role_created",
+        /** 角色销毁 */
+        Destroyed: "role_destroyed",
+        /** 属性变化 */
+        AttributeChange: "role_attribute_change",
+        /** 状态变化 */
+        StateChange: "role_state_change",
+        /** 位置变化 */
+        PositionChange: "role_position_change",
+        /** Actor绑定 */
+        ActorBind: "role_actor_bind",
+        /** Actor解绑 */
+        ActorUnbind: "role_actor_unbind",
+        /** 角色初始化 */
+        Initialized: "role_initialized",
+        /** 角色重置 */
+        Reset: "role_reset"
+    },
+
+    /** 技能相关事件 */
+    Skill: {
+        /** 技能使用 */
+        Used: "skill_used",
+        /** 冷却开始 */
+        CooldownStart: "skill_cooldown_start",
+        /** 冷却结束 */
+        CooldownEnd: "skill_cooldown_end",
+        /** 效果生效 */
+        EffectApplied: "skill_effect_applied",
+        /** 技能升级 */
+        LevelUp: "skill_level_up",
+        /** 技能学习 */
+        Learned: "skill_learned",
+        /** 技能失败 */
+        Failed: "skill_failed",
+        /** 技能中断 */
+        Interrupted: "skill_interrupted"
+    },
+
+    /** NPC相关事件 */
+    NPC: {
+        /** NPC生成 */
+        Spawned: "npc_spawned",
+        /** NPC触发 */
+        Triggered: "npc_triggered",
+        /** 效果生效 */
+        EffectApplied: "npc_effect_applied",
+        /** NPC过期 */
+        Expired: "npc_expired",
+        /** NPC移除 */
+        Removed: "npc_removed",
+        /** NPC状态变化 */
+        StateChange: "npc_state_change",
+        /** NPC交互 */
+        Interact: "npc_interact"
+    },
+
     /** 骰子相关事件 */
     Dice: {
         /** 开始投掷 */

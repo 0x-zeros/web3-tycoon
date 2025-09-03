@@ -9,6 +9,10 @@
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",
-    "fairygui-cc": "latest"
+    "fairygui-cc": "latest",
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12"
   }
 }

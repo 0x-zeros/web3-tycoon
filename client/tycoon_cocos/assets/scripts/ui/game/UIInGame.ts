@@ -1,7 +1,7 @@
 import { UIBase } from "../core/UIBase";
-import { EventBus } from "../events/EventBus";
-import { EventTypes } from "../events/EventTypes";
-import { Blackboard } from "../events/Blackboard";
+import { EventBus } from "../../events/EventBus";
+import { EventTypes } from "../../events/EventTypes";
+import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 

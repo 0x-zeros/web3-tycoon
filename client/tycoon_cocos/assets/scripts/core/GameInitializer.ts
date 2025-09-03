@@ -15,6 +15,7 @@ import { SkillManager } from '../skill/SkillManager';
 import { UIManager } from '../ui/core/UIManager';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
+import { fromEntries } from '../utils/object-utils';
 
 const { ccclass, property } = _decorator;
 
@@ -47,13 +48,13 @@ export interface InitializationResult {
  */
 @ccclass('GameInitializer')
 export class GameInitializer extends Component {
-    @property({ displayName: "配置加载器节点", tooltip: "ConfigLoader组件所在节点" })
+    @property({ displayName: "配置加载器节点", type: Node, tooltip: "ConfigLoader组件所在节点" })
     public configLoaderNode: Node | null = null;
 
-    @property({ displayName: "角色管理器节点", tooltip: "RoleManager组件所在节点" })
+    @property({ displayName: "角色管理器节点", type: Node, tooltip: "RoleManager组件所在节点" })
     public roleManagerNode: Node | null = null;
 
-    @property({ displayName: "技能管理器节点", tooltip: "SkillManager组件所在节点" })
+    @property({ displayName: "技能管理器节点", type: Node, tooltip: "SkillManager组件所在节点" })
     public skillManagerNode: Node | null = null;
 
     @property({ displayName: "显示加载进度", tooltip: "是否在控制台显示加载进度" })
@@ -62,7 +63,7 @@ export class GameInitializer extends Component {
     @property({ displayName: "启用性能监测", tooltip: "是否启用初始化性能监测" })
     public enableProfiling: boolean = true;
 
-    @property({ displayName: "地图容器节点", tooltip: "地图预制体将加载到此节点下" })
+    @property({ displayName: "地图容器节点", type: Node, tooltip: "地图预制体将加载到此节点下" })
     public mapContainer: Node | null = null;
 
     // 单例实例
@@ -158,7 +159,7 @@ export class GameInitializer extends Component {
                 success: true,
                 phase: InitializationPhase.GAME_READY,
                 loadTime: totalTime,
-                details: Object.fromEntries(this.performanceLog)
+                details: fromEntries(this.performanceLog)
             };
 
         } catch (error) {
@@ -407,27 +408,26 @@ export class GameInitializer extends Component {
      */
     private registerEventListeners(): void {
         // 注册全局游戏事件监听器
-        if (this.roleManager) {
-            this.roleManager.addEventListener('player-created', this.onPlayerCreated.bind(this));
-            this.roleManager.addEventListener('npc-created', this.onNPCCreated.bind(this));
-        }
+        // 使用EventBus替代直接的addEventListener
+        EventBus.onEvent(EventTypes.Role.Created, this.onPlayerCreated, this);
+        EventBus.onEvent(EventTypes.NPC.Created, this.onNPCCreated, this);
 
         // 注册游戏开始事件监听器
         EventBus.onEvent(EventTypes.Game.GameStart, this.onGameStart, this);
     }
 
     /**
-     * 玩家创建事件处理
+     * 角色创建事件处理
      */
-    private onPlayerCreated(event: CustomEvent): void {
-        console.log('玩家创建:', event.detail);
+    private onPlayerCreated(data: any): void {
+        console.log('角色创建:', data);
     }
 
     /**
      * NPC创建事件处理
      */
-    private onNPCCreated(event: CustomEvent): void {
-        console.log('NPC创建:', event.detail);
+    private onNPCCreated(data: any): void {
+        console.log('NPC创建:', data);
     }
 
     /**

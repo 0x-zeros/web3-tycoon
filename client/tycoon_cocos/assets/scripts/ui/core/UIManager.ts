@@ -1,9 +1,9 @@
-import { warn, error } from "cc";
+import { warn, error, director, Canvas, Node } from "cc";
 import { UIBase } from "./UIBase";
-import { EventBus } from "../events/EventBus";
-import { EventTypes } from "../events/EventTypes";
-import { Blackboard } from "../events/Blackboard";
-import { UI3DInteractionManager } from "../events/UI3DInteractionManager";
+import { EventBus } from "../../events/EventBus";
+import { EventTypes } from "../../events/EventTypes";
+import { Blackboard } from "../../events/Blackboard";
+import { UI3DInteractionManager } from "../../events/UI3DInteractionManager";
 import * as fgui from "fairygui-cc";
 
 // 导入UI类以便在静态方法中使用
@@ -101,18 +101,24 @@ export class UIManager {
             return;
         }
 
-        this._config = {
-            debug: false,
-            enableCache: true,
-            designResolution: { width: 1136, height: 640 },
-            ...config
-        };
+        try {
+            this._config = {
+                debug: false,
+                enableCache: true,
+                designResolution: { width: 1136, height: 640 },
+                ...config
+            };
 
-        this._initFairyGUI();
-        this._inited = true;
+            this._initFairyGUI();
+            this._inited = true;
 
-        if (this._config.debug) {
-            console.log("[UIManager] Initialized with FairyGUI");
+            if (this._config.debug) {
+                console.log("[UIManager] Initialized with FairyGUI");
+            }
+        } catch (error) {
+            console.error("[UIManager] Failed to initialize UI system:", error);
+            // 重新抛出错误，让调用者能够正确处理
+            throw error;
         }
     }
 
@@ -120,23 +126,64 @@ export class UIManager {
      * 初始化FairyGUI
      */
     private _initFairyGUI(): void {
-        // 先创建GRoot实例
-        fgui.GRoot.create();
-        
-        // 然后获取实例
-        this._groot = fgui.GRoot.inst;
-        
-        // FairyGUI会自动处理设计分辨率
-        // 不需要手动调用setContentScaleFactor
+        try {
+            // 检查场景和Canvas是否准备好
+            const scene = director.getScene();
+            if (!scene) {
+                throw new Error("场景未准备好，无法初始化FairyGUI");
+            }
+            
+            const canvas = scene.getComponentInChildren(Canvas);
+            if (!canvas) {
+                throw new Error("场景中找不到Canvas组件，FairyGUI需要Canvas才能工作");
+            }
+            
+            console.log("[UIManager] Scene and Canvas ready, initializing FairyGUI");
+            
+            // 检查是否已经初始化过
+            // if (fgui.GRoot.inst) {
+            //     this._groot = fgui.GRoot.inst;
+            //     console.log("[UIManager] FairyGUI already initialized, reusing existing instance");
+            // }
+            // else
+            {
+                // 先创建GRoot实例
+                //注意 FairyGUI 的 GRoot.create 内部硬编码查找场景根节点下名为 “Canvas” 的节点
+                //所以场景里的UIRoot要命名为Canvas
+                fgui.GRoot.create();
+                
+                // 然后获取实例
+                this._groot = fgui.GRoot.inst;
+            }
+            
+            if (!this._groot) {
+                throw new Error("FairyGUI GRoot创建失败");
+            }
+            
+            // FairyGUI会自动处理设计分辨率
+            // 不需要手动调用setContentScaleFactor
 
-        if (this._config.debug) {
-            console.log("[UIManager] FairyGUI initialized", {
-                groot: this._groot,
-                designResolution: this._config.designResolution
-            });
+            if (this._config.debug) {
+                console.log("[UIManager] FairyGUI initialized", {
+                    groot: this._groot,
+                    designResolution: this._config.designResolution
+                });
+            }
+
+            // 检查节点是否有效再添加组件
+            if (this._groot.node) {
+                // 检查是否已经有UI3DInteractionManager组件
+                let interactionManager = this._groot.node.getComponent(UI3DInteractionManager);
+                if (!interactionManager) {
+                    this._groot.node.addComponent(UI3DInteractionManager);
+                }
+            } else {
+                console.warn("[UIManager] FairyGUI根节点无效，跳过UI3DInteractionManager添加");
+            }
+        } catch (error) {
+            console.error("[UIManager] FairyGUI初始化失败:", error);
+            throw error;
         }
-
-        this._groot.node.addComponent(UI3DInteractionManager);
 
         // 设置事件总线调试模式
         if (this._config.debug) {
@@ -619,6 +666,12 @@ export class UIManager {
         try {
             // 初始化UI管理器
             UIManager.instance.init(config);
+            
+            // 检查初始化是否成功
+            if (!UIManager.instance._inited) {
+                console.error("[UISystem] UI Manager initialization failed");
+                return false;
+            }
             
             // 预加载公共依赖包
             const loaded = await UIManager.instance.loadCommonPackages();

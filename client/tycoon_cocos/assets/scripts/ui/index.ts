@@ -9,9 +9,9 @@ export { UIBase } from "./core/UIBase";
 export * from "./core/UITypes";
 
 // 事件系统
-export { EventBus } from "./events/EventBus";
-export { EventTypes } from "./events/EventTypes";
-export { Blackboard } from "./events/Blackboard";
+export { EventBus } from "../events/EventBus";
+export { EventTypes } from "../events/EventTypes";
+export { Blackboard } from "../events/Blackboard";
 
 // 游戏界面
 export { UIModeSelect } from "./game/UIModeSelect";

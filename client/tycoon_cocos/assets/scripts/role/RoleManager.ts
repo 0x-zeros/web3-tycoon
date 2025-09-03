@@ -139,7 +139,6 @@ export class RoleManager extends Component {
         // 设置单例
         if (RoleManager._instance === null) {
             RoleManager._instance = this;
-            director.addPersistRootNode(this.node);
         } else {
             this.destroy();
             return;

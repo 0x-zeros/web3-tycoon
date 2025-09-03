@@ -68,7 +68,7 @@ export class SkillManager extends Component {
     // ========================= 编辑器属性 =========================
     
     @property({ displayName: "技能配置文件路径", tooltip: "JSON格式的技能配置文件路径" })
-    public skillConfigPath: string = 'configs/skills';
+    public skillConfigPath: string = 'data/configs/skills';
     
     @property({ displayName: "启用技能缓存", tooltip: "是否启用技能实例缓存" })
     public enableCache: boolean = true;
@@ -101,7 +101,7 @@ export class SkillManager extends Component {
     
     /** 管理器配置 */
     private m_config: SkillManagerConfig = {
-        configPath: 'configs/skills',
+        configPath: 'data/configs/skills',
         enableUpgrade: true,
         enableLearning: true,
         globalCooldown: 1.0,
@@ -208,12 +208,24 @@ export class SkillManager extends Component {
             }
             
             const configData = jsonAsset.json;
-            if (!configData || !configData.skills) {
-                throw new Error('技能配置文件格式错误');
+            if (!configData) {
+                throw new Error('技能配置文件加载失败');
+            }
+            
+            // 支持两种格式：直接数组或包含skills字段的对象
+            let skillsArray;
+            if (Array.isArray(configData)) {
+                // 直接是技能数组
+                skillsArray = configData;
+            } else if (configData.skills && Array.isArray(configData.skills)) {
+                // 包含skills字段的对象
+                skillsArray = configData.skills;
+            } else {
+                throw new Error('技能配置文件格式错误：期待数组或包含skills字段的对象');
             }
             
             // 解析技能配置
-            await this.parseSkillConfigs(configData.skills);
+            await this.parseSkillConfigs(skillsArray);
             
             // 构建索引
             this.buildSkillIndices();

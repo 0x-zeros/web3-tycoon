@@ -1,6 +1,6 @@
 import { Component, _decorator } from 'cc';
-import { EventBus } from "../events/EventBus";
-import { Blackboard } from "../events/Blackboard";
+import { EventBus } from "../../events/EventBus";
+import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 
 const { ccclass, property } = _decorator;

@@ -196,8 +196,13 @@ export class UIModeSelect extends UIBase {
         Blackboard.instance.set("gameMode", "single_player", true);
 
         // 显示地图选择界面
-        EventBus.emitEvent(EventTypes.UI.ShowMapSelect, {
-            gameMode: "single_player",
+        // EventBus.emitEvent(EventTypes.UI.ShowMapSelect, {
+        //     gameMode: "single_player",
+        //     source: "mode_select"
+        // });
+
+        EventBus.emitEvent(EventTypes.Game.GameStart, {
+            mode: "single_player",
             source: "mode_select"
         });
 

@@ -2,6 +2,7 @@ import { _decorator, Component, input, Input, EventTouch, EventMouse, Camera, ge
 import { GRoot } from 'fairygui-cc';
 import { EventBus } from './EventBus';
 import { EventTypes, Input3DEventData, RaycastEventData } from './EventTypes';
+import { CameraController } from '../camera/CameraController';
 
 const { ccclass, property } = _decorator;
 
@@ -24,9 +25,9 @@ export class UI3DInteractionManager extends Component {
       console.log("[UI3DInteractionManager] start");
     }
     
-    // 自动查找3D相机
+    // 通过CameraController获取3D相机
     if (!this.camera3D) {
-      this.camera3D = find("Main Camera")?.getComponent(Camera); //scene/Main Camera
+      this.camera3D = CameraController.getMainCamera(); //通过CameraController统一访问
     }
     
     if (!this.camera3D && this.enableDebug) {

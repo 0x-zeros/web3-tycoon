@@ -240,7 +240,9 @@ export const EventTypes = {
         /** 设置变化 */
         SettingsChange: "system_settings_change",
         /** 语言变化 */
-        LanguageChange: "system_language_change"
+        LanguageChange: "system_language_change",
+        /** 相机模式变化 */
+        CameraModeChanged: "system_camera_mode_changed"
     },
 
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */

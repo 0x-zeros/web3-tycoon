@@ -12,6 +12,7 @@ import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, res
 import { MapData, MapTileData, TileType, PathResult } from '../types/MapTypes';
 import { PlayerData } from '../types/GameTypes';
 import { MapTile, TileInteractionResult } from './MapTile';
+import { CameraController } from '../../camera/CameraController';
 import { input } from 'cc';
 import { Input } from 'cc';
 
@@ -188,12 +189,12 @@ export class GameMap extends Component {
             this.tilesContainer.setParent(this.node);
         }
         
-        // 获取主摄像机（如果不存在）
+        // 获取主摄像机（通过CameraController统一管理）
         if (!this.mainCamera) {
-            this.mainCamera = find("Main Camera")?.getComponent(Camera);
+            this.mainCamera = CameraController.getMainCamera();
       
             if (!this.mainCamera) {
-                console.error('[Map] 未找到主摄像机，请在场景中添加Main Camera');
+                console.error('[GameMap] 无法通过CameraController获取主摄像机，请确保CameraController已正确初始化');
             }
         }
         

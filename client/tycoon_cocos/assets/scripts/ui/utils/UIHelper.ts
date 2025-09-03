@@ -1,4 +1,5 @@
 import { Node, Vec3, tween, UITransform, view, Canvas, Camera, director } from "cc";
+import { CameraController } from "../../camera/CameraController";
 
 /**
  * UI辅助工具类 - 提供常用的UI操作方法
@@ -9,7 +10,7 @@ export class UIHelper {
      * 将世界坐标转换为UI坐标
      */
     public static worldToUIPosition(worldPos: Vec3, canvas: Canvas): Vec3 {
-        const camera = canvas.cameraComponent || director.getScene()?.getComponentInChildren(Camera);
+        const camera = canvas.cameraComponent || CameraController.getMainCamera();
         if (!camera) {
             console.warn("[UIHelper] Camera not found");
             return Vec3.ZERO;
@@ -31,7 +32,7 @@ export class UIHelper {
      * 将UI坐标转换为世界坐标
      */
     public static uiToWorldPosition(uiPos: Vec3, canvas: Canvas, depth: number = 0): Vec3 {
-        const camera = canvas.cameraComponent || director.getScene()?.getComponentInChildren(Camera);
+        const camera = canvas.cameraComponent || CameraController.getMainCamera();
         if (!camera) {
             console.warn("[UIHelper] Camera not found");
             return Vec3.ZERO;

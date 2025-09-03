@@ -8,10 +8,13 @@
  * @version 1.0.0
  */
 
-import { _decorator, Component, director, Node, game } from 'cc';
+import { _decorator, Component, director, Node, game, resources, Prefab, instantiate } from 'cc';
 import { ConfigLoader, ConfigType } from '../config/ConfigLoader';
 import { RoleManager } from '../role/RoleManager';
 import { SkillManager } from '../skill/SkillManager';
+import { UIManager } from '../ui/core/UIManager';
+import { EventBus } from '../events/EventBus';
+import { EventTypes } from '../events/EventTypes';
 
 const { ccclass, property } = _decorator;
 
@@ -59,6 +62,9 @@ export class GameInitializer extends Component {
     @property({ displayName: "启用性能监测", tooltip: "是否启用初始化性能监测" })
     public enableProfiling: boolean = true;
 
+    @property({ displayName: "地图容器节点", tooltip: "地图预制体将加载到此节点下" })
+    public mapContainer: Node | null = null;
+
     // 单例实例
     private static _instance: GameInitializer | null = null;
 
@@ -74,6 +80,9 @@ export class GameInitializer extends Component {
     private initStartTime: number = 0;
     private phaseStartTime: number = 0;
     private performanceLog: Map<string, number> = new Map();
+
+    // 地图相关
+    private currentMapInstance: Node | null = null;
 
     /**
      * 获取单例实例
@@ -93,9 +102,17 @@ export class GameInitializer extends Component {
         }
     }
 
-    protected start(): void {
+    protected async start(): Promise<void> {
         // 自动开始初始化
-        this.initializeGame();
+        const initResult = await this.initializeGame();
+        
+        if (initResult.success) {
+            // 初始化UI系统并显示模式选择界面
+            await UIManager.initializeGameUI();
+            console.log('UI系统初始化完成，显示模式选择界面');
+        } else {
+            console.error('游戏初始化失败:', initResult.error);
+        }
     }
 
     protected onDestroy(): void {
@@ -394,6 +411,9 @@ export class GameInitializer extends Component {
             this.roleManager.addEventListener('player-created', this.onPlayerCreated.bind(this));
             this.roleManager.addEventListener('npc-created', this.onNPCCreated.bind(this));
         }
+
+        // 注册游戏开始事件监听器
+        EventBus.onEvent(EventTypes.Game.GameStart, this.onGameStart, this);
     }
 
     /**
@@ -421,6 +441,70 @@ export class GameInitializer extends Component {
             }
             console.log('=====================');
         }
+    }
+
+    /**
+     * 游戏开始事件处理
+     */
+    private async onGameStart(data: any): Promise<void> {
+        console.log('接收到游戏开始事件:', data);
+        
+        try {
+            // 加载测试地图
+            await this.loadGameMap('test_map');
+            
+            // 显示游戏内UI
+            // TODO: 这里需要根据实际的UIManager API来显示游戏内界面
+            console.log('地图加载完成，准备显示游戏内UI');
+            
+        } catch (error) {
+            console.error('游戏启动失败:', error);
+        }
+    }
+
+    /**
+     * 加载游戏地图
+     * @param mapName 地图名称
+     */
+    private async loadGameMap(mapName: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            console.log(`开始加载地图: ${mapName}`);
+            
+            const mapPath = `scene/${mapName}`;
+            
+            resources.load(mapPath, Prefab, (err, prefab) => {
+                if (err) {
+                    console.error('地图加载失败:', err);
+                    reject(err);
+                    return;
+                }
+                
+                try {
+                    // 清除之前的地图实例
+                    if (this.currentMapInstance) {
+                        this.currentMapInstance.destroy();
+                        this.currentMapInstance = null;
+                    }
+                    
+                    // 实例化新地图
+                    this.currentMapInstance = instantiate(prefab);
+                    
+                    // 添加到地图容器或当前场景
+                    const parent = this.mapContainer || this.node.scene;
+                    if (parent) {
+                        parent.addChild(this.currentMapInstance);
+                        console.log(`地图 ${mapName} 加载成功`);
+                        resolve();
+                    } else {
+                        throw new Error('找不到地图容器节点');
+                    }
+                    
+                } catch (error) {
+                    console.error('地图实例化失败:', error);
+                    reject(error);
+                }
+            });
+        });
     }
 }
 

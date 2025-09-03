@@ -468,7 +468,7 @@ export class ChanceTile extends MapTile {
     private async handleMoveToEvent(player: PlayerData, event: ChanceEvent): Promise<TileInteractionResult> {
         const targetType = event.parameters.targetType;
         
-        // TODO: 这里需要通过MapManager执行实际的移动
+        // TODO: 这里需要通过Map组件执行实际的移动
         // 当前只是记录事件，实际移动需要在上层处理
         
         const gameEvent = {

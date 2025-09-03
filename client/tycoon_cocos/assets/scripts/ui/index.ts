@@ -15,6 +15,7 @@ export { Blackboard } from "../events/Blackboard";
 
 // 游戏界面
 export { UIModeSelect } from "./game/UIModeSelect";
+export { UIMapSelect } from "./game/UIMapSelect";
 export { UIInGame } from "./game/UIInGame";
 
 // 工具类

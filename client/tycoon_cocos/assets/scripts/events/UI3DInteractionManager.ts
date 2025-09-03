@@ -26,8 +26,7 @@ export class UI3DInteractionManager extends Component {
     
     // 自动查找3D相机
     if (!this.camera3D) {
-      this.camera3D = find("scene/Main Camera")?.getComponent(Camera) || 
-                      this.getComponentInChildren(Camera);
+      this.camera3D = find("Main Camera")?.getComponent(Camera); //scene/Main Camera
     }
     
     if (!this.camera3D && this.enableDebug) {

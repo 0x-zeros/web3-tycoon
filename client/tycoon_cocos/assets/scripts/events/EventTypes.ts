@@ -23,6 +23,8 @@ export const EventTypes = {
         ShowSettings: "ui_show_settings",
         /** 显示暂停菜单 */
         ShowPauseMenu: "ui_show_pause_menu",
+        /** 显示地图选择界面 */
+        ShowMapSelect: "ui_show_map_select",
         /** UI管理器状态变化 */
         ManagerStateChange: "ui_manager_state_change",
         /** 按钮点击 */
@@ -54,7 +56,21 @@ export const EventTypes = {
         /** 回合开始 */
         TurnStart: "game_turn_start",
         /** 回合结束 */
-        TurnEnd: "game_turn_end"
+        TurnEnd: "game_turn_end",
+        
+        // 地图相关事件
+        /** 地图被选择 */
+        MapSelected: "game_map_selected",
+        /** 地图加载完成 */
+        MapLoaded: "game_map_loaded",
+        /** 地图卸载 */
+        MapUnloaded: "game_map_unloaded",
+        /** 地图加载失败 */
+        MapLoadFailed: "game_map_load_failed",
+        /** 地图配置更新 */
+        MapConfigUpdated: "game_map_config_updated",
+        /** 请求切换地图 */
+        RequestMapChange: "game_request_map_change"
     },
 
     /** 地产相关事件 */

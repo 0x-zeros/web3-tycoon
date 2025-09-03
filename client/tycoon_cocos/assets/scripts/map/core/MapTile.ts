@@ -179,7 +179,7 @@ export abstract class MapTile extends Component {
         // if (this.enableClickInteraction) {
         //     // TODO: 这里需要根据Cocos Creator的具体版本调整事件处理方式
         //     // 当前版本的射线检测和鼠标事件需要在场景级别处理
-        //     // 这里预留接口，具体实现需要配合MapManager
+        //     // 这里预留接口，具体实现需要配合Map组件
         //     this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
         //     this.node.on(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
         //     this.node.on(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
@@ -653,7 +653,7 @@ export abstract class MapTile extends Component {
         // 当前只是记录日志，实际实现时需要通过事件系统通知其他组件
         console.log(`[MapTile] 发射游戏事件: ${eventType}`, eventData);
         
-        // 示例：通过节点事件系统发射（需要在MapManager中监听）
+        // 示例：通过节点事件系统发射（需要在Map组件中监听）
         this.node.emit('game-event', {
             type: eventType,
             data: eventData,

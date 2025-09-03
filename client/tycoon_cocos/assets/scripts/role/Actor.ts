@@ -356,7 +356,7 @@ export class Actor extends Component {
             // 播放移动动画
             this.playAnimation('move');
             
-            // 计算目标位置（这里需要通过MapManager获取地块位置）
+            // 计算目标位置（这里需要通过Map获取地块位置）
             const targetPos = await this.getTilePosition(params.targetTileId);
             
             if (targetPos) {
@@ -376,7 +376,7 @@ export class Actor extends Component {
      * 获取地块世界位置
      */
     private async getTilePosition(tileId: number): Promise<Vec3 | null> {
-        // 这里需要通过MapManager获取地块位置
+        // 这里需要通过Map获取地块位置
         // 暂时返回一个模拟位置
         return new Vec3(tileId * 2, 0, 0);
     }

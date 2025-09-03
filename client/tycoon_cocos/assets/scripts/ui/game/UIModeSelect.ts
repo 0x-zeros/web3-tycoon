@@ -192,14 +192,14 @@ export class UIModeSelect extends UIBase {
     private _onSinglePlayerClick(): void {
         console.log("[UIModeSelect] Single player clicked");
 
-        // 发送游戏开始事件
-        EventBus.emitEvent(EventTypes.Game.GameStart, {
-            mode: "single_player",
-            source: "mode_select"
-        });
-
         // 保存游戏模式
         Blackboard.instance.set("gameMode", "single_player", true);
+
+        // 显示地图选择界面
+        EventBus.emitEvent(EventTypes.UI.ShowMapSelect, {
+            gameMode: "single_player",
+            source: "mode_select"
+        });
 
         this.hide();
     }
@@ -226,14 +226,16 @@ export class UIModeSelect extends UIBase {
             return;
         }
 
-        // 发送游戏开始事件
-        EventBus.emitEvent(EventTypes.Game.GameStart, {
-            mode: "multi_player",
+        // 保存游戏模式
+        Blackboard.instance.set("gameMode", "multi_player", true);
+
+        // 显示地图选择界面
+        EventBus.emitEvent(EventTypes.UI.ShowMapSelect, {
+            gameMode: "multi_player",
             source: "mode_select"
         });
 
-        // 保存游戏模式
-        Blackboard.instance.set("gameMode", "multi_player", true);
+        this.hide();
     }
 
     /**

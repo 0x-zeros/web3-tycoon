@@ -1,14 +1,14 @@
 /**
- * 地图管理器
+ * 地图组件
  * 
- * 负责地图的加载、渲染、玩家移动路径计算等核心功能
- * 作为地图系统的中央控制器，协调各个地块和玩家的交互
+ * 负责单个地图的加载、渲染、玩家移动路径计算等核心功能
+ * 作为单个地图的控制器，协调该地图内各个地块和玩家的交互
  * 
  * @author Web3 Tycoon Team
  * @version 1.0.0
  */
 
-import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, resources, JsonAsset, instantiate, Prefab, tween } from 'cc';
+import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, resources, JsonAsset, instantiate, Prefab, tween, find } from 'cc';
 import { MapData, MapTileData, TileType, PathResult } from '../types/MapTypes';
 import { PlayerData } from '../types/GameTypes';
 import { MapTile, TileInteractionResult } from './MapTile';
@@ -62,11 +62,11 @@ interface CameraControlConfig {
 }
 
 /**
- * 地图管理器主类
+ * 地图组件主类
  * 继承自Cocos Creator Component，可挂载到场景节点
  */
-@ccclass('MapManager')
-export class MapManager extends Component {
+@ccclass('GameMap')
+export class GameMap extends Component {
     
     // ========================= 编辑器属性 =========================
     
@@ -190,17 +190,17 @@ export class MapManager extends Component {
         
         // 获取主摄像机（如果不存在）
         if (!this.mainCamera) {
-            this.mainCamera = this.node.getComponentInChildren(Camera);
+            this.mainCamera = find("Main Camera")?.getComponent(Camera);
+      
             if (!this.mainCamera) {
-                console.error('[MapManager] 未找到主摄像机，尝试自动创建');
-                // this.createDefaultCamera();
+                console.error('[Map] 未找到主摄像机，请在场景中添加Main Camera');
             }
         }
         
         // 更新移动配置
         this._moveConfig.moveSpeed = this.playerMoveSpeed;
         
-        console.log('[MapManager] 组件初始化完成');
+        console.log('[Map] 组件初始化完成');
     }
     
     /**
@@ -230,7 +230,7 @@ export class MapManager extends Component {
      */
     private async initializeMap(): Promise<void> {
         try {
-            console.log('[MapManager] 开始加载地图...');
+            console.log('[Map] 开始加载地图...');
             
             // 加载地图数据
             await this.loadMapData();
@@ -246,13 +246,13 @@ export class MapManager extends Component {
             
             this._isInitialized = true;
             
-            console.log('[MapManager] 地图初始化完成');
+            console.log('[Map] 地图初始化完成');
             
             // 触发地图加载完成事件
             this.node.emit('map-loaded', { mapData: this._mapData });
             
         } catch (error) {
-            console.error('[MapManager] 地图初始化失败:', error);
+            console.error('[Map] 地图初始化失败:', error);
             this.node.emit('map-load-error', { error });
         }
     }
@@ -266,17 +266,17 @@ export class MapManager extends Component {
             //resources.load 只能加载在resources目录下的资源，所以需要把data/maps/test_map.json 放到resources目录下
             resources.load(this.mapDataPath, JsonAsset, (err, jsonAsset) => {
                 if (err) {
-                    console.error('[MapManager] 加载地图数据失败:', err);
+                    console.error('[Map] 加载地图数据失败:', err);
                     reject(err);
                     return;
                 }
                 
                 try {
                     this._mapData = jsonAsset.json as MapData;
-                    console.log('[MapManager] 地图数据加载成功:', this._mapData.mapName);
+                    console.log('[Map] 地图数据加载成功:', this._mapData.mapName);
                     resolve();
                 } catch (parseError) {
-                    console.error('[MapManager] 解析地图数据失败:', parseError);
+                    console.error('[Map] 解析地图数据失败:', parseError);
                     reject(parseError);
                 }
             });
@@ -299,7 +299,7 @@ export class MapManager extends Component {
         
         await Promise.all(promises);
         
-        console.log(`[MapManager] 创建了 ${this._tileInstances.size} 个地块`);
+        console.log(`[Map] 创建了 ${this._tileInstances.size} 个地块`);
     }
     
     /**
@@ -308,7 +308,7 @@ export class MapManager extends Component {
     private async createSingleTile(tileData: MapTileData): Promise<void> {
         const prefab = this.getTilePrefab(tileData.type);
         if (!prefab) {
-            console.error(`[MapManager] 找不到地块类型 ${tileData.type} 的预制件`);
+            console.error(`[Map] 找不到地块类型 ${tileData.type} 的预制件`);
             return;
         }
         
@@ -320,7 +320,7 @@ export class MapManager extends Component {
         // 获取MapTile组件
         const tileComponent = tileNode.getComponent(MapTile);
         if (!tileComponent) {
-            console.error(`[MapManager] 地块预制件 ${tileData.type} 缺少MapTile组件`);
+            console.error(`[Map] 地块预制件 ${tileData.type} 缺少MapTile组件`);
             tileNode.destroy();
             return;
         }
@@ -336,7 +336,7 @@ export class MapManager extends Component {
         this._tileNodes.set(tileData.id, tileNode);
         
         if (this.debugMode) {
-            console.log(`[MapManager] 创建地块: ${tileData.name} (${tileData.type})`);
+            console.log(`[Map] 创建地块: ${tileData.name} (${tileData.type})`);
         }
     }
     
@@ -362,7 +362,7 @@ export class MapManager extends Component {
             case TileType.CARD_STATION:
                 return this.cardStationTilePrefab;
             default:
-                console.warn(`[MapManager] 未支持的地块类型: ${tileType}`);
+                console.warn(`[Map] 未支持的地块类型: ${tileType}`);
                 return this.emptyTilePrefab; // 默认使用空白地块
         }
     }
@@ -388,7 +388,7 @@ export class MapManager extends Component {
             // this.mainCamera.node.setRotationFromEuler(45, 0, 0);
         }
         
-        console.log('[MapManager] 摄像机设置完成');
+        console.log('[Map] 摄像机设置完成');
     }
     
     /**
@@ -424,7 +424,7 @@ export class MapManager extends Component {
             return;
         }
         
-        console.log('[MapManager] 开始构建路径缓存...');
+        console.log('[Map] 开始构建路径缓存...');
         
         // 为常用路径组合建立缓存
         // 这里可以预计算一些常用的路径，提高运行时性能
@@ -440,7 +440,7 @@ export class MapManager extends Component {
             }
         }
         
-        console.log(`[MapManager] 路径缓存构建完成，缓存了 ${this._pathCache.size} 条路径`);
+        console.log(`[Map] 路径缓存构建完成，缓存了 ${this._pathCache.size} 条路径`);
     }
     
     // ========================= 公共接口方法 =========================
@@ -530,7 +530,7 @@ export class MapManager extends Component {
     public async movePlayerToTile(player: PlayerData, targetTileId: number, animated: boolean = true): Promise<TileInteractionResult> {
         const targetTile = this.getTile(targetTileId);
         if (!targetTile) {
-            console.error(`[MapManager] 目标地块不存在: ${targetTileId}`);
+            console.error(`[Map] 目标地块不存在: ${targetTileId}`);
             return {
                 success: false,
                 message: '目标地块不存在',
@@ -552,7 +552,7 @@ export class MapManager extends Component {
         // 到达新地块
         const result = await targetTile.playerLandOn(player);
         
-        console.log(`[MapManager] 玩家 ${player.nickname} 移动到地块 ${targetTile.getTileInfo().name}`);
+        console.log(`[Map] 玩家 ${player.nickname} 移动到地块 ${targetTile.getTileInfo().name}`);
         
         return result;
     }
@@ -575,7 +575,7 @@ export class MapManager extends Component {
             const tile = this.getTile(tileId);
             
             if (!tile) {
-                console.error(`[MapManager] 路径上的地块不存在: ${tileId}`);
+                console.error(`[Map] 路径上的地块不存在: ${tileId}`);
                 continue;
             }
             
@@ -738,7 +738,7 @@ export class MapManager extends Component {
         // 这里需要根据Cocos Creator的物理系统API来实现
         // 基本流程是：鼠标位置 -> 世界坐标射线 -> 与地块碰撞检测
         
-        // console.log('[MapManager] 射线检测功能待实现');
+        // console.log('[Map] 射线检测功能待实现');
 
         // 将屏幕坐标转成射线
         const ray = this.mainCamera.screenPointToRay(event.getLocationX(), event.getLocationY());
@@ -808,7 +808,7 @@ export class MapManager extends Component {
     private onTileEvent(event: any): void {
         const { type, data, source } = event.detail || event;
         
-        console.log(`[MapManager] 收到地块事件: ${type}`, data);
+        console.log(`[Map] 收到地块事件: ${type}`, data);
         
         // 转发给游戏管理器或其他系统
         this.node.emit('tile-event', { type, data, source });
@@ -856,7 +856,7 @@ export class MapManager extends Component {
 
         input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
         
-        console.log('[MapManager] 资源清理完成');
+        console.log('[Map] 资源清理完成');
     }
     
     /**

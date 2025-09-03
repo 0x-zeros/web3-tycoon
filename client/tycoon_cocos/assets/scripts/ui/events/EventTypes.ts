@@ -165,6 +165,30 @@ export const EventTypes = {
         SettingsChange: "system_settings_change",
         /** 语言变化 */
         LanguageChange: "system_language_change"
+    },
+
+    /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */
+    Input3D: {
+        /** 鼠标按下 */
+        MouseDown: "input3d_mouse_down",
+        /** 鼠标抬起 */
+        MouseUp: "input3d_mouse_up", 
+        /** 鼠标移动 */
+        MouseMove: "input3d_mouse_move",
+        /** 鼠标滚轮 */
+        MouseWheel: "input3d_mouse_wheel",
+        /** 触摸开始 */
+        TouchStart: "input3d_touch_start",
+        /** 触摸移动 */
+        TouchMove: "input3d_touch_move",
+        /** 触摸结束 */
+        TouchEnd: "input3d_touch_end",
+        /** 触摸取消 */
+        TouchCancel: "input3d_touch_cancel",
+        /** 射线检测命中 */
+        RaycastHit: "input3d_raycast_hit",
+        /** 射线检测未命中 */
+        RaycastMiss: "input3d_raycast_miss"
     }
 };
 
@@ -201,4 +225,50 @@ export interface EventListenerConfig {
     once?: boolean;
     /** 监听器优先级(数字越大优先级越高) */
     priority?: number;
+}
+
+/**
+ * 3D输入事件数据接口
+ */
+export interface Input3DEventData {
+    /** 事件类型 */
+    type: string;
+    /** 屏幕坐标X */
+    screenX: number;
+    /** 屏幕坐标Y */
+    screenY: number;
+    /** UI坐标X（适配分辨率后） */
+    uiX?: number;
+    /** UI坐标Y（适配分辨率后） */
+    uiY?: number;
+    /** 鼠标按键（仅鼠标事件有效） */
+    button?: number;
+    /** 触摸ID（仅触摸事件有效） */
+    touchId?: number;
+    /** 滚轮增量（仅滚轮事件有效） */
+    scrollDelta?: { x: number; y: number };
+    /** 原始事件对象 */
+    originalEvent?: any;
+    /** 事件时间戳 */
+    timestamp: number;
+}
+
+/**
+ * 射线检测结果事件数据
+ */
+export interface RaycastEventData {
+    /** 射线起点 */
+    rayOrigin: { x: number; y: number; z: number };
+    /** 射线方向 */
+    rayDirection: { x: number; y: number; z: number };
+    /** 射线距离 */
+    rayDistance: number;
+    /** 是否命中 */
+    hit: boolean;
+    /** 命中点（如果命中） */
+    hitPoint?: { x: number; y: number; z: number };
+    /** 命中的节点名称 */
+    hitNodeName?: string;
+    /** 事件时间戳 */
+    timestamp: number;
 }

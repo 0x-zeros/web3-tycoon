@@ -726,7 +726,7 @@
     <image id="mumqk3" name="tile_0023.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>
     <image id="mumqk4" name="tile_0024.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>
     <image id="mumqk5" name="tile_0025.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>
-    <image id="mumqk6" name="tile_0026.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>
+    <image id="mumqk6" name="tile_0026.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/" scale="9grid" scale9grid="4,4,8,8"/>
     <image id="mumqk7" name="tile_0027.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>
     <image id="mumqk8" name="tile_0028.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>
     <image id="mumqk9" name="tile_0029.png" path="/images/kenney_ui-pack-pixel-adventure/SmallTiles/"/>

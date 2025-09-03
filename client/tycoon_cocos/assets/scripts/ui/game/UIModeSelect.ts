@@ -78,29 +78,29 @@ export class UIModeSelect extends UIBase {
      */
     protected bindEvents(): void {
         // 绑定按钮点击事件
-        if (this.m_btn_start) {
-            this.m_btn_start.onClick(this._onSinglePlayerClick, this);
-        }
 
-        if (this.m_btn1) {
-            this.m_btn1.onClick(this._onBtn1Click, this);
-        }
+        this.m_btn_start?.onClick(this._onSinglePlayerClick, this);
 
-        if (this._singlePlayerBtn) {
-            this._singlePlayerBtn.onClick(this._onSinglePlayerClick, this);
-        }
 
-        if (this._multiPlayerBtn) {
-            this._multiPlayerBtn.onClick(this._onMultiPlayerClick, this);
-        }
 
-        if (this._settingsBtn) {
-            this._settingsBtn.onClick(this._onSettingsClick, this);
-        }
+        this.m_btn1?.onClick(this._onBtn1Click, this);
 
-        if (this._exitBtn) {
-            this._exitBtn.onClick(this._onExitClick, this);
-        }
+
+
+        this._singlePlayerBtn?.onClick(this._onSinglePlayerClick, this);
+
+
+
+        this._multiPlayerBtn?.onClick(this._onMultiPlayerClick, this);
+
+
+
+        this._settingsBtn?.onClick(this._onSettingsClick, this);
+
+
+
+        this._exitBtn?.onClick(this._onExitClick, this);
+
 
         // 监听游戏事件
         EventBus.onEvent(EventTypes.Game.GameStart, this._onGameStart, this);
@@ -117,22 +117,31 @@ export class UIModeSelect extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
+
         // 解绑按钮事件
-        if (this._singlePlayerBtn) {
-            this._singlePlayerBtn.offClick(this._onSinglePlayerClick, this);
-        }
+        this.m_btn_start?.offClick(this._onSinglePlayerClick, this);
 
-        if (this._multiPlayerBtn) {
-            this._multiPlayerBtn.offClick(this._onMultiPlayerClick, this);
-        }
 
-        if (this._settingsBtn) {
-            this._settingsBtn.offClick(this._onSettingsClick, this);
-        }
 
-        if (this._exitBtn) {
-            this._exitBtn.offClick(this._onExitClick, this);
-        }
+        this.m_btn1?.offClick(this._onBtn1Click, this);
+
+
+
+        
+
+        this._singlePlayerBtn?.offClick(this._onSinglePlayerClick, this);
+
+
+        this._multiPlayerBtn?.offClick(this._onMultiPlayerClick, this);
+
+
+
+        this._settingsBtn?.offClick(this._onSettingsClick, this);
+
+
+
+        this._exitBtn?.offClick(this._onExitClick, this);
+
 
         // 调用父类解绑
         super.unbindEvents();

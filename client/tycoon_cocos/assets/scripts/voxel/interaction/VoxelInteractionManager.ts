@@ -5,6 +5,8 @@ import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
 import { VoxelWorldManager } from "../world/VoxelWorld";
 import { VoxelBlockType } from "../core/VoxelBlock";
 import { VoxelWorldConfig, VoxelWorldMode } from "../core/VoxelWorldConfig";
+import { EventBus } from "../../ui/events/EventBus";
+import { EventTypes, Input3DEventData } from "../../ui/events/EventTypes";
 
 const { ccclass, property } = _decorator;
 
@@ -68,13 +70,23 @@ export class VoxelInteractionManager extends Component {
     }
 
     protected onEnable() {
-        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        input.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+        // 监听通过UI3DInteractionManager转发的3D输入事件
+        EventBus.onEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
+        EventBus.onEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
+        EventBus.onEvent(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
+        EventBus.onEvent(EventTypes.Input3D.TouchMove, this.onInput3DTouchMove, this);
+
+        console.log("[VoxelInteractionManager] 已注册3D输入事件监听");
     }
 
     protected onDisable() {
-        input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+        // 解绑3D输入事件
+        EventBus.offEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
+        EventBus.offEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
+        EventBus.offEvent(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
+        EventBus.offEvent(EventTypes.Input3D.TouchMove, this.onInput3DTouchMove, this);
+
+        console.log("[VoxelInteractionManager] 已解绑3D输入事件监听");
     }
 
     public initialize(worldManager: VoxelWorldManager, events?: VoxelInteractionEvents): void {
@@ -219,6 +231,97 @@ export class VoxelInteractionManager extends Component {
         
         return success;
     }
+
+    // ==================== 新的3D输入事件处理方法 ====================
+
+    /**
+     * 处理从UI3DInteractionManager转发的鼠标按下事件
+     * @param eventData 3D输入事件数据
+     */
+    private onInput3DMouseDown(eventData: Input3DEventData): void {
+        console.log("[VoxelInteractionManager] 接收到3D鼠标按下事件:", eventData);
+        
+        // 转换为EventMouse进行处理
+        const originalEvent = eventData.originalEvent as EventMouse;
+        this.onMouseDown(originalEvent);
+    }
+
+    /**
+     * 处理从UI3DInteractionManager转发的鼠标移动事件
+     * @param eventData 3D输入事件数据
+     */
+    private onInput3DMouseMove(eventData: Input3DEventData): void {
+        // 转换为EventMouse进行处理
+        const originalEvent = eventData.originalEvent as EventMouse;
+        this.onMouseMove(originalEvent);
+    }
+
+    /**
+     * 处理从UI3DInteractionManager转发的触摸开始事件
+     * @param eventData 3D输入事件数据
+     */
+    private onInput3DTouchStart(eventData: Input3DEventData): void {
+        console.log("[VoxelInteractionManager] 接收到3D触摸开始事件:", eventData);
+        
+        // 模拟鼠标事件进行处理
+        // 可以根据需要创建一个模拟的EventMouse对象，或者直接使用eventData
+        this.handleTouchAsMouseDown(eventData);
+    }
+
+    /**
+     * 处理从UI3DInteractionManager转发的触摸移动事件
+     * @param eventData 3D输入事件数据
+     */
+    private onInput3DTouchMove(eventData: Input3DEventData): void {
+        // 处理触摸移动，可以用于悬停检测
+        // 暂时禁用以避免频繁日志
+    }
+
+    /**
+     * 将触摸事件按鼠标事件处理
+     * @param eventData 3D输入事件数据
+     */
+    private handleTouchAsMouseDown(eventData: Input3DEventData): void {
+        const buttonName = '触摸';
+        
+        console.log(`[VoxelInteractionManager] 触摸点击: ${buttonName}`);
+        
+        if (!this.camera) {
+            console.warn('[VoxelInteraction] 摄像机未设置，无法进行射线投射');
+            return;
+        }
+        
+        if (!this.worldManager) {
+            console.warn('[VoxelInteraction] 世界管理器未设置，无法进行方块操作');
+            return;
+        }
+
+        // 使用UI坐标进行射线投射
+        const mouseX = eventData.uiX || eventData.screenX;
+        const mouseY = eventData.uiY || eventData.screenY;
+
+        console.log('[VoxelInteraction] 触摸坐标:', { mouseX, mouseY, eventData });
+        
+        const hitResult = this.performRaycast(mouseX, mouseY);
+        console.log('[VoxelInteraction] 射线投射结果:', hitResult);
+        
+        if (hitResult.hit && hitResult.position) {
+            console.log(`[VoxelInteraction] 击中方块 位置:(${hitResult.position.x}, ${hitResult.position.y}, ${hitResult.position.z}) 类型:${hitResult.blockType}`);
+            
+            // 触摸默认执行破坏操作（可以根据需要调整）
+            console.log('[VoxelInteraction] 执行破坏方块操作');
+            const success = this.breakBlock(hitResult.position);
+            console.log(`[VoxelInteraction] 破坏方块结果: ${success ? '成功' : '失败'}`);
+            
+            if (this.events.onBlockClick) {
+                this.events.onBlockClick(hitResult);
+            }
+        } else {
+            console.log('[VoxelInteraction] 射线未击中任何方块');
+        }
+    }
+
+    // ==================== 原有的事件处理方法（保留用于兼容） ====================
 
     private onMouseDown(event: EventMouse): void {
         const buttonName = event.getButton() === EventMouse.BUTTON_LEFT ? '左键' : 

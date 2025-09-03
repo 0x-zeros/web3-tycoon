@@ -45,6 +45,8 @@ export abstract class UIBase extends Component {
      * Cocos组件生命周期 - 禁用  
      */
     protected onDisable(): void {
+        // console.log("[UIBase] onDisable", this.node.name);
+        
         if (!this._inited) return;
         
         this.unbindEvents();
@@ -56,8 +58,9 @@ export abstract class UIBase extends Component {
      * Cocos组件生命周期 - 销毁
      */
     protected onDestroy(): void {
+        // console.log("[UIBase] onDestroy", this.node.name);
+
         if (this._inited) {
-            this.unbindEvents();
             this._inited = false;
         }
     }

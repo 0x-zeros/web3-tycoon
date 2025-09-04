@@ -222,13 +222,15 @@ export class UI3DInteractionManager extends Component {
             y: firstHit.hitPoint.y, 
             z: firstHit.hitPoint.z 
           };
-          raycastData.hitNodeName = firstHit.collider.node.name;
+          raycastData.collider = firstHit.collider;
+          raycastData.node = firstHit.collider.node;
+          raycastData.rayResult = firstHit;
 
           // 发送命中事件
           EventBus.emit(EventTypes.Input3D.RaycastHit, raycastData);
           
           if (this.enableDebug) {
-            console.log("[UI3DInteractionManager] 射线检测命中:", raycastData.hitNodeName);
+            console.log("[UI3DInteractionManager] 射线检测命中:", raycastData.node.name);
           }
         } else {
           raycastData.hit = false;

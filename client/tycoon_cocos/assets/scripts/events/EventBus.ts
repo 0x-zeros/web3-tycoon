@@ -1,5 +1,5 @@
 import { EventTarget } from "cc";
-import { EventListener, EventListenerConfig } from "./EventTypes";
+import { EventListener, EventListenerConfig, EventTypes } from "./EventTypes";
 
 /**
  * 事件总线类 - 全局事件通信机制
@@ -93,7 +93,8 @@ class EventBusClass {
      */
     public emit<T>(event: string, data?: T): void {
         try {
-            if (this._debug && !event.startsWith('input3d_')) {
+            if (this._debug && (!event.startsWith('input3d_') || event.startsWith(EventTypes.Input3D.RaycastHit))) {
+            // if (this._debug) {
                 const listenerCount = this.getEventListenerCount(event);
                 console.log(`[EventBus] Emit event: ${event}, listeners: ${listenerCount}`, data);
             }

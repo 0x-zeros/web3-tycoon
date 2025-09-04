@@ -219,7 +219,7 @@
     "node": {
       "__id__": 2
     },
-    "_enabled": true,
+    "_enabled": false,
     "__prefab": null,
     "enableInputControl": true,
     "debugMode": false,
@@ -288,7 +288,7 @@
     "node": {
       "__id__": 2
     },
-    "_enabled": true,
+    "_enabled": false,
     "__prefab": null,
     "enableInputControl": true,
     "debugMode": false,
@@ -1106,7 +1106,7 @@
     "defaultCameraMode": "isometric",
     "enableKeyboardShortcuts": true,
     "enableMouseInteraction": true,
-    "debugMode": false,
+    "debugMode": true,
     "_id": "ddMyb5NAlObJCejZDtYA8z"
   },
   {
@@ -1179,7 +1179,7 @@
     "propertyPath": [
       "_active"
     ],
-    "value": false
+    "value": true
   },
   {
     "__type__": "cc.Node",
@@ -1343,7 +1343,7 @@
     "propertyPath": [
       "_active"
     ],
-    "value": true
+    "value": false
   },
   {
     "__type__": "95df6s+N3VMV6LtNwWCRrvN",

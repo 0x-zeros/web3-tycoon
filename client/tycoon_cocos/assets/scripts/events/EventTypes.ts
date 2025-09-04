@@ -1,3 +1,5 @@
+import { Collider, Node, PhysicsRayResult} from "cc";
+
 /**
  * 游戏事件类型定义
  * 统一管理所有游戏事件，便于维护和避免事件名冲突
@@ -335,6 +337,7 @@ export interface Input3DEventData {
  * 射线检测结果事件数据
  */
 export interface RaycastEventData {
+
     /** 射线起点 */
     rayOrigin: { x: number; y: number; z: number };
     /** 射线方向 */
@@ -345,8 +348,12 @@ export interface RaycastEventData {
     hit: boolean;
     /** 命中点（如果命中） */
     hitPoint?: { x: number; y: number; z: number };
-    /** 命中的节点名称 */
-    hitNodeName?: string;
+    /** 命中的节点 */
+    node?: Node;
+    /** 命中的碰撞器 */
+    collider?: Collider;
+    /** 射线检测结果 */
+    rayResult?: PhysicsRayResult;
     /** 事件时间戳 */
     timestamp: number;
 }

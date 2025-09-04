@@ -12,6 +12,8 @@ import { _decorator, Component, Node, Vec3, Color, Material, MeshRenderer, BoxCo
 import { MapTileData, TileType, TileState, Position3D } from '../types/MapTypes';
 import { PlayerData, GameEvent, GameEventType } from '../types/GameTypes';
 import { randomRangeInt } from 'cc';
+import { EventBus } from '../../events/EventBus';
+import { EventTypes, RaycastEventData } from '../../events/EventTypes';
 
 const { ccclass, property } = _decorator;
 
@@ -175,38 +177,20 @@ export abstract class MapTile extends Component {
      * 设置鼠标交互事件
      */
     protected registerEventHandlers(): void {
-
-        // if (this.enableClickInteraction) {
-        //     // TODO: 这里需要根据Cocos Creator的具体版本调整事件处理方式
-        //     // 当前版本的射线检测和鼠标事件需要在场景级别处理
-        //     // 这里预留接口，具体实现需要配合Map组件
-        //     this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
-        //     this.node.on(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
-        //     this.node.on(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
-        // }
+        if (this.enableClickInteraction) {
+            // 监听3D射线检测事件（替代直接的鼠标事件）
+            EventBus.on(EventTypes.Input3D.RaycastHit, this.onRaycastHit, this);
+        }
     }
     
     /**
      * 取消注册事件处理器
      */
     protected unregisterEventHandlers(): void {
-
-    //重要：
-    //在 Cocos Creator 3.x 里，Node.EventType.MOUSE_DOWN / TOUCH_START 这类事件系统，其实是基于 UI Canvas 系统 + UI Camera 实现的，不会直接作用到 3D 世界里的 Mesh 或 3D 节点。
-    // 如果你在 3D Node 上直接写：
-    //this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
-    //	•	事件系统会尝试通过 PointerEventDispatcher 去找相机
-	// •	但 3D Camera 并不是 UI Camera，它在内部没有 cameraPriority，于是就变成了 null → 报错。
-    //error: [Window] Cannot read properties of null (reading 'cameraPriority')TypeError: Cannot read properties of null (reading 'cameraPriority')
-
-    //解决思路
-    //如果你要在 3D Node 上做点击交互，要走 射线检测（Raycast），而不是直接监听 Node 的鼠标事件。
-
-        // if (this.node.isValid) {
-        //     this.node.off(Node.EventType.MOUSE_DOWN, this.onMouseClick, this);
-        //     this.node.off(Node.EventType.MOUSE_ENTER, this.onMouseEnter, this);
-        //     this.node.off(Node.EventType.MOUSE_LEAVE, this.onMouseLeave, this);
-        // }
+        if (this.enableClickInteraction) {
+            // 取消监听3D射线检测事件
+            EventBus.off(EventTypes.Input3D.RaycastHit, this.onRaycastHit, this);
+        }
     }
     
     /**
@@ -514,21 +498,32 @@ export abstract class MapTile extends Component {
     // ========================= 事件处理方法 =========================
     
     /**
-     * 鼠标点击处理
+     * 射线检测命中处理
+     */
+    protected onRaycastHit(data: RaycastEventData): void {
+        // 检查命中的是否是当前地块
+        if (data.node.parent === this.node) {//todo
+            console.log(`[MapTile] 射线命中地块: ${this.tileName}`);
+            
+            // 触发地块点击事件
+            this.emitGameEvent(GameEventType.PLAYER_MOVE, {
+                tileId: this._tileData?.id,
+                tileName: this.tileName,
+                tileType: this.tileType,
+                hitPoint: data.hitPoint
+            });
+            
+            // 调用子类的点击处理
+            this.onTileClicked(data);
+        }
+    }
+    
+    /**
+     * 鼠标点击处理（已弃用，使用射线检测）
+     * @deprecated 使用 onRaycastHit 代替
      */
     protected onMouseClick(event: any): void {
         console.log(`[MapTile] 点击地块: ${this.tileName}`);
-        
-        // // 触发地块点击事件
-        // this.emitGameEvent('tile_click', {
-        //     tileId: this._tileData?.id,
-        //     tileName: this.tileName,
-        //     tileType: this.tileType,
-        //     clickPosition: event.getLocation()
-        // });
-        
-        // // 调用子类的点击处理
-        // this.onTileClicked(event);
     }
     
     /**
@@ -558,8 +553,14 @@ export abstract class MapTile extends Component {
     /**
      * 地块点击回调（子类可重写）
      */
-    protected onTileClicked(_event: any): void {
-        // 默认实现：无特殊处理
+    protected onTileClicked(data: RaycastEventData): void {
+        // 默认实现：设置高亮效果
+        this.setHighlighted(true);
+        
+        // 0.5秒后取消高亮
+        this.scheduleOnce(() => {
+            this.setHighlighted(false);
+        }, 0.2);
     }
     
     /**

@@ -63,7 +63,6 @@ export class InteractionManager extends Component {
             return;
         }
 
-        this.debugLog('主游戏交互管理器已初始化');
     }
 
     protected start(): void {
@@ -82,7 +81,6 @@ export class InteractionManager extends Component {
         // 设置事件监听
         this._setupEventListeners();
 
-        this.debugLog('主游戏交互管理器启动完成');
     }
 
     protected onEnable(): void {
@@ -104,13 +102,12 @@ export class InteractionManager extends Component {
         
         // Input3D 事件
         if (this.enableMouseInteraction) {
-            EventBus.onEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
-            EventBus.onEvent(EventTypes.Input3D.MouseUp, this.onInput3DMouseUp, this);
-            EventBus.onEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
-            EventBus.onEvent(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
-            EventBus.onEvent(EventTypes.Input3D.TouchEnd, this.onInput3DTouchEnd, this);
+            EventBus.on(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
+            EventBus.on(EventTypes.Input3D.MouseUp, this.onInput3DMouseUp, this);
+            EventBus.on(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
+            EventBus.on(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
+            EventBus.on(EventTypes.Input3D.TouchEnd, this.onInput3DTouchEnd, this);
             
-            this.debugLog('已注册 Input3D 事件监听');
         }
     }
 
@@ -119,16 +116,15 @@ export class InteractionManager extends Component {
         input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         
         // 移除 Input3D 事件
-        EventBus.offEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
-        EventBus.offEvent(EventTypes.Input3D.MouseUp, this.onInput3DMouseUp, this);
-        EventBus.offEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
-        EventBus.offEvent(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
-        EventBus.offEvent(EventTypes.Input3D.TouchEnd, this.onInput3DTouchEnd, this);
+        EventBus.off(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
+        EventBus.off(EventTypes.Input3D.MouseUp, this.onInput3DMouseUp, this);
+        EventBus.off(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
+        EventBus.off(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
+        EventBus.off(EventTypes.Input3D.TouchEnd, this.onInput3DTouchEnd, this);
         
         // 重置状态
         this._isMouseDown = false;
         
-        this.debugLog('已移除所有事件监听');
     }
 
     protected onDestroy(): void {
@@ -216,7 +212,6 @@ export class InteractionManager extends Component {
         // 处理鼠标点击交互
         this._handleInput3DClick(eventData);
         
-        this.debugLog(`Input3D 鼠标按下: (${eventData.screenX}, ${eventData.screenY})`);
     }
 
     /**
@@ -225,7 +220,6 @@ export class InteractionManager extends Component {
     private onInput3DMouseUp(eventData: Input3DEventData): void {
         this._isMouseDown = false;
         
-        this.debugLog(`Input3D 鼠标抬起: (${eventData.screenX}, ${eventData.screenY})`);
     }
 
     /**
@@ -248,7 +242,6 @@ export class InteractionManager extends Component {
         // 触摸事件按鼠标点击处理
         this._handleInput3DClick(eventData);
         
-        this.debugLog(`Input3D 触摸开始: (${eventData.screenX}, ${eventData.screenY})`);
     }
 
     /**
@@ -257,7 +250,6 @@ export class InteractionManager extends Component {
     private onInput3DTouchEnd(eventData: Input3DEventData): void {
         this._isMouseDown = false;
         
-        this.debugLog(`Input3D 触摸结束: (${eventData.screenX}, ${eventData.screenY})`);
     }
 
     /**
@@ -268,7 +260,6 @@ export class InteractionManager extends Component {
         const uiY = eventData.uiY ?? eventData.screenY;
         const worldPos = new Vec3(uiX, uiY, 0);
 
-        this.debugLog(`Input3D 点击: UI(${uiX}, ${uiY})`);
 
         // 这里可以添加射线检测逻辑，检测点击的游戏对象
         // 暂时简化处理
@@ -284,7 +275,6 @@ export class InteractionManager extends Component {
         const currentPos = new Vec3(eventData.screenX, eventData.screenY, 0);
         const deltaPos = currentPos.subtract(this._lastMousePos);
 
-        this.debugLog(`Input3D 拖拽: 增量(${deltaPos.x}, ${deltaPos.y})`);
 
         // 这里可以根据当前相机模式处理拖拽
         // 例如在等距视角模式下旋转相机等
@@ -299,18 +289,18 @@ export class InteractionManager extends Component {
      */
     private _setupEventListeners(): void {
         // 监听相机模式变化事件
-        EventBus.onEvent(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
+        EventBus.on(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
         
         // 监听游戏状态变化事件
-        EventBus.onEvent(EventTypes.Game.GameStart, this._onGameStart, this);
+        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**
      * 移除事件监听器
      */
     private _removeEventListeners(): void {
-        EventBus.offEvent(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
-        EventBus.offEvent(EventTypes.Game.GameStart, this._onGameStart, this);
+        EventBus.off(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
+        EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**

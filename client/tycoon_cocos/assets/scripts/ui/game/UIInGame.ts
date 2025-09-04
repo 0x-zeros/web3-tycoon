@@ -147,12 +147,12 @@ export class UIInGame extends UIBase {
         }
 
         // 监听游戏事件
-        EventBus.onEvent(EventTypes.Game.TurnStart, this._onTurnStart, this);
-        EventBus.onEvent(EventTypes.Game.TurnEnd, this._onTurnEnd, this);
-        EventBus.onEvent(EventTypes.Game.GamePause, this._onGamePause, this);
-        EventBus.onEvent(EventTypes.Game.GameResume, this._onGameResume, this);
-        EventBus.onEvent(EventTypes.Dice.StartRoll, this._onDiceStart, this);
-        EventBus.onEvent(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
+        EventBus.on(EventTypes.Game.TurnStart, this._onTurnStart, this);
+        EventBus.on(EventTypes.Game.TurnEnd, this._onTurnEnd, this);
+        EventBus.on(EventTypes.Game.GamePause, this._onGamePause, this);
+        EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
+        EventBus.on(EventTypes.Dice.StartRoll, this._onDiceStart, this);
+        EventBus.on(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
 
         // 监听玩家数据变化
         Blackboard.instance.watch("playerMoney", this._onPlayerMoneyChange, this);
@@ -244,7 +244,7 @@ export class UIInGame extends UIBase {
         }
 
         // 发送投掷骰子事件
-        EventBus.emitEvent(EventTypes.Dice.StartRoll, {
+        EventBus.emit(EventTypes.Dice.StartRoll, {
             playerId: Blackboard.instance.get("currentPlayerId"),
             source: "in_game_ui"
         });
@@ -257,12 +257,12 @@ export class UIInGame extends UIBase {
         console.log("[UIInGame] Pause clicked");
 
         // 发送游戏暂停事件
-        EventBus.emitEvent(EventTypes.Game.GamePause, {
+        EventBus.emit(EventTypes.Game.GamePause, {
             source: "in_game_ui"
         });
 
         // 显示暂停菜单
-        EventBus.emitEvent(EventTypes.UI.ShowPauseMenu);
+        EventBus.emit(EventTypes.UI.ShowPauseMenu);
     }
 
     /**
@@ -272,7 +272,7 @@ export class UIInGame extends UIBase {
         console.log("[UIInGame] Settings clicked");
 
         // 发送显示设置界面事件
-        EventBus.emitEvent(EventTypes.UI.ShowSettings, {
+        EventBus.emit(EventTypes.UI.ShowSettings, {
             source: "in_game_ui"
         });
     }
@@ -284,7 +284,7 @@ export class UIInGame extends UIBase {
         console.log("[UIInGame] Bag clicked");
 
         // 发送打开背包事件
-        EventBus.emitEvent(EventTypes.UI.OpenBag, {
+        EventBus.emit(EventTypes.UI.OpenBag, {
             source: "in_game_ui"
         });
     }

@@ -68,7 +68,7 @@ export class CameraDebugger extends Component {
         }
 
         // 监听相机模式变化事件
-        EventBus.onEvent(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
+        EventBus.on(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
         
         console.log('[CameraDebugger] 相机调试器初始化完成');
         
@@ -110,7 +110,7 @@ export class CameraDebugger extends Component {
         }
 
         // 移除事件监听
-        EventBus.offEvent(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
+        EventBus.off(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
     }
 
     // ========================= 公共方法 =========================

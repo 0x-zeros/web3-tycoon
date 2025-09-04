@@ -103,10 +103,10 @@ export class UIModeSelect extends UIBase {
 
 
         // 监听游戏事件
-        EventBus.onEvent(EventTypes.Game.GameStart, this._onGameStart, this);
-        EventBus.onEvent(EventTypes.Game.GameEnd, this._onGameEnd, this);
-        EventBus.onEvent(EventTypes.Network.Connected, this._onNetworkConnected, this);
-        EventBus.onEvent(EventTypes.Network.Disconnected, this._onNetworkDisconnected, this);
+        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
+        EventBus.on(EventTypes.Game.GameEnd, this._onGameEnd, this);
+        EventBus.on(EventTypes.Network.Connected, this._onNetworkConnected, this);
+        EventBus.on(EventTypes.Network.Disconnected, this._onNetworkDisconnected, this);
 
         // 监听玩家数据变化
         Blackboard.instance.watch("playerName", this._onPlayerNameChange, this);
@@ -154,7 +154,7 @@ export class UIModeSelect extends UIBase {
         console.log("[UIModeSelect] Showing mode select UI");
         
         // 播放背景音乐
-        EventBus.emitEvent(EventTypes.Audio.PlayBGM, {
+        EventBus.emit(EventTypes.Audio.PlayBGM, {
             musicPath: "audio/bgm/main_menu",
             loop: true
         });
@@ -173,7 +173,7 @@ export class UIModeSelect extends UIBase {
         console.log("[UIModeSelect] Hiding mode select UI");
         
         // 停止背景音乐
-        EventBus.emitEvent(EventTypes.Audio.StopBGM);
+        EventBus.emit(EventTypes.Audio.StopBGM);
     }
 
     /**
@@ -196,13 +196,13 @@ export class UIModeSelect extends UIBase {
         Blackboard.instance.set("gameMode", "single_player", true);
 
         // 显示地图选择界面
-        // EventBus.emitEvent(EventTypes.UI.ShowMapSelect, {
+        // EventBus.emit(EventTypes.UI.ShowMapSelect, {
         //     gameMode: "single_player",
         //     source: "mode_select"
         // });
 
         console.log("[UIModeSelect] 🚀 Emitting GameStart event...");
-        EventBus.emitEvent(EventTypes.Game.GameStart, {
+        EventBus.emit(EventTypes.Game.GameStart, {
             mode: "single_player",
             source: "mode_select"
         });
@@ -236,7 +236,7 @@ export class UIModeSelect extends UIBase {
         Blackboard.instance.set("gameMode", "multi_player", true);
 
         // 显示地图选择界面
-        EventBus.emitEvent(EventTypes.UI.ShowMapSelect, {
+        EventBus.emit(EventTypes.UI.ShowMapSelect, {
             gameMode: "multi_player",
             source: "mode_select"
         });
@@ -251,7 +251,7 @@ export class UIModeSelect extends UIBase {
         console.log("[UIModeSelect] Settings clicked");
 
         // 发送显示设置界面事件
-        EventBus.emitEvent(EventTypes.UI.ShowSettings, {
+        EventBus.emit(EventTypes.UI.ShowSettings, {
             source: "mode_select"
         });
     }
@@ -263,7 +263,7 @@ export class UIModeSelect extends UIBase {
         console.log("[UIModeSelect] Exit clicked");
 
         // 发送应用退出事件
-        EventBus.emitEvent(EventTypes.System.AppBackground);
+        EventBus.emit(EventTypes.System.AppBackground);
     }
 
     // ================== 游戏事件处理 ==================
@@ -295,7 +295,7 @@ export class UIModeSelect extends UIBase {
         console.log("[UIModeSelect] Game ended:", data);
         
         // // 通过事件系统请求显示模式选择界面，而不是直接调用show()
-        // EventBus.emitEvent(EventTypes.UI.ShowMainMenu, {
+        // EventBus.emit(EventTypes.UI.ShowMainMenu, {
         //     source: "game_end"
         // });
     }
@@ -383,7 +383,7 @@ export class UIModeSelect extends UIBase {
     private _showNetworkErrorDialog(): void {
         // 这里可以显示一个错误对话框
         // 由于我们移除了UIDialog，可以通过事件让其他系统处理
-        EventBus.emitEvent(EventTypes.UI.ShowSettings, {
+        EventBus.emit(EventTypes.UI.ShowSettings, {
             type: "network_error",
             title: "网络错误",
             message: "多人游戏需要网络连接，请检查网络设置。",

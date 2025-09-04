@@ -203,7 +203,7 @@ export class UIMapSelect extends UIBase {
         }
 
         // 监听地图配置更新事件
-        EventBus.onEvent(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
+        EventBus.on(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
     }
 
     /**
@@ -221,7 +221,7 @@ export class UIMapSelect extends UIBase {
         }
 
         // 解绑全局事件
-        EventBus.offEvent(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
+        EventBus.off(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
 
         // 调用父类解绑
         super.unbindEvents();
@@ -234,7 +234,7 @@ export class UIMapSelect extends UIBase {
         console.log("[UIMapSelect] Showing map select UI");
         
         // 播放背景音乐
-        EventBus.emitEvent(EventTypes.Audio.PlayBGM, {
+        EventBus.emit(EventTypes.Audio.PlayBGM, {
             musicPath: "audio/bgm/map_select",
             loop: true
         });
@@ -253,7 +253,7 @@ export class UIMapSelect extends UIBase {
         console.log("[UIMapSelect] Hiding map select UI");
         
         // 停止背景音乐
-        EventBus.emitEvent(EventTypes.Audio.StopBGM);
+        EventBus.emit(EventTypes.Audio.StopBGM);
     }
 
     /**
@@ -287,7 +287,7 @@ export class UIMapSelect extends UIBase {
         Blackboard.instance.set("selectedMapConfig", this._selectedMapConfig, true);
 
         // 发送地图选择事件
-        EventBus.emitEvent(EventTypes.Game.MapSelected, {
+        EventBus.emit(EventTypes.Game.MapSelected, {
             mapId: this._selectedMapId,
             mapConfig: this._selectedMapConfig,
             source: "map_select"
@@ -304,7 +304,7 @@ export class UIMapSelect extends UIBase {
         console.log("[UIMapSelect] Back to mode select");
 
         // 发送返回模式选择事件
-        EventBus.emitEvent(EventTypes.UI.ShowModeSelect, {
+        EventBus.emit(EventTypes.UI.ShowModeSelect, {
             source: "map_select_back"
         });
 

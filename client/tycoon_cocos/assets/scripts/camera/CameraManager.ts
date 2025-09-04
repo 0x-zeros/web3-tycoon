@@ -188,7 +188,7 @@ export class CameraManager extends Component {
         this.debugLog(`切换到相机控制器: ${type}`);
 
         // 发送相机切换事件
-        EventBus.emitEvent(EventTypes.System.CameraModeChanged, {
+        EventBus.emit(EventTypes.System.CameraModeChanged, {
             controllerType: type,
             controller: controller
         });
@@ -311,14 +311,14 @@ export class CameraManager extends Component {
      */
     private _setupEventListeners(): void {
         // 监听游戏模式变化事件
-        EventBus.onEvent(EventTypes.Game.GameStart, this._onGameModeChange, this);
+        EventBus.on(EventTypes.Game.GameStart, this._onGameModeChange, this);
     }
 
     /**
      * 移除事件监听器
      */
     private _removeEventListeners(): void {
-        EventBus.offEvent(EventTypes.Game.GameStart, this._onGameModeChange, this);
+        EventBus.off(EventTypes.Game.GameStart, this._onGameModeChange, this);
     }
 
     /**

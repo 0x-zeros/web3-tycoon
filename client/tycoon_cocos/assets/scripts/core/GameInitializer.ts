@@ -421,11 +421,11 @@ export class GameInitializer extends Component {
     private registerEventListeners(): void {
         // 注册全局游戏事件监听器
         // 使用EventBus替代直接的addEventListener
-        EventBus.onEvent(EventTypes.Role.Created, this.onPlayerCreated, this);
-        EventBus.onEvent(EventTypes.NPC.Created, this.onNPCCreated, this);
+        EventBus.on(EventTypes.Role.Created, this.onPlayerCreated, this);
+        EventBus.on(EventTypes.NPC.Created, this.onNPCCreated, this);
 
         // 注册游戏开始事件监听器
-        EventBus.onEvent(EventTypes.Game.GameStart, this.onGameStart, this);
+        EventBus.on(EventTypes.Game.GameStart, this.onGameStart, this);
     }
 
     /**

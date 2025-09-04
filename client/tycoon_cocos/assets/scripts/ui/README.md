@@ -149,7 +149,7 @@ export class UICustom extends UIBase {
     }
 
     private _onStartClick(): void {
-        EventBus.emitEvent("game_start", { source: "custom_ui" });
+        EventBus.emit("game_start", { source: "custom_ui" });
     }
 
     private _onPlayerNameChange(name: string): void {
@@ -221,11 +221,11 @@ await UIManager.instance.showUI("Dialog");
 import { EventTypes } from "./ui/events/EventTypes";
 
 // 发送事件
-EventBus.emitEvent(EventTypes.Game.GameStart, { mode: "single" });
-EventBus.emitEvent(EventTypes.Player.MoneyChange, { money: 1000 });
+EventBus.emit(EventTypes.Game.GameStart, { mode: "single" });
+EventBus.emit(EventTypes.Player.MoneyChange, { money: 1000 });
 
 // 监听事件
-EventBus.onEvent(EventTypes.UI.ButtonClick, (data) => {
+EventBus.on(EventTypes.UI.ButtonClick, (data) => {
     console.log("按钮点击:", data);
 }, this);
 

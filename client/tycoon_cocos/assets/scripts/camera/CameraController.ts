@@ -166,7 +166,7 @@ export class CameraController extends BaseCameraController {
         this._applyModeSettings(mode, immediate);
 
         // 发送模式变化事件
-        EventBus.emitEvent(EventTypes.System.CameraModeChanged, {
+        EventBus.emit(EventTypes.System.CameraModeChanged, {
             oldMode,
             newMode: mode
         });

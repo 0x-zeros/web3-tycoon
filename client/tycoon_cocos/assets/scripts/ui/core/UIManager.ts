@@ -426,7 +426,7 @@ export class UIManager {
             this._activeUIs.set(uiName, uiInstance);
 
             // 发送显示事件
-            EventBus.emitEvent(EventTypes.UI.ManagerStateChange, {
+            EventBus.emit(EventTypes.UI.ManagerStateChange, {
                 action: "show",
                 uiName: uiName,
                 ui: uiInstance
@@ -484,7 +484,7 @@ export class UIManager {
             }
 
             // 发送隐藏事件
-            EventBus.emitEvent(EventTypes.UI.ManagerStateChange, {
+            EventBus.emit(EventTypes.UI.ManagerStateChange, {
                 action: "hide",
                 uiName: uiName,
                 ui: uiInstance
@@ -813,12 +813,12 @@ export class UIManager {
      */
     private _setupGlobalUIEventListeners(): void {
         // 监听显示主菜单事件
-        EventBus.onEvent(EventTypes.UI.ShowMainMenu, async (data) => {
+        EventBus.on(EventTypes.UI.ShowMainMenu, async (data) => {
             console.log("[UISystem] ShowMainMenu event received:", data);
             await this.showModeSelect();
         }, this);
 
-        EventBus.onEvent(EventTypes.Game.GameStart, async (data) => {
+        EventBus.on(EventTypes.Game.GameStart, async (data) => {
             console.log("[UISystem] 🎮 Game.GameStart event received:", data);
             console.log("[UISystem] Current UI state:", {
                 activeUIs: Array.from(this._activeUIs.keys()),

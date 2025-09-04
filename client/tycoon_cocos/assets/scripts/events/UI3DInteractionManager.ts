@@ -178,7 +178,7 @@ export class UI3DInteractionManager extends Component {
     }
 
     // 通过EventBus发送事件（即时同步）
-    EventBus.emitEvent(eventType, eventData);
+    EventBus.emit(eventType, eventData);
 
     // 如果启用内置射线检测，执行射线检测并发送结果事件
     if (this.enableBuiltinRaycast && this.camera3D) {
@@ -225,7 +225,7 @@ export class UI3DInteractionManager extends Component {
           raycastData.hitNodeName = firstHit.collider.node.name;
 
           // 发送命中事件
-          EventBus.emitEvent(EventTypes.Input3D.RaycastHit, raycastData);
+          EventBus.emit(EventTypes.Input3D.RaycastHit, raycastData);
           
           if (this.enableDebug) {
             console.log("[UI3DInteractionManager] 射线检测命中:", raycastData.hitNodeName);
@@ -237,7 +237,7 @@ export class UI3DInteractionManager extends Component {
 
       // 如果没有命中，发送未命中事件
       if (!raycastData.hit) {
-        EventBus.emitEvent(EventTypes.Input3D.RaycastMiss, raycastData);
+        EventBus.emit(EventTypes.Input3D.RaycastMiss, raycastData);
         
         if (this.enableDebug) {
           console.log("[UI3DInteractionManager] 射线检测未命中");

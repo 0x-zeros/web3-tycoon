@@ -167,7 +167,7 @@ export abstract class Role {
         this.m_bInitialized = true;
         
         // 触发初始化完成事件
-        EventBus.emitEvent(EventTypes.Role.Initialized, {
+        EventBus.emit(EventTypes.Role.Initialized, {
             roleId: this.m_oId,
             role: this
         });
@@ -194,7 +194,7 @@ export abstract class Role {
         this.m_attr.set(attr, value);
         
         // 触发属性变化事件
-        EventBus.emitEvent(EventTypes.Role.AttributeChange, {
+        EventBus.emit(EventTypes.Role.AttributeChange, {
             roleId: this.m_oId,
             attribute: attr,
             oldValue: oldValue,
@@ -324,7 +324,7 @@ export abstract class Role {
     public addSkill(skill: Skill): void {
         if (!includes(this.m_skills, skill)) {
             this.m_skills.push(skill);
-            EventBus.emitEvent(EventTypes.Skill.Learned, {
+            EventBus.emit(EventTypes.Skill.Learned, {
                 roleId: this.m_oId,
                 skillId: skill.getConfig().id,
                 skill: skill
@@ -339,7 +339,7 @@ export abstract class Role {
         const index = this.m_skills.indexOf(skill);
         if (index >= 0) {
             this.m_skills.splice(index, 1);
-            EventBus.emitEvent(EventTypes.Role.StateChange, {
+            EventBus.emit(EventTypes.Role.StateChange, {
                 roleId: this.m_oId,
                 message: 'skill-removed',
                 data: { skill: skill }
@@ -354,7 +354,7 @@ export abstract class Role {
         if (!includes(this.m_cards, card)) {
             this.m_cards.push(card);
             this.setAttr(RoleAttribute.CARDS_COUNT, this.m_cards.length);
-            EventBus.emitEvent(EventTypes.Card.GetNewCard, {
+            EventBus.emit(EventTypes.Card.GetNewCard, {
                 roleId: this.m_oId,
                 card: card
             });
@@ -369,7 +369,7 @@ export abstract class Role {
         if (index >= 0) {
             this.m_cards.splice(index, 1);
             this.setAttr(RoleAttribute.CARDS_COUNT, this.m_cards.length);
-            EventBus.emitEvent(EventTypes.Role.StateChange, {
+            EventBus.emit(EventTypes.Role.StateChange, {
                 roleId: this.m_oId,
                 message: 'card-removed',
                 data: { card: card }
@@ -402,7 +402,7 @@ export abstract class Role {
             this.setState(RoleState.IDLE);
             
             // 触发移动完成事件
-            EventBus.emitEvent(EventTypes.Role.PositionChange, {
+            EventBus.emit(EventTypes.Role.PositionChange, {
                 roleId: this.m_oId,
                 fromTileId: this.m_currentTileId,
                 toTileId: params.targetTileId,
@@ -523,7 +523,7 @@ export abstract class Role {
      */
     protected onStateChanged(oldState: RoleState, newState: RoleState): void {
         console.log(`[Role] ${this.m_strName} 状态变化: ${oldState} -> ${newState}`);
-        EventBus.emitEvent(EventTypes.Role.StateChange, {
+        EventBus.emit(EventTypes.Role.StateChange, {
             roleId: this.m_oId,
             oldState: oldState,
             newState: newState
@@ -535,7 +535,7 @@ export abstract class Role {
      */
     protected onTileChanged(oldTileId: number, newTileId: number): void {
         console.log(`[Role] ${this.m_strName} 位置变化: ${oldTileId} -> ${newTileId}`);
-        EventBus.emitEvent(EventTypes.Role.PositionChange, {
+        EventBus.emit(EventTypes.Role.PositionChange, {
             roleId: this.m_oId,
             oldTileId: oldTileId,
             newTileId: newTileId
@@ -583,7 +583,7 @@ export abstract class Role {
         this.m_inventory = {};
         
         // 触发销毁事件
-        EventBus.emitEvent(EventTypes.Role.Destroyed, {
+        EventBus.emit(EventTypes.Role.Destroyed, {
             roleId: this.m_oId,
             roleType: this.m_eType,
             roleName: this.m_strName

@@ -287,7 +287,7 @@ export class Skill {
             this.startCooldown();
             
             // 触发使用完成事件
-            EventBus.emitEvent(EventTypes.Skill.Used, {
+            EventBus.emit(EventTypes.Skill.Used, {
                 skillId: this.m_oId,
                 casterId: caster.getRoleId(),
                 targetId: target?.getRoleId(),
@@ -805,7 +805,7 @@ export class Skill {
             this.m_eState = SkillState.COOLING_DOWN;
             
             // 触发冷却开始事件
-            EventBus.emitEvent(EventTypes.Skill.CooldownStart, {
+            EventBus.emit(EventTypes.Skill.CooldownStart, {
                 skillId: this.m_oId,
                 cooldownTime: cooldown
             });
@@ -829,7 +829,7 @@ export class Skill {
                 this.m_eState = SkillState.READY;
                 
                 // 触发冷却结束事件
-                EventBus.emitEvent(EventTypes.Skill.CooldownEnd, {
+                EventBus.emit(EventTypes.Skill.CooldownEnd, {
                     skillId: this.m_oId
                 });
                 

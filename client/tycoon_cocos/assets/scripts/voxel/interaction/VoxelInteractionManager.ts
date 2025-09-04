@@ -82,11 +82,9 @@ export class VoxelInteractionManager extends Component {
             this.collisionSystem = this.getComponent(VoxelCollisionSystem);
         }
         
-        console.log('[VoxelInteractionManager] 体素交互管理器已初始化');
     }
 
     protected start(): void {
-        console.log('[VoxelInteractionManager] 体素交互管理器启动完成');
     }
 
     protected onEnable(): void {
@@ -106,22 +104,20 @@ export class VoxelInteractionManager extends Component {
         }
         
         // 监听通过UI3DInteractionManager转发的3D输入事件
-        EventBus.onEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
-        EventBus.onEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
-        EventBus.onEvent(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
-        EventBus.onEvent(EventTypes.Input3D.TouchMove, this.onInput3DTouchMove, this);
+        EventBus.on(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
+        EventBus.on(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
+        EventBus.on(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
+        EventBus.on(EventTypes.Input3D.TouchMove, this.onInput3DTouchMove, this);
 
-        console.log("[VoxelInteractionManager] 已注册3D输入事件监听");
     }
 
     protected onDisable(): void {
         // 解绑3D输入事件
-        EventBus.offEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
-        EventBus.offEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
-        EventBus.offEvent(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
-        EventBus.offEvent(EventTypes.Input3D.TouchMove, this.onInput3DTouchMove, this);
+        EventBus.off(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
+        EventBus.off(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
+        EventBus.off(EventTypes.Input3D.TouchStart, this.onInput3DTouchStart, this);
+        EventBus.off(EventTypes.Input3D.TouchMove, this.onInput3DTouchMove, this);
 
-        console.log("[VoxelInteractionManager] 已解绑3D输入事件监听");
     }
 
     public initialize(worldManager: VoxelWorldManager, events?: VoxelInteractionEvents): void {
@@ -274,7 +270,6 @@ export class VoxelInteractionManager extends Component {
      * @param eventData 3D输入事件数据
      */
     private onInput3DMouseDown(eventData: Input3DEventData): void {
-        console.log("[VoxelInteractionManager] 接收到3D鼠标按下事件:", eventData);
         
         // 转换为EventMouse进行处理
         const originalEvent = eventData.originalEvent as EventMouse;
@@ -296,7 +291,6 @@ export class VoxelInteractionManager extends Component {
      * @param eventData 3D输入事件数据
      */
     private onInput3DTouchStart(eventData: Input3DEventData): void {
-        console.log("[VoxelInteractionManager] 接收到3D触摸开始事件:", eventData);
         
         // 模拟鼠标事件进行处理
         // 可以根据需要创建一个模拟的EventMouse对象，或者直接使用eventData
@@ -319,7 +313,6 @@ export class VoxelInteractionManager extends Component {
     private handleTouchAsMouseDown(eventData: Input3DEventData): void {
         const buttonName = '触摸';
         
-        console.log(`[VoxelInteractionManager] 触摸点击: ${buttonName}`);
         
         if (!this.camera) {
             console.warn('[VoxelInteraction] 摄像机未设置，无法进行射线投射');
@@ -335,7 +328,6 @@ export class VoxelInteractionManager extends Component {
         const mouseX = eventData.uiX || eventData.screenX;
         const mouseY = eventData.uiY || eventData.screenY;
 
-        console.log('[VoxelInteraction] 触摸坐标:', { mouseX, mouseY, eventData });
         
         const hitResult = this.performRaycast(mouseX, mouseY);
         console.log('[VoxelInteraction] 射线投射结果:', hitResult);
@@ -363,7 +355,6 @@ export class VoxelInteractionManager extends Component {
                           event.getButton() === EventMouse.BUTTON_RIGHT ? '右键' : 
                           `按键${event.getButton()}`;
         
-        console.log(`[VoxelInteraction] 鼠标点击: ${buttonName}`);
         
         if (!this.camera) {
             console.warn('[VoxelInteraction] 摄像机未设置，无法进行射线投射');
@@ -385,7 +376,6 @@ export class VoxelInteractionManager extends Component {
         //debug event.getLocationX() 与 event.getUILocation() 的差异
         const locX = event.getLocationX();
         const locY = event.getLocationY();
-        console.log('[VoxelInteraction] event.getLocation 与 event.getUILocation() 的差异:', locX-mouseX, locY-mouseY);
 
         
         const hitResult = this.performRaycast(mouseX, mouseY);

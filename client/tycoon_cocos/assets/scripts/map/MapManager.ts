@@ -262,7 +262,7 @@ export class MapManager extends Component {
             this.log(`地图 ${mapId} 加载成功`);
 
             // 发送地图加载完成事件
-            EventBus.emitEvent(EventTypes.Game.MapLoaded, {
+            EventBus.emit(EventTypes.Game.MapLoaded, {
                 mapId: mapId,
                 mapName: config.name,
                 mapComponent: mapComponent
@@ -289,7 +289,7 @@ export class MapManager extends Component {
             
             // 发送地图卸载事件
             if (this._currentMapId) {
-                EventBus.emitEvent(EventTypes.Game.MapUnloaded, {
+                EventBus.emit(EventTypes.Game.MapUnloaded, {
                     mapId: this._currentMapId
                 });
             }
@@ -342,10 +342,10 @@ export class MapManager extends Component {
      */
     private registerEventListeners(): void {
         // 监听地图选择事件
-        EventBus.onEvent(EventTypes.Game.MapSelected, this.onMapSelected, this);
+        EventBus.on(EventTypes.Game.MapSelected, this.onMapSelected, this);
         
         // 监听地图切换请求
-        EventBus.onEvent(EventTypes.Game.RequestMapChange, this.onMapChangeRequest, this);
+        EventBus.on(EventTypes.Game.RequestMapChange, this.onMapChangeRequest, this);
     }
 
     /**
@@ -358,14 +358,14 @@ export class MapManager extends Component {
         if (result.success) {
             // 发送游戏开始事件
             console.log("[MapManager] 🚀 Map loaded successfully, emitting GameStart event...");
-            EventBus.emitEvent(EventTypes.Game.GameStart, {
+            EventBus.emit(EventTypes.Game.GameStart, {
                 mode: "single_player", // 这里可以根据实际情况调整
                 mapId: data.mapId,
                 source: "map_select"
             });
         } else {
             // 发送加载失败事件
-            EventBus.emitEvent(EventTypes.Game.MapLoadFailed, {
+            EventBus.emit(EventTypes.Game.MapLoadFailed, {
                 mapId: data.mapId,
                 error: result.error
             });

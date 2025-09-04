@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween } from 'cc';
+import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween, v3 } from 'cc';
 import { CameraMode, CameraConfig, CameraState, DEFAULT_CAMERA_CONFIG, TransitionConfig } from './CameraConfig';
 import { BaseCameraController } from './BaseCameraController';
 import { EventBus } from '../events/EventBus';
@@ -46,7 +46,7 @@ export class CameraController extends BaseCameraController {
 
     // Tween引用，用于相机动画
     private _positionTween: Tween<Vec3> | null = null;
-    private _rotationTween: Tween<Quat> | null = null;
+    private _rotationTween: Tween<Vec3> | null = null;
 
     /**
      * 获取单例实例
@@ -266,6 +266,31 @@ export class CameraController extends BaseCameraController {
 
     // ========================= 私有方法 =========================
 
+    /**
+     * 归一化四元数并返回
+     */
+    private _normalizeQuat(quat: Quat): Quat {
+        const result = new Quat();
+        return Quat.normalize(result, quat);
+    }
+
+    /**
+     * 从前向量计算欧拉角
+     */
+    private _calculateEulerFromLookDirection(lookDirection: Vec3): Vec3 {
+        const euler = new Vec3();
+        
+        // 计算俯仰角（pitch）
+        euler.x = Math.asin(-lookDirection.y) * 180 / Math.PI;
+        
+        // 计算偏航角（yaw）
+        euler.y = Math.atan2(lookDirection.x, lookDirection.z) * 180 / Math.PI;
+        
+        // 滚转角（roll）保持为0
+        euler.z = 0;
+        
+        return euler;
+    }
 
     /**
      * 设置事件监听器
@@ -334,7 +359,7 @@ export class CameraController extends BaseCameraController {
         const lookDirection = Vec3.subtract(new Vec3(), this._lookAtTarget, targetPos);
         lookDirection.normalize();
         
-        const rotation = Quat.fromViewUp(lookDirection, Vec3.UP);
+        const eulerAngles = this._calculateEulerFromLookDirection(lookDirection);
 
         // 设置FOV
         if (this.camera) {
@@ -344,9 +369,9 @@ export class CameraController extends BaseCameraController {
         // 应用位置和旋转
         if (immediate) {
             this.node.setPosition(targetPos);
-            this.node.setRotation(rotation);
+            this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
         } else {
-            this._transitionToPositionAndRotation(targetPos, rotation);
+            this._transitionToPositionAndRotation(targetPos, eulerAngles);
         }
     }
 
@@ -363,7 +388,7 @@ export class CameraController extends BaseCameraController {
         );
 
         // 俯视角度（向下看）
-        const rotation = Quat.fromEuler(new Quat(), -90, 0, 0);
+        const eulerAngles = new Vec3(-90, 0, 0);
 
         // 设置FOV
         if (this.camera) {
@@ -373,9 +398,9 @@ export class CameraController extends BaseCameraController {
         // 应用位置和旋转
         if (immediate) {
             this.node.setPosition(targetPos);
-            this.node.setRotation(rotation);
+            this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
         } else {
-            this._transitionToPositionAndRotation(targetPos, rotation);
+            this._transitionToPositionAndRotation(targetPos, eulerAngles);
         }
     }
 
@@ -414,21 +439,22 @@ export class CameraController extends BaseCameraController {
         // 计算旋转
         const lookDirection = Vec3.subtract(new Vec3(), lookAtPoint, cameraPos);
         lookDirection.normalize();
-        const rotation = Quat.fromViewUp(lookDirection, Vec3.UP);
+        const eulerAngles = this._calculateEulerFromLookDirection(lookDirection);
 
         // 应用位置和旋转
         if (immediate) {
             this.node.setPosition(cameraPos);
-            this.node.setRotation(rotation);
+            this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
         } else {
             // 平滑跟随
             const currentPos = this.node.getPosition();
             const lerpedPos = Vec3.lerp(new Vec3(), currentPos, cameraPos, config.smoothSpeed * 0.016);
             this.node.setPosition(lerpedPos);
 
-            const currentRot = this.node.getRotation();
-            const lerpedRot = Quat.slerp(new Quat(), currentRot, rotation, config.smoothSpeed * 0.016);
-            this.node.setRotation(lerpedRot);
+            const currentEuler = new Vec3();
+            this.node.rotation.getEulerAngles(currentEuler);
+            const lerpedEuler = Vec3.lerp(new Vec3(), currentEuler, eulerAngles, config.smoothSpeed * 0.016);
+            this.node.setRotationFromEuler(lerpedEuler.x, lerpedEuler.y, lerpedEuler.z);
         }
     }
 
@@ -444,7 +470,7 @@ export class CameraController extends BaseCameraController {
     /**
      * 过渡到指定位置和旋转
      */
-    private _transitionToPositionAndRotation(position: Vec3, rotation: Quat): void {
+    private _transitionToPositionAndRotation(position: Vec3, targetEuler: Vec3): void {
         this._stopAllTweens();
         this._isTransitioning = true;
 
@@ -459,10 +485,16 @@ export class CameraController extends BaseCameraController {
             })
             .start();
 
-        // 旋转过渡
-        this._rotationTween = tween(this.node.rotation)
-            .to(this.config.transition.rotationDuration, rotation, {
-                easing: this._getEasingFunction()
+        // 旋转过渡 - 使用欧拉角插值
+        const currentEuler = new Vec3();
+        this.node.rotation.getEulerAngles(currentEuler);
+
+        this._rotationTween = tween(currentEuler)
+            .to(this.config.transition.rotationDuration, targetEuler, {
+                easing: this._getEasingFunction(),
+                onUpdate: () => {
+                    this.node.setRotationFromEuler(currentEuler.x, currentEuler.y, currentEuler.z);
+                }
             })
             .call(() => {
                 this._rotationTween = null;

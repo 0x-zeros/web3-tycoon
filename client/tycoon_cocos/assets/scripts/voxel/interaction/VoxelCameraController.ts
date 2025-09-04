@@ -1,6 +1,7 @@
 import { _decorator, Component, Node, Vec3, input, Input, EventKeyboard, KeyCode, EventMouse, Quat, Camera } from "cc";
 import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
 import { VoxelBlockType } from "../core/VoxelBlock";
+import { CameraController } from "../../camera/CameraController";
 
 const { ccclass, property } = _decorator;
 
@@ -41,8 +42,14 @@ export class VoxelCameraController extends Component {
     private getBlockAt: (x: number, y: number, z: number) => VoxelBlockType = null;
 
     protected onLoad() {
+
+        // if (!this.camera) {
+        //     //this.camera = this.getComponent(Camera);
+        // }
+
+        // 如果本地找不到Camera组件，使用CameraController获取主相机
         if (!this.camera) {
-            this.camera = this.getComponent(Camera);
+            this.camera = CameraController.getMainCamera();
         }
     }
 

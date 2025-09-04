@@ -35,7 +35,7 @@
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 41
+      "__id__": 50
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -66,7 +66,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 48
+      "__id__": 57
     },
     "_id": "1c0a1b58-502e-469f-9999-5ad9768f840b"
   },
@@ -645,7 +645,7 @@
         "__id__": 25
       },
       {
-        "__id__": 40
+        "__id__": 49
       }
     ],
     "_prefab": null,
@@ -897,6 +897,9 @@
     "_children": [
       {
         "__id__": 27
+      },
+      {
+        "__id__": 36
       }
     ],
     "_active": true,
@@ -948,10 +951,10 @@
       "__id__": 27
     },
     "asset": {
-      "__uuid__": "87d0624a-120b-4d27-a0a7-3a8986404d4e",
+      "__uuid__": "e02b5234-40b8-4884-a1c3-6710b172bebb",
       "__expectedType__": "cc.Prefab"
     },
-    "fileId": "02dus81ItI/o3FrwVZMrqe",
+    "fileId": "54SJAXqx9M0L51PDWQq6di",
     "instance": {
       "__id__": 29
     },
@@ -960,7 +963,7 @@
   },
   {
     "__type__": "cc.PrefabInstance",
-    "fileId": "dflMDdPKFOrYFQJKwp3C65",
+    "fileId": "7eqAzz4SpNTJ2U0xTcbpj9",
     "prefabRootNode": null,
     "mountedChildren": [],
     "mountedComponents": [],
@@ -979,12 +982,6 @@
       },
       {
         "__id__": 35
-      },
-      {
-        "__id__": 37
-      },
-      {
-        "__id__": 39
       }
     ],
     "removedComponents": []
@@ -997,12 +994,12 @@
     "propertyPath": [
       "_name"
     ],
-    "value": "voxel_map"
+    "value": "test_map"
   },
   {
     "__type__": "cc.TargetInfo",
     "localID": [
-      "02dus81ItI/o3FrwVZMrqe"
+      "54SJAXqx9M0L51PDWQq6di"
     ]
   },
   {
@@ -1054,7 +1051,137 @@
   {
     "__type__": "CCPropertyOverrideInfo",
     "targetInfo": {
+      "__id__": 31
+    },
+    "propertyPath": [
+      "_active"
+    ],
+    "value": false
+  },
+  {
+    "__type__": "cc.Node",
+    "_objFlags": 0,
+    "_parent": {
+      "__id__": 26
+    },
+    "_prefab": {
+      "__id__": 37
+    },
+    "__editorExtras__": {}
+  },
+  {
+    "__type__": "cc.PrefabInfo",
+    "root": {
       "__id__": 36
+    },
+    "asset": {
+      "__uuid__": "87d0624a-120b-4d27-a0a7-3a8986404d4e",
+      "__expectedType__": "cc.Prefab"
+    },
+    "fileId": "02dus81ItI/o3FrwVZMrqe",
+    "instance": {
+      "__id__": 38
+    },
+    "targetOverrides": null,
+    "nestedPrefabInstanceRoots": null
+  },
+  {
+    "__type__": "cc.PrefabInstance",
+    "fileId": "dflMDdPKFOrYFQJKwp3C65",
+    "prefabRootNode": null,
+    "mountedChildren": [],
+    "mountedComponents": [],
+    "propertyOverrides": [
+      {
+        "__id__": 39
+      },
+      {
+        "__id__": 41
+      },
+      {
+        "__id__": 42
+      },
+      {
+        "__id__": 43
+      },
+      {
+        "__id__": 44
+      },
+      {
+        "__id__": 46
+      },
+      {
+        "__id__": 48
+      }
+    ],
+    "removedComponents": []
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 40
+    },
+    "propertyPath": [
+      "_name"
+    ],
+    "value": "voxel_map"
+  },
+  {
+    "__type__": "cc.TargetInfo",
+    "localID": [
+      "02dus81ItI/o3FrwVZMrqe"
+    ]
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 40
+    },
+    "propertyPath": [
+      "_lpos"
+    ],
+    "value": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 40
+    },
+    "propertyPath": [
+      "_lrot"
+    ],
+    "value": {
+      "__type__": "cc.Quat",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1
+    }
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 40
+    },
+    "propertyPath": [
+      "_euler"
+    ],
+    "value": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  {
+    "__type__": "CCPropertyOverrideInfo",
+    "targetInfo": {
+      "__id__": 45
     },
     "propertyPath": [
       "camera"
@@ -1072,7 +1199,7 @@
   {
     "__type__": "CCPropertyOverrideInfo",
     "targetInfo": {
-      "__id__": 38
+      "__id__": 47
     },
     "propertyPath": [
       "cameraController"
@@ -1090,12 +1217,12 @@
   {
     "__type__": "CCPropertyOverrideInfo",
     "targetInfo": {
-      "__id__": 31
+      "__id__": 40
     },
     "propertyPath": [
       "_active"
     ],
-    "value": false
+    "value": true
   },
   {
     "__type__": "95df6s+N3VMV6LtNwWCRrvN",
@@ -1117,34 +1244,37 @@
     "instance": null,
     "targetOverrides": [
       {
-        "__id__": 42
+        "__id__": 51
       },
       {
-        "__id__": 45
+        "__id__": 54
       }
     ],
     "nestedPrefabInstanceRoots": [
       {
         "__id__": 27
+      },
+      {
+        "__id__": 36
       }
     ]
   },
   {
     "__type__": "cc.TargetOverrideInfo",
     "source": {
-      "__id__": 27
+      "__id__": 36
     },
     "sourceInfo": {
-      "__id__": 43
+      "__id__": 52
     },
     "propertyPath": [
       "voxelRenderer"
     ],
     "target": {
-      "__id__": 27
+      "__id__": 36
     },
     "targetInfo": {
-      "__id__": 44
+      "__id__": 53
     }
   },
   {
@@ -1162,19 +1292,19 @@
   {
     "__type__": "cc.TargetOverrideInfo",
     "source": {
-      "__id__": 27
+      "__id__": 36
     },
     "sourceInfo": {
-      "__id__": 46
+      "__id__": 55
     },
     "propertyPath": [
       "collisionSystem"
     ],
     "target": {
-      "__id__": 27
+      "__id__": 36
     },
     "targetInfo": {
-      "__id__": 47
+      "__id__": 56
     }
   },
   {
@@ -1192,28 +1322,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 49
+      "__id__": 58
     },
     "shadows": {
-      "__id__": 50
+      "__id__": 59
     },
     "_skybox": {
-      "__id__": 51
+      "__id__": 60
     },
     "fog": {
-      "__id__": 52
+      "__id__": 61
     },
     "octree": {
-      "__id__": 53
+      "__id__": 62
     },
     "skin": {
-      "__id__": 54
+      "__id__": 63
     },
     "lightProbeInfo": {
-      "__id__": 55
+      "__id__": 64
     },
     "postSettings": {
-      "__id__": 56
+      "__id__": 65
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

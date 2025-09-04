@@ -43,6 +43,12 @@ class EventBusClass extends EventTarget {
     public emitEvent<T>(event: string, data?: T): void {
         try {
             if (this._debug) {
+
+                // 不打印3D输入事件 //todo generic filter
+                if(event.startsWith('input3d_')){
+                    return;
+                }
+
                 console.log(`[EventBus] Emit: ${event}`, data);
             }
 

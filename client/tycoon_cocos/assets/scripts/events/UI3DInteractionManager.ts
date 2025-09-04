@@ -15,7 +15,7 @@ export class UI3DInteractionManager extends Component {
   enableBuiltinRaycast: boolean = true;
 
   @property({ tooltip: "启用调试日志" })
-  enableDebug: boolean = true;
+  enableDebug: boolean = false;
 
   @property({ tooltip: "射线检测最大距离" })
   maxRaycastDistance: number = 100;

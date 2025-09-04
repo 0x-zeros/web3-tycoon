@@ -7,6 +7,7 @@ import { VoxelBlockType } from "../core/VoxelBlock";
 import { VoxelWorldConfig, VoxelWorldMode } from "../core/VoxelWorldConfig";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes, Input3DEventData } from "../../events/EventTypes";
+import { CameraController } from "../../camera/CameraController";
 
 const { ccclass, property } = _decorator;
 
@@ -56,8 +57,13 @@ export class VoxelInteractionManager extends Component {
     private debugMarkerNodes: Node[] = [];
 
     protected onLoad() {
+        // if (!this.camera) {
+        //     //this.camera = this.getComponent(Camera);
+        // }
+
+        // 如果本地找不到Camera组件，使用CameraController获取主相机
         if (!this.camera) {
-            this.camera = this.getComponent(Camera) || this.getComponentInChildren(Camera);
+            this.camera = CameraController.getMainCamera();
         }
         
         if (!this.cameraController) {

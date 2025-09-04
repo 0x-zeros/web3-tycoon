@@ -357,6 +357,7 @@ export class MapManager extends Component {
         const result = await this.loadMap(data.mapId);
         if (result.success) {
             // 发送游戏开始事件
+            console.log("[MapManager] 🚀 Map loaded successfully, emitting GameStart event...");
             EventBus.emitEvent(EventTypes.Game.GameStart, {
                 mode: "single_player", // 这里可以根据实际情况调整
                 mapId: data.mapId,

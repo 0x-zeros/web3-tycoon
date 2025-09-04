@@ -42,6 +42,8 @@ class EventBusClass extends EventTarget {
      */
     public emitEvent<T>(event: string, data?: T): void {
         try {
+            const listenerCount = this.getEventListenerCount(event);
+            
             if (this._debug) {
 
                 // 不打印3D输入事件 //todo generic filter
@@ -49,7 +51,23 @@ class EventBusClass extends EventTarget {
                     return;
                 }
 
-                console.log(`[EventBus] Emit: ${event}`, data);
+                console.log(`[EventBus] Emit: ${event}, listeners: ${listenerCount}`, data);
+            }
+
+            // 特别记录 GameStart 事件的详细信息
+            if (event === "game_start") {
+                console.log(`[EventBus] 🎮 GameStart Event - Listeners: ${listenerCount}`, data);
+                const listeners = this._listenerMap.get(event);
+                if (listeners) {
+                    listeners.forEach((config, index) => {
+                        console.log(`[EventBus] - Listener ${index + 1}:`, {
+                            hasTarget: !!config.target,
+                            targetName: config.target?.constructor?.name || 'Unknown',
+                            once: config.once,
+                            priority: config.priority || 0
+                        });
+                    });
+                }
             }
 
             // 使用Cocos Creator的EventTarget发送事件

@@ -459,14 +459,17 @@ export class GameInitializer extends Component {
      * 游戏开始事件处理
      */
     private async onGameStart(data: any): Promise<void> {
-        console.log('接收到游戏开始事件:', data);
+        console.log('[GameInitializer] 🎮 GameStart listener called:', data);
+        console.log('[GameInitializer] Current game state:', {
+            hasMapManager: !!this.mapManager
+        });
         
         try {
             // 检查是否已经有地图信息（由MapManager处理）
             if (data.mapId) {
-                console.log(`游戏将在地图 ${data.mapId} 上开始`);
+                console.log(`[GameInitializer] 游戏将在地图 ${data.mapId} 上开始`);
             } else {
-                console.warn('游戏开始事件缺少地图信息');
+                console.warn('[GameInitializer] 游戏开始事件缺少地图信息');
             }
             
             // 显示游戏内UI

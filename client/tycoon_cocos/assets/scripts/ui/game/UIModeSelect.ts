@@ -201,6 +201,7 @@ export class UIModeSelect extends UIBase {
         //     source: "mode_select"
         // });
 
+        console.log("[UIModeSelect] 🚀 Emitting GameStart event...");
         EventBus.emitEvent(EventTypes.Game.GameStart, {
             mode: "single_player",
             source: "mode_select"
@@ -271,10 +272,20 @@ export class UIModeSelect extends UIBase {
      * 游戏开始事件
      */
     private _onGameStart(data: any): void {
-        console.log("[UIModeSelect] Game started:", data);
+        console.log("[UIModeSelect] 🎮 GameStart listener called:", data);
+        console.log("[UIModeSelect] Current visibility:", {
+            isShowing: this.isShowing,
+            node: this.node?.name || 'No node'
+        });
         
-        // 隐藏模式选择界面
-        this.hide();
+        try {
+            // 隐藏模式选择界面
+            console.log("[UIModeSelect] Attempting to hide...");
+            this.hide();
+            console.log("[UIModeSelect] ✅ Successfully hidden");
+        } catch (error) {
+            console.error("[UIModeSelect] ❌ Error hiding:", error);
+        }
     }
 
     /**

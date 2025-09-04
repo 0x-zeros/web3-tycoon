@@ -816,14 +816,31 @@ export class UIManager {
         EventBus.onEvent(EventTypes.UI.ShowMainMenu, async (data) => {
             console.log("[UISystem] ShowMainMenu event received:", data);
             await this.showModeSelect();
-        });
+        }, this);
 
         EventBus.onEvent(EventTypes.Game.GameStart, async (data) => {
-            console.log("[UISystem] Game.GameStart event received:", data);
+            console.log("[UISystem] 🎮 Game.GameStart event received:", data);
+            console.log("[UISystem] Current UI state:", {
+                activeUIs: Array.from(this._activeUIs.keys()),
+                cachedUIs: Array.from(this._uiCache.keys()),
+                isInitialized: this._inited
+            });
 
-            //todo 开始选地图等
-            await this.showInGame();
-        });
+            try {
+                console.log("[UISystem] Attempting to show InGame UI...");
+                const result = await this.showInGame();
+                console.log("[UISystem] ✅ showInGame result:", result ? result.constructor.name : 'null');
+                
+                if (result) {
+                    console.log("[UISystem] ✅ InGame UI successfully shown");
+                } else {
+                    console.error("[UISystem] ❌ showInGame returned null");
+                }
+            } catch (error) {
+                console.error("[UISystem] ❌ showInGame error:", error);
+                console.error("[UISystem] Error stack:", error.stack);
+            }
+        }, this);
 
         // 监听其他全局UI事件
         // TODO: 添加更多UI事件监听器

@@ -24,3 +24,5 @@ node_modules/
 .idea/
 
 old_for_ref/
+
+mc_resources/

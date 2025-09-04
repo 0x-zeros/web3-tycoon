@@ -1,7 +1,8 @@
 import { _decorator, Component, Camera, Vec3, KeyCode, input, Input, EventKeyboard } from "cc";
 import { VoxelRenderer } from "../render/VoxelRenderer";
 import { VoxelInteractionManager, VoxelInteractionEvents } from "../interaction/VoxelInteractionManager";
-import { VoxelCameraController, CameraMode } from "../interaction/VoxelCameraController";
+import { VoxelCameraController } from "../../camera/voxel/VoxelCameraController";
+import { VoxelCameraMode } from "../../camera/voxel/VoxelCameraConfig";
 import { VoxelCollisionSystem } from "../interaction/VoxelCollisionSystem";
 import { VoxelBlockType } from "../core/VoxelBlock";
 import { VoxelWorldMode, VoxelWorldConfig } from "../core/VoxelWorldConfig";
@@ -94,7 +95,7 @@ export class VoxelInteractionExample extends Component {
             },
             onModeChange: (mode) => {
                 console.log(`[交互] 摄像机模式切换: ${mode}`);
-                const speedText = mode === CameraMode.FLYING ? '飞行模式 (20 units/s)' : '步行模式 (5 units/s)';
+                const speedText = mode === VoxelCameraMode.FLYING ? '飞行模式 (20 units/s)' : '步行模式 (5 units/s)';
                 console.log(`[交互] 当前速度: ${speedText}`);
             }
         };
@@ -126,7 +127,8 @@ export class VoxelInteractionExample extends Component {
                 this.toggleRenderMode();
                 break;
             case KeyCode.KEY_T:
-                this.toggleWorldMode();
+                // this.toggleWorldMode();
+                console.log('toggleWorldMode 太卡了，暂时禁用');
                 break;
             case KeyCode.KEY_G:
                 this.regenerateWorld();
@@ -219,13 +221,20 @@ export class VoxelInteractionExample extends Component {
         console.log(worldInfo);
         
         // 交互系统信息
-        this.voxelRenderer.debugPrintInteractionInfo();
+        const interactionManager = this.voxelRenderer.getInteractionManager();
+        if (interactionManager) {
+            console.log('交互系统状态: 已初始化');
+            console.log('当前选择的方块类型:', this.currentBlockType);
+        } else {
+            console.log('交互系统状态: 未初始化');
+        }
         
-        // 节点层级结构
-        this.voxelRenderer.debugPrintNodeHierarchy();
+        // 节点层级结构信息
+        console.log('VoxelRenderer节点子节点数量:', this.voxelRenderer.node.children.length);
         
-        // 网格信息
-        this.voxelRenderer.debugPrintMeshInfo();
+        // 简化的调试信息
+        console.log('当前渲染模式:', this.voxelRenderer.getCurrentRenderMode());
+        console.log('当前世界模式:', this.voxelRenderer.getCurrentWorldMode());
         
         console.log('=== 调试信息结束 ===');
     }

@@ -1,13 +1,14 @@
 import { _decorator, Component, Node, Vec3, Camera, input, Input, EventMouse, MeshRenderer, Material, primitives, Mesh, Color, view, UITransform, Canvas, utils } from "cc";
 import { VoxelRayCaster, VoxelHitResult, RaycastAlgorithm } from "./VoxelRayCaster";
-import { VoxelCameraController, CameraMode } from "./VoxelCameraController";
 import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
 import { VoxelWorldManager } from "../world/VoxelWorld";
 import { VoxelBlockType } from "../core/VoxelBlock";
 import { VoxelWorldConfig, VoxelWorldMode } from "../core/VoxelWorldConfig";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes, Input3DEventData } from "../../events/EventTypes";
-import { CameraController } from "../../camera/CameraController";
+import { CameraManager, CameraControllerType } from "../../camera/CameraManager";
+import { VoxelCameraController } from "../../camera/voxel/VoxelCameraController";
+import { VoxelCameraMode } from "../../camera/voxel/VoxelCameraConfig";
 
 const { ccclass, property } = _decorator;
 
@@ -16,7 +17,7 @@ export interface VoxelInteractionEvents {
     onBlockHover?: (hitResult: VoxelHitResult | null) => void;
     onBlockPlace?: (position: Vec3, blockType: VoxelBlockType) => void;
     onBlockBreak?: (position: Vec3) => void;
-    onModeChange?: (mode: CameraMode) => void;
+    onModeChange?: (mode: VoxelCameraMode) => void;
 }
 
 @ccclass('VoxelInteractionManager')
@@ -25,8 +26,11 @@ export class VoxelInteractionManager extends Component {
     @property({ type: Camera })
     camera: Camera = null;
 
-    @property({ type: VoxelCameraController })
-    cameraController: VoxelCameraController = null;
+    @property({ displayName: "启用体素相机", tooltip: "在start时自动启用体素相机控制器" })
+    public enableVoxelCamera: boolean = true;
+
+    @property({ displayName: "默认相机模式", tooltip: "启动时的默认体素相机模式" })
+    public defaultVoxelMode: VoxelCameraMode = VoxelCameraMode.WALKING;
 
     @property({ type: VoxelCollisionSystem })
     collisionSystem: VoxelCollisionSystem = null;
@@ -50,6 +54,10 @@ export class VoxelInteractionManager extends Component {
     private worldManager: VoxelWorldManager = null;
     private events: VoxelInteractionEvents = {};
     
+    // 相机管理器和控制器引用
+    private _cameraManager: CameraManager | null = null;
+    private _voxelCameraController: VoxelCameraController | null = null;
+    
     private lastHoverResult: VoxelHitResult | null = null;
     
     // 调试可视化相关
@@ -57,25 +65,46 @@ export class VoxelInteractionManager extends Component {
     private debugMarkerNodes: Node[] = [];
 
     protected onLoad() {
-        // if (!this.camera) {
-        //     //this.camera = this.getComponent(Camera);
-        // }
-
-        // 如果本地找不到Camera组件，使用CameraController获取主相机
-        if (!this.camera) {
-            this.camera = CameraController.getMainCamera();
-        }
+        // 获取相机管理器实例
+        this._cameraManager = CameraManager.getInstance();
         
-        if (!this.cameraController) {
-            this.cameraController = this.getComponent(VoxelCameraController);
+        if (!this._cameraManager) {
+            console.error('[VoxelInteractionManager] 无法获取CameraManager实例！请确保场景中有CameraManager组件');
+            return;
+        }
+
+        // 获取相机引用
+        if (!this.camera) {
+            this.camera = this._cameraManager.getMainCamera();
         }
         
         if (!this.collisionSystem) {
             this.collisionSystem = this.getComponent(VoxelCollisionSystem);
         }
+        
+        console.log('[VoxelInteractionManager] 体素交互管理器已初始化');
     }
 
-    protected onEnable() {
+    protected start(): void {
+        console.log('[VoxelInteractionManager] 体素交互管理器启动完成');
+    }
+
+    protected onEnable(): void {
+        // 启用体素相机控制器
+        if (this._cameraManager) {
+            const success = this._cameraManager.switchToController(CameraControllerType.VOXEL_WORLD);
+            if (success) {
+                this._cameraManager.setVoxelCameraMode(this.defaultVoxelMode);
+                
+                // 获取体素相机控制器引用
+                this._voxelCameraController = this._cameraManager.getActiveController() as VoxelCameraController;
+                
+                console.log(`[VoxelInteractionManager] onEnable: 已切换到体素相机，模式: ${this.defaultVoxelMode}`);
+            } else {
+                console.warn('[VoxelInteractionManager] onEnable: 无法切换到体素相机控制器');
+            }
+        }
+        
         // 监听通过UI3DInteractionManager转发的3D输入事件
         EventBus.onEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
         EventBus.onEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
@@ -85,7 +114,7 @@ export class VoxelInteractionManager extends Component {
         console.log("[VoxelInteractionManager] 已注册3D输入事件监听");
     }
 
-    protected onDisable() {
+    protected onDisable(): void {
         // 解绑3D输入事件
         EventBus.offEvent(EventTypes.Input3D.MouseDown, this.onInput3DMouseDown, this);
         EventBus.offEvent(EventTypes.Input3D.MouseMove, this.onInput3DMouseMove, this);
@@ -99,8 +128,8 @@ export class VoxelInteractionManager extends Component {
         this.worldManager = worldManager;
         this.events = events || {};
         
-        if (this.cameraController) {
-            this.cameraController.setBlockQueryFunction((x, y, z) => 
+        if (this._voxelCameraController) {
+            this._voxelCameraController.setBlockQueryFunction((x, y, z) => 
                 this.worldManager.getBlock(x, y, z)
             );
         }
@@ -114,8 +143,8 @@ export class VoxelInteractionManager extends Component {
         return this.selectedBlockType;
     }
 
-    public getCameraController(): VoxelCameraController {
-        return this.cameraController;
+    public getVoxelCameraController(): VoxelCameraController {
+        return this._voxelCameraController;
     }
 
     public getCollisionSystem(): VoxelCollisionSystem {
@@ -465,18 +494,18 @@ export class VoxelInteractionManager extends Component {
     }
 
     public toggleCameraMode(): void {
-        if (this.cameraController) {
-            this.cameraController.toggleMode();
+        if (this._voxelCameraController) {
+            this._voxelCameraController.toggleMode();
             
             if (this.events.onModeChange) {
-                this.events.onModeChange(this.cameraController.getCurrentMode());
+                this.events.onModeChange(this._voxelCameraController.getCurrentMode());
             }
         }
     }
 
-    public setCameraMode(mode: CameraMode): void {
-        if (this.cameraController) {
-            this.cameraController.setMode(mode);
+    public setCameraMode(mode: VoxelCameraMode): void {
+        if (this._voxelCameraController) {
+            this._voxelCameraController.setMode(mode);
             
             if (this.events.onModeChange) {
                 this.events.onModeChange(mode);
@@ -484,8 +513,8 @@ export class VoxelInteractionManager extends Component {
         }
     }
 
-    public getCurrentCameraMode(): CameraMode | null {
-        return this.cameraController ? this.cameraController.getCurrentMode() : null;
+    public getCurrentCameraMode(): VoxelCameraMode | null {
+        return this._voxelCameraController ? this._voxelCameraController.getCurrentMode() : null;
     }
 
     public getWorldManager(): VoxelWorldManager {

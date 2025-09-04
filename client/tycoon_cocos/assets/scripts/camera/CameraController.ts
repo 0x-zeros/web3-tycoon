@@ -8,8 +8,9 @@
  * @version 1.0.0
  */
 
-import { _decorator, Component, Camera, Node, Vec3, Quat, director, find, input, Input, EventKeyboard, KeyCode, EventMouse, tween, Tween } from 'cc';
+import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween } from 'cc';
 import { CameraMode, CameraConfig, CameraState, DEFAULT_CAMERA_CONFIG, TransitionConfig } from './CameraConfig';
+import { BaseCameraController } from './BaseCameraController';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 
@@ -20,19 +21,13 @@ const { ccclass, property } = _decorator;
  * 单例模式，提供全局相机访问和控制功能
  */
 @ccclass('CameraController')
-export class CameraController extends Component {
+export class CameraController extends BaseCameraController {
     
     @property({ displayName: "相机配置", tooltip: "相机各种模式的配置参数" })
     public config: CameraConfig = DEFAULT_CAMERA_CONFIG;
 
     @property({ displayName: "自动查找相机", tooltip: "是否自动查找Main Camera节点" })
     public autoFindCamera: boolean = true;
-
-    @property({ displayName: "启用输入控制", tooltip: "是否启用键盘和鼠标控制" })
-    public enableInputControl: boolean = true;
-
-    @property({ type: Camera, displayName: "主相机", tooltip: "主相机组件引用" })
-    public mainCamera: Camera | null = null;
 
     @property({ type: Node, displayName: "跟随目标", tooltip: "第三人称模式的跟随目标" })
     public followTarget: Node | null = null;
@@ -45,11 +40,6 @@ export class CameraController extends Component {
     private _targetPosition: Vec3 = new Vec3();
     private _targetRotation: Quat = new Quat();
     private _isTransitioning: boolean = false;
-
-    // 输入状态
-    private _mouseDown: boolean = false;
-    private _lastMousePosition: Vec3 = new Vec3();
-    private _keyStates: Map<KeyCode, boolean> = new Map();
 
     // 当前跟随目标中心点（用于非跟随模式）
     private _lookAtTarget: Vec3 = new Vec3(0, 0, 0);
@@ -84,24 +74,34 @@ export class CameraController extends Component {
             return;
         }
 
-        // 查找或获取主相机
-        this._setupMainCamera();
-        
-        console.log('[CameraController] 相机控制器初始化完成');
+        // 调用基类onLoad
+        super.onLoad();
     }
 
-    protected start(): void {
+    // ========================= 基类抽象方法实现 =========================
+
+    protected onCameraStart(): void {
         // 设置默认视角
         this.setMode(CameraMode.ISOMETRIC);
         
         // 注册事件监听
         this._setupEventListeners();
         
-        console.log(`[CameraController] 已设置为默认模式: ${this._currentMode}`);
+        this.debugLog(`已设置为默认模式: ${this._currentMode}`);
     }
 
-    protected update(deltaTime: number): void {
-        if (!this.mainCamera) return;
+    protected onCameraEnable(): void {
+        // 相机启用时的逻辑
+        this.debugLog('主相机控制器已启用');
+    }
+
+    protected onCameraDisable(): void {
+        // 相机禁用时的逻辑  
+        this.debugLog('主相机控制器已禁用');
+    }
+
+    protected onCameraUpdate(deltaTime: number): void {
+        if (!this.camera) return;
 
         // 处理相机跟随逻辑
         this._updateCameraFollow(deltaTime);
@@ -117,7 +117,7 @@ export class CameraController extends Component {
         }
     }
 
-    protected onDestroy(): void {
+    protected onCameraDestroy(): void {
         if (CameraController._instance === this) {
             CameraController._instance = null;
         }
@@ -129,13 +129,26 @@ export class CameraController extends Component {
         this._removeEventListeners();
     }
 
+    protected onResetToDefault(): void {
+        this.setMode(CameraMode.ISOMETRIC, true);
+        this._lookAtTarget.set(0, 0, 0);
+        this._stopAllTweens();
+    }
+
     // ========================= 公共接口方法 =========================
 
     /**
-     * 获取主相机组件
+     * 获取主相机组件 - 重写基类方法
+     */
+    public getCamera(): Camera | null {
+        return this.camera;
+    }
+
+    /**
+     * 获取主相机组件 - 保持向后兼容
      */
     public getMainCamera(): Camera | null {
-        return this.mainCamera;
+        return this.camera;
     }
 
     /**
@@ -253,25 +266,6 @@ export class CameraController extends Component {
 
     // ========================= 私有方法 =========================
 
-    /**
-     * 设置主相机
-     */
-    private _setupMainCamera(): void {
-        if (!this.mainCamera && this.autoFindCamera) {
-            // 自动查找Main Camera
-            const cameraNode = find("Main Camera");
-            if (cameraNode) {
-                this.mainCamera = cameraNode.getComponent(Camera);
-            }
-        }
-
-        if (!this.mainCamera) {
-            console.error('[CameraController] 无法找到主相机组件！');
-            return;
-        }
-
-        console.log('[CameraController] 主相机设置完成');
-    }
 
     /**
      * 设置事件监听器
@@ -343,8 +337,8 @@ export class CameraController extends Component {
         const rotation = Quat.fromViewUp(lookDirection, Vec3.UP);
 
         // 设置FOV
-        if (this.mainCamera) {
-            this.mainCamera.fov = config.fov;
+        if (this.camera) {
+            this.camera.fov = config.fov;
         }
 
         // 应用位置和旋转
@@ -372,8 +366,8 @@ export class CameraController extends Component {
         const rotation = Quat.fromEuler(new Quat(), -90, 0, 0);
 
         // 设置FOV
-        if (this.mainCamera) {
-            this.mainCamera.fov = config.fov;
+        if (this.camera) {
+            this.camera.fov = config.fov;
         }
 
         // 应用位置和旋转
@@ -545,11 +539,14 @@ export class CameraController extends Component {
         // 例如 WASD 移动目标点等
     }
 
+    // ========================= 重写基类输入处理方法 =========================
+
     /**
-     * 键盘按下事件
+     * 重写基类键盘按下事件
      */
-    private _onKeyDown(event: EventKeyboard): void {
-        this._keyStates.set(event.keyCode, true);
+    protected onKeyDown(event: EventKeyboard): void {
+        // 调用基类方法处理基础功能
+        super.onKeyDown(event);
 
         // 快捷键切换相机模式
         switch (event.keyCode) {
@@ -572,47 +569,27 @@ export class CameraController extends Component {
     }
 
     /**
-     * 键盘松开事件
+     * 重写基类鼠标按下事件
      */
-    private _onKeyUp(event: EventKeyboard): void {
-        this._keyStates.set(event.keyCode, false);
-    }
-
-    /**
-     * 鼠标按下事件
-     */
-    private _onMouseDown(event: EventMouse): void {
-        if (event.getButton() === EventMouse.BUTTON_RIGHT) {
-            this._mouseDown = true;
-            this._lastMousePosition.set(event.getLocationX(), event.getLocationY(), 0);
-        }
-    }
-
-    /**
-     * 鼠标松开事件
-     */
-    private _onMouseUp(event: EventMouse): void {
-        if (event.getButton() === EventMouse.BUTTON_RIGHT) {
-            this._mouseDown = false;
-        }
-    }
-
-    /**
-     * 鼠标移动事件
-     */
-    private _onMouseMove(event: EventMouse): void {
-        if (!this._mouseDown) return;
-
-        const currentPos = new Vec3(event.getLocationX(), event.getLocationY(), 0);
-        const deltaPos = Vec3.subtract(new Vec3(), currentPos, this._lastMousePosition);
+    protected onMouseDown(event: EventMouse): void {
+        // 调用基类方法处理基础功能
+        super.onMouseDown(event);
         
+        // 右键特殊处理
+        if (event.getButton() === EventMouse.BUTTON_RIGHT) {
+            this.debugLog('Right mouse button pressed for camera control');
+        }
+    }
+
+    /**
+     * 重写基类鼠标拖拽处理
+     */
+    protected onMouseDrag(deltaPos: Vec3): void {
         // 右键拖拽旋转（仅在等距模式下）
         if (this._currentMode === CameraMode.ISOMETRIC && this.config.isometric.allowRotation) {
             this.config.isometric.yawAngle += deltaPos.x * this.config.isometric.rotationSpeed * 0.1;
             this._applyModeSettings(this._currentMode, true);
         }
-
-        this._lastMousePosition.set(currentPos);
     }
 
     /**

@@ -9,6 +9,7 @@ import { VoxelWorldConfig, VoxelWorldMode } from '../core/VoxelWorldConfig';
 import { VoxelInteractionManager, VoxelInteractionEvents } from '../interaction/VoxelInteractionManager';
 import { VoxelCameraController, CameraMode } from '../interaction/VoxelCameraController';
 import { VoxelCollisionSystem } from '../interaction/VoxelCollisionSystem';
+import { CameraController } from '../../camera/CameraController';
 
 const { ccclass, property } = _decorator;
 
@@ -44,6 +45,11 @@ export class VoxelRenderer extends Component {
         if (!this.worldRoot) {
             this.worldRoot = new Node('VoxelWorld');
             this.node.addChild(this.worldRoot);
+        }
+
+        // 如果本地找不到Camera组件，使用CameraController获取主相机
+        if (!this.camera) {
+            this.camera = CameraController.getMainCamera();
         }
         
         this.worldManager = new VoxelWorldManager();
@@ -99,7 +105,7 @@ export class VoxelRenderer extends Component {
         console.log('[VoxelRenderer] 交互系统初始化完成');
         
         // 调试信息：打印组件状态
-        const cameraController = this.interactionManager.getCameraController();
+        const cameraController = this.interactionManager.getVoxelCameraController();
         const collisionSystem = this.interactionManager.getCollisionSystem();
         
         console.log(`[VoxelRenderer] 交互系统状态:`);

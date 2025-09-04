@@ -38,53 +38,67 @@
   - 相机边界限制
   - 调试模式和可视化
 
-  🤔 架构建议
 
-  方案1: 保持独立 (推荐) ✅
+---
+ ✅ 重构完成总结
 
-  理由:
-  1. 用途完全不同:
-    - VoxelCameraController = FPS第一人称控制
-    - CameraController = 策略游戏第三人称控制
-  2. 依赖不同:
-    - VoxelCameraController 依赖体素碰撞系统
-    - CameraController 依赖游戏地图系统
-  3. 清晰的职责分离:
-    - 体素世界有自己的相机需求
-    - 主游戏有不同的相机需求
+  1. 创建了 InteractionManager.ts
 
-  建议的目录结构:
-  /scripts/camera/
-    ├── CameraController.ts      # 主游戏相机
-    ├── CameraConfig.ts          # 主游戏相机配置
-    ├── CameraDebugger.ts        # 调试组件
-    └── voxel/
-        └── VoxelCameraController.ts  # 体素相机(移动到这里)
+  - 位置：/scripts/interaction/InteractionManager.ts
+  - 功能：管理主游戏（非体素）的交互逻辑
+  - 在 start() 中自动启用 CameraManager 的主游戏相机模式
+  - 提供键盘快捷键 F1-F3 切换主游戏相机模式
+  - 专注处理棋盘游戏、策略游戏场景的交互
 
-  方案2: 功能融合 (不推荐) ❌
+  2. 整理了 VoxelInteractionManager.ts
 
-  如果要融合，需要：
-  1. 在CameraMode中添加 FIRST_PERSON_FPS 和 FIRST_PERSON_FLYING
-  2. 添加碰撞系统的可选依赖
-  3. 增加配置复杂度
-  4. 可能导致代码臃肿
+  - ✅ 移除了对 CameraController 的直接引用
+  - ✅ 改用 CameraManager.getInstance() 统一获取相机
+  - ✅ 在 start() 中启用体素相机模式（VoxelCameraMode.WALKING）
+  - ✅ 添加了配置开关控制相机启用和默认模式
+  - ✅ 更新了所有方法签名使用 VoxelCameraMode 而非通用 CameraMode
+  - ✅ 保持了所有体素特有的交互逻辑（射线投射、方块操作等）
 
-  🎯 我的建议
+  3. 增强了 CameraDebugger.ts
 
-  保持两个控制器独立，但做以下优化：
+  - ✅ 合并了 CameraUsageExample 的所有功能
+  - ✅ 添加了 3 个 @property 开关：
+    - enableDebugDisplay - 控制调试信息显示
+    - enableKeyboardSwitching - 控制键盘快捷键
+    - enableCameraDemo - 控制自动演示功能
+  - ✅ 支持两种相机控制器的统一调试
+  - ✅ 新增键盘快捷键：
+    - 1-3: 主游戏相机模式切换
+    - 4-5: 体素相机模式切换
+    - M: 控制器类型切换
+    - D: 演示自动切换流程
+  - ✅ 可挂载在 CameraManager 同一节点上
 
-  1. 移动位置: 将 VoxelCameraController.ts 移到 /scripts/camera/voxel/ 下
-  2. 重命名: 改为 VoxelFPSCameraController.ts 更清晰
-  3. 共享基础功能: 可以创建一个 BaseCameraController 基类
-  4. 统一访问接口: 在需要时通过配置选择使用哪个控制器
+  4. 清理工作
 
-  // 使用示例
-  if (gameMode === 'voxel') {
-      // 使用体素FPS相机
-      this.addComponent(VoxelFPSCameraController);
-  } else {
-      // 使用主游戏相机
-      this.addComponent(CameraController);
-  }
+  - ✅ 删除了 CameraUsageExample.ts
+  - ✅ 删除了 CameraSystemTest.ts
 
-  这样既保持了代码的清晰性，又避免了不必要的复杂性。体素世界和主游戏可以各自优化自己的相机控制逻辑。
+  🎯 使用方式
+
+  设置：
+
+  1. 将 CameraManager 组件挂载到场景节点
+  2. 将 CameraDebugger 组件挂载到 CameraManager 同一节点
+  3. 将 InteractionManager 挂载到主游戏场景需要的节点
+  4. 将 VoxelInteractionManager 挂载到体素世界场景需要的节点
+
+  配置：
+
+  - CameraDebugger: 你可以通过 Property 面板控制各种调试功能的开关
+  - VoxelInteractionManager: 会在 start 时自动启用体素相机
+  - InteractionManager: 会在 start 时自动启用主游戏相机
+
+  现在系统架构清晰：
+  - VoxelInteractionManager 专注体素世界交互 + 自动启用体素相机
+  - InteractionManager 专注主游戏交互 + 自动启用主游戏相机
+  - CameraDebugger 作为统一调试工具，支持所有相机功能测试
+
+  
+
+ 

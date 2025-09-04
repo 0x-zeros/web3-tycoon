@@ -283,10 +283,10 @@ export class UIModeSelect extends UIBase {
     private _onGameEnd(data: any): void {
         console.log("[UIModeSelect] Game ended:", data);
         
-        // 通过事件系统请求显示模式选择界面，而不是直接调用show()
-        EventBus.emitEvent(EventTypes.UI.ShowMainMenu, {
-            source: "game_end"
-        });
+        // // 通过事件系统请求显示模式选择界面，而不是直接调用show()
+        // EventBus.emitEvent(EventTypes.UI.ShowMainMenu, {
+        //     source: "game_end"
+        // });
     }
 
     /**

@@ -85,6 +85,19 @@ export class CameraController extends BaseCameraController {
     // 当前跟随目标中心点（用于非跟随模式）
     private _lookAtTarget: Vec3 = new Vec3(0, 0, 0);
 
+    // 运行时偏移变量（避免直接修改配置）
+    private _runtimeYawOffset: number = 0;      // 等距模式yaw角度偏移
+    private _runtimeDistanceOffset: number = 0; // 等距模式距离偏移
+    private _runtimeHeightOffset: number = 0;   // 俯视模式高度偏移
+
+    // 按键状态跟踪
+    private _keyStates = {
+        w: false,
+        a: false,
+        s: false,
+        d: false
+    };
+
     // Tween引用，用于相机动画
     private _positionTween: Tween<Vec3> | null = null;
     private _rotationTween: Tween<Vec3> | null = null;
@@ -203,6 +216,11 @@ export class CameraController extends BaseCameraController {
         const oldMode = this._currentMode;
         this._currentMode = mode;
 
+        // 切换模式时重置所有运行时偏移
+        this._runtimeYawOffset = 0;
+        this._runtimeDistanceOffset = 0;
+        this._runtimeHeightOffset = 0;
+
         console.log(`[CameraController] 切换相机模式: ${oldMode} -> ${mode}`);
 
         // 根据模式设置相机位置和角度
@@ -315,12 +333,12 @@ export class CameraController extends BaseCameraController {
      */
     private _setupEventListeners(): void {
         if (this.enableInputControl) {
-            input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
-            input.on(Input.EventType.KEY_UP, this._onKeyUp, this);
-            input.on(Input.EventType.MOUSE_DOWN, this._onMouseDown, this);
-            input.on(Input.EventType.MOUSE_UP, this._onMouseUp, this);
-            input.on(Input.EventType.MOUSE_MOVE, this._onMouseMove, this);
-            input.on(Input.EventType.MOUSE_WHEEL, this._onMouseWheel, this);
+            input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
+            input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
+            input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+            input.on(Input.EventType.MOUSE_UP, this.onMouseUp, this);
+            input.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+            input.on(Input.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
         }
     }
 
@@ -329,12 +347,12 @@ export class CameraController extends BaseCameraController {
      */
     private _removeEventListeners(): void {
         if (this.enableInputControl) {
-            input.off(Input.EventType.KEY_DOWN, this._onKeyDown, this);
-            input.off(Input.EventType.KEY_UP, this._onKeyUp, this);
-            input.off(Input.EventType.MOUSE_DOWN, this._onMouseDown, this);
-            input.off(Input.EventType.MOUSE_UP, this._onMouseUp, this);
-            input.off(Input.EventType.MOUSE_MOVE, this._onMouseMove, this);
-            input.off(Input.EventType.MOUSE_WHEEL, this._onMouseWheel, this);
+            input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
+            input.off(Input.EventType.KEY_UP, this.onKeyUp, this);
+            input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+            input.off(Input.EventType.MOUSE_UP, this.onMouseUp, this);
+            input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+            input.off(Input.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
         }
     }
 
@@ -365,9 +383,9 @@ export class CameraController extends BaseCameraController {
         
         // 设置欧拉角
         const eulerAngles = new Vec3(
-            config.angle,           // pitch (俯视角度，如45度)
-            config.yawAngle,        // yaw (水平旋转角度，如45度)
-            0                       // roll (保持为0)
+            config.angle,                               // pitch (俯视角度，如45度)
+            config.yawAngle + this._runtimeYawOffset,   // yaw (水平旋转角度，如45度)
+            0                                           // roll (保持为0)
         );
         
         // 先设置旋转以获取正确的forward向量
@@ -381,7 +399,8 @@ export class CameraController extends BaseCameraController {
         console.log(`[CameraController] config=${JSON.stringify(config)}`);
 
         let dir = new Vec3();
-        Vec3.multiplyScalar(dir, forward, config.distance); // 往后退distance距离
+        const actualDistance = config.distance + this._runtimeDistanceOffset;
+        Vec3.multiplyScalar(dir, forward, actualDistance); // 往后退distance距离
         dir.y += config.height; // 抬高height
 
         // 相机位置 = 目标点 - forward * 距离
@@ -412,9 +431,10 @@ export class CameraController extends BaseCameraController {
     private _applyTopDownMode(immediate: boolean): void {
         const config = this.config.topDown;
         
+        const actualHeight = config.height + this._runtimeHeightOffset;
         const targetPos = new Vec3(
             this._lookAtTarget.x,
-            this._lookAtTarget.y + config.height,
+            this._lookAtTarget.y + actualHeight,
             this._lookAtTarget.z
         );
 
@@ -614,8 +634,33 @@ export class CameraController extends BaseCameraController {
      * 处理输入控制
      */
     private _handleInput(deltaTime: number): void {
-        // 这里可以添加额外的输入处理逻辑
-        // 例如 WASD 移动目标点等
+        if (!this.enableInputControl) return;
+
+        const moveSpeed = 15; // 移动速度
+        let moved = false;
+
+        // WASD 移动观察目标点 (使用按键状态跟踪)
+        if (this._keyStates.w) {
+            this._lookAtTarget.z -= moveSpeed * deltaTime; // 前进
+            moved = true;
+        }
+        if (this._keyStates.s) {
+            this._lookAtTarget.z += moveSpeed * deltaTime; // 后退
+            moved = true;
+        }
+        if (this._keyStates.a) {
+            this._lookAtTarget.x -= moveSpeed * deltaTime; // 左移
+            moved = true;
+        }
+        if (this._keyStates.d) {
+            this._lookAtTarget.x += moveSpeed * deltaTime; // 右移
+            moved = true;
+        }
+
+        // 如果有移动，立即更新相机位置并调用lookAt
+        if (moved) {
+            this._applyModeSettings(this._currentMode, true);
+        }
     }
 
     // ========================= 重写基类输入处理方法 =========================
@@ -624,8 +669,21 @@ export class CameraController extends BaseCameraController {
      * 重写基类键盘按下事件
      */
     protected onKeyDown(event: EventKeyboard): void {
-        // 调用基类方法处理基础功能
-        super.onKeyDown(event);
+        // 更新WASD按键状态
+        switch (event.keyCode) {
+            case KeyCode.KEY_W:
+                this._keyStates.w = true;
+                break;
+            case KeyCode.KEY_A:
+                this._keyStates.a = true;
+                break;
+            case KeyCode.KEY_S:
+                this._keyStates.s = true;
+                break;
+            case KeyCode.KEY_D:
+                this._keyStates.d = true;
+                break;
+        }
 
         // 快捷键切换相机模式
         switch (event.keyCode) {
@@ -643,6 +701,27 @@ export class CameraController extends BaseCameraController {
                 if (!this.followTarget) {
                     this.createDefaultTarget();
                 }
+                break;
+        }
+    }
+
+    /**
+     * 键盘释放事件
+     */
+    protected onKeyUp(event: EventKeyboard): void {
+        // 更新WASD按键状态
+        switch (event.keyCode) {
+            case KeyCode.KEY_W:
+                this._keyStates.w = false;
+                break;
+            case KeyCode.KEY_A:
+                this._keyStates.a = false;
+                break;
+            case KeyCode.KEY_S:
+                this._keyStates.s = false;
+                break;
+            case KeyCode.KEY_D:
+                this._keyStates.d = false;
                 break;
         }
     }
@@ -666,23 +745,57 @@ export class CameraController extends BaseCameraController {
     protected onMouseDrag(deltaPos: Vec3): void {
         // 右键拖拽旋转（仅在等距模式下）
         if (this._currentMode === CameraMode.ISOMETRIC && this.config.isometric.allowRotation) {
-            this.config.isometric.yawAngle += deltaPos.x * this.config.isometric.rotationSpeed * 0.1;
+            this._runtimeYawOffset += deltaPos.x * this.config.isometric.rotationSpeed * 0.1;
             this._applyModeSettings(this._currentMode, true);
         }
     }
 
     /**
+     * 鼠标松开事件
+     */
+    protected onMouseUp(event: EventMouse): void {
+        super.onMouseUp(event);
+    }
+
+    /**
+     * 鼠标移动事件
+     */
+    protected onMouseMove(event: EventMouse): void {
+        super.onMouseMove(event);
+    }
+
+    /**
      * 鼠标滚轮事件
      */
-    private _onMouseWheel(event): void {
+    protected onMouseWheel(event): void {
         const scrollY = event.getScrollY();
         
-        // 滚轮缩放
         if (this._currentMode === CameraMode.TOP_DOWN && this.config.topDown.allowZoom) {
+            // 俯视模式：调整高度
             const config = this.config.topDown;
-            const newHeight = config.height - scrollY * config.zoomSpeed;
-            config.height = Math.max(config.minHeight, Math.min(config.maxHeight, newHeight));
-            this._applyModeSettings(this._currentMode, true);
+            const newHeightOffset = this._runtimeHeightOffset - scrollY * config.zoomSpeed;
+            const actualHeight = config.height + newHeightOffset;
+            
+            // 限制在允许范围内
+            if (actualHeight >= config.minHeight && actualHeight <= config.maxHeight) {
+                this._runtimeHeightOffset = newHeightOffset;
+                this._applyModeSettings(this._currentMode, true);
+            }
+        } else if (this._currentMode === CameraMode.ISOMETRIC) {
+            // 等距模式：调整距离
+            const config = this.config.isometric;
+            const zoomSpeed = 2.0; // 等距模式的缩放速度
+            const newDistanceOffset = this._runtimeDistanceOffset + scrollY * zoomSpeed;
+            const actualDistance = config.distance + newDistanceOffset;
+            
+            // 限制距离在合理范围内 (5 到 50)
+            const minDistance = 5;
+            const maxDistance = 50;
+            
+            if (actualDistance >= minDistance && actualDistance <= maxDistance) {
+                this._runtimeDistanceOffset = newDistanceOffset;
+                this._applyModeSettings(this._currentMode, true);
+            }
         }
     }
 

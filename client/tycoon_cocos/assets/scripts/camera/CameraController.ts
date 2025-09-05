@@ -24,19 +24,19 @@ const { ccclass, property } = _decorator;
 export class CameraController extends BaseCameraController {
     
     @property({ displayName: "相机配置", tooltip: "相机各种模式的配置参数" })
-    public config: CameraConfig = DEFAULT_CAMERA_CONFIG;
+    private config: CameraConfig = DEFAULT_CAMERA_CONFIG;
 
     @property({ displayName: "自动查找相机", tooltip: "是否自动查找Main Camera节点" })
     public autoFindCamera: boolean = true;
 
-    @property({ type: Node, displayName: "跟随目标", tooltip: "第三人称模式的跟随目标" })
+    @property({ displayName: "跟随目标", type: Node, tooltip: "第三人称模式的跟随目标" })
     public followTarget: Node | null = null;
 
     // 单例实例
     private static _instance: CameraController | null = null;
 
     // 当前状态
-    private _currentMode: CameraMode = CameraMode.ISOMETRIC;
+    private _currentMode: CameraMode = CameraMode.NONE;
     private _targetPosition: Vec3 = new Vec3();
     private _targetRotation: Quat = new Quat();
     private _isTransitioning: boolean = false;
@@ -266,31 +266,6 @@ export class CameraController extends BaseCameraController {
 
     // ========================= 私有方法 =========================
 
-    /**
-     * 归一化四元数并返回
-     */
-    private _normalizeQuat(quat: Quat): Quat {
-        const result = new Quat();
-        return Quat.normalize(result, quat);
-    }
-
-    /**
-     * 从前向量计算欧拉角
-     */
-    private _calculateEulerFromLookDirection(lookDirection: Vec3): Vec3 {
-        const euler = new Vec3();
-        
-        // 计算俯仰角（pitch）
-        euler.x = Math.asin(-lookDirection.y) * 180 / Math.PI;
-        
-        // 计算偏航角（yaw）
-        euler.y = Math.atan2(lookDirection.x, lookDirection.z) * 180 / Math.PI;
-        
-        // 滚转角（roll）保持为0
-        euler.z = 0;
-        
-        return euler;
-    }
 
     /**
      * 设置事件监听器
@@ -341,25 +316,37 @@ export class CameraController extends BaseCameraController {
      * 应用等距视角模式
      */
     private _applyIsometricMode(immediate: boolean): void {
+        console.log(`[CameraController] 应用等距视角模式`);
+
         const config = this.config.isometric;
         
-        // 计算等距视角位置
-        const distance = config.distance;
-        const height = config.height;
-        const angleRad = config.angle * Math.PI / 180;
-        const yawRad = config.yawAngle * Math.PI / 180;
-        
-        const targetPos = new Vec3(
-            this._lookAtTarget.x + Math.cos(yawRad) * distance * Math.cos(angleRad),
-            this._lookAtTarget.y + height,
-            this._lookAtTarget.z + Math.sin(yawRad) * distance * Math.cos(angleRad)
+        // 设置欧拉角
+        const eulerAngles = new Vec3(
+            config.angle,           // pitch (俯视角度，如45度)
+            config.yawAngle,        // yaw (水平旋转角度，如45度)
+            0                       // roll (保持为0)
         );
-
-        // 计算旋转
-        const lookDirection = Vec3.subtract(new Vec3(), this._lookAtTarget, targetPos);
-        lookDirection.normalize();
         
-        const eulerAngles = this._calculateEulerFromLookDirection(lookDirection);
+        // 先设置旋转以获取正确的forward向量
+        this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+        
+        // 根据forward计算相机位置
+        const forward = this.node.forward;
+
+        console.log(`[CameraController] forward=${forward}`);
+        console.log(`[CameraController] lookAtTarget=${this._lookAtTarget}`);
+        console.log(`[CameraController] config=${JSON.stringify(config)}`);
+
+        let dir = new Vec3();
+        Vec3.multiplyScalar(dir, forward, config.distance); // 往后退distance距离
+        dir.y += config.height; // 抬高height
+
+        // 相机位置 = 目标点 - forward * 距离
+        let camPos = new Vec3();
+        camPos = Vec3.subtract(camPos, this._lookAtTarget, dir);
+        // Vec3.add(camPos, dir, this._lookAtTarget); // 相对于目标点的位置
+
+        console.log(`[CameraController] targetPos=${camPos}`);
 
         // 设置FOV
         if (this.camera) {
@@ -368,10 +355,11 @@ export class CameraController extends BaseCameraController {
 
         // 应用位置和旋转
         if (immediate) {
-            this.node.setPosition(targetPos);
-            this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+            this.node.setPosition(camPos);
+            // this.node.lookAt(this._lookAtTarget); // 确保对准目标
         } else {
-            this._transitionToPositionAndRotation(targetPos, eulerAngles);
+            // this._transitionToPositionAndLookAt(targetPos, this._lookAtTarget);
+            this.node.setPosition(camPos);
         }
     }
 
@@ -436,25 +424,16 @@ export class CameraController extends BaseCameraController {
         const lookAhead = Vec3.multiplyScalar(new Vec3(), targetForward, config.lookAheadDistance);
         const lookAtPoint = Vec3.add(new Vec3(), targetPos, lookAhead);
         
-        // 计算旋转
-        const lookDirection = Vec3.subtract(new Vec3(), lookAtPoint, cameraPos);
-        lookDirection.normalize();
-        const eulerAngles = this._calculateEulerFromLookDirection(lookDirection);
-
         // 应用位置和旋转
         if (immediate) {
             this.node.setPosition(cameraPos);
-            this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+            this.node.lookAt(lookAtPoint); // 直接lookAt前瞻点
         } else {
             // 平滑跟随
             const currentPos = this.node.getPosition();
             const lerpedPos = Vec3.lerp(new Vec3(), currentPos, cameraPos, config.smoothSpeed * 0.016);
             this.node.setPosition(lerpedPos);
-
-            const currentEuler = new Vec3();
-            this.node.rotation.getEulerAngles(currentEuler);
-            const lerpedEuler = Vec3.lerp(new Vec3(), currentEuler, eulerAngles, config.smoothSpeed * 0.016);
-            this.node.setRotationFromEuler(lerpedEuler.x, lerpedEuler.y, lerpedEuler.z);
+            this.node.lookAt(lookAtPoint); // lookAt前瞻点
         }
     }
 
@@ -499,6 +478,31 @@ export class CameraController extends BaseCameraController {
             .call(() => {
                 this._rotationTween = null;
                 this._checkTransitionComplete();
+            })
+            .start();
+    }
+
+    /**
+     * 过渡到指定位置并lookAt目标
+     */
+    private _transitionToPositionAndLookAt(position: Vec3, lookAtTarget: Vec3): void {
+        this._stopAllTweens();
+        this._isTransitioning = true;
+
+        // 位置过渡
+        this._positionTween = tween(this.node.position)
+            .to(this.config.transition.positionDuration, position, {
+                easing: this._getEasingFunction(),
+                onUpdate: () => {
+                    // 在移动过程中持续lookAt目标
+                    this.node.lookAt(lookAtTarget);
+                }
+            })
+            .call(() => {
+                this._positionTween = null;
+                this._isTransitioning = false;
+                // 确保最终位置正确
+                this.node.lookAt(lookAtTarget);
             })
             .start();
     }

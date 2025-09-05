@@ -14,6 +14,8 @@ import { Vec3 } from 'cc';
  * 相机模式枚举
  */
 export enum CameraMode {
+    /** 未初始化 */
+    NONE = 'none',
     /** 等距视角 - 45度俯视角，适合棋盘游戏 */
     ISOMETRIC = 'isometric',
     /** 俯视视角 - 90度垂直俯视，清晰查看整个地图 */
@@ -130,10 +132,10 @@ export interface CameraConfig {
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
     isometric: {
         distance: 20,
-        height: 15,
-        angle: 45,
+        height: 0,
+        angle: -45, //-45度俯视 //俯仰角 X ≈ 45°（比暗黑的 26° 高，突出棋盘格）。
         fov: 45,
-        yawAngle: 45,
+        yawAngle: -45, //-45度水平旋转
         allowRotation: true,
         rotationSpeed: 2.0
     },

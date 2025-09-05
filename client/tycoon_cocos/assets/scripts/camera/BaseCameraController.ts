@@ -112,6 +112,8 @@ export abstract class BaseCameraController extends Component implements ICameraC
      */
     public setEnabled(enabled: boolean): void {
         this._isEnabled = enabled;
+
+        this.enabled = enabled;//设置组件的启用状态
         
         if (enabled) {
             this.onCameraEnable();

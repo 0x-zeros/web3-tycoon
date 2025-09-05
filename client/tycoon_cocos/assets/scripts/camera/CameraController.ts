@@ -9,7 +9,17 @@
  */
 
 import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween, v3 } from 'cc';
-import { CameraMode, CameraConfig, CameraState, DEFAULT_CAMERA_CONFIG, TransitionConfig } from './CameraConfig';
+import { 
+    CameraMode, 
+    CameraConfig, 
+    CameraState, 
+    DEFAULT_CAMERA_CONFIG, 
+    TransitionConfig,
+    IsometricConfig,
+    TopDownConfig,
+    FollowConfig,
+    CameraBounds
+} from './CameraConfig';
 import { BaseCameraController } from './BaseCameraController';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
@@ -23,14 +33,45 @@ const { ccclass, property } = _decorator;
 @ccclass('CameraController')
 export class CameraController extends BaseCameraController {
     
-    @property({ displayName: "相机配置", tooltip: "相机各种模式的配置参数" })
-    private config: CameraConfig = DEFAULT_CAMERA_CONFIG;
+    @property({ type: IsometricConfig, displayName: "等距视角配置" })
+    public isometricConfig: IsometricConfig = new IsometricConfig();
+
+    @property({ type: TopDownConfig, displayName: "俯视视角配置" })
+    public topDownConfig: TopDownConfig = new TopDownConfig();
+
+    @property({ type: FollowConfig, displayName: "跟随模式配置" })
+    public followConfig: FollowConfig = new FollowConfig();
+
+    @property({ type: TransitionConfig, displayName: "过渡动画配置" })
+    public transitionConfig: TransitionConfig = new TransitionConfig();
+
+    @property({ type: CameraBounds, displayName: "边界限制配置" })
+    public boundsConfig: CameraBounds = new CameraBounds();
+
+    @property({ displayName: "调试模式", tooltip: "是否启用调试模式显示" })
+    public debugMode: boolean = true;
 
     @property({ displayName: "自动查找相机", tooltip: "是否自动查找Main Camera节点" })
     public autoFindCamera: boolean = true;
 
     @property({ displayName: "跟随目标", type: Node, tooltip: "第三人称模式的跟随目标" })
     public followTarget: Node | null = null;
+
+    // 内部使用的config对象
+    public get config(): CameraConfig {
+        if (!this._config) {
+            this._config = new CameraConfig();
+            this._config.isometric = this.isometricConfig;
+            this._config.topDown = this.topDownConfig;
+            this._config.follow = this.followConfig;
+            this._config.bounds = this.boundsConfig;
+            this._config.transition = this.transitionConfig;
+            this._config.debugMode = this.debugMode;
+        }
+        return this._config;
+    }
+
+    private _config: CameraConfig | null = null;
 
     // 单例实例
     private static _instance: CameraController | null = null;
@@ -73,6 +114,8 @@ export class CameraController extends BaseCameraController {
             this.destroy();
             return;
         }
+
+        // 配置通过getter自动创建，无需额外初始化
 
         // 调用基类onLoad
         super.onLoad();

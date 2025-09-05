@@ -22,7 +22,7 @@ import {
 } from './CameraConfig';
 import { BaseCameraController } from './BaseCameraController';
 import { EventBus } from '../events/EventBus';
-import { EventTypes } from '../events/EventTypes';
+import { EventTypes, Input3DEventData } from '../events/EventTypes';
 
 const { ccclass, property } = _decorator;
 
@@ -335,10 +335,15 @@ export class CameraController extends BaseCameraController {
         if (this.enableInputControl) {
             input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
             input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
-            input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-            input.on(Input.EventType.MOUSE_UP, this.onMouseUp, this);
-            input.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
-            input.on(Input.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
+            
+            // // 监听EventBus的3D输入事件 
+            // 鼠标控制： （实现有bug，测试下来没反应，暂时用不到，先不要了）
+            //   - 滚轮 - 在topdown mode下缩放相机高度， 在isometric mode下缩放distance
+            //   - 右键拖拽 - 在等距模式下旋转相机 
+            // EventBus.on(EventTypes.Input3D.MouseDown, this.onMouseDown, this);
+            // EventBus.on(EventTypes.Input3D.MouseUp, this.onMouseUp, this);
+            // EventBus.on(EventTypes.Input3D.MouseMove, this.onMouseMove, this);
+            // EventBus.on(EventTypes.Input3D.MouseWheel, this.onMouseWheel, this);
         }
     }
 
@@ -349,10 +354,12 @@ export class CameraController extends BaseCameraController {
         if (this.enableInputControl) {
             input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
             input.off(Input.EventType.KEY_UP, this.onKeyUp, this);
-            input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-            input.off(Input.EventType.MOUSE_UP, this.onMouseUp, this);
-            input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
-            input.off(Input.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
+
+            // // 移除EventBus的3D输入事件监听
+            // EventBus.off(EventTypes.Input3D.MouseDown, this.onMouseDown, this);
+            // EventBus.off(EventTypes.Input3D.MouseUp, this.onMouseUp, this);
+            // EventBus.off(EventTypes.Input3D.MouseMove, this.onMouseMove, this);
+            // EventBus.off(EventTypes.Input3D.MouseWheel, this.onMouseWheel, this);
         }
     }
 
@@ -388,11 +395,34 @@ export class CameraController extends BaseCameraController {
             0                                           // roll (保持为0)
         );
         
-        // 先设置旋转以获取正确的forward向量
-        this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+        // // 先设置旋转以获取正确的forward向量
+        // this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
         
-        // 根据forward计算相机位置
-        const forward = this.node.forward;
+        // // 根据forward计算相机位置
+        // const forward = this.node.forward;
+
+        //先计算，不设置，后面有tween处理
+        // 方法1：使用四元数计算 forward 向量（推荐）
+        const tempQuat = new Quat();
+        Quat.fromEuler(tempQuat, eulerAngles.x, eulerAngles.y, eulerAngles.z);
+
+        // 默认的 forward 向量是 (0, 0, -1)
+        const defaultForward = new Vec3(0, 0, -1);
+        const forward = new Vec3();
+        Vec3.transformQuat(forward, defaultForward, tempQuat);
+
+        // 方法2：手动计算（如果需要更精确的控制）
+        /*
+        const pitch = math.toRadian(eulerAngles.x);
+        const yaw = math.toRadian(eulerAngles.y);
+
+        const forward = new Vec3(
+            Math.sin(yaw) * Math.cos(pitch),
+            -Math.sin(pitch),
+            -Math.cos(yaw) * Math.cos(pitch)
+        );
+        */
+       
 
         console.log(`[CameraController] forward=${forward}`);
         console.log(`[CameraController] lookAtTarget=${this._lookAtTarget}`);
@@ -418,10 +448,10 @@ export class CameraController extends BaseCameraController {
         // 应用位置和旋转
         if (immediate) {
             this.node.setPosition(camPos);
+            this.node.setRotationFromEuler(eulerAngles);
             // this.node.lookAt(this._lookAtTarget); // 确保对准目标
         } else {
-            // this._transitionToPositionAndLookAt(targetPos, this._lookAtTarget);
-            this.node.setPosition(camPos);
+            this._transitionToPositionAndRotation(camPos, eulerAngles);
         }
     }
 
@@ -432,7 +462,7 @@ export class CameraController extends BaseCameraController {
         const config = this.config.topDown;
         
         const actualHeight = config.height + this._runtimeHeightOffset;
-        const targetPos = new Vec3(
+        const camPos = new Vec3(
             this._lookAtTarget.x,
             this._lookAtTarget.y + actualHeight,
             this._lookAtTarget.z
@@ -448,10 +478,10 @@ export class CameraController extends BaseCameraController {
 
         // 应用位置和旋转
         if (immediate) {
-            this.node.setPosition(targetPos);
-            this.node.setRotationFromEuler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+            this.node.setPosition(camPos);
+            this.node.setRotationFromEuler(eulerAngles);
         } else {
-            this._transitionToPositionAndRotation(targetPos, eulerAngles);
+            this._transitionToPositionAndRotation(camPos, eulerAngles);
         }
     }
 
@@ -490,13 +520,13 @@ export class CameraController extends BaseCameraController {
         // 应用位置和旋转
         if (immediate) {
             this.node.setPosition(cameraPos);
-            this.node.lookAt(lookAtPoint); // 直接lookAt前瞻点
+            // this.node.lookAt(lookAtPoint); // 直接lookAt前瞻点
         } else {
             // 平滑跟随
             const currentPos = this.node.getPosition();
             const lerpedPos = Vec3.lerp(new Vec3(), currentPos, cameraPos, config.smoothSpeed * 0.016);
             this.node.setPosition(lerpedPos);
-            this.node.lookAt(lookAtPoint); // lookAt前瞻点
+            // this.node.lookAt(lookAtPoint); // lookAt前瞻点
         }
     }
 
@@ -541,31 +571,6 @@ export class CameraController extends BaseCameraController {
             .call(() => {
                 this._rotationTween = null;
                 this._checkTransitionComplete();
-            })
-            .start();
-    }
-
-    /**
-     * 过渡到指定位置并lookAt目标
-     */
-    private _transitionToPositionAndLookAt(position: Vec3, lookAtTarget: Vec3): void {
-        this._stopAllTweens();
-        this._isTransitioning = true;
-
-        // 位置过渡
-        this._positionTween = tween(this.node.position)
-            .to(this.config.transition.positionDuration, position, {
-                easing: this._getEasingFunction(),
-                onUpdate: () => {
-                    // 在移动过程中持续lookAt目标
-                    this.node.lookAt(lookAtTarget);
-                }
-            })
-            .call(() => {
-                this._positionTween = null;
-                this._isTransitioning = false;
-                // 确保最终位置正确
-                this.node.lookAt(lookAtTarget);
             })
             .start();
     }
@@ -639,21 +644,42 @@ export class CameraController extends BaseCameraController {
         const moveSpeed = 15; // 移动速度
         let moved = false;
 
-        // WASD 移动观察目标点 (使用按键状态跟踪)
+        // WASD 移动观察目标点 - 相对于相机视角移动
+        const moveVector = new Vec3(0, 0, 0);
+        
         if (this._keyStates.w) {
-            this._lookAtTarget.z -= moveSpeed * deltaTime; // 前进
-            moved = true;
+            moveVector.z -= 1; // 前进（相机前方）
         }
         if (this._keyStates.s) {
-            this._lookAtTarget.z += moveSpeed * deltaTime; // 后退
-            moved = true;
+            moveVector.z += 1; // 后退（相机后方）
         }
         if (this._keyStates.a) {
-            this._lookAtTarget.x -= moveSpeed * deltaTime; // 左移
-            moved = true;
+            moveVector.x -= 1; // 左移（相机左侧）
         }
         if (this._keyStates.d) {
-            this._lookAtTarget.x += moveSpeed * deltaTime; // 右移
+            moveVector.x += 1; // 右移（相机右侧）
+        }
+        
+        // 如果有移动输入，将移动向量转换到相机坐标系
+        if (moveVector.lengthSqr() > 0) {
+            // 获取相机的旋转（只取Y轴旋转，忽略俯仰角）
+            const cameraRotation = this.node.eulerAngles;
+            const yawAngle = cameraRotation.y;
+            
+            // 创建只包含Y轴旋转的四元数
+            const yawQuat = new Quat();
+            Quat.fromEuler(yawQuat, 0, yawAngle, 0);
+            
+            // 将移动向量转换到世界坐标系
+            const worldMoveVector = new Vec3();
+            Vec3.transformQuat(worldMoveVector, moveVector, yawQuat);
+            
+            // 标准化并应用速度
+            worldMoveVector.normalize();
+            Vec3.multiplyScalar(worldMoveVector, worldMoveVector, moveSpeed * deltaTime);
+            
+            // 应用到观察目标点
+            Vec3.add(this._lookAtTarget, this._lookAtTarget, worldMoveVector);
             moved = true;
         }
 
@@ -727,14 +753,11 @@ export class CameraController extends BaseCameraController {
     }
 
     /**
-     * 重写基类鼠标按下事件
+     * 处理EventBus鼠标按下事件
      */
-    protected onMouseDown(event: EventMouse): void {
-        // 调用基类方法处理基础功能
-        super.onMouseDown(event);
-        
+    protected onMouseDown(eventData: Input3DEventData): void {
         // 右键特殊处理
-        if (event.getButton() === EventMouse.BUTTON_RIGHT) {
+        if (eventData.button === 2) { // 右键按钮
             this.debugLog('Right mouse button pressed for camera control');
         }
     }
@@ -751,24 +774,28 @@ export class CameraController extends BaseCameraController {
     }
 
     /**
-     * 鼠标松开事件
+     * 处理EventBus鼠标松开事件
      */
-    protected onMouseUp(event: EventMouse): void {
-        super.onMouseUp(event);
+    protected onMouseUp(eventData: Input3DEventData): void {
+        // 处理鼠标松开逻辑
     }
 
     /**
-     * 鼠标移动事件
+     * 处理EventBus鼠标移动事件
      */
-    protected onMouseMove(event: EventMouse): void {
-        super.onMouseMove(event);
+    protected onMouseMove(eventData: Input3DEventData): void {
+        // 处理鼠标移动逻辑，用于拖拽旋转
+        // 这里可能需要根据实际需求实现拖拽逻辑
     }
 
     /**
-     * 鼠标滚轮事件
+     * 处理EventBus鼠标滚轮事件
      */
-    protected onMouseWheel(event): void {
-        const scrollY = event.getScrollY();
+    protected onMouseWheel(eventData: Input3DEventData): void {
+        const scrollDelta = eventData.scrollDelta;
+        if (!scrollDelta) return;
+        
+        const scrollY = scrollDelta.y;
         
         if (this._currentMode === CameraMode.TOP_DOWN && this.config.topDown.allowZoom) {
             // 俯视模式：调整高度

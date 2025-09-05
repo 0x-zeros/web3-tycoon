@@ -5,6 +5,7 @@
  */
 
 const OpenAI = require('openai');
+const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -15,9 +16,15 @@ const { ASSET_CONFIGS, CATEGORIES } = require('./assets_config.js');
 
 class AIAssetGenerator {
     constructor(options = {}) {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
+        // 初始化客户端
+        if (process.env.OPENAI_API_KEY) {
+            this.openai = new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY
+            });
+        }
+        if (process.env.GEMINI_API_KEY) {
+            this.gemini = new GoogleGenAI(process.env.GEMINI_API_KEY);
+        }
         
         // 模型与生成参数（可通过CLI或ENV覆盖）- 先定义这些参数
         this.model = options.model || process.env.IMAGE_MODEL || 'dall-e-3';
@@ -36,7 +43,9 @@ class AIAssetGenerator {
         this.modelCosts = {
             'dall-e-3': { standard: 0.04, hd: 0.08 },
             // gpt-image-1 采用 low/medium/high 质量层级
-            'gpt-image-1': { low: 0.01, medium: 0.02, high: 0.04 }
+            'gpt-image-1': { low: 0.01, medium: 0.02, high: 0.04 },
+            // Gemini 2.5 Flash Image 定价
+            'gemini-2.5-flash-image-preview': { standard: 0.039, hd: 0.039, low: 0.039, medium: 0.039, high: 0.039 }
         };
         const envCost = process.env.IMAGE_COST_PER_IMAGE ? Number(process.env.IMAGE_COST_PER_IMAGE) : undefined;
         this.costPerImage = options.costPerImage !== undefined ? Number(options.costPerImage) : envCost;
@@ -102,33 +111,79 @@ class AIAssetGenerator {
                 }
             }
 
-            const requestBody = {
-                model: useModel,
-                prompt: fullPrompt,
-                size: useSize,
-                quality: apiQuality,
-                n: 1,
-                response_format: useResponseFormat
-            };
-            if (useBackground) {
-                requestBody.background = useBackground; // 'transparent' to remove bg (png)
-            }
-            if (useStyle) {
-                requestBody.style = useStyle; // 'vivid' | 'natural'
+            let response;
+            
+            // 根据模型选择不同的 API 调用
+            if (useModel.includes('gemini')) {
+                // Gemini API 调用
+                if (!this.gemini) {
+                    throw new Error('GEMINI_API_KEY not found. Please set your Gemini API key.');
+                }
+                
+                response = await this.gemini.models.generateContent({
+                    model: useModel,
+                    contents: fullPrompt
+                });
+            } else {
+                // OpenAI API 调用
+                if (!this.openai) {
+                    throw new Error('OPENAI_API_KEY not found. Please set your OpenAI API key.');
+                }
+                
+                const requestBody = {
+                    model: useModel,
+                    prompt: fullPrompt,
+                    size: useSize,
+                    quality: apiQuality,
+                    n: 1,
+                    response_format: useResponseFormat
+                };
+                if (useBackground) {
+                    requestBody.background = useBackground; // 'transparent' to remove bg (png)
+                }
+                if (useStyle) {
+                    requestBody.style = useStyle; // 'vivid' | 'natural'
+                }
+
+                response = await this.openai.images.generate(requestBody);
             }
 
-            const response = await this.openai.images.generate(requestBody);
-
-            const imageData = response.data[0];
-            const imageUrl = imageData.url;
             const filepath = path.join(this.modelOutputDir, category, filename);
             
-            if (imageUrl) {
-                await this.downloadImage(imageUrl, filepath);
-            } else if (imageData.b64_json) {
-                await this.writeBase64Image(imageData.b64_json, filepath);
+            if (useModel.includes('gemini')) {
+                // 处理 Gemini 响应格式
+                console.log('Gemini response:', JSON.stringify(response, null, 2));
+                
+                if (response && response.candidates && response.candidates[0] && response.candidates[0].content) {
+                    const parts = response.candidates[0].content.parts;
+                    let imageFound = false;
+                    
+                    for (const part of parts) {
+                        if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith('image/')) {
+                            await this.writeBase64Image(part.inlineData.data, filepath);
+                            imageFound = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!imageFound) {
+                        throw new Error('No image data returned from Gemini');
+                    }
+                } else {
+                    throw new Error('Invalid response format from Gemini');
+                }
             } else {
-                throw new Error('No image data returned');
+                // 处理 OpenAI 响应格式
+                const imageData = response.data[0];
+                const imageUrl = imageData.url;
+                
+                if (imageUrl) {
+                    await this.downloadImage(imageUrl, filepath);
+                } else if (imageData.b64_json) {
+                    await this.writeBase64Image(imageData.b64_json, filepath);
+                } else {
+                    throw new Error('No image data returned');
+                }
             }
             
             this.stats.success++;
@@ -143,6 +198,8 @@ class AIAssetGenerator {
                     costKey = (useQuality === 'hd') ? 'hd' : 'standard';
                 } else if (useModel === 'gpt-image-1') {
                     costKey = apiQuality; // low/medium/high
+                } else if (useModel.includes('gemini')) {
+                    costKey = 'standard'; // Gemini 统一价格
                 }
                 cost = modelCostTable[costKey];
             }
@@ -702,9 +759,26 @@ async function main() {
     });
 
     // 检查API密钥
-    if (!process.env.OPENAI_API_KEY) {
-        console.error('❌ 错误: 未找到OPENAI_API_KEY环境变量');
-        console.log('请复制 .env.example 到 .env 并配置你的API密钥');
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    
+    if (!hasOpenAI && !hasGemini) {
+        console.error('❌ 错误: 未找到API密钥');
+        console.log('请在 .env 文件中配置 OPENAI_API_KEY 或 GEMINI_API_KEY');
+        console.log('如需使用免费额度，建议配置 GEMINI_API_KEY');
+        process.exit(1);
+    }
+    
+    // 如果指定了模型但缺少对应的API密钥，给出友好提示
+    const modelFlag = flags.model || process.env.IMAGE_MODEL;
+    if (modelFlag?.includes('gemini') && !hasGemini) {
+        console.error('❌ 错误: 指定了 Gemini 模型但未找到 GEMINI_API_KEY');
+        console.log('请在 .env 文件中配置 GEMINI_API_KEY');
+        process.exit(1);
+    }
+    if ((modelFlag === 'dall-e-3' || modelFlag === 'gpt-image-1') && !hasOpenAI) {
+        console.error('❌ 错误: 指定了 OpenAI 模型但未找到 OPENAI_API_KEY');
+        console.log('请在 .env 文件中配置 OPENAI_API_KEY');
         process.exit(1);
     }
 
@@ -752,13 +826,16 @@ async function main() {
             console.log('  node asset_generator.js category [类别名]                # 生成特定类别');
             console.log('');
             console.log('可选参数:');
-            console.log('  --model <dall-e-3|gpt-image-1>             选择图像模型 (默认 dall-e-3)');
+            console.log('  --model <dall-e-3|gpt-image-1|gemini-2.5-flash-image-preview>  选择图像模型 (默认 dall-e-3)');
             console.log('  --size <WxH>                               图片尺寸 (默认 1024x1024)');
-            console.log('  --quality <standard|hd|low|medium|high>    生成质量 (默认 standard; gpt-image-1: low/medium/high)');
+            console.log('  --quality <standard|hd|low|medium|high>    生成质量 (默认 standard)');
             console.log('  --responseFormat <url|b64_json>            响应格式 (默认 url)');
             console.log('  --background <transparent|...>             背景选项 (gpt-image-1 支持 transparent)');
             console.log('  --style <vivid|natural>                    风格选项 (gpt-image-1 可选)');
             console.log('  --cost <number>                            成本估算覆盖（每张美元）');
+            console.log('');
+            console.log('🆓 Gemini 免费额度: 每天500张图片，超出后 $0.039/张');
+            console.log('💰 OpenAI 价格: DALL-E 3 $0.04/张, GPT-Image-1 $0.01-0.04/张');
             console.log('');
             console.log('可用类别:', Object.keys(ASSET_CONFIGS).join(', '));
         }

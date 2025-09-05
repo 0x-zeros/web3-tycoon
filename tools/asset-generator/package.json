@@ -1,7 +1,7 @@
 {
   "name": "web3-tycoon-asset-generator",
   "version": "1.0.0",
-  "description": "AIGC美术资源批量生成工具 - Web3 Tycoon游戏专用",
+  "description": "AIGC美术资源批量生成工具 - Web3 Tycoon游戏专用，支持OpenAI DALL-E和Google Gemini双引擎",
   "main": "asset_generator.js",
   "scripts": {
     "generate": "node asset_generator.js",
@@ -17,6 +17,12 @@
     "generate:dice": "node asset_generator.js category dice",
     "generate:gpt": "node asset_generator.js --model gpt-image-1 --size 1024x1024",
     "generate:gpt:tiles": "node asset_generator.js category tiles --model gpt-image-1 --size 1024x1024",
+    "generate:gemini": "node asset_generator.js --model gemini-2.5-flash-image-preview",
+    "generate:gemini:tiles": "node asset_generator.js category tiles --model gemini-2.5-flash-image-preview",
+    "generate:gemini:ui": "node asset_generator.js category ui --model gemini-2.5-flash-image-preview",
+    "generate:gemini:icons": "node asset_generator.js category icons --model gemini-2.5-flash-image-preview",
+    "generate:gemini:sample": "node asset_generator.js sample --model gemini-2.5-flash-image-preview",
+    "generate:free": "node asset_generator.js --model gemini-2.5-flash-image-preview",
     "generate:fast": "node asset_generator.js core 10",
     "test": "node -e \"console.log('Asset generator ready!')\"",
     "clean": "rm -rf output/* logs/*",
@@ -26,15 +32,22 @@
     "aigc",
     "game-assets",
     "dall-e-3",
+    "gemini-2.5-flash",
+    "google-gemini",
+    "openai",
     "web3",
     "monopoly",
     "cocos-creator",
     "ai-generated",
-    "batch-generation"
+    "batch-generation",
+    "image-generation",
+    "nano-banana",
+    "free-tier"
   ],
   "author": "Web3 Tycoon Team",
   "license": "MIT",
   "dependencies": {
+    "@google/genai": "^1.17.0",
     "dotenv": "^17.2.1",
     "openai": "^5.16.0"
   },

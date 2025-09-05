@@ -22,10 +22,11 @@ Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board 
 ```bash
 # Navigate to main project
 cd client/tycoon_cocos
-npm install                   # Install @tweenjs/tween.js dependency
+npm install                   # Install dependencies: @tweenjs/tween.js, fairygui-cc, lodash-es
 
 # Development through Cocos Creator 3.8+ GUI
-# No build scripts - uses Creator interface for compilation and builds
+# Open project in Cocos Creator 3.8.7 - no build scripts needed
+# Use Creator interface for compilation, builds, and deployment
 ```
 
 ### Asset Generation Tool
@@ -60,24 +61,41 @@ npm run clean
 
 ## Code Architecture
 
-### Component-Based Game System (Cocos Creator)
+### Core System Architecture
 
-The game follows a hierarchical component architecture:
+The project uses a modular architecture with clear separation of concerns:
 
 ```typescript
-// Global game state
-window.game = {
-    config: config,           // From assets/data/config.ts
-    player: new Player(),     // Player data management
-    asset: new Asset(),       // Resource loading
-    pool: new Pool(),         // Object pooling
-    eventTarget: EventTarget  // Global event system
-};
+// Core initialization and management
+GameInitializer.ts          // 统一游戏初始化管理器，控制启动流程
+MapManager.ts               // 地图管理和瓦片系统核心组件
+RoleManager.ts              // 角色和玩家管理系统
+UIManager.ts                // 基于FairyGUI的UI界面统一管理
+CameraController.ts         // 多模式相机控制（等距、俯视、跟随）
+EventBus.ts                 // 全局事件总线，支持跨模块通信
+```
 
-// Main controllers
-@ccclass('Game') extends Component      // Global initialization
-@ccclass('MapManager') extends Component // Map and tile management  
-@ccclass('Player') extends Component    // Player logic and movement
+### Event-Driven Architecture
+
+```typescript
+// Singleton event bus for cross-component communication
+EventBus.instance.emit('tile-interaction', data);
+EventBus.instance.on('player-move', handler);
+
+// Event types defined in EventTypes.ts with full TypeScript support
+// Component hierarchy: Tile → MapManager → GameInitializer → UI
+```
+
+### Camera System Architecture
+
+```typescript
+// Multi-mode camera with smooth transitions
+CameraController.setMode(CameraMode.ISOMETRIC);   // 等距视角
+CameraController.setMode(CameraMode.TOP_DOWN);    // 俯视视角
+CameraController.setMode(CameraMode.FOLLOW);      // 跟随模式
+
+// WASD keyboard controls + mouse interactions
+// Configurable via CameraConfig decorators
 ```
 
 ### Map System Architecture
@@ -106,12 +124,30 @@ this.node.emit('tile-event', { type: 'property-purchase', data, source });
 game.eventTarget.dispatchEvent(new CustomEvent('game-state-change'));
 ```
 
-## Key Configuration Files
+## Key Files and Configuration
 
-### Game Configuration
-- **`assets/data/config.ts`** - Global game settings and project configuration
-- **`assets/data/types.ts`** - TypeScript interfaces for GameJsonData and ConfigData
-- **`assets/resources/data/maps/test_map.json`** - Complete 20-tile test map with properties
+### Project Structure
+```
+assets/
+├── scripts/
+│   ├── core/                 # GameInitializer.ts - 游戏启动和初始化
+│   ├── camera/               # CameraController.ts - 3D相机控制系统  
+│   ├── events/               # EventBus.ts - 全局事件总线
+│   ├── map/                  # MapManager.ts - 地图和瓦片管理
+│   ├── ui/core/              # UIManager.ts - 基于FairyGUI的界面管理
+│   ├── role/                 # RoleManager.ts - 角色和玩家系统
+│   └── utils/                # 工具函数和辅助类
+├── resources/
+│   ├── data/                 # JSON配置文件和游戏数据
+│   ├── prefabs/              # 预制体资源
+│   └── ui/                   # FairyGUI界面资源
+└── texture/                  # 贴图和图像资源
+```
+
+### Dependencies and Configuration
+- **`package.json`** - 项目依赖：fairygui-cc, @tweenjs/tween.js, lodash-es
+- **`tsconfig.json`** - TypeScript配置，extends Cocos Creator base config
+- **`FGUIProject/`** - FairyGUI独立项目，UI界面设计和导出
 
 ### Asset Generation Configuration  
 - **`tools/asset-generator/assets_config.js`** - 100+ AIGC prompt templates
@@ -141,23 +177,30 @@ game.eventTarget.dispatchEvent(new CustomEvent('game-state-change'));
 ## Development Workflow
 
 ### Primary Development Path
-1. **Use Cocos Creator 3.8+ IDE** for main game development
-2. **Test with existing map data** (`test_map.json`) 
-3. **Generate assets as needed** using AIGC tool
-4. **Iterate on TypeScript game logic** within Creator environment
+1. **Open in Cocos Creator 3.8.7** - Load project via Creator GUI
+2. **Core development files**:
+   - `assets/scripts/core/GameInitializer.ts` - 游戏启动逻辑
+   - `assets/scripts/map/MapManager.ts` - 地图系统开发  
+   - `assets/scripts/camera/CameraController.ts` - 相机控制功能
+   - `assets/scripts/events/EventBus.ts` - 事件系统扩展
+3. **UI development** - Use FGUIProject for interface design, export to `assets/resources/ui/`
+4. **Test and debug** - Preview in Creator, use built-in debugging tools
 
 ### Code Conventions
 - **Language**: Code in English, comments in Chinese for domain context
-- **Files**: English naming with kebab_case convention
-- **Types**: Use provided interfaces from `assets/data/types.ts`
-- **Events**: Follow component hierarchy for event bubbling
-- **Assets**: Import generated assets from `tools/asset-generator/output/`
+- **Files**: English naming with kebab_case convention  
+- **Components**: Use Cocos Creator @ccclass decorators and Component inheritance
+- **Events**: Utilize EventBus.instance for cross-component communication
+- **UI**: FairyGUI integration via UIManager for all interface elements
+- **Camera**: Use CameraController for all camera operations and mode switches
+- **TypeScript**: Strict typing enabled, leverage provided interfaces
 
 ### Integration Points
-- **Map Loading**: JSON configuration → MapManager component
-- **Event Flow**: Tile interactions → MapManager → Game controller  
-- **Asset Pipeline**: AIGC tool → Cocos Creator import
-- **Global State**: Access via `window.game` object
+- **Initialization Flow**: GameInitializer → ConfigLoader → Manager initialization
+- **Event Communication**: EventBus.instance handles all cross-component events
+- **UI Integration**: FGUIProject design → Export → UIManager loading
+- **Camera Control**: CameraController.setMode() for view switching
+- **Asset Pipeline**: AIGC tool → Cocos Creator import → Resource management
 
 ## Special Considerations
 

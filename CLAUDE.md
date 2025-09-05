@@ -89,17 +89,21 @@ The repository follows this structure:
 - `client/tycoon_cocos/` - **Active Cocos Creator 3.8 project** with TypeScript
 - `docs/` - Comprehensive documentation including design, technical specs, and API docs
 - `tools/` - Development tools (includes working VSCode markdown extension)
+  - `asset-generator/` - **Active AIGC asset generation tool** with OpenAI DALL-E 3 integration
   - `md-paste-image-extension/` - Working VSCode extension for pasting images into markdown
-  - `map-editor/` - Planned map editing tool
+  - `ref4AI/` - AI reference materials and documentation
 - `assets/` - Game assets and shared resources
 
 ## Active Development Focus
 
 **Primary Client**: `client/tycoon_cocos/` contains the active Cocos Creator project:
 - Uses Cocos Creator 3.8.7 with TypeScript
-- Contains game scenes, scripts, assets, and configurations
-- Includes shooting game mechanics that can be adapted for Web3 Tycoon
-- Has complete asset pipeline with textures, animations, and audio
+- **Current Status**: 大富翁核心游戏系统已初步完成架构
+- **地图系统**: 完整的瓦片地图实现，支持多种瓦片类型（地产、机会卡、监狱等）
+- **事件系统**: 基于EventBus的跨模块通信架构
+- **相机控制**: 完整的3D相机控制器，支持等距、俯视、跟随等多种视角
+- **UI管理**: 基于FairyGUI的UI界面管理系统
+- **角色管理**: 角色和玩家管理系统框架
 
 ## Code Conventions
 
@@ -127,11 +131,40 @@ This is a multi-layered Web3 game with:
 ## Current Cocos Client Architecture
 
 The active Cocos project (`client/tycoon_cocos/`) contains:
-- **Core Scripts**: `Game.ts`, `Player.ts`, `PlayScene.ts` for main game logic
-- **Configuration**: `assets/data/config.ts` and `assets/data/types.ts` for game settings
-- **Assets Pipeline**: Organized textures, animations, audio, and prefabs
-- **Scene Management**: Multiple game scenes with proper TypeScript organization
-- **Dependencies**: Uses `@tweenjs/tween.js` for animations
+
+### Core System Architecture
+```typescript
+// 核心管理器组件
+- GameInitializer.ts       // 统一游戏初始化管理器
+- MapManager.ts            // 全局地图管理，支持多地图切换
+- RoleManager.ts           // 角色和玩家管理系统
+- UIManager.ts             // UI界面统一管理
+- CameraController.ts      // 相机控制器（等距、俯视、跟随模式）
+- EventBus.ts              // 全局事件总线（单例模式）
+```
+
+### Map System Implementation
+```typescript
+// 地图系统完整实现
+- GameMap.ts               // 地图核心组件
+- MapTile.ts               // 地图瓦片基类
+- PropertyTile.ts          // 地产瓦片（可购买）
+- ChanceTile.ts           // 机会卡瓦片
+- StartTile.ts            // 起点瓦片
+- JailTile.ts             // 监狱瓦片
+- FeeTile.ts              // 收费瓦片
+- CardStationTile.ts      // 卡片车站瓦片
+```
+
+### Event-Driven Architecture
+- **EventBus**: 单例全局事件总线，基于Cocos Creator EventTarget
+- **EventTypes**: 完整的事件类型定义和监听器配置
+- **跨模块通信**: 支持组合模式的事件处理机制
+
+### Dependencies
+- `@tweenjs/tween.js`: 动画补间
+- `fairygui-cc`: UI框架（FairyGUI集成）
+- `lodash-es`: 工具函数库
 
 ## Development Phases
 
@@ -191,6 +224,18 @@ Key documentation files to reference:
 - Follow TypeScript strict typing conventions
 - Utilize existing asset pipeline and configuration system
 - Maintain game object pooling and performance optimization patterns
+
+### Key Development Files
+- **Game Entry**: `assets/scripts/core/GameInitializer.ts` - 游戏启动和初始化
+- **Map System**: `assets/scripts/map/MapManager.ts` - 地图管理和瓦片系统
+- **Event System**: `assets/scripts/events/EventBus.ts` - 全局事件通信
+- **Camera Control**: `assets/scripts/camera/CameraController.ts` - 3D相机控制
+- **UI Framework**: `assets/scripts/ui/core/UIManager.ts` - 界面管理
+
+### Project Configuration
+- **Package Config**: `package.json` includes fairygui-cc, lodash-es, @tweenjs/tween.js
+- **TypeScript Config**: `tsconfig.json` configured for Cocos Creator 3.8+
+- **Cocos Creator Version**: 3.8.7 (specified in package.json)
 
 ## Keeping This File Updated
 

@@ -401,10 +401,12 @@ export class BlockRegistry {
         const block = this.getBlock(blockId);
         return block ? block.renderType : BlockRenderType.CUBE;
     }
+}
 
 // 旧的 VoxelBlockRegistry （保留兼容性）
 export class VoxelBlockRegistry {
     private static blockProperties: Map<VoxelBlockType, VoxelBlockProperties> = new Map();
+    private static _initialized: boolean = false;
     
     private static readonly items: VoxelBlockType[] = [
         VoxelBlockType.GRASS,
@@ -434,8 +436,15 @@ export class VoxelBlockRegistry {
         VoxelBlockType.BLUE_FLOWER
     ]);
 
-    static {
+    // static { this.initializeBlocks(); }
+    public static initialize(): void {
+        this.ensureInitialized();
+    }
+
+    private static ensureInitialized(): void {
+        if (this._initialized) return;
         this.initializeBlocks();
+        this._initialized = true;
     }
 
     private static initializeBlocks(): void {
@@ -553,26 +562,31 @@ export class VoxelBlockRegistry {
     }
 
     static isPlant(blockType: VoxelBlockType): boolean {
+        this.ensureInitialized();
         const props = this.blockProperties.get(blockType);
         return props ? props.isPlant : false;
     }
 
     static isObstacle(blockType: VoxelBlockType): boolean {
+        this.ensureInitialized();
         const props = this.blockProperties.get(blockType);
         return props ? props.isObstacle : false;
     }
 
     static isTransparent(blockType: VoxelBlockType): boolean {
+        this.ensureInitialized();
         const props = this.blockProperties.get(blockType);
         return props ? props.isTransparent : true;
     }
 
     static isDestructable(blockType: VoxelBlockType): boolean {
+        this.ensureInitialized();
         const props = this.blockProperties.get(blockType);
         return props ? props.isDestructable : false;
     }
 
     static getTextureIndex(blockType: VoxelBlockType, faceIndex: number): number {
+        this.ensureInitialized();
         const props = this.blockProperties.get(blockType);
         if (!props) return 0;
 
@@ -584,30 +598,37 @@ export class VoxelBlockRegistry {
     }
 
     static getLightLevel(blockType: VoxelBlockType): number {
+        this.ensureInitialized();
         const props = this.blockProperties.get(blockType);
         return props ? props.lightLevel : 0;
     }
 
     static getItems(): VoxelBlockType[] {
+        this.ensureInitialized();
         return [...this.items];
     }
 
     static getItemCount(): number {
+        this.ensureInitialized();
         return this.items.length;
     }
 
     static isValidBlockType(blockType: number): blockType is VoxelBlockType {
+        this.ensureInitialized();
         return this.blockProperties.has(blockType as VoxelBlockType);
     }
 
     static getBlockProperties(blockType: VoxelBlockType): VoxelBlockProperties | undefined {
+        this.ensureInitialized();
         return this.blockProperties.get(blockType);
     }
 
     static registerCustomBlock(blockType: VoxelBlockType, properties: VoxelBlockProperties): void {
+        this.ensureInitialized();
         this.blockProperties.set(blockType, properties);
     }
 }
 
 // 初始化方块注册表
 BlockRegistry.initialize();
+VoxelBlockRegistry.initialize();

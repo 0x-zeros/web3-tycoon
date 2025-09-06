@@ -258,3 +258,4 @@ This CLAUDE.md file should be kept in sync with project changes. See `CLAUDE-UPD
 - Code should be in English, but explanations and discussions in Chinese
 - This follows the project's `.cursorrules` configuration
 - 请使用中文和我对话
+- 保持 ES2015 目标，不改 tsconfig

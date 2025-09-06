@@ -31,12 +31,15 @@ export class VoxelNoise {
 
     private static perm: number[] = new Array(512);
     private static permMod12: number[] = new Array(512);
+    private static _initialized = false;
 
-    static {
+    private static ensureInitialized(): void {
+        if (this._initialized) return;
         for (let i = 0; i < 512; i++) {
             this.perm[i] = this.P[i & 255];
             this.permMod12[i] = this.perm[i] % 12;
         }
+        this._initialized = true;
     }
 
     private static fastFloor(x: number): number {
@@ -53,6 +56,7 @@ export class VoxelNoise {
     }
 
     static simplex2(x: number, y: number, octaves: number, persistence: number, lacunarity: number): number {
+        this.ensureInitialized();
         let amplitude = 1.0;
         let frequency = 1.0;
         let maxValue = 0.0;
@@ -69,6 +73,7 @@ export class VoxelNoise {
     }
 
     private static rawSimplex2(xin: number, yin: number): number {
+        this.ensureInitialized();
         let n0: number, n1: number, n2: number;
 
         const s = (xin + yin) * this.SIMPLEX_SKEW_FACTOR_2D;
@@ -126,6 +131,7 @@ export class VoxelNoise {
     }
 
     static simplex3(x: number, y: number, z: number, octaves: number, persistence: number, lacunarity: number): number {
+        this.ensureInitialized();
         let amplitude = 1.0;
         let frequency = 1.0;
         let maxValue = 0.0;
@@ -142,6 +148,7 @@ export class VoxelNoise {
     }
 
     private static rawSimplex3(xin: number, yin: number, zin: number): number {
+        this.ensureInitialized();
         let n0: number, n1: number, n2: number, n3: number;
 
         const s = (xin + yin + zin) * this.SIMPLEX_SKEW_FACTOR_3D;
@@ -231,10 +238,12 @@ export class VoxelNoise {
     }
 
     static noise2(x: number, y: number): number {
+        this.ensureInitialized();
         return this.rawSimplex2(x, y);
     }
 
     static noise3(x: number, y: number, z: number): number {
+        this.ensureInitialized();
         return this.rawSimplex3(x, y, z);
     }
 }

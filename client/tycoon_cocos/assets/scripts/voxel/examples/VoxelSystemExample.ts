@@ -1,7 +1,7 @@
-import { _decorator, Component, Node, MeshRenderer, Vec3, Camera, Material } from 'cc';
+import { _decorator, Component, Node, MeshRenderer, Vec3, Camera, Material, director } from 'cc';
 import { VoxelSystem, getVoxelSystem } from '../VoxelSystem';
 import { MeshBuilder } from '../resource/MeshBuilder';
-import { CameraController } from '../../camera/CameraController';
+// import { CameraController } from '../../camera/CameraController';
 
 const { ccclass, property } = _decorator;
 
@@ -30,7 +30,12 @@ export class VoxelSystemExample extends Component {
         }
 
         if (!this.camera) {
-            this.camera = CameraController.getMainCamera();
+            // 尝试查找场景中的相机
+            const cameraNode = director.getScene()?.getComponentInChildren(Camera);
+            this.camera = cameraNode || null;
+            if (!this.camera) {
+                console.warn('[VoxelSystemExample] 请在Inspector中设置Camera引用');
+            }
         }
 
         // 初始化体素系统

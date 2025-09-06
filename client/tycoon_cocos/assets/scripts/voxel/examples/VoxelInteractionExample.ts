@@ -1,8 +1,8 @@
 import { _decorator, Component, Camera, Vec3, KeyCode, input, Input, EventKeyboard } from "cc";
 import { VoxelRenderer } from "../render/VoxelRenderer";
 import { VoxelInteractionManager, VoxelInteractionEvents } from "../interaction/VoxelInteractionManager";
-import { VoxelCameraController } from "../../camera/voxel/VoxelCameraController";
-import { VoxelCameraMode } from "../../camera/voxel/VoxelCameraConfig";
+// import { VoxelCameraController } from "../../camera/voxel/VoxelCameraController";
+// import { VoxelCameraMode } from "../../camera/voxel/VoxelCameraConfig";
 import { VoxelCollisionSystem } from "../interaction/VoxelCollisionSystem";
 import { VoxelBlockType } from "../core/VoxelBlock";
 import { VoxelWorldMode, VoxelWorldConfig } from "../core/VoxelWorldConfig";

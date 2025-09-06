@@ -40,7 +40,7 @@ export { VoxelRenderer } from './render/VoxelRenderer';
 export { VoxelCuller } from './render/VoxelCuller';
 
 // Interaction modules
-export { VoxelInteractionManager } from './interaction/VoxelInteractionManager';
+export { VoxelInteractionManager, VoxelCameraMode, VoxelInteractionEvents } from './interaction/VoxelInteractionManager';
 export { VoxelRayCaster, RaycastAlgorithm } from './interaction/VoxelRayCaster';
 
 // 使用示例 (新系统)：

@@ -47,9 +47,9 @@ export class VoxelRenderer extends Component {
             this.node.addChild(this.worldRoot);
         }
 
-        // 如果本地找不到Camera组件，使用CameraController获取主相机
+        // 相机引用检查
         if (!this.camera) {
-            this.camera = CameraController.getMainCamera();
+            console.warn('[VoxelRenderer] 请在Inspector中设置Camera引用');
         }
         
         this.worldManager = new VoxelWorldManager();

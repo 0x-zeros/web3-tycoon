@@ -6,10 +6,8 @@ import { VoxelBlockType } from '../core/VoxelBlock';
 import { VoxelWorldManager } from '../world/VoxelWorld';
 import { VoxelConfig, VoxelRenderMode } from '../core/VoxelConfig';
 import { VoxelWorldConfig, VoxelWorldMode } from '../core/VoxelWorldConfig';
-import { VoxelInteractionManager, VoxelInteractionEvents } from '../interaction/VoxelInteractionManager';
-import { VoxelCameraController, CameraMode } from '../interaction/VoxelCameraController';
+import { VoxelInteractionManager, VoxelInteractionEvents, VoxelCameraMode } from '../interaction/VoxelInteractionManager';
 import { VoxelCollisionSystem } from '../interaction/VoxelCollisionSystem';
-import { CameraController } from '../../camera/CameraController';
 
 const { ccclass, property } = _decorator;
 
@@ -105,12 +103,10 @@ export class VoxelRenderer extends Component {
         console.log('[VoxelRenderer] 交互系统初始化完成');
         
         // 调试信息：打印组件状态
-        const cameraController = this.interactionManager.getVoxelCameraController();
-        const collisionSystem = this.interactionManager.getCollisionSystem();
+        const collisionSystem = this.interactionManager.getCollisionSystem?.();
         
         console.log(`[VoxelRenderer] 交互系统状态:`);
         console.log(`  - InteractionManager: ${this.interactionManager ? '✓' : '✗'}`);
-        console.log(`  - CameraController: ${cameraController ? '✓' : '✗'}`);
         console.log(`  - CollisionSystem: ${collisionSystem ? '✓' : '✗'}`);
         console.log(`  - WorldManager: ${this.worldManager ? '✓' : '✗'}`);
         console.log(`  - Camera: ${this.camera ? '✓' : '✗'}`);
@@ -829,13 +825,13 @@ export class VoxelRenderer extends Component {
         }
     }
 
-    public setCameraMode(mode: CameraMode): void {
+    public setCameraMode(mode: VoxelCameraMode): void {
         if (this.interactionManager) {
             this.interactionManager.setCameraMode(mode);
         }
     }
 
-    public getCurrentCameraMode(): CameraMode | null {
+    public getCurrentCameraMode(): VoxelCameraMode | null {
         return this.interactionManager ? this.interactionManager.getCurrentCameraMode() : null;
     }
 

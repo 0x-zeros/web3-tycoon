@@ -112,6 +112,12 @@ export class VoxelInteractionManager extends Component {
         console.log('[VoxelInteractionManager] 事件回调设置完成');
     }
 
+    // 统一初始化入口，兼容外部调用
+    public initialize(manager: VoxelWorldManager, events?: VoxelInteractionEvents): void {
+        this.setWorldManager(manager);
+        if (events) this.setEvents(events);
+    }
+
     private setupInputHandlers(): void {
         input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
         input.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
@@ -128,7 +134,7 @@ export class VoxelInteractionManager extends Component {
 
     private onMouseMove(event: EventMouse): void {
         if (this.events.onBlockHover) {
-            const hitResult = this.performRaycast(event);
+            const hitResult = this.performRaycastFromEvent(event);
             
             if (hitResult !== this.lastHoverResult) {
                 this.events.onBlockHover(hitResult);
@@ -138,7 +144,7 @@ export class VoxelInteractionManager extends Component {
     }
 
     private handleLeftClick(event: EventMouse): void {
-        const hitResult = this.performRaycast(event);
+        const hitResult = this.performRaycastFromEvent(event);
         
         if (hitResult && this.events.onBlockClick) {
             this.events.onBlockClick(hitResult);
@@ -158,7 +164,7 @@ export class VoxelInteractionManager extends Component {
     }
 
     private handleRightClick(event: EventMouse): void {
-        const hitResult = this.performRaycast(event);
+        const hitResult = this.performRaycastFromEvent(event);
         
         // 放置方块
         if (hitResult && this.worldManager) {
@@ -180,7 +186,7 @@ export class VoxelInteractionManager extends Component {
         }
     }
 
-    private performRaycast(event: EventMouse): VoxelHitResult | null {
+    private performRaycastFromEvent(event: EventMouse): VoxelHitResult | null {
         if (!this.camera || !this.worldManager) {
             return null;
         }
@@ -212,6 +218,21 @@ export class VoxelInteractionManager extends Component {
         }
 
         return hitResult;
+    }
+
+    // 对外暴露：根据屏幕坐标进行射线检测（供渲染器/调试器调用）
+    public performRaycast(mouseX?: number, mouseY?: number): VoxelHitResult | null {
+        if (!this.camera || !this.worldManager) return null;
+        if (mouseX === undefined || mouseY === undefined) return null;
+
+        return VoxelRayCaster.performRaycast(
+            this.camera,
+            mouseX,
+            mouseY,
+            this.maxRaycastDistance,
+            this.worldManager,
+            RaycastAlgorithm.SIMPLE
+        );
     }
 
     private visualizeRaycast(hitResult: VoxelHitResult | null): void {
@@ -356,6 +377,29 @@ export class VoxelInteractionManager extends Component {
 
     public getCurrentCameraMode(): VoxelCameraMode {
         return this._currentCameraMode;
+    }
+
+    // 对外：放置与破坏方块
+    public placeBlock(position: Vec3, blockType: VoxelBlockType = this.selectedBlockType): boolean {
+        if (!this.worldManager) return false;
+        const ok = this.worldManager.setBlock(position.x, position.y, position.z, blockType);
+        if (ok && this.events.onBlockPlace) this.events.onBlockPlace(position, blockType);
+        return ok;
+    }
+
+    public breakBlock(position: Vec3): boolean {
+        if (!this.worldManager) return false;
+        const ok = this.worldManager.setBlock(position.x, position.y, position.z, VoxelBlockType.EMPTY);
+        if (ok && this.events.onBlockBreak) this.events.onBlockBreak(position);
+        return ok;
+    }
+
+    public getLastHoverResult(): VoxelHitResult | null {
+        return this.lastHoverResult;
+    }
+
+    public getCollisionSystem(): VoxelCollisionSystem | null {
+        return this.collisionSystem;
     }
 
     // 获取当前选中的方块类型

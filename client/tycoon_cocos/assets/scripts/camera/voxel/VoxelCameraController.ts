@@ -40,7 +40,7 @@ export class VoxelCameraController extends BaseCameraController {
 
     protected onCameraUpdate(deltaTime: number): void {
         this._handleMovement(deltaTime);
-        this._updateCameraRotation();
+        this.updateCameraRotation();
     }
 
     protected onCameraDestroy(): void {
@@ -148,8 +148,8 @@ export class VoxelCameraController extends BaseCameraController {
         const currentPos = this.node.getWorldPosition();
         const newPos = currentPos.clone().add(movement);
 
-        if (this.currentMode === CameraMode.WALKING && this.collisionSystem && this.getBlockAt) {
-            if (!this.collisionSystem.checkCollision(newPos, this.getBlockAt)) {
+        if (this._currentMode === VoxelCameraMode.WALKING && this.collisionSystem && this._getBlockAt) {
+            if (!this.collisionSystem.checkCollision(newPos, this._getBlockAt)) {
                 this.node.setWorldPosition(newPos);
             } else {
                 const separateMovement = this._trySeparateAxisMovement(currentPos, movement);
@@ -173,7 +173,7 @@ export class VoxelCameraController extends BaseCameraController {
         for (const mov of movements) {
             if (mov.length() > 0) {
                 const testPos = finalPos.clone().add(mov);
-                if (!this.collisionSystem.checkCollision(testPos, this.getBlockAt)) {
+                if (!this.collisionSystem.checkCollision(testPos, this._getBlockAt)) {
                     finalPos.add(mov);
                 }
             }
@@ -197,8 +197,8 @@ export class VoxelCameraController extends BaseCameraController {
     }
 
     private updateCameraRotation(): void {
-        const yawQuat = Quat.fromAxisAngle(new Quat(), Vec3.UP, this._yaw * Math.PI / 180);
-        const pitchQuat = Quat.fromAxisAngle(new Quat(), Vec3.RIGHT, this._pitch * Math.PI / 180);
+        const yawQuat = Quat.fromAxisAngle(new Quat(), new Vec3(0, 1, 0), this._yaw * Math.PI / 180);
+        const pitchQuat = Quat.fromAxisAngle(new Quat(), new Vec3(1, 0, 0), this._pitch * Math.PI / 180);
         const finalRotation = yawQuat.clone();
         Quat.multiply(finalRotation, finalRotation, pitchQuat);
         
@@ -219,28 +219,28 @@ export class VoxelCameraController extends BaseCameraController {
 
     private onMouseDown(event: EventMouse): void {
         if (event.getButton() === EventMouse.BUTTON_LEFT) {
-            this._isMouseDown = true;
-            this._lastMousePos = new Vec3(event.getLocationX(), event.getLocationY(), 0);
+            this._mouseDown = true;
+            this._lastMousePosition = new Vec3(event.getLocationX(), event.getLocationY(), 0);
         }
     }
 
     private onMouseUp(event: EventMouse): void {
         if (event.getButton() === EventMouse.BUTTON_LEFT) {
-            this._isMouseDown = false;
+            this._mouseDown = false;
         }
     }
 
     private onMouseMove(event: EventMouse): void {
-        if (!this._isMouseDown) return;
+        if (!this._mouseDown) return;
 
         const currentPos = new Vec3(event.getLocationX(), event.getLocationY(), 0);
-        const deltaPos = currentPos.subtract(this._lastMousePos);
+        const deltaPos = currentPos.subtract(this._lastMousePosition);
 
         this._yaw -= deltaPos.x * this.config.view.mouseSensitivity;
         this._pitch += deltaPos.y * this.config.view.mouseSensitivity;
         
         this._pitch = Math.max(this.config.view.minPitchAngle, Math.min(this.config.view.maxPitchAngle, this._pitch));
         
-        this._lastMousePos = currentPos;
+        this._lastMousePosition = currentPos;
     }
 }

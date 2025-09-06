@@ -1,3 +1,4 @@
+// 保留兼容性的方块类型枚举（旧系统）
 export enum VoxelBlockType {
     EMPTY = 0,
     GRASS = 1,
@@ -57,6 +58,28 @@ export enum VoxelBlockType {
     COLOR_31 = 63
 }
 
+// 新的方块定义接口
+export interface BlockDefinition {
+    id: string;                    // 方块ID，如 "minecraft:stone"
+    displayName: string;           // 显示名称
+    isPlant: boolean;              // 是否为植物
+    isObstacle: boolean;           // 是否为障碍物
+    isTransparent: boolean;        // 是否透明
+    isDestructable: boolean;       // 是否可破坏
+    lightLevel: number;            // 发光等级 (0-15)
+    hardness: number;              // 硬度
+    renderType: BlockRenderType;   // 渲染类型
+    properties?: { [key: string]: any }; // 自定义属性
+}
+
+export enum BlockRenderType {
+    CUBE = 'cube',                 // 普通立方体
+    CROSS = 'cross',               // 交叉植物
+    TRANSPARENT = 'transparent',    // 透明方块
+    CUTOUT = 'cutout',             // 裁切（如叶子）
+    LIQUID = 'liquid'              // 液体
+}
+
 export interface VoxelBlockProperties {
     isPlant: boolean;
     isObstacle: boolean;
@@ -68,6 +91,318 @@ export interface VoxelBlockProperties {
     lightLevel: number;
 }
 
+// 新的方块注册表类（支持字符串ID）
+export class BlockRegistry {
+    private static blockDefinitions: Map<string, BlockDefinition> = new Map();
+    private static legacyMapping: Map<VoxelBlockType, string> = new Map(); // 旧系统映射
+    private static initialized: boolean = false;
+
+    static initialize(): void {
+        if (this.initialized) return;
+        
+        console.log('[BlockRegistry] 初始化方块注册表...');
+        
+        // 注册基础方块
+        this.registerMinecraftBlocks();
+        
+        // 建立旧系统兼容映射
+        this.createLegacyMapping();
+        
+        this.initialized = true;
+        console.log(`[BlockRegistry] 初始化完成，共注册 ${this.blockDefinitions.size} 个方块`);
+    }
+
+    private static registerMinecraftBlocks(): void {
+        // 空气
+        this.register({
+            id: 'minecraft:air',
+            displayName: '空气',
+            isPlant: false,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: false,
+            lightLevel: 0,
+            hardness: 0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 石头
+        this.register({
+            id: 'minecraft:stone',
+            displayName: '石头',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 1.5,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 泥土
+        this.register({
+            id: 'minecraft:dirt',
+            displayName: '泥土',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0.5,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 草方块
+        this.register({
+            id: 'minecraft:grass_block',
+            displayName: '草方块',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0.6,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 沙子
+        this.register({
+            id: 'minecraft:sand',
+            displayName: '沙子',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0.5,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 鹅卵石
+        this.register({
+            id: 'minecraft:cobblestone',
+            displayName: '鹅卵石',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 2.0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 橡木原木
+        this.register({
+            id: 'minecraft:oak_log',
+            displayName: '橡木原木',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 2.0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 橡木木板
+        this.register({
+            id: 'minecraft:oak_planks',
+            displayName: '橡木木板',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 2.0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 橡木叶子
+        this.register({
+            id: 'minecraft:oak_leaves',
+            displayName: '橡木叶子',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0.2,
+            renderType: BlockRenderType.CUTOUT
+        });
+
+        // 玻璃
+        this.register({
+            id: 'minecraft:glass',
+            displayName: '玻璃',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0.3,
+            renderType: BlockRenderType.TRANSPARENT
+        });
+
+        // 蒲公英（植物）
+        this.register({
+            id: 'minecraft:dandelion',
+            displayName: '蒲公英',
+            isPlant: true,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
+
+        // 虞粟（植物）
+        this.register({
+            id: 'minecraft:poppy',
+            displayName: '虞粟',
+            isPlant: true,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
+
+        // 草（植物）
+        this.register({
+            id: 'minecraft:grass',
+            displayName: '草',
+            isPlant: true,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
+
+        // 蕨（植物）
+        this.register({
+            id: 'minecraft:fern',
+            displayName: '蕨',
+            isPlant: true,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 0,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
+    }
+
+    private static createLegacyMapping(): void {
+        // 建立旧枚举到新ID的映射
+        this.legacyMapping.set(VoxelBlockType.EMPTY, 'minecraft:air');
+        this.legacyMapping.set(VoxelBlockType.STONE, 'minecraft:stone');
+        this.legacyMapping.set(VoxelBlockType.DIRT, 'minecraft:dirt');
+        this.legacyMapping.set(VoxelBlockType.GRASS, 'minecraft:grass_block');
+        this.legacyMapping.set(VoxelBlockType.SAND, 'minecraft:sand');
+        this.legacyMapping.set(VoxelBlockType.COBBLE, 'minecraft:cobblestone');
+        this.legacyMapping.set(VoxelBlockType.WOOD, 'minecraft:oak_log');
+        this.legacyMapping.set(VoxelBlockType.PLANK, 'minecraft:oak_planks');
+        this.legacyMapping.set(VoxelBlockType.LEAVES, 'minecraft:oak_leaves');
+        this.legacyMapping.set(VoxelBlockType.GLASS, 'minecraft:glass');
+        this.legacyMapping.set(VoxelBlockType.YELLOW_FLOWER, 'minecraft:dandelion');
+        this.legacyMapping.set(VoxelBlockType.RED_FLOWER, 'minecraft:poppy');
+        this.legacyMapping.set(VoxelBlockType.TALL_GRASS, 'minecraft:grass');
+    }
+
+    /**
+     * 注册方块定义
+     */
+    static register(definition: BlockDefinition): void {
+        this.blockDefinitions.set(definition.id, definition);
+        console.log(`[BlockRegistry] 注册方块: ${definition.id} (${definition.displayName})`);
+    }
+
+    /**
+     * 获取方块定义
+     */
+    static getBlock(blockId: string): BlockDefinition | undefined {
+        if (!this.initialized) this.initialize();
+        return this.blockDefinitions.get(blockId);
+    }
+
+    /**
+     * 获取所有已注册的方块ID
+     */
+    static getAllBlockIds(): string[] {
+        if (!this.initialized) this.initialize();
+        return Array.from(this.blockDefinitions.keys());
+    }
+
+    /**
+     * 旧系统兼容：从枚举转换为ID
+     */
+    static fromLegacyType(legacyType: VoxelBlockType): string {
+        if (!this.initialized) this.initialize();
+        return this.legacyMapping.get(legacyType) || 'minecraft:air';
+    }
+
+    /**
+     * 旧系统兼容：从 ID 转换为枚举
+     */
+    static toLegacyType(blockId: string): VoxelBlockType {
+        if (!this.initialized) this.initialize();
+        for (const [type, id] of this.legacyMapping) {
+            if (id === blockId) return type;
+        }
+        return VoxelBlockType.EMPTY;
+    }
+
+    /**
+     * 检查方块是否存在
+     */
+    static exists(blockId: string): boolean {
+        if (!this.initialized) this.initialize();
+        return this.blockDefinitions.has(blockId);
+    }
+
+    /**
+     * 获取方块属性方法（新API）
+     */
+    static isPlant(blockId: string): boolean {
+        const block = this.getBlock(blockId);
+        return block ? block.isPlant : false;
+    }
+
+    static isObstacle(blockId: string): boolean {
+        const block = this.getBlock(blockId);
+        return block ? block.isObstacle : false;
+    }
+
+    static isTransparent(blockId: string): boolean {
+        const block = this.getBlock(blockId);
+        return block ? block.isTransparent : true;
+    }
+
+    static isDestructable(blockId: string): boolean {
+        const block = this.getBlock(blockId);
+        return block ? block.isDestructable : false;
+    }
+
+    static getLightLevel(blockId: string): number {
+        const block = this.getBlock(blockId);
+        return block ? block.lightLevel : 0;
+    }
+
+    static getHardness(blockId: string): number {
+        const block = this.getBlock(blockId);
+        return block ? block.hardness : 0;
+    }
+
+    static getRenderType(blockId: string): BlockRenderType {
+        const block = this.getBlock(blockId);
+        return block ? block.renderType : BlockRenderType.CUBE;
+    }
+
+// 旧的 VoxelBlockRegistry （保留兼容性）
 export class VoxelBlockRegistry {
     private static blockProperties: Map<VoxelBlockType, VoxelBlockProperties> = new Map();
     
@@ -273,3 +608,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(blockType, properties);
     }
 }
+
+// 初始化方块注册表
+BlockRegistry.initialize();

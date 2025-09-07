@@ -86,31 +86,31 @@ export class MeshBuilder {
             toZ / 16 - 0.5
         );
 
-        // 定义立方体的面
+        // 定义立方体的面（逆时针顺序，从外部观看）
         const faces = [
             { name: 'north', normal: new Vec3(0, 0, -1), positions: [
-                new Vec3(from.x, from.y, from.z), new Vec3(to.x, from.y, from.z),
-                new Vec3(to.x, to.y, from.z), new Vec3(from.x, to.y, from.z)
+                new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z),
+                new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
             ]},
             { name: 'south', normal: new Vec3(0, 0, 1), positions: [
-                new Vec3(to.x, from.y, to.z), new Vec3(from.x, from.y, to.z),
-                new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z)
+                new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z),
+                new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
             ]},
             { name: 'west', normal: new Vec3(-1, 0, 0), positions: [
-                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z),
-                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z)
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z),
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
             ]},
             { name: 'east', normal: new Vec3(1, 0, 0), positions: [
-                new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z),
-                new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z),
+                new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
             ]},
             { name: 'down', normal: new Vec3(0, -1, 0), positions: [
-                new Vec3(from.x, from.y, to.z), new Vec3(to.x, from.y, to.z),
-                new Vec3(to.x, from.y, from.z), new Vec3(from.x, from.y, from.z)
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z),
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z)
             ]},
             { name: 'up', normal: new Vec3(0, 1, 0), positions: [
-                new Vec3(from.x, to.y, from.z), new Vec3(to.x, to.y, from.z),
-                new Vec3(to.x, to.y, to.z), new Vec3(from.x, to.y, to.z)
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z),
+                new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
             ]}
         ];
 

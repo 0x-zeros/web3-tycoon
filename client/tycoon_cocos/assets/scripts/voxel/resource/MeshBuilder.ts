@@ -108,31 +108,31 @@ export class MeshBuilder {
         // 通过判断 element 在 x 或 z 轴上是否为一个平面来确定是否为 cross 类型
         const isCrossElement = (element.to[0] - element.from[0] < 0.1) || (element.to[2] - element.from[2] < 0.1);
 
-        // 原始的立方体面顶点顺序
+        // 经过修正的、正确的立方体面顶点顺序 (CCW)
         const cubeFaces = [
+            // north (-Z)
             { name: 'north', normal: new Vec3(0, 0, -1), positions: [
-                new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z),
-                new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
+                new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
             ]},
+            // south (+Z)
             { name: 'south', normal: new Vec3(0, 0, 1), positions: [
-                new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z),
-                new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
+                new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
             ]},
+            // west (-X)
             { name: 'west', normal: new Vec3(-1, 0, 0), positions: [
-                new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z),
-                new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
             ]},
+            // east (+X)
             { name: 'east', normal: new Vec3(1, 0, 0), positions: [
-                new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z),
-                new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
             ]},
+            // down (-Y)
             { name: 'down', normal: new Vec3(0, -1, 0), positions: [
-                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z),
-                new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z)
+                new Vec3(from.x, from.y, from.z), new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z), new Vec3(from.x, from.y, to.z)
             ]},
+            // up (+Y)
             { name: 'up', normal: new Vec3(0, 1, 0), positions: [
-                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z),
-                new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
             ]}
         ];
 

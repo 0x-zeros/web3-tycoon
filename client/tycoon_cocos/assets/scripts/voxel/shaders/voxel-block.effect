@@ -129,18 +129,44 @@ CCProgram voxel-block-fs %{
       discard;
     }
     
+    // 检测是否为发光方块（light > 0.1 认为是发光方块）
+    bool isEmissive = light > 0.1;
+    
     float df = isCloud ? 1.0 - diffuse * 0.2 : diffuse;
     float aoFinal = isCloud ? 1.0 - (1.0 - ao) * 0.2 : ao;
     
-    aoFinal = min(1.0, aoFinal + light);
-    df = min(1.0, df + light);
+    // 发光方块的AO和漫反射处理
+    if (isEmissive) {
+      // 发光方块减少AO的影响，让它们更亮
+      aoFinal = mix(aoFinal, 1.0, light * 0.8);
+      // 发光方块有基础光照，减少对环境光的依赖
+      df = mix(df, 1.0, light * 0.6);
+    }
     
+    // 光照计算
     float lightValue = min(1.0, daylight + light);
-    vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
-    vec3 ambient = vec3(lightValue * 0.3 + 0.2);
-    vec3 lightFinal = ambient + lightColor * df;
     
-    return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
+    // 环境光：发光方块有更高的基础亮度
+    vec3 ambient = vec3(lightValue * 0.4 + (isEmissive ? 0.4 : 0.15));
+    
+    // 方向光：发光方块自发光，减少方向光依赖
+    vec3 directional = vec3(lightValue * 0.4 + 0.1) * df;
+    
+    // 自发光：发光方块添加额外的发光效果
+    vec3 emissive = isEmissive ? texColor.rgb * light * 0.6 : vec3(0.0);
+    
+    // 最终光照 = 环境光 + 方向光 + 自发光
+    vec3 lightFinal = ambient + directional + emissive;
+    
+    // 应用AO
+    vec3 finalColor = texColor.rgb * lightFinal * aoFinal;
+    
+    // 发光方块确保最低亮度
+    if (isEmissive) {
+      finalColor = max(finalColor, texColor.rgb * 0.7 * light);
+    }
+    
+    return clamp(finalColor, vec3(0.0), vec3(1.0));
   }
 
   void main() {
@@ -186,18 +212,37 @@ CCProgram voxel-cutout-fs %{
   layout(location = 0) out vec4 fragColor;
 
   vec3 calculateLighting(vec4 texColor, float ao, float diffuse, float light) {
+    // 检测是否为发光方块
+    bool isEmissive = light > 0.1;
+    
     float df = diffuse;
     float aoFinal = ao;
     
-    aoFinal = min(1.0, aoFinal + light);
-    df = min(1.0, df + light);
+    // 发光方块的AO和漫反射处理  
+    if (isEmissive) {
+      aoFinal = mix(aoFinal, 1.0, light * 0.8);
+      df = mix(df, 1.0, light * 0.6);
+    }
     
+    // 光照计算
     float lightValue = min(1.0, daylight + light);
-    vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
-    vec3 ambient = vec3(lightValue * 0.3 + 0.2);
-    vec3 lightFinal = ambient + lightColor * df;
     
-    return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
+    // 环境光和方向光
+    vec3 ambient = vec3(lightValue * 0.4 + (isEmissive ? 0.4 : 0.15));
+    vec3 directional = vec3(lightValue * 0.4 + 0.1) * df;
+    
+    // 自发光效果
+    vec3 emissive = isEmissive ? texColor.rgb * light * 0.6 : vec3(0.0);
+    
+    vec3 lightFinal = ambient + directional + emissive;
+    vec3 finalColor = texColor.rgb * lightFinal * aoFinal;
+    
+    // 发光方块确保最低亮度
+    if (isEmissive) {
+      finalColor = max(finalColor, texColor.rgb * 0.7 * light);
+    }
+    
+    return clamp(finalColor, vec3(0.0), vec3(1.0));
   }
 
   void main() {
@@ -247,18 +292,37 @@ CCProgram voxel-transparent-fs %{
   layout(location = 0) out vec4 fragColor;
 
   vec3 calculateLighting(vec4 texColor, float ao, float diffuse, float light) {
+    // 检测是否为发光方块
+    bool isEmissive = light > 0.1;
+    
     float df = diffuse;
     float aoFinal = ao;
     
-    aoFinal = min(1.0, aoFinal + light);
-    df = min(1.0, df + light);
+    // 发光方块的AO和漫反射处理
+    if (isEmissive) {
+      aoFinal = mix(aoFinal, 1.0, light * 0.8);
+      df = mix(df, 1.0, light * 0.6);
+    }
     
+    // 光照计算
     float lightValue = min(1.0, daylight + light);
-    vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
-    vec3 ambient = vec3(lightValue * 0.5 + 0.2);
-    vec3 lightFinal = ambient + lightColor * df * 0.8;
     
-    return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
+    // 环境光和方向光（透明方块稍微提高基础亮度）
+    vec3 ambient = vec3(lightValue * 0.5 + (isEmissive ? 0.4 : 0.2));
+    vec3 directional = vec3(lightValue * 0.3 + 0.1) * df * 0.8;
+    
+    // 自发光效果
+    vec3 emissive = isEmissive ? texColor.rgb * light * 0.6 : vec3(0.0);
+    
+    vec3 lightFinal = ambient + directional + emissive;
+    vec3 finalColor = texColor.rgb * lightFinal * aoFinal;
+    
+    // 发光方块确保最低亮度
+    if (isEmissive) {
+      finalColor = max(finalColor, texColor.rgb * 0.7 * light);
+    }
+    
+    return clamp(finalColor, vec3(0.0), vec3(1.0));
   }
 
   void main() {

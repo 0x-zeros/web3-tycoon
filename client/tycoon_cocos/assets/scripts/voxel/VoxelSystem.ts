@@ -118,7 +118,8 @@ export class VoxelSystem {
             // 4. 构建网格
             const meshBuildContext = {
                 blockPosition: position,
-                blockRotation: rotation || resolvedState.rotation
+                blockRotation: rotation || resolvedState.rotation,
+                blockId: blockId // 传递方块ID用于光照计算
             };
 
             const meshData = MeshBuilder.buildMesh(model, meshBuildContext);

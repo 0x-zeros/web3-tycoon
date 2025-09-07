@@ -294,6 +294,164 @@ export class BlockRegistry {
             hardness: 0,
             renderType: BlockRenderType.CROSS
         });
+
+        // ========== 发光方块 ==========
+        
+        // 萤石
+        this.register({
+            id: 'minecraft:glowstone',
+            displayName: '萤石',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 0.3,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 火把
+        this.register({
+            id: 'minecraft:torch',
+            displayName: '火把',
+            isPlant: false,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 14,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
+
+        // 灯笼
+        this.register({
+            id: 'minecraft:lantern',
+            displayName: '灯笼',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 3.5,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 海晶灯
+        this.register({
+            id: 'minecraft:sea_lantern',
+            displayName: '海晶灯',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 0.3,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 南瓜灯
+        this.register({
+            id: 'minecraft:jack_o_lantern',
+            displayName: '南瓜灯',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 1.0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 红石灯
+        this.register({
+            id: 'minecraft:redstone_lamp',
+            displayName: '红石灯',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: false,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 0.3,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 营火
+        this.register({
+            id: 'minecraft:campfire',
+            displayName: '营火',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 2.0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 端烛
+        this.register({
+            id: 'minecraft:end_rod',
+            displayName: '末地烛',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 14,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
+
+        // 信标
+        this.register({
+            id: 'minecraft:beacon',
+            displayName: '信标',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 15,
+            hardness: 3.0,
+            renderType: BlockRenderType.CUBE
+        });
+
+        // 蜂蜜块（弱发光）
+        this.register({
+            id: 'minecraft:honey_block',
+            displayName: '蜂蜜块',
+            isPlant: false,
+            isObstacle: true,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 3,
+            hardness: 0,
+            renderType: BlockRenderType.TRANSPARENT
+        });
+
+        // 荧光地衣
+        this.register({
+            id: 'minecraft:glow_lichen',
+            displayName: '荧光地衣',
+            isPlant: true,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 7,
+            hardness: 0.2,
+            renderType: BlockRenderType.CUTOUT
+        });
+
+        // 发光浆果
+        this.register({
+            id: 'minecraft:glow_berries',
+            displayName: '发光浆果',
+            isPlant: true,
+            isObstacle: false,
+            isTransparent: true,
+            isDestructable: true,
+            lightLevel: 14,
+            hardness: 0,
+            renderType: BlockRenderType.CROSS
+        });
     }
 
     private static createLegacyMapping(): void {

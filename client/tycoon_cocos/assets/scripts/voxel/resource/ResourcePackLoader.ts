@@ -92,7 +92,8 @@ export class ResourcePackLoader {
         const blockstateNames = [
             'stone', 'oak_log', 'oak_planks', 'grass_block', 'dirt',
             'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'short_grass', 'fern'
+            'dandelion', 'poppy', 'short_grass', 'fern',
+            'glowstone' // 添加发光石
         ];
 
         for (const name of blockstateNames) {
@@ -151,7 +152,8 @@ export class ResourcePackLoader {
         const blockModels = [
             'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
             'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'short_grass', 'fern'
+            'dandelion', 'poppy', 'short_grass', 'fern',
+            'glowstone' // 添加发光石模型
         ];
 
         for (const model of blockModels) {

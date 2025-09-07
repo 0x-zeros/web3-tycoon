@@ -200,10 +200,7 @@ export class MaterialFactory {
                 break;
         }
 
-        // 发光配置
-        if (config.emissive) {
-            this.configureEmissive(material, config);
-        }
+        // 发光效果由顶点light值在shader中实现，不需要额外材质配置
     }
 
     /**
@@ -334,11 +331,9 @@ export class MaterialFactory {
      * 配置发光属性
      */
     private configureEmissive(material: Material, config: MaterialConfig): void {
-        const intensity = config.emissiveIntensity || 1.0;
-        
-        // 设置发光颜色和强度
-        material.setProperty('emissive', [intensity, intensity, intensity, 1.0]);
-        material.setProperty('emissiveScale', intensity);
+        // 发光属性已经在setVoxelShaderUniforms方法中设置
+        // 这里不需要额外的设置，因为我们使用的是体素发光着色器的标准属性
+        console.log(`[MaterialFactory] 发光属性配置：intensity=${config.emissiveIntensity}`);
     }
 
     /**
@@ -396,16 +391,18 @@ export class MaterialFactory {
         } else if (textureInfo.transparent) {
             materialType = MaterialType.TRANSPARENT; // 透明纹理
         } else {
-            materialType = MaterialType.OPAQUE; // 不透明
+            materialType = MaterialType.OPAQUE; // 不透明（包括发光方块）
         }
 
         const config: MaterialConfig = {
             type: materialType,
             texture: texturePath,
-            emissive,
-            emissiveIntensity: emissive ? 1.0 : 0,
             alphaTest: materialType === MaterialType.CUTOUT ? 0.5 : undefined
         };
+        
+        if (emissive) {
+            console.log(`[MaterialFactory] 创建发光方块材质: ${texturePath} (发光效果由顶点light值实现)`);
+        }
 
         return await this.createMaterial(config);
     }

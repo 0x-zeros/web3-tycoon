@@ -1,5 +1,8 @@
 import { Vec3, Vec2, Vec4, Color, utils } from 'cc';
 import { ResolvedModel, ResolvedElement, ResolvedFace } from './ModelParser';
+import { AOCalculator } from '../lighting/AOCalculator';
+import { VoxelLightingSystem } from '../lighting/VoxelLightingSystem';
+import { BlockRegistry } from '../core/VoxelBlock';
 
 export interface VoxelMeshData {
     vertices: VoxelVertex[];
@@ -29,6 +32,13 @@ export interface MeshBuildContext {
     blockRotation: { x: number; y: number; z: number };
     aoData?: number[][];
     lightData?: number[][];
+    // 新增：方块查询函数和光照系统
+    getBlockAt?: (x: number, y: number, z: number) => string;
+    chunkLights?: any; // VoxelChunk 光照数据
+    chunkBaseX?: number;
+    chunkBaseZ?: number;
+    // 新增：方块ID用于获取光照等级
+    blockId?: string;
 }
 
 export class MeshBuilder {
@@ -337,12 +347,27 @@ export class MeshBuilder {
      * @returns AO值数组
      */
     private static calculateAO(positions: Vec3[], normal: Vec3, context: MeshBuildContext): number[] {
-        if (!context.aoData) {
-            return [1, 1, 1, 1]; // 无AO数据时返回无遮蔽
+        // 如果有预计算的AO数据，使用它
+        if (context.aoData && context.aoData.length > 0) {
+            // 假设aoData按面顺序存储，这里简化处理
+            return context.aoData[0] || [1, 1, 1, 1];
         }
-
-        // 简化实现：使用固定AO值
-        // 实际应用中应该根据相邻方块计算遮蔽
+        
+        // 如果有方块查询函数，使用真实AO计算
+        if (context.getBlockAt) {
+            try {
+                // 将相对坐标转换为世界坐标
+                const worldPositions = positions.map(pos => 
+                    Vec3.add(new Vec3(), pos, context.blockPosition)
+                );
+                
+                return AOCalculator.calculateFaceAO(worldPositions, normal, context.getBlockAt);
+            } catch (error) {
+                console.warn('[MeshBuilder] AO计算失败:', error);
+            }
+        }
+        
+        // 降级方案：使用固定值
         return [0.8, 0.9, 1.0, 0.85];
     }
 
@@ -353,11 +378,53 @@ export class MeshBuilder {
      * @returns 光照值数组
      */
     private static calculateLight(positions: Vec3[], context: MeshBuildContext): number[] {
-        if (!context.lightData) {
-            return [1, 1, 1, 1]; // 无光照数据时返回全亮
+        // 如果有预计算的光照数据，使用它
+        if (context.lightData && context.lightData.length > 0) {
+            return context.lightData[0] || [1, 1, 1, 1];
         }
-
-        // 简化实现：使用固定光照值
+        
+        // 如果有区块光照数据，使用插值光照
+        if (context.chunkLights && typeof context.chunkBaseX === 'number' && typeof context.chunkBaseZ === 'number') {
+            try {
+                const lightValues: number[] = [];
+                
+                for (const pos of positions) {
+                    // 转换为世界坐标
+                    const worldPos = Vec3.add(new Vec3(), pos, context.blockPosition);
+                    
+                    // 获取插值光照
+                    const light = VoxelLightingSystem.getInterpolatedLight(
+                        context.chunkLights,
+                        worldPos.x,
+                        worldPos.y,
+                        worldPos.z,
+                        context.chunkBaseX,
+                        context.chunkBaseZ
+                    );
+                    
+                    lightValues.push(light);
+                }
+                
+                return lightValues;
+            } catch (error) {
+                console.warn('[MeshBuilder] 光照计算失败:', error);
+            }
+        }
+        
+        // 降级方案：检查是否有方块ID可用于获取光照等级
+        if (context.blockId) {
+            const lightLevel = BlockRegistry.getLightLevel(context.blockId);
+            if (lightLevel > 0) {
+                // 发光方块：返回归一化的光照值
+                const normalizedLight = lightLevel / 15.0;
+                console.log(`[MeshBuilder] 设置发光方块光照: ${context.blockId} 光照等级=${lightLevel} 归一化=${normalizedLight}`);
+                return [normalizedLight, normalizedLight, normalizedLight, normalizedLight];
+            } else {
+                console.log(`[MeshBuilder] 普通方块: ${context.blockId} 光照等级=${lightLevel}`);
+            }
+        }
+        
+        // 最终降级：全亮
         return [1, 1, 1, 1];
     }
 
@@ -716,12 +783,16 @@ export class MeshBuilder {
         const normals: number[] = [];
         const uvs: number[] = [];
         const uvs2: number[] = [];
+        const aos: number[] = [];      // 环境光遮蔽
+        const lights: number[] = [];   // 光照等级
 
         for (const vertex of vertices) {
             positions.push(vertex.position.x, vertex.position.y, vertex.position.z);
             normals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
             uvs.push(vertex.texCoord.x, vertex.texCoord.y);   // 主UV
             uvs2.push(vertex.texCoord.z, vertex.texCoord.w);  // overlay UV
+            aos.push(vertex.ao);         // AO值
+            lights.push(vertex.light);   // 光照值
         }
 
         const geometryData = {
@@ -729,9 +800,118 @@ export class MeshBuilder {
             normals,
             uvs,
             uvs2,
+            aos,      // 添加AO属性
+            lights,   // 添加光照属性
             indices: new Uint16Array(indices)
         };
 
-        return utils.MeshUtils.createMesh(geometryData);
+        // 使用完整的几何数据，包含AO和光照属性
+        return MeshBuilder.createMeshWithCustomAttributes(geometryData);
+    }
+
+    /**
+     * 创建包含自定义属性的网格
+     * @param geometryData 几何数据
+     * @returns Mesh对象
+     */
+    static createMeshWithCustomAttributes(geometryData: {
+        positions: number[];
+        normals: number[];
+        uvs: number[];
+        uvs2: number[];
+        aos: number[];
+        lights: number[];
+        indices: Uint16Array;
+    }): any {
+        const { Mesh, gfx, utils } = require('cc');
+
+        try {
+            const vertexCount = geometryData.positions.length / 3;
+            
+            // 定义顶点格式
+            const attributes = [
+                new gfx.Attribute('a_position', gfx.Format.RGB32F),
+                new gfx.Attribute('a_normal', gfx.Format.RGB32F), 
+                new gfx.Attribute('a_texCoord', gfx.Format.RG32F),
+                new gfx.Attribute('a_ao', gfx.Format.R32F),      // AO属性
+                new gfx.Attribute('a_light', gfx.Format.R32F),   // 光照属性
+            ];
+            
+            // 计算顶点数据大小
+            const vertexStride = 3 * 4 + 3 * 4 + 2 * 4 + 1 * 4 + 1 * 4; // position + normal + uv + ao + light
+            const vertexBuffer = new ArrayBuffer(vertexCount * vertexStride);
+            const vertexView = new DataView(vertexBuffer);
+            
+            let offset = 0;
+            for (let i = 0; i < vertexCount; i++) {
+                // Position (3 floats)
+                vertexView.setFloat32(offset, geometryData.positions[i * 3], true);
+                vertexView.setFloat32(offset + 4, geometryData.positions[i * 3 + 1], true);  
+                vertexView.setFloat32(offset + 8, geometryData.positions[i * 3 + 2], true);
+                offset += 12;
+                
+                // Normal (3 floats)
+                vertexView.setFloat32(offset, geometryData.normals[i * 3], true);
+                vertexView.setFloat32(offset + 4, geometryData.normals[i * 3 + 1], true);
+                vertexView.setFloat32(offset + 8, geometryData.normals[i * 3 + 2], true);
+                offset += 12;
+                
+                // UV (2 floats) 
+                vertexView.setFloat32(offset, geometryData.uvs[i * 2], true);
+                vertexView.setFloat32(offset + 4, geometryData.uvs[i * 2 + 1], true);
+                offset += 8;
+                
+                // AO (1 float)
+                vertexView.setFloat32(offset, geometryData.aos[i] || 1.0, true);
+                offset += 4;
+                
+                // Light (1 float)
+                vertexView.setFloat32(offset, geometryData.lights[i] || 0.0, true);
+                offset += 4;
+            }
+            
+            // 创建网格
+            const mesh = new Mesh();
+            mesh.struct = {
+                vertexBundles: [{
+                    attributes,
+                    view: {
+                        offset: 0,
+                        length: vertexBuffer.byteLength,
+                        count: vertexCount,
+                        stride: vertexStride
+                    }
+                }],
+                primitives: [{
+                    vertexBundelIndices: [0],
+                    indexView: {
+                        offset: 0,
+                        length: geometryData.indices.byteLength,
+                        count: geometryData.indices.length,
+                        stride: 2
+                    }
+                }]
+            };
+            
+            const indexBuffer = new ArrayBuffer(geometryData.indices.byteLength);
+            new Uint16Array(indexBuffer).set(geometryData.indices);
+            
+            mesh.data = new Uint8Array(vertexBuffer.byteLength + indexBuffer.byteLength);
+            mesh.data.set(new Uint8Array(vertexBuffer), 0);
+            mesh.data.set(new Uint8Array(indexBuffer), vertexBuffer.byteLength);
+            
+            console.log(`[MeshBuilder] 创建自定义网格成功: ${vertexCount} 个顶点, 包含AO和光照属性`);
+            return mesh;
+            
+        } catch (error) {
+            console.error('[MeshBuilder] 创建自定义网格失败:', error);
+            // 降级到基础网格
+            return utils.MeshUtils.createMesh({
+                positions: geometryData.positions,
+                normals: geometryData.normals, 
+                uvs: geometryData.uvs,
+                indices: geometryData.indices
+            });
+        }
     }
 }

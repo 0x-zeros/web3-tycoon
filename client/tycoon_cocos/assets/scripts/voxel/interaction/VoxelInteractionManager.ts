@@ -1,13 +1,23 @@
 import { _decorator, Component, Node, Vec3, Camera, input, Input, EventMouse, MeshRenderer, Material, utils } from "cc";
 import { VoxelRayCaster, VoxelHitResult, RaycastAlgorithm } from "./VoxelRayCaster";
 import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
-import { VoxelWorldManager } from "../world/VoxelWorld";
-import { VoxelBlockType } from "../core/VoxelBlock";
+import { VoxelWorld } from "../world/VoxelWorld";
+import { MinecraftBlockId } from "../core/VoxelBlockRegistry";
 import { VoxelWorldConfig, VoxelWorldMode } from "../core/VoxelWorldConfig";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 
 const { ccclass, property } = _decorator;
+
+// 现代射线检测结果接口
+export interface VoxelHitResult {
+    position: Vec3;           // 击中的方块位置
+    normal: Vec3;             // 面法向量
+    blockId: string;          // 方块ID（字符串格式）
+    distance: number;         // 射线距离
+    rayStart: Vec3;           // 射线起点
+    rayEnd: Vec3;             // 射线终点
+}
 
 // 简化的相机模式定义（避免循环依赖）
 export enum VoxelCameraMode {
@@ -19,7 +29,7 @@ export enum VoxelCameraMode {
 export interface VoxelInteractionEvents {
     onBlockClick?: (hitResult: VoxelHitResult) => void;
     onBlockHover?: (hitResult: VoxelHitResult | null) => void;
-    onBlockPlace?: (position: Vec3, blockType: VoxelBlockType) => void;
+    onBlockPlace?: (position: Vec3, blockId: MinecraftBlockId) => void;
     onBlockBreak?: (position: Vec3) => void;
     onModeChange?: (mode: VoxelCameraMode) => void;
 }
@@ -45,7 +55,7 @@ export class VoxelInteractionManager extends Component {
     maxRaycastDistance: number = 64.0;
 
     @property
-    selectedBlockType: VoxelBlockType = VoxelBlockType.STONE;
+    selectedBlockId: MinecraftBlockId = 'minecraft:stone';
 
     @property({ tooltip: "启用射线可视化调试" })
     enableDebugVisualization: boolean = true;
@@ -57,7 +67,7 @@ export class VoxelInteractionManager extends Component {
     debugDisplayTime: number = 2.0;
 
     // 私有变量
-    private worldManager: VoxelWorldManager = null;
+    private world: VoxelWorld = null;
     private events: VoxelInteractionEvents = {};
     private _currentCameraMode: VoxelCameraMode = VoxelCameraMode.WALKING;
     private lastHoverResult: VoxelHitResult | null = null;
@@ -90,21 +100,20 @@ export class VoxelInteractionManager extends Component {
         console.log(`[VoxelInteractionManager] onEnable: 相机模式设置为: ${this._currentCameraMode}`);
 
         this.setupInputHandlers();
-        this.setupWorldManager();
+        this.setupWorld();
     }
 
-    private setupWorldManager(): void {
-        if (!this.worldManager) {
-            this.worldManager = this.node.getComponent(VoxelWorldManager);
-            if (!this.worldManager) {
-                console.warn('[VoxelInteractionManager] 未找到VoxelWorldManager组件');
-            }
+    private setupWorld(): void {
+        // VoxelWorld不是Component，需要通过外部注入
+        // 这里只做检查，实际设置通过setWorld方法
+        if (!this.world) {
+            console.warn('[VoxelInteractionManager] VoxelWorld未设置，请调用setWorld方法');
         }
     }
 
-    public setWorldManager(manager: VoxelWorldManager): void {
-        this.worldManager = manager;
-        console.log('[VoxelInteractionManager] 世界管理器设置完成');
+    public setWorld(world: VoxelWorld): void {
+        this.world = world;
+        console.log('[VoxelInteractionManager] 体素世界设置完成');
     }
 
     public setEvents(events: VoxelInteractionEvents): void {
@@ -113,8 +122,8 @@ export class VoxelInteractionManager extends Component {
     }
 
     // 统一初始化入口，兼容外部调用
-    public initialize(manager: VoxelWorldManager, events?: VoxelInteractionEvents): void {
-        this.setWorldManager(manager);
+    public initialize(world: VoxelWorld, events?: VoxelInteractionEvents): void {
+        this.setWorld(world);
         if (events) this.setEvents(events);
     }
 
@@ -151,9 +160,9 @@ export class VoxelInteractionManager extends Component {
         }
 
         // 破坏方块
-        if (hitResult && this.worldManager) {
+        if (hitResult && this.world) {
             const pos = hitResult.position;
-            this.worldManager.setBlock(pos.x, pos.y, pos.z, VoxelBlockType.EMPTY);
+            this.world.setBlock(pos.x, pos.y, pos.z, 'minecraft:air');
             
             if (this.events.onBlockBreak) {
                 this.events.onBlockBreak(pos);
@@ -167,7 +176,7 @@ export class VoxelInteractionManager extends Component {
         const hitResult = this.performRaycastFromEvent(event);
         
         // 放置方块
-        if (hitResult && this.worldManager) {
+        if (hitResult && this.world) {
             const normal = hitResult.normal;
             const pos = hitResult.position;
             const placePos = new Vec3(
@@ -176,18 +185,18 @@ export class VoxelInteractionManager extends Component {
                 pos.z + normal.z
             );
             
-            this.worldManager.setBlock(placePos.x, placePos.y, placePos.z, this.selectedBlockType);
+            this.world.setBlock(placePos.x, placePos.y, placePos.z, this.selectedBlockId);
             
             if (this.events.onBlockPlace) {
-                this.events.onBlockPlace(placePos, this.selectedBlockType);
+                this.events.onBlockPlace(placePos, this.selectedBlockId);
             }
 
-            console.log(`[VoxelInteractionManager] 方块已放置: (${placePos.x}, ${placePos.y}, ${placePos.z}) 类型:${this.selectedBlockType}`);
+            console.log(`[VoxelInteractionManager] 方块已放置: (${placePos.x}, ${placePos.y}, ${placePos.z}) 类型:${this.selectedBlockId}`);
         }
     }
 
     private performRaycastFromEvent(event: EventMouse): VoxelHitResult | null {
-        if (!this.camera || !this.worldManager) {
+        if (!this.camera || !this.world) {
             return null;
         }
 
@@ -198,15 +207,8 @@ export class VoxelInteractionManager extends Component {
 
         console.log(`[VoxelInteractionManager] 射线检测: 屏幕坐标(${mouseX}, ${mouseY})`);
 
-        // 执行射线检测
-        const hitResult = VoxelRayCaster.performRaycast(
-            this.camera,
-            mouseX,
-            mouseY,
-            this.maxRaycastDistance,
-            this.worldManager,
-            RaycastAlgorithm.SIMPLE
-        );
+        // 执行射线检测 - 需要适配新的VoxelWorld接口
+        const hitResult = this.performWorldRaycast(mouseX, mouseY);
 
         // 可视化调试
         if (this.enableDebugVisualization) {
@@ -222,17 +224,37 @@ export class VoxelInteractionManager extends Component {
 
     // 对外暴露：根据屏幕坐标进行射线检测（供渲染器/调试器调用）
     public performRaycast(mouseX?: number, mouseY?: number): VoxelHitResult | null {
-        if (!this.camera || !this.worldManager) return null;
+        if (!this.camera || !this.world) return null;
         if (mouseX === undefined || mouseY === undefined) return null;
 
-        return VoxelRayCaster.performRaycast(
-            this.camera,
-            mouseX,
-            mouseY,
-            this.maxRaycastDistance,
-            this.worldManager,
-            RaycastAlgorithm.SIMPLE
-        );
+        return this.performWorldRaycast(mouseX, mouseY);
+    }
+
+    /**
+     * 使用新VoxelWorld接口的射线检测
+     */
+    private performWorldRaycast(mouseX: number, mouseY: number): VoxelHitResult | null {
+        if (!this.camera || !this.world) return null;
+
+        // 从屏幕坐标生成射线
+        const ray = this.camera.screenPointToRay(mouseX, mouseY);
+        if (!ray) return null;
+
+        // 使用VoxelWorld的射线检测
+        const result = this.world.raycast(ray.o, ray.d, this.maxRaycastDistance);
+        
+        if (result.hit && result.position && result.normal) {
+            return {
+                position: result.position,
+                normal: result.normal,
+                blockId: result.blockId || 'minecraft:air',
+                distance: result.position.clone().subtract(ray.o).length(),
+                rayStart: ray.o,
+                rayEnd: ray.o.clone().add(ray.d.clone().multiplyScalar(this.maxRaycastDistance))
+            };
+        }
+
+        return null;
     }
 
     private visualizeRaycast(hitResult: VoxelHitResult | null): void {
@@ -380,16 +402,16 @@ export class VoxelInteractionManager extends Component {
     }
 
     // 对外：放置与破坏方块
-    public placeBlock(position: Vec3, blockType: VoxelBlockType = this.selectedBlockType): boolean {
-        if (!this.worldManager) return false;
-        const ok = this.worldManager.setBlock(position.x, position.y, position.z, blockType);
-        if (ok && this.events.onBlockPlace) this.events.onBlockPlace(position, blockType);
+    public placeBlock(position: Vec3, blockId: MinecraftBlockId = this.selectedBlockId): boolean {
+        if (!this.world) return false;
+        const ok = this.world.setBlock(position.x, position.y, position.z, blockId);
+        if (ok && this.events.onBlockPlace) this.events.onBlockPlace(position, blockId);
         return ok;
     }
 
     public breakBlock(position: Vec3): boolean {
-        if (!this.worldManager) return false;
-        const ok = this.worldManager.setBlock(position.x, position.y, position.z, VoxelBlockType.EMPTY);
+        if (!this.world) return false;
+        const ok = this.world.setBlock(position.x, position.y, position.z, 'minecraft:air');
         if (ok && this.events.onBlockBreak) this.events.onBlockBreak(position);
         return ok;
     }
@@ -403,14 +425,14 @@ export class VoxelInteractionManager extends Component {
     }
 
     // 获取当前选中的方块类型
-    public getSelectedBlockType(): VoxelBlockType {
-        return this.selectedBlockType;
+    public getSelectedBlockId(): MinecraftBlockId {
+        return this.selectedBlockId;
     }
 
     // 设置选中的方块类型
-    public setSelectedBlockType(blockType: VoxelBlockType): void {
-        this.selectedBlockType = blockType;
-        console.log(`[VoxelInteractionManager] 选中方块类型: ${blockType}`);
+    public setSelectedBlockId(blockId: MinecraftBlockId): void {
+        this.selectedBlockId = blockId;
+        console.log(`[VoxelInteractionManager] 选中方块类型: ${blockId}`);
     }
 
     // 获取当前的射线检测算法

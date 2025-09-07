@@ -1,302 +1,545 @@
-import { VoxelChunk, VoxelWorldFunc } from "../core/VoxelTypes";
-import { VoxelChunkManager } from "./VoxelChunk";
-import { VoxelTerrain } from "./VoxelTerrain";
-import { VoxelConfig } from "../core/VoxelConfig";
-import { VoxelBlockType } from "../core/VoxelBlock";
-import { VoxelWorldConfig } from "../core/VoxelWorldConfig";
+/**
+ * 现代体素世界管理器
+ * 使用调色板压缩和字符串ID系统
+ * 替代旧的VoxelWorldManager
+ */
 
-export class VoxelWorldManager {
-    private chunks: Map<string, VoxelChunk> = new Map();
+import { Vec3 } from 'cc';
+import { ModernVoxelChunk, VoxelChunkStorage } from '../core/VoxelChunkStorage';
+import { BlockRegistry, MinecraftBlockId } from '../core/VoxelBlockRegistry';
+import { VoxelSystem } from '../VoxelSystem';
+import { VoxelConfig } from '../core/VoxelConfig';
+
+export interface WorldStats {
+    loadedChunks: number;
+    totalBlocks: number;
+    memoryUsage: number;
+    compressionRatio: number;
+    cacheHits: number;
+    cacheMisses: number;
+}
+
+export interface ChunkLoadOptions {
+    generateTerrain?: boolean;
+    loadFromDisk?: boolean;
+    priority?: 'low' | 'normal' | 'high';
+}
+
+/**
+ * 现代体素世界管理器
+ */
+export class VoxelWorld {
+    private chunks: Map<string, ModernVoxelChunk> = new Map();
     private chunkCount: number = 0;
-    private createRadius: number = VoxelConfig.CREATE_CHUNK_RADIUS;
-    private renderRadius: number = VoxelConfig.RENDER_CHUNK_RADIUS;
-    private deleteRadius: number = VoxelConfig.DELETE_CHUNK_RADIUS;
-
+    
+    // 配置参数
+    private loadRadius: number = VoxelConfig.CREATE_CHUNK_RADIUS || 3;
+    private unloadRadius: number = VoxelConfig.DELETE_CHUNK_RADIUS || 5;
+    private renderRadius: number = VoxelConfig.RENDER_CHUNK_RADIUS || 4;
+    
+    // 集成系统
+    private voxelSystem: VoxelSystem | null = null;
+    
+    // 性能统计
+    private stats = {
+        cacheHits: 0,
+        cacheMisses: 0,
+        totalBlockOperations: 0
+    };
+    
+    // 地形生成器（简化版）
+    private terrainGenerator: TerrainGenerator;
+    
     constructor() {
+        console.log('[VoxelWorld] 初始化现代体素世界管理器...');
+        this.terrainGenerator = new TerrainGenerator();
         
+        // 尝试获取体素渲染系统
+        this.voxelSystem = VoxelSystem.getInstance();
     }
-
-    private isValidWorldCoordinate(x: number, y: number, z: number): boolean {
-        return Number.isInteger(y) && 
-               y >= 0 && 
-               y < VoxelConfig.MAX_HEIGHT &&
-               Number.isInteger(x) && 
-               Number.isInteger(z);
+    
+    /**
+     * 初始化世界
+     */
+    async initialize(): Promise<void> {
+        console.log('[VoxelWorld] 开始初始化世界...');
+        
+        // 确保方块注册表已初始化
+        if (!BlockRegistry) {
+            throw new Error('BlockRegistry not initialized');
+        }
+        
+        // 初始化体素渲染系统
+        if (this.voxelSystem && !this.voxelSystem.getSystemStatus().initialized) {
+            await this.voxelSystem.initialize();
+        }
+        
+        console.log('[VoxelWorld] 世界初始化完成');
     }
-
-    private makeChunkKey(p: number, q: number): string {
+    
+    /**
+     * 生成Chunk键
+     */
+    private getChunkKey(p: number, q: number): string {
         return `${p}_${q}`;
     }
-
-    getChunk(p: number, q: number): VoxelChunk | undefined {
-        const key = this.makeChunkKey(p, q);
-        return this.chunks.get(key);
+    
+    /**
+     * 从世界坐标获取Chunk坐标
+     */
+    private getChunkCoords(x: number, z: number): { p: number, q: number } {
+        return VoxelChunkStorage.getChunkCoords(x, z);
     }
-
-    createChunk(p: number, q: number): VoxelChunk {
-        const key = this.makeChunkKey(p, q);
+    
+    /**
+     * 获取Chunk（如果不存在则创建）
+     */
+    getOrCreateChunk(p: number, q: number, options?: ChunkLoadOptions): ModernVoxelChunk {
+        const key = this.getChunkKey(p, q);
         let chunk = this.chunks.get(key);
         
         if (!chunk) {
-            chunk = VoxelChunkManager.createChunk(p, q);
-            this.chunks.set(key, chunk);
-            this.chunkCount++;
+            this.stats.cacheMisses++;
+            chunk = this.createChunk(p, q, options);
+        } else {
+            this.stats.cacheHits++;
         }
         
         return chunk;
     }
-
-    deleteChunk(p: number, q: number): boolean {
-        const key = this.makeChunkKey(p, q);
+    
+    /**
+     * 创建新Chunk
+     */
+    private createChunk(p: number, q: number, options?: ChunkLoadOptions): ModernVoxelChunk {
+        const chunk = VoxelChunkStorage.createChunk(p, q);
+        const key = this.getChunkKey(p, q);
+        
+        this.chunks.set(key, chunk);
+        this.chunkCount++;
+        
+        // 生成地形
+        if (options?.generateTerrain !== false) {
+            this.terrainGenerator.generateTerrain(chunk);
+        }
+        
+        console.log(`[VoxelWorld] 创建Chunk(${p},${q})，当前总数: ${this.chunkCount}`);
+        return chunk;
+    }
+    
+    /**
+     * 获取已存在的Chunk
+     */
+    getChunk(p: number, q: number): ModernVoxelChunk | null {
+        const key = this.getChunkKey(p, q);
+        return this.chunks.get(key) || null;
+    }
+    
+    /**
+     * 卸载Chunk
+     */
+    unloadChunk(p: number, q: number): boolean {
+        const key = this.getChunkKey(p, q);
         const chunk = this.chunks.get(key);
         
         if (chunk) {
-            VoxelChunkManager.freeChunk(chunk);
+            VoxelChunkStorage.freeChunk(chunk);
             this.chunks.delete(key);
             this.chunkCount--;
+            console.log(`[VoxelWorld] 卸载Chunk(${p},${q})，剩余: ${this.chunkCount}`);
             return true;
         }
         
         return false;
     }
-
-    generateChunk(p: number, q: number): VoxelChunk {
-        const chunk = this.createChunk(p, q);
-        
-        const worldFunc: VoxelWorldFunc = (x: number, y: number, z: number, w: number) => {
-            if (Math.abs(w) !== VoxelBlockType.CLOUD) {
-                VoxelChunkManager.setChunkBlock(chunk, x, y, z, Math.abs(w));
-            }
-        };
-        
-        VoxelTerrain.createWorld(p, q, worldFunc);
-        
-        return chunk;
-    }
-
-    getBlock(x: number, y: number, z: number): VoxelBlockType {
-        if (!this.isValidWorldCoordinate(x, y, z)) {
-            return VoxelBlockType.EMPTY;
-        }
-        
-        const { p, q } = VoxelChunkManager.getChunkCoords(x, z);
-        const chunk = this.getChunk(p, q);
-        
-        if (!chunk) {
-            return VoxelTerrain.getBlockTypeAt(x, y, z);
-        }
-        
-        return VoxelChunkManager.getChunkBlock(chunk, x, y, z) as VoxelBlockType;
-    }
-
-    setBlock(x: number, y: number, z: number, blockType: VoxelBlockType): boolean {
-        if (!this.isValidWorldCoordinate(x, y, z)) {
-            console.warn(`[VoxelWorldManager] 无效坐标: (${x}, ${y}, ${z})`);
+    
+    /**
+     * 设置方块（世界坐标）
+     */
+    setBlock(x: number, y: number, z: number, blockId: MinecraftBlockId | string): boolean {
+        if (!this.isValidCoordinate(x, y, z)) {
+            console.warn(`[VoxelWorld] 无效坐标: (${x}, ${y}, ${z})`);
             return false;
         }
         
-        const { p, q } = VoxelChunkManager.getChunkCoords(x, z);
-        let chunk = this.getChunk(p, q);
+        // 验证方块ID
+        if (!BlockRegistry.exists(blockId)) {
+            console.warn(`[VoxelWorld] 未知方块ID: ${blockId}`);
+            return false;
+        }
+        
+        const { p, q } = this.getChunkCoords(x, z);
+        const chunk = this.getOrCreateChunk(p, q);
+        
+        const success = VoxelChunkStorage.setBlock(chunk, x, y, z, blockId);
+        
+        if (success) {
+            this.stats.totalBlockOperations++;
+            this.markNeighborChunksForUpdate(p, q);
+        }
+        
+        return success;
+    }
+    
+    /**
+     * 获取方块（世界坐标）
+     */
+    getBlock(x: number, y: number, z: number): string {
+        if (!this.isValidCoordinate(x, y, z)) {
+            return 'minecraft:air';
+        }
+        
+        const { p, q } = this.getChunkCoords(x, z);
+        const chunk = this.getChunk(p, q);
         
         if (!chunk) {
-            chunk = this.generateChunk(p, q);
+            // 如果Chunk不存在，返回地形生成器的预测值
+            return this.terrainGenerator.predictBlockAt(x, y, z);
         }
         
-        const result = VoxelChunkManager.setChunkBlock(chunk, x, y, z, blockType);
-        
-        if (result) {
-            this.markNeighborChunksDirty(p, q);
-        }
-        
-        return result;
+        this.stats.totalBlockOperations++;
+        return VoxelChunkStorage.getBlock(chunk, x, y, z);
     }
-
-    private markNeighborChunksDirty(p: number, q: number): void {
-        const neighbors = VoxelChunkManager.getNeighborChunkCoords(p, q);
+    
+    /**
+     * 批量设置方块
+     */
+    setBlocks(positions: Array<{ x: number, y: number, z: number, blockId: string }>): number {
+        let successCount = 0;
+        const chunkUpdates = new Map<string, Array<{ x: number, y: number, z: number }>>();
         
-        neighbors.forEach(({ p: np, q: nq }) => {
-            const neighborChunk = this.getChunk(np, nq);
-            if (neighborChunk) {
-                VoxelChunkManager.markChunkDirty(neighborChunk);
+        // 按Chunk分组
+        for (const pos of positions) {
+            if (!this.isValidCoordinate(pos.x, pos.y, pos.z)) continue;
+            if (!BlockRegistry.exists(pos.blockId)) continue;
+            
+            const { p, q } = this.getChunkCoords(pos.x, pos.z);
+            const key = this.getChunkKey(p, q);
+            
+            if (!chunkUpdates.has(key)) {
+                chunkUpdates.set(key, []);
             }
-        });
+            chunkUpdates.get(key)!.push(pos);
+        }
+        
+        // 批量更新每个Chunk
+        for (const [chunkKey, chunkPositions] of chunkUpdates) {
+            const [pStr, qStr] = chunkKey.split('_');
+            const p = parseInt(pStr), q = parseInt(qStr);
+            const chunk = this.getOrCreateChunk(p, q);
+            
+            // 按方块类型再次分组以优化调色板操作
+            const blockGroups = new Map<string, Array<{ x: number, y: number, z: number }>>();
+            for (const pos of chunkPositions) {
+                if (!blockGroups.has(pos.blockId)) {
+                    blockGroups.set(pos.blockId, []);
+                }
+                blockGroups.get(pos.blockId)!.push(pos);
+            }
+            
+            // 批量设置同类型方块
+            for (const [blockId, blockPositions] of blockGroups) {
+                VoxelChunkStorage.setBlocks(chunk, blockPositions, blockId);
+                successCount += blockPositions.length;
+            }
+            
+            this.markNeighborChunksForUpdate(p, q);
+        }
+        
+        this.stats.totalBlockOperations += successCount;
+        return successCount;
     }
-
+    
+    /**
+     * 填充区域
+     */
+    fillRegion(min: Vec3, max: Vec3, blockId: MinecraftBlockId | string): number {
+        if (!BlockRegistry.exists(blockId)) {
+            console.warn(`[VoxelWorld] 未知方块ID: ${blockId}`);
+            return 0;
+        }
+        
+        const positions: Array<{ x: number, y: number, z: number, blockId: string }> = [];
+        
+        for (let x = min.x; x <= max.x; x++) {
+            for (let y = min.y; y <= max.y; y++) {
+                for (let z = min.z; z <= max.z; z++) {
+                    if (this.isValidCoordinate(x, y, z)) {
+                        positions.push({ x, y, z, blockId });
+                    }
+                }
+            }
+        }
+        
+        return this.setBlocks(positions);
+    }
+    
+    /**
+     * 检查坐标有效性
+     */
+    private isValidCoordinate(x: number, y: number, z: number): boolean {
+        return Number.isInteger(x) && 
+               Number.isInteger(z) && 
+               Number.isInteger(y) && 
+               y >= 0 && 
+               y < VoxelConfig.MAX_HEIGHT;
+    }
+    
+    /**
+     * 标记邻近Chunk需要更新
+     */
+    private markNeighborChunksForUpdate(p: number, q: number): void {
+        const neighbors = [
+            { p: p - 1, q }, { p: p + 1, q },
+            { p, q: q - 1 }, { p, q: q + 1 }
+        ];
+        
+        for (const { p: np, q: nq } of neighbors) {
+            const chunk = this.getChunk(np, nq);
+            if (chunk) {
+                chunk.meshDirty = true;
+            }
+        }
+    }
+    
+    /**
+     * 更新玩家周围的Chunk
+     */
     updateChunksAroundPlayer(playerX: number, playerZ: number): void {
-        const { p: playerP, q: playerQ } = VoxelChunkManager.getChunkCoords(playerX, playerZ);
+        const { p: playerP, q: playerQ } = this.getChunkCoords(playerX, playerZ);
         
-        this.deleteDistantChunks(playerP, playerQ);
+        // 卸载远距离Chunk
+        this.unloadDistantChunks(playerP, playerQ);
         
-        this.createNearbyChunks(playerP, playerQ);
+        // 加载近距离Chunk
+        this.loadNearbyChunks(playerP, playerQ);
     }
-
-    private deleteDistantChunks(playerP: number, playerQ: number): void {
-        const chunksToDelete: string[] = [];
+    
+    /**
+     * 卸载远距离Chunk
+     */
+    private unloadDistantChunks(playerP: number, playerQ: number): void {
+        const chunksToUnload: Array<{ p: number, q: number }> = [];
         
-        this.chunks.forEach((chunk, key) => {
-            const isInRadius = VoxelChunkManager.isChunkInRadius(
-                playerP, playerQ, chunk.p, chunk.q, this.deleteRadius
+        for (const chunk of this.chunks.values()) {
+            const distance = Math.max(
+                Math.abs(chunk.p - playerP),
+                Math.abs(chunk.q - playerQ)
             );
             
-            if (!isInRadius) {
-                chunksToDelete.push(key);
+            if (distance > this.unloadRadius) {
+                chunksToUnload.push({ p: chunk.p, q: chunk.q });
             }
-        });
+        }
         
-        chunksToDelete.forEach(key => {
-            const [p, q] = key.split('_').map(Number);
-            this.deleteChunk(p, q);
-        });
+        for (const { p, q } of chunksToUnload) {
+            this.unloadChunk(p, q);
+        }
     }
-
-    private createNearbyChunks(playerP: number, playerQ: number): void {
-        for (let dp = -this.createRadius; dp <= this.createRadius; dp++) {
-            for (let dq = -this.createRadius; dq <= this.createRadius; dq++) {
+    
+    /**
+     * 加载近距离Chunk
+     */
+    private loadNearbyChunks(playerP: number, playerQ: number): void {
+        for (let dp = -this.loadRadius; dp <= this.loadRadius; dp++) {
+            for (let dq = -this.loadRadius; dq <= this.loadRadius; dq++) {
                 const p = playerP + dp;
                 const q = playerQ + dq;
                 
-                const isInRadius = VoxelChunkManager.isChunkInRadius(
-                    playerP, playerQ, p, q, this.createRadius
-                );
-                
-                if (isInRadius && !this.getChunk(p, q)) {
-                    this.generateChunk(p, q);
+                const distance = Math.max(Math.abs(dp), Math.abs(dq));
+                if (distance <= this.loadRadius && !this.getChunk(p, q)) {
+                    this.getOrCreateChunk(p, q, { generateTerrain: true });
                 }
             }
         }
     }
-
-    getRenderableChunks(playerX: number, playerZ: number): VoxelChunk[] {
-        const { p: playerP, q: playerQ } = VoxelChunkManager.getChunkCoords(playerX, playerZ);
-        const renderableChunks: VoxelChunk[] = [];
+    
+    /**
+     * 获取渲染范围内的Chunk
+     */
+    getRenderableChunks(playerX: number, playerZ: number): ModernVoxelChunk[] {
+        const { p: playerP, q: playerQ } = this.getChunkCoords(playerX, playerZ);
+        const renderableChunks: ModernVoxelChunk[] = [];
         
-        this.chunks.forEach(chunk => {
-            const isInRenderRadius = VoxelChunkManager.isChunkInRadius(
-                playerP, playerQ, chunk.p, chunk.q, this.renderRadius
+        for (const chunk of this.chunks.values()) {
+            const distance = Math.max(
+                Math.abs(chunk.p - playerP),
+                Math.abs(chunk.q - playerQ)
             );
             
-            if (isInRenderRadius && !VoxelChunkManager.isChunkEmpty(chunk)) {
+            if (distance <= this.renderRadius && !chunk.isEmpty) {
                 renderableChunks.push(chunk);
             }
-        });
+        }
         
         return renderableChunks;
     }
-
-    getDirtyChunks(): VoxelChunk[] {
-        const dirtyChunks: VoxelChunk[] = [];
-        
-        this.chunks.forEach(chunk => {
-            if (VoxelChunkManager.isChunkDirty(chunk)) {
-                dirtyChunks.push(chunk);
-            }
-        });
-        
-        return dirtyChunks;
+    
+    /**
+     * 获取需要网格更新的Chunk
+     */
+    getDirtyChunks(): ModernVoxelChunk[] {
+        return Array.from(this.chunks.values()).filter(chunk => chunk.meshDirty);
     }
-
-    getLoadedChunks(): VoxelChunk[] {
-        return Array.from(this.chunks.values());
-    }
-
-    getChunkCount(): number {
-        return this.chunkCount;
-    }
-
-    isChunkLoaded(p: number, q: number): boolean {
-        return this.getChunk(p, q) !== undefined;
-    }
-
-    clear(): void {
-        this.chunks.forEach(chunk => {
-            VoxelChunkManager.freeChunk(chunk);
-        });
-        
-        this.chunks.clear();
-        this.chunkCount = 0;
-    }
-
-    getHeightAt(x: number, z: number): number {
-        return VoxelTerrain.getHeightAt(x, z);
-    }
-
-    getBiomeAt(x: number, z: number): string {
-        return VoxelTerrain.getBiomeAt(x, z);
-    }
-
-    isValidSpawnLocation(x: number, z: number): boolean {
-        return VoxelTerrain.isValidSpawnLocation(x, z);
-    }
-
-    findSpawnLocation(): { x: number, y: number, z: number } {
-        const maxSearchRange = Math.min(200, VoxelConfig.CHUNK_SIZE * VoxelConfig.CREATE_CHUNK_RADIUS);
-        
-        for (let attempts = 0; attempts < 100; attempts++) {
-            const x = Math.floor(Math.random() * maxSearchRange - maxSearchRange / 2);
-            const z = Math.floor(Math.random() * maxSearchRange - maxSearchRange / 2);
-            
-            if (this.isValidSpawnLocation(x, z)) {
-                const groundHeight = this.getHeightAt(x, z);
-                const y = Math.min(groundHeight + 1, VoxelConfig.MAX_HEIGHT - 2);
-                
-                if (this.isValidWorldCoordinate(x, y, z)) {
-                    return { x, y, z };
-                }
-            }
-        }
-        
-        const fallbackHeight = this.getHeightAt(0, 0);
-        const fallbackY = Math.min(fallbackHeight + 1, VoxelConfig.MAX_HEIGHT - 2);
-        
-        return { x: 0, y: fallbackY, z: 0 };
-    }
-
+    
+    /**
+     * 射线检测
+     */
     raycast(
-        startX: number, startY: number, startZ: number,
-        dirX: number, dirY: number, dirZ: number,
+        start: Vec3,
+        direction: Vec3,
         maxDistance: number = 100
-    ): { hit: boolean, x?: number, y?: number, z?: number, blockType?: VoxelBlockType } {
+    ): { hit: boolean, position?: Vec3, blockId?: string, normal?: Vec3 } {
+        
         const step = 0.1;
         const steps = Math.floor(maxDistance / step);
+        const dir = direction.clone().normalize();
         
         for (let i = 0; i <= steps; i++) {
-            const x = Math.floor(startX + dirX * i * step);
-            const y = Math.floor(startY + dirY * i * step);
-            const z = Math.floor(startZ + dirZ * i * step);
+            const pos = start.clone().add(dir.clone().multiplyScalar(i * step));
+            const x = Math.floor(pos.x);
+            const y = Math.floor(pos.y);
+            const z = Math.floor(pos.z);
             
-            if (!this.isValidWorldCoordinate(x, y, z)) {
-                continue;
-            }
+            if (!this.isValidCoordinate(x, y, z)) continue;
             
-            const blockType = this.getBlock(x, y, z);
-            
-            if (blockType !== VoxelBlockType.EMPTY && blockType !== VoxelBlockType.CLOUD) {
-                return { hit: true, x, y, z, blockType };
+            const blockId = this.getBlock(x, y, z);
+            if (blockId !== 'minecraft:air') {
+                // 计算法向量（简化版）
+                const normal = this.calculateBlockNormal(start, new Vec3(x, y, z));
+                
+                return {
+                    hit: true,
+                    position: new Vec3(x, y, z),
+                    blockId,
+                    normal
+                };
             }
         }
         
         return { hit: false };
     }
-
-    setCreateRadius(radius: number): void {
-        this.createRadius = Math.max(1, radius);
+    
+    /**
+     * 计算方块法向量（简化实现）
+     */
+    private calculateBlockNormal(rayStart: Vec3, blockPos: Vec3): Vec3 {
+        const diff = rayStart.clone().subtract(blockPos.clone().add(new Vec3(0.5, 0.5, 0.5)));
+        const absX = Math.abs(diff.x);
+        const absY = Math.abs(diff.y);
+        const absZ = Math.abs(diff.z);
+        
+        if (absX > absY && absX > absZ) {
+            return new Vec3(diff.x > 0 ? 1 : -1, 0, 0);
+        } else if (absY > absZ) {
+            return new Vec3(0, diff.y > 0 ? 1 : -1, 0);
+        } else {
+            return new Vec3(0, 0, diff.z > 0 ? 1 : -1);
+        }
     }
-
-    setRenderRadius(radius: number): void {
-        this.renderRadius = Math.max(1, radius);
-    }
-
-    setDeleteRadius(radius: number): void {
-        this.deleteRadius = Math.max(this.createRadius + 1, radius);
-    }
-
-    getStatistics() {
+    
+    /**
+     * 获取世界统计信息
+     */
+    getWorldStats(): WorldStats {
+        let totalBlocks = 0;
+        let totalMemory = 0;
+        let totalUncompressedSize = 0;
+        
+        for (const chunk of this.chunks.values()) {
+            const stats = VoxelChunkStorage.getChunkStats(chunk);
+            totalBlocks += stats.blockCount;
+            totalMemory += stats.memoryUsage.total;
+            totalUncompressedSize += 16 * 16 * 256 * 4; // 假设每个方块4字节
+        }
+        
         return {
-            totalChunks: this.chunkCount,
-            loadedChunks: this.chunks.size,
-            createRadius: this.createRadius,
-            renderRadius: this.renderRadius,
-            deleteRadius: this.deleteRadius
+            loadedChunks: this.chunkCount,
+            totalBlocks,
+            memoryUsage: totalMemory,
+            compressionRatio: totalUncompressedSize > 0 ? totalUncompressedSize / totalMemory : 1,
+            cacheHits: this.stats.cacheHits,
+            cacheMisses: this.stats.cacheMisses
         };
+    }
+    
+    /**
+     * 优化世界（清理和压缩）
+     */
+    optimizeWorld(): void {
+        console.log('[VoxelWorld] 开始世界优化...');
+        
+        let optimizedChunks = 0;
+        for (const chunk of this.chunks.values()) {
+            VoxelChunkStorage.optimizeChunk(chunk);
+            optimizedChunks++;
+        }
+        
+        console.log(`[VoxelWorld] 优化完成，处理了 ${optimizedChunks} 个Chunk`);
+    }
+    
+    /**
+     * 清理世界
+     */
+    clear(): void {
+        for (const chunk of this.chunks.values()) {
+            VoxelChunkStorage.freeChunk(chunk);
+        }
+        
+        this.chunks.clear();
+        this.chunkCount = 0;
+        this.stats.cacheHits = 0;
+        this.stats.cacheMisses = 0;
+        this.stats.totalBlockOperations = 0;
+        
+        console.log('[VoxelWorld] 世界已清理');
+    }
+    
+    /**
+     * 设置配置参数
+     */
+    setLoadRadius(radius: number): void { this.loadRadius = Math.max(1, radius); }
+    setUnloadRadius(radius: number): void { this.unloadRadius = Math.max(2, radius); }
+    setRenderRadius(radius: number): void { this.renderRadius = Math.max(1, radius); }
+    
+    /**
+     * 获取配置参数
+     */
+    getLoadRadius(): number { return this.loadRadius; }
+    getUnloadRadius(): number { return this.unloadRadius; }
+    getRenderRadius(): number { return this.renderRadius; }
+}
+
+/**
+ * 简化的地形生成器
+ */
+class TerrainGenerator {
+    generateTerrain(chunk: ModernVoxelChunk): void {
+        // 简单的平地生成
+        const groundLevel = 64;
+        
+        for (let x = 0; x < 16; x++) {
+            for (let z = 0; z < 16; z++) {
+                for (let y = 0; y < groundLevel; y++) {
+                    const blockId = y < groundLevel - 1 ? 'minecraft:stone' : 'minecraft:grass_block';
+                    VoxelChunkStorage.setBlock(chunk, x, y, z, blockId);
+                }
+            }
+        }
+        
+        // 随机添加一些植物
+        for (let i = 0; i < 5; i++) {
+            const x = Math.floor(Math.random() * 16);
+            const z = Math.floor(Math.random() * 16);
+            const plantType = Math.random() > 0.5 ? 'minecraft:dandelion' : 'minecraft:grass';
+            VoxelChunkStorage.setBlock(chunk, x, groundLevel, z, plantType);
+        }
+    }
+    
+    predictBlockAt(x: number, y: number, z: number): string {
+        const groundLevel = 64;
+        if (y < groundLevel - 1) return 'minecraft:stone';
+        if (y === groundLevel - 1) return 'minecraft:grass_block';
+        return 'minecraft:air';
     }
 }

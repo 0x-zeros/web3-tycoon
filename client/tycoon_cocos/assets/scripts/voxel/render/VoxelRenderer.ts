@@ -2,8 +2,8 @@ import { _decorator, Component, Node, MeshRenderer, Material, utils, Vec3, Camer
 import { VoxelChunk } from '../core/VoxelTypes';
 import { VoxelMeshGenerator } from './VoxelMesh';
 import { VoxelChunkManager } from '../world/VoxelChunk';
-import { VoxelBlockType } from '../core/VoxelBlock';
-import { VoxelWorldManager } from '../world/VoxelWorld';
+import { VoxelWorld } from '../world/VoxelWorld';
+import { MinecraftBlockId } from '../core/VoxelBlockRegistry';
 import { VoxelConfig, VoxelRenderMode } from '../core/VoxelConfig';
 import { VoxelWorldConfig, VoxelWorldMode } from '../core/VoxelWorldConfig';
 import { VoxelInteractionManager, VoxelInteractionEvents, VoxelCameraMode } from '../interaction/VoxelInteractionManager';
@@ -32,7 +32,7 @@ export class VoxelRenderer extends Component {
     @property(VoxelInteractionManager)
     public interactionManager: VoxelInteractionManager | null = null;
     
-    private worldManager: VoxelWorldManager | null = null;
+    private world: VoxelWorld | null = null;
     private chunkNodes: Map<string, Node> = new Map();
     private blockNodes: Map<string, Node> = new Map(); // 独立模式下存储block节点
     private timer: number = 0;
@@ -50,7 +50,11 @@ export class VoxelRenderer extends Component {
             console.warn('[VoxelRenderer] 请在Inspector中设置Camera引用');
         }
         
-        this.worldManager = new VoxelWorldManager();
+        this.world = new VoxelWorld();
+        // 异步初始化世界
+        this.world.initialize().catch(err => {
+            console.error('[VoxelRenderer] 世界初始化失败:', err);
+        });
         
         this.initializeInteractionSystem();
     }
@@ -81,8 +85,8 @@ export class VoxelRenderer extends Component {
                 //     console.log('[VoxelRenderer] 方块悬停:', hitResult.position);
                 // }
             },
-            onBlockPlace: (position, blockType) => {
-                console.log(`[VoxelRenderer] 方块放置事件: 位置(${position.x}, ${position.y}, ${position.z}) 类型:${blockType}`);
+            onBlockPlace: (position, blockId) => {
+                console.log(`[VoxelRenderer] 方块放置事件: 位置(${position.x}, ${position.y}, ${position.z}) 类型:${blockId}`);
                 this.markChunkForUpdate(position);
             },
             onBlockBreak: (position) => {
@@ -94,12 +98,12 @@ export class VoxelRenderer extends Component {
             }
         };
         
-        if (!this.worldManager) {
-            console.error('[VoxelRenderer] 世界管理器未初始化，无法完成交互系统初始化');
+        if (!this.world) {
+            console.error('[VoxelRenderer] 体素世界未初始化，无法完成交互系统初始化');
             return;
         }
         
-        this.interactionManager.initialize(this.worldManager, interactionEvents);
+        this.interactionManager.initialize(this.world, interactionEvents);
         console.log('[VoxelRenderer] 交互系统初始化完成');
         
         // 调试信息：打印组件状态

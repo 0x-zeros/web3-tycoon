@@ -575,7 +575,7 @@
     "_priority": 1,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 540,
+    "_orthoHeight": 581.5143603133159,
     "_near": 1,
     "_far": 1000,
     "_color": {
@@ -1480,7 +1480,7 @@
     "camera": {
       "__id__": 3
     },
-    "worldSize": 10,
+    "worldSize": 30,
     "plantDensity": 0.1,
     "glowingBlockDensity": 0.05,
     "batchSize": 1000,

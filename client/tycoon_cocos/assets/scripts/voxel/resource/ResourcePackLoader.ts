@@ -128,6 +128,25 @@ export class ResourcePackLoader {
             }
         }
 
+        // 额外加载常用的父模型（非模板，但经常被作为 parent 使用）
+        const parentBaseModels = [
+            'block',          // block/block.json（提供 display 等）
+            'leaves',         // 叶子基础模型（包含 elements）
+            'tinted_cross'    // 植物基础模型（包含 elements）
+        ];
+        for (const base of parentBaseModels) {
+            try {
+                const path = `${this.resourcePackPath}/assets/minecraft/models/block/${base}`;
+                const jsonAsset = await this.loadJsonAsset(path);
+                if (jsonAsset) {
+                    this.index.models.set(`minecraft:block/${base}`, jsonAsset);
+                    console.log(`[ResourcePackLoader] 已加载父模型: minecraft:block/${base}`);
+                }
+            } catch (error) {
+                console.warn(`[ResourcePackLoader] 无法加载父模型: ${base}`);
+            }
+        }
+
         // 加载具体方块模型
         const blockModels = [
             'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
@@ -158,7 +177,9 @@ export class ResourcePackLoader {
             if (!model || !model.textures) return;
 
             // 1) 为每个 textures 条目建立直达索引
-            for (const [key, value] of Object.entries(model.textures)) {
+            for (const key in model.textures) {
+                if (!Object.prototype.hasOwnProperty.call(model.textures, key)) continue;
+                const value = (model.textures as any)[key];
                 const fullTexId = this.normalizeTextureId(value); // e.g. minecraft:block/grass_block_top
                 const tailName = fullTexId.replace('minecraft:block/', '');
                 const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${tailName}`;

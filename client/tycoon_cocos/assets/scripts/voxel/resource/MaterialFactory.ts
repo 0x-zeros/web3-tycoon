@@ -1,4 +1,4 @@
-import { Material, Texture2D, gfx } from 'cc';
+import { Material, Texture2D, gfx, EffectAsset, resources } from 'cc';
 import { TextureManager } from './TextureManager';
 
 export enum MaterialType {
@@ -76,8 +76,8 @@ export class MaterialFactory {
         // 加载纹理
         const textureInfo = await this.textureManager.loadTexture(config.texture);
         if (!textureInfo || !textureInfo.texture) {
-            console.error(`[MaterialFactory] 纹理加载失败: ${config.texture}`);
-            return null;
+            console.warn(`[MaterialFactory] 纹理加载失败，使用后备材质: ${config.texture}`);
+            return await this.createMissingMaterial();
         }
 
         // 选择着色器和技术
@@ -85,24 +85,36 @@ export class MaterialFactory {
         
         // 创建材质
         const material = new Material();
-        material.initialize({
-            effectName: shaderInfo.shader,
-            technique: shaderInfo.technique
-        });
-
-        // 设置纹理
-        material.setProperty('mainTexture', textureInfo.texture);
         
-        // 设置天空盒纹理（如果可用）
-        if (textureInfo.skyTexture) {
-            material.setProperty('skyTexture', textureInfo.skyTexture);
+        // 从 resources 仅加载 EffectAsset，再用 effectAsset 初始化（不做任何回退）
+        const effectAsset = await this.loadEffectAsset(shaderInfo.shader);
+        if (!effectAsset) {
+            console.error(`[MaterialFactory] EffectAsset 加载失败: voxel/shaders/${shaderInfo.shader}`);
+            return null;
         }
+        console.log(`[MaterialFactory] EffectAsset 加载成功: voxel/shaders/${shaderInfo.shader}`);
 
-        // 设置体素着色器通用参数
-        this.setVoxelShaderUniforms(material, config);
+        material.initialize({ effectAsset, technique: shaderInfo.technique });
 
-        // 配置材质属性（渲染状态等）
-        this.configureMaterial(material, config);
+        try {
+            // 设置纹理
+            material.setProperty('mainTexture', textureInfo.texture);
+            
+            // // 设置天空盒纹理（如果可用）
+            // if (textureInfo.skyTexture) {
+            //     material.setProperty('skyTexture', textureInfo.skyTexture);
+            // }
+
+            // 设置体素着色器通用参数
+            this.setVoxelShaderUniforms(material, config);
+
+            // 配置材质属性（渲染状态等）
+            this.configureMaterial(material, config);
+        } catch (error) {
+            console.error(`[MaterialFactory] 材质属性设置失败:`, error);
+            material.destroy();
+            return null;
+        }
 
         return material;
     }
@@ -112,21 +124,25 @@ export class MaterialFactory {
      * @param config 材质配置
      * @returns 着色器信息
      */
-    private selectShaderAndTechnique(config: MaterialConfig): { shader: string, technique: string } {
+    private selectShaderAndTechnique(config: MaterialConfig): { shader: string, technique: number } {
+        // technique 索引按 effect 文件 techniques 顺序：
+        // voxel-block.effect: 0=opaque, 1=cutout, 2=transparent
+        // voxel-plant.effect: 0=plant
+        // voxel-emissive.effect: 0=emissive
         switch (config.type) {
             case MaterialType.OPAQUE:
-                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'opaque' };
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 0 };
+            case MaterialType.CUTOUT:
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 1 };
             case MaterialType.TRANSPARENT:
             case MaterialType.DOUBLE_SIDED:
-                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'transparent' };
-            case MaterialType.CUTOUT:
-                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'cutout' };
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 2 };
             case MaterialType.PLANT:
-                return { shader: MaterialFactory.SHADERS.VOXEL_PLANT, technique: 'plant' };
+                return { shader: MaterialFactory.SHADERS.VOXEL_PLANT, technique: 0 };
             case MaterialType.EMISSIVE:
-                return { shader: MaterialFactory.SHADERS.VOXEL_EMISSIVE, technique: 'emissive' };
+                return { shader: MaterialFactory.SHADERS.VOXEL_EMISSIVE, technique: 0 };
             default:
-                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'opaque' };
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 0 };
         }
     }
 
@@ -171,39 +187,48 @@ export class MaterialFactory {
      * 设置体素着色器通用参数
      */
     private setVoxelShaderUniforms(material: Material, config: MaterialConfig): void {
-        // 通用参数
-        material.setProperty('timer', 0.0);
-        material.setProperty('daylight', 1.0);
-        material.setProperty('fogDistance', 150.0);
-        material.setProperty('ortho', 0);
-        
-        // 根据材质类型设置特定参数
-        switch (config.type) {
-            case MaterialType.CUTOUT:
-                material.setProperty('alphaThreshold', config.alphaTest || 0.5);
-                break;
-                
-            case MaterialType.TRANSPARENT:
-            case MaterialType.DOUBLE_SIDED:
-                material.setProperty('transparency', config.transparency || 0.8);
-                break;
-                
-            case MaterialType.PLANT:
-                material.setProperty('windStrength', config.windStrength || 0.1);
-                material.setProperty('windSpeed', config.windSpeed || 1.0);
-                material.setProperty('alphaThreshold', config.alphaTest || 0.1);
-                material.setProperty('tintColor', [1.0, 1.0, 1.0, 1.0]);
-                material.setProperty('plantHeight', 1.0);
-                break;
-                
-            case MaterialType.EMISSIVE:
-                const emissiveColor = config.emissiveColor || [1.0, 0.8, 0.3, 1.0];
-                material.setProperty('emissiveColor', emissiveColor);
-                material.setProperty('emissiveIntensity', config.emissiveIntensity || 2.0);
-                material.setProperty('flickerSpeed', config.flickerSpeed || 0.0);
-                material.setProperty('flickerAmount', config.flickerAmount || 0.0);
-                material.setProperty('bloomIntensity', 1.0);
-                break;
+        try {
+            console.log(`[MaterialFactory] 设置着色器参数，材质类型: ${config.type}`);
+            
+            // 通用参数 - 所有着色器都有这些
+            material.setProperty('timer', 0.0);
+            material.setProperty('daylight', 1.0);
+            material.setProperty('fogDistance', 150.0);
+            material.setProperty('ortho', 0);
+            
+            // 根据材质类型设置特定参数
+            switch (config.type) {
+                case MaterialType.CUTOUT:
+                    material.setProperty('alphaThreshold', config.alphaTest || 0.5);
+                    break;
+                    
+                case MaterialType.TRANSPARENT:
+                case MaterialType.DOUBLE_SIDED:
+                    material.setProperty('transparency', config.transparency || 0.8);
+                    break;
+                    
+                case MaterialType.PLANT:
+                    material.setProperty('windStrength', config.windStrength || 0.1);
+                    material.setProperty('windSpeed', config.windSpeed || 1.0);
+                    material.setProperty('alphaThreshold', config.alphaTest || 0.1);
+                    material.setProperty('tintColor', [1.0, 1.0, 1.0, 1.0]);
+                    material.setProperty('plantHeight', 1.0);
+                    break;
+                    
+                case MaterialType.EMISSIVE:
+                    const emissiveColor = config.emissiveColor || [1.0, 0.8, 0.3, 1.0];
+                    material.setProperty('emissiveColor', emissiveColor);
+                    material.setProperty('emissiveIntensity', config.emissiveIntensity || 2.0);
+                    material.setProperty('flickerSpeed', config.flickerSpeed || 0.0);
+                    material.setProperty('flickerAmount', config.flickerAmount || 0.0);
+                    material.setProperty('bloomIntensity', 1.0);
+                    break;
+            }
+            
+            console.log(`[MaterialFactory] 着色器参数设置完成`);
+        } catch (error) {
+            console.error(`[MaterialFactory] 设置着色器参数失败:`, error);
+            throw error;
         }
     }
     
@@ -283,6 +308,42 @@ export class MaterialFactory {
         // 设置发光颜色和强度
         material.setProperty('emissive', [intensity, intensity, intensity, 1.0]);
         material.setProperty('emissiveScale', intensity);
+    }
+
+    /**
+     * 创建缺失纹理的后备材质
+     * @returns 基础材质对象
+     */
+    async createMissingMaterial(): Promise<Material | null> {
+        console.warn('[MaterialFactory] 创建缺失纹理后备材质');
+        
+        const material = new Material();
+        const initResult = material.initialize({
+            effectName: 'voxel/shaders/voxel-block',
+            technique: 0 // 后备材质使用 opaque 技术
+        });
+        
+        if (!initResult || !material.passes || material.passes.length === 0) {
+            console.error('[MaterialFactory] 后备材质创建失败');
+            return null;
+        }
+        
+        // 设置基础参数
+        material.setProperty('timer', 0.0);
+        material.setProperty('daylight', 1.0);
+        material.setProperty('fogDistance', 150.0);
+        material.setProperty('ortho', 0);
+        
+        return material;
+    }
+
+    /** 仅从 resources 加载 EffectAsset */
+    private async loadEffectAsset(shaderName: string): Promise<EffectAsset | null> {
+        return await new Promise<EffectAsset | null>((resolve) => {
+            resources.load(`voxel/shaders/${shaderName}`, EffectAsset, (err, res) => {
+                resolve(err ? null : (res as EffectAsset));
+            });
+        });
     }
 
     /**

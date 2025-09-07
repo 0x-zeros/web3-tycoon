@@ -1,0 +1,54 @@
+// Copyright (c) 2017-2023 Xiamen Yaji Software Co., Ltd.
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: voxel-sky-vs
+      frag: voxel-sky-fs
+      rasterizerState:
+        cullMode: front
+      properties:
+        skyTexture:       { value: white }
+        timer:            { value: 0.0 }
+}%
+
+CCProgram voxel-sky-vs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+  
+  uniform VoxelSkyUniforms {
+    float timer;
+  };
+
+  in vec3 a_position;
+  in vec2 a_texCoord;
+
+  out vec2 v_uv;
+
+  void main() {
+    gl_Position = cc_matViewProj * cc_matWorld * vec4(a_position, 1.0);
+    v_uv = a_texCoord;
+  }
+}%
+
+CCProgram voxel-sky-fs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  
+  uniform sampler2D skyTexture;
+  
+  uniform VoxelSkyUniforms {
+    float timer;
+  };
+
+  in vec2 v_uv;
+
+  layout(location = 0) out vec4 fragColor;
+
+  void main() {
+    vec2 skyUV = vec2(timer, v_uv.y);
+    vec4 skyColor = texture(skyTexture, skyUV);
+    fragColor = skyColor;
+  }
+}%

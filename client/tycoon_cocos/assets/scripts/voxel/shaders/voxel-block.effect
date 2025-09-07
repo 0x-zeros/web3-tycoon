@@ -29,7 +29,7 @@ CCEffect %{
     passes:
     - vert: voxel-block-vs
       frag: voxel-transparent-fs
-      priority: transparent
+      priority: 200
       rasterizerState:
         cullMode: none
       depthStencilState:
@@ -124,7 +124,7 @@ CCProgram voxel-block-fs %{
   layout(location = 0) out vec4 fragColor;
 
   vec3 calculateLighting(vec4 texColor, float ao, float diffuse, float light) {
-    bool isCloud = (texColor.rgb == vec3(1.0, 1.0, 1.0));
+    bool isCloud = all(equal(texColor.rgb, vec3(1.0, 1.0, 1.0)));
     if (isCloud && ortho > 0.5) {
       discard;
     }
@@ -146,16 +146,14 @@ CCProgram voxel-block-fs %{
   void main() {
     vec4 texColor = texture(mainTexture, v_uv);
     
-    // 丢弃magenta像素（缺失纹理标记）
-    if (texColor.rgb == vec3(1.0, 0.0, 1.0)) {
+    if (all(equal(texColor.rgb, vec3(1.0, 0.0, 1.0)))) {
       discard;
     }
     
     vec3 finalColor = calculateLighting(texColor, v_ao, v_diffuse, v_light);
     
-    // 应用雾效果
     vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
-    finalColor = mix(finalColor, skyColor, v_fogFactor);
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor, 0.0, 1.0));
     
     fragColor = vec4(finalColor, texColor.a);
   }
@@ -173,6 +171,8 @@ CCProgram voxel-cutout-fs %{
     float daylight;
     float fogDistance;
     float ortho;
+  };
+  uniform CutoutParams {
     float alphaThreshold;
   };
 
@@ -203,21 +203,18 @@ CCProgram voxel-cutout-fs %{
   void main() {
     vec4 texColor = texture(mainTexture, v_uv);
     
-    // Alpha test for cutout materials
     if (texColor.a < alphaThreshold) {
       discard;
     }
     
-    // 丢弃magenta像素（缺失纹理标记）
-    if (texColor.rgb == vec3(1.0, 0.0, 1.0)) {
+    if (all(equal(texColor.rgb, vec3(1.0, 0.0, 1.0)))) {
       discard;
     }
     
     vec3 finalColor = calculateLighting(texColor, v_ao, v_diffuse, v_light);
     
-    // 应用雾效果
     vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
-    finalColor = mix(finalColor, skyColor, v_fogFactor);
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor, 0.0, 1.0));
     
     fragColor = vec4(finalColor, 1.0);
   }
@@ -235,6 +232,8 @@ CCProgram voxel-transparent-fs %{
     float daylight;
     float fogDistance;
     float ortho;
+  };
+  uniform TransparentParams {
     float transparency;
   };
 
@@ -256,8 +255,8 @@ CCProgram voxel-transparent-fs %{
     
     float lightValue = min(1.0, daylight + light);
     vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
-    vec3 ambient = vec3(lightValue * 0.5 + 0.2); // 透明物体稍微提高环境光
-    vec3 lightFinal = ambient + lightColor * df * 0.8; // 降低直射光强度
+    vec3 ambient = vec3(lightValue * 0.5 + 0.2);
+    vec3 lightFinal = ambient + lightColor * df * 0.8;
     
     return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
   }
@@ -265,18 +264,15 @@ CCProgram voxel-transparent-fs %{
   void main() {
     vec4 texColor = texture(mainTexture, v_uv);
     
-    // 丢弃magenta像素（缺失纹理标记）
-    if (texColor.rgb == vec3(1.0, 0.0, 1.0)) {
+    if (all(equal(texColor.rgb, vec3(1.0, 0.0, 1.0)))) {
       discard;
     }
     
     vec3 finalColor = calculateLighting(texColor, v_ao, v_diffuse, v_light);
     
-    // 透明物体减少雾效果
     vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
-    finalColor = mix(finalColor, skyColor, v_fogFactor * 0.5);
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor * 0.5, 0.0, 1.0));
     
-    // 使用配置的透明度
     float alpha = texColor.a * transparency;
     fragColor = vec4(finalColor, alpha);
   }

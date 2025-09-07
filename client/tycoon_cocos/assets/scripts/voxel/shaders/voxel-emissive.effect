@@ -30,7 +30,7 @@ CCProgram voxel-emissive-vs %{
   #include <builtin/uniforms/cc-global>
   #include <builtin/uniforms/cc-local>
   
-  uniform EmissiveUniforms {
+  uniform EmissiveVSUniforms {
     float timer;
     float daylight;
     float fogDistance;
@@ -65,11 +65,9 @@ CCProgram voxel-emissive-vs %{
     v_ao = 0.3 + (1.0 - a_ao) * 0.7;
     v_light = a_light;
     
-    // 基础漫反射（发光物体仍需要一定的形状感）
     vec3 worldNormal = normalize((cc_matWorld * vec4(a_normal, 0.0)).xyz);
     v_diffuse = max(0.0, dot(worldNormal, LIGHT_DIRECTION));
     
-    // 计算闪烁因子
     if (flickerSpeed > 0.0) {
       float flicker1 = sin(timer * flickerSpeed);
       float flicker2 = sin(timer * flickerSpeed * 1.7 + 1.0);
@@ -80,13 +78,12 @@ CCProgram voxel-emissive-vs %{
       v_flickerFactor = 1.0;
     }
     
-    // 雾效果计算（发光物体雾效果较弱）
     if (ortho > 0.5) {
       v_fogFactor = 0.0;
       v_fogHeight = 0.0;
     } else {
       float cameraDistance = distance(cc_cameraPos.xyz, worldPos.xyz);
-      v_fogFactor = pow(clamp(cameraDistance / fogDistance, 0.0, 1.0), 6.0); // 更慢的雾衰减
+      v_fogFactor = pow(clamp(cameraDistance / fogDistance, 0.0, 1.0), 6.0);
       
       float dy = worldPos.y - cc_cameraPos.y;
       float dx = distance(worldPos.xz, cc_cameraPos.xz);
@@ -102,7 +99,7 @@ CCProgram voxel-emissive-fs %{
   uniform sampler2D mainTexture;
   uniform sampler2D skyTexture;
   
-  uniform EmissiveUniforms {
+  uniform EmissiveFSUniforms {
     float timer;
     float daylight;
     float fogDistance;
@@ -127,40 +124,29 @@ CCProgram voxel-emissive-fs %{
   void main() {
     vec4 texColor = texture(mainTexture, v_uv);
     
-    // 丢弃magenta像素（缺失纹理标记）
-    if (texColor.rgb == vec3(1.0, 0.0, 1.0)) {
+    if (all(equal(texColor.rgb, vec3(1.0, 0.0, 1.0)))) {
       discard;
     }
     
-    // 基础光照计算（发光物体仍需要一些形状感）
     float ao = v_ao;
-    float df = v_diffuse * 0.3; // 大幅减少漫反射影响
+    float df = v_diffuse * 0.3;
     
     ao = min(1.0, ao + v_light);
     df = min(1.0, df + v_light);
     
-    // 环境光（很弱，主要靠自发光）
     float lightValue = min(1.0, daylight + v_light);
-    vec3 ambient = vec3(lightValue * 0.1 + 0.1); // 很弱的环境光
-    vec3 diffuseLight = vec3(lightValue * 0.1) * df; // 很弱的漫反射
+    vec3 ambient = vec3(lightValue * 0.1 + 0.1);
+    vec3 diffuseLight = vec3(lightValue * 0.1) * df;
     
-    // 基础颜色
     vec3 baseColor = texColor.rgb * (ambient + diffuseLight) * ao;
-    
-    // 自发光计算
     vec3 emissive = texColor.rgb * emissiveColor.rgb * emissiveIntensity * v_flickerFactor;
     
-    // 混合基础颜色和发光
     vec3 finalColor = baseColor + emissive;
+    finalColor = clamp(finalColor, vec3(0.0), vec3(10.0));
     
-    // HDR支持 - 允许超过1.0的亮度值
-    finalColor = clamp(finalColor, vec3(0.0), vec3(10.0)); // 限制在合理范围内
-    
-    // 发光物体的雾效果更弱
     vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
-    finalColor = mix(finalColor, skyColor, v_fogFactor * 0.3);
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor * 0.3, 0.0, 1.0));
     
-    // Bloom效果提示 - 通过alpha通道传递亮度信息
     float brightness = dot(emissive, vec3(0.299, 0.587, 0.114)) * bloomIntensity;
     brightness = clamp(brightness, 0.0, 1.0);
     

@@ -269,9 +269,9 @@ export class BlockRegistry {
             renderType: BlockRenderType.CROSS
         });
 
-        // 草（植物）
+        // 矮草（植物）
         this.register({
-            id: 'minecraft:grass',
+            id: 'minecraft:short_grass',
             displayName: '草',
             isPlant: true,
             isObstacle: false,
@@ -310,7 +310,7 @@ export class BlockRegistry {
         this.legacyMapping.set(VoxelBlockType.GLASS, 'minecraft:glass');
         this.legacyMapping.set(VoxelBlockType.YELLOW_FLOWER, 'minecraft:dandelion');
         this.legacyMapping.set(VoxelBlockType.RED_FLOWER, 'minecraft:poppy');
-        this.legacyMapping.set(VoxelBlockType.TALL_GRASS, 'minecraft:grass');
+        this.legacyMapping.set(VoxelBlockType.TALL_GRASS, 'minecraft:short_grass');
     }
 
     /**

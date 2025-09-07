@@ -531,7 +531,7 @@ class TerrainGenerator {
         for (let i = 0; i < 5; i++) {
             const x = Math.floor(Math.random() * 16);
             const z = Math.floor(Math.random() * 16);
-            const plantType = Math.random() > 0.5 ? 'minecraft:dandelion' : 'minecraft:grass';
+            const plantType = Math.random() > 0.5 ? 'minecraft:dandelion' : 'minecraft:short_grass';
             VoxelChunkStorage.setBlock(chunk, x, groundLevel, z, plantType);
         }
     }

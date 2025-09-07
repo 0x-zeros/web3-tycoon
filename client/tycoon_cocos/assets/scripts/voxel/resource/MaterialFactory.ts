@@ -423,7 +423,7 @@ export class MaterialFactory {
      */
     private isPlantTexture(texturePath: string): boolean {
         const plantTextures = [
-            'grass', 'fern', 'dandelion', 'poppy', 'flower',
+            'short_grass', 'fern', 'dandelion', 'poppy', 'flower',
             'sapling', 'vine', 'wheat', 'carrot', 'potato'
         ];
         

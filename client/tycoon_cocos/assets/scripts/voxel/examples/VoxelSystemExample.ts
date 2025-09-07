@@ -96,7 +96,7 @@ export class VoxelSystemExample extends Component {
             // 第四排：植物（交叉模型）
             { id: 'minecraft:dandelion', position: new Vec3(-4, 0, 3) },
             { id: 'minecraft:poppy', position: new Vec3(-3, 0, 3) },
-            { id: 'minecraft:grass', position: new Vec3(-2, 0, 3) },
+            { id: 'minecraft:short_grass', position: new Vec3(-2, 0, 3) },
             { id: 'minecraft:fern', position: new Vec3(-1, 0, 3) }
         ];
 

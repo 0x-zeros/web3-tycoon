@@ -396,7 +396,7 @@ export class VoxelBlockCatalog {
             'minecraft:glowstone': ['光源', '发光', '照明'],
             'minecraft:dandelion': ['植物', '花朵', '装饰'],
             'minecraft:poppy': ['植物', '花朵', '红色'],
-            'minecraft:grass': ['植物', '草', '装饰'],
+            'minecraft:short_grass': ['植物', '草', '装饰'],
         };
         
         return tagMap[blockId] || [];

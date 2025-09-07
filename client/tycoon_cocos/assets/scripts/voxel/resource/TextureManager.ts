@@ -156,7 +156,7 @@ export class TextureManager {
             'minecraft:block/oak_leaves',
             'minecraft:block/dandelion',
             'minecraft:block/poppy',
-            'minecraft:block/grass',
+            'minecraft:block/short_grass',
             'minecraft:block/fern'
         ];
 
@@ -206,7 +206,7 @@ export class TextureManager {
      */
     private isTransparentTexture(texturePath: string): boolean {
         const transparentTextures = [
-            'glass', 'leaves', 'grass', 'fern', 'dandelion', 'poppy',
+            'glass', 'leaves', 'short_grass', 'fern', 'dandelion', 'poppy',
             'water', 'ice', 'portal', 'vine', 'flower', 'sapling'
         ];
 

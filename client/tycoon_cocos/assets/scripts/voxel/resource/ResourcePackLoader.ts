@@ -92,7 +92,7 @@ export class ResourcePackLoader {
         const blockstateNames = [
             'stone', 'oak_log', 'oak_planks', 'grass_block', 'dirt',
             'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'grass', 'fern'
+            'dandelion', 'poppy', 'short_grass', 'fern'
         ];
 
         for (const name of blockstateNames) {
@@ -132,7 +132,7 @@ export class ResourcePackLoader {
         const blockModels = [
             'stone', 'stone_mirrored', 'oak_log', 'oak_planks', 'grass_block',
             'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'grass', 'fern'
+            'dandelion', 'poppy', 'short_grass', 'fern'
         ];
 
         for (const model of blockModels) {
@@ -154,7 +154,7 @@ export class ResourcePackLoader {
             'stone', 'oak_log', 'oak_log_top', 'oak_planks',
             'grass_block_top', 'grass_block_side', 'dirt',
             'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'grass', 'fern'
+            'dandelion', 'poppy', 'short_grass', 'fern'
         ];
 
         for (const textureName of textureNames) {

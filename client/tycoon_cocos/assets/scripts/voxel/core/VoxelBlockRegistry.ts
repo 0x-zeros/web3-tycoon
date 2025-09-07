@@ -17,7 +17,7 @@ export type MinecraftBlockId =
     | 'minecraft:glass'
     | 'minecraft:dandelion'
     | 'minecraft:poppy'
-    | 'minecraft:grass'
+    | 'minecraft:short_grass'
     | 'minecraft:fern'
     | 'minecraft:bedrock'
     | 'minecraft:water'
@@ -345,10 +345,10 @@ export class VoxelBlockRegistry {
             textures: { all: 'minecraft:block/poppy' }
         });
         
-        // 草
+        // 矮草
         this.register({
-            id: 'minecraft:grass',
-            displayName: '草',
+            id: 'minecraft:short_grass',
+            displayName: '矮草',
             category: BlockCategory.DECORATION,
             renderType: BlockRenderType.CROSS,
             properties: {
@@ -360,7 +360,7 @@ export class VoxelBlockRegistry {
                 waterlogged: false,
                 gravity: false
             },
-            textures: { all: 'minecraft:block/grass' }
+            textures: { all: 'minecraft:block/short_grass' }
         });
         
         // 萤石

@@ -321,7 +321,7 @@ export class MeshBuilder {
      */
     private static isTransparentTexture(texture: string): boolean {
         const transparentTextures = [
-            'glass', 'leaves', 'grass', 'fern', 'dandelion', 'poppy',
+            'glass', 'leaves', 'short_grass', 'fern', 'dandelion', 'poppy',
             'water', 'ice', 'portal'
         ];
 

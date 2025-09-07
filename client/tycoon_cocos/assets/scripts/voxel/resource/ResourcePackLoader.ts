@@ -184,8 +184,11 @@ export class ResourcePackLoader {
             return null;
         }
 
+        //https://docs.cocos.com/creator/3.8/manual/zh/asset/dynamic-load-resources.html#%E5%8A%A0%E8%BD%BD-spriteframe-%E6%88%96-texture2d
+        //图片设置为 sprite-frame 或 texture 或其他图片类型后，将会在 资源管理器 中生成一个对应类型的资源。但如果直接加载 test_assets/image，得到的类型将会是 ImageAsset。你必须指定路径到具体的子资源
+        // 即添加后缀 /texture 或者 /spriteFrame
         return new Promise((resolve, reject) => {
-            resources.load(resourcePath, Texture2D, (err, texture) => {
+            resources.load(resourcePath + '/texture', Texture2D, (err, texture) => {
                 if (err) {
                     console.warn(`[ResourcePackLoader] 纹理加载失败: ${resourcePath}`, err);
                     resolve(null);

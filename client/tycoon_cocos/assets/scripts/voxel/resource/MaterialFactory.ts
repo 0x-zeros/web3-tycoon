@@ -7,12 +7,14 @@ export enum MaterialType {
     CUTOUT = 'cutout',
     DOUBLE_SIDED = 'double_sided',
     PLANT = 'plant',
-    EMISSIVE = 'emissive'
+    EMISSIVE = 'emissive',
+    OVERLAY = 'overlay'
 }
 
 export interface MaterialConfig {
     type: MaterialType;
     texture: string;
+    overlayTexture?: string;  // overlay纹理路径
     alphaTest?: number;
     emissive?: boolean;
     emissiveIntensity?: number;
@@ -34,7 +36,8 @@ export class MaterialFactory {
     private static readonly SHADERS = {
         VOXEL_BLOCK: 'voxel-block',
         VOXEL_PLANT: 'voxel-plant', 
-        VOXEL_EMISSIVE: 'voxel-emissive'
+        VOXEL_EMISSIVE: 'voxel-emissive',
+        VOXEL_OVERLAY: 'voxel-overlay'
     };
 
     constructor(textureManager: TextureManager) {
@@ -97,8 +100,21 @@ export class MaterialFactory {
         material.initialize({ effectAsset, technique: shaderInfo.technique });
 
         try {
-            // 设置纹理
+            // 设置主纹理
             material.setProperty('mainTexture', textureInfo.texture);
+            
+            // 设置overlay纹理（如果有）
+            if (config.overlayTexture) {
+                const overlayTextureInfo = await this.textureManager.loadTexture(config.overlayTexture);
+                if (overlayTextureInfo && overlayTextureInfo.texture) {
+                    material.setProperty('overlayTexture', overlayTextureInfo.texture);
+                    console.log(`[MaterialFactory] Overlay纹理加载成功: ${config.overlayTexture}`);
+                } else {
+                    console.warn(`[MaterialFactory] Overlay纹理加载失败: ${config.overlayTexture}`);
+                    // 使用白色纹理作为fallback
+                    material.setProperty('overlayTexture', textureInfo.texture);
+                }
+            }
             
             // // 设置天空盒纹理（如果可用）
             // if (textureInfo.skyTexture) {
@@ -129,6 +145,7 @@ export class MaterialFactory {
         // voxel-block.effect: 0=opaque, 1=cutout, 2=transparent
         // voxel-plant.effect: 0=plant
         // voxel-emissive.effect: 0=emissive
+        // voxel-overlay.effect: 0=opaque, 1=cutout, 2=transparent
         switch (config.type) {
             case MaterialType.OPAQUE:
                 return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 0 };
@@ -141,6 +158,9 @@ export class MaterialFactory {
                 return { shader: MaterialFactory.SHADERS.VOXEL_PLANT, technique: 0 };
             case MaterialType.EMISSIVE:
                 return { shader: MaterialFactory.SHADERS.VOXEL_EMISSIVE, technique: 0 };
+            case MaterialType.OVERLAY:
+                // overlay材质默认使用opaque technique，根据需要可以扩展
+                return { shader: MaterialFactory.SHADERS.VOXEL_OVERLAY, technique: 0 };
             default:
                 return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 0 };
         }
@@ -174,6 +194,9 @@ export class MaterialFactory {
                 break;
             case MaterialType.EMISSIVE:
                 this.configureEmissiveMaterial(pass, config);
+                break;
+            case MaterialType.OVERLAY:
+                this.configureOverlayMaterial(pass, config);
                 break;
         }
 
@@ -268,6 +291,14 @@ export class MaterialFactory {
      */
     private configureEmissiveMaterial(pass: any, config: MaterialConfig): void {
         // 发光材质的渲染状态已在effect文件中定义
+    }
+
+    /**
+     * 配置overlay材质
+     */
+    private configureOverlayMaterial(pass: any, config: MaterialConfig): void {
+        // overlay材质的渲染状态已在effect文件中定义
+        // 主要处理双纹理和混合相关的设置
     }
 
     /**
@@ -380,6 +411,29 @@ export class MaterialFactory {
     }
 
     /**
+     * 创建overlay方块材质（支持双纹理）
+     * @param baseTexturePath 基础纹理路径
+     * @param overlayTexturePath overlay纹理路径
+     * @param emissive 是否发光
+     * @returns 材质对象
+     */
+    async createOverlayBlockMaterial(
+        baseTexturePath: string, 
+        overlayTexturePath: string, 
+        emissive: boolean = false
+    ): Promise<Material | null> {
+        const config: MaterialConfig = {
+            type: MaterialType.OVERLAY,
+            texture: baseTexturePath,
+            overlayTexture: overlayTexturePath,
+            emissive,
+            emissiveIntensity: emissive ? 1.0 : 0
+        };
+
+        return await this.createMaterial(config);
+    }
+
+    /**
      * 批量创建材质
      * @param configs 材质配置数组
      * @returns 材质映射
@@ -409,6 +463,7 @@ export class MaterialFactory {
         const parts = [
             config.type,
             config.texture,
+            config.overlayTexture || 'no-overlay',
             config.alphaTest?.toString() || 'no-alpha',
             config.emissive ? 'emissive' : 'no-emissive',
             config.doubleSided ? 'double-sided' : 'single-sided'
@@ -463,14 +518,16 @@ export class MaterialFactory {
         transparent: number;
         cutout: number;
         doubleSided: number;
+        overlay: number;
     } {
-        let opaque = 0, transparent = 0, cutout = 0, doubleSided = 0;
+        let opaque = 0, transparent = 0, cutout = 0, doubleSided = 0, overlay = 0;
 
         for (const [key] of this.materialCache) {
             if (key.includes('opaque')) opaque++;
             else if (key.includes('transparent')) transparent++;
             else if (key.includes('cutout')) cutout++;
             else if (key.includes('double_sided')) doubleSided++;
+            else if (key.includes('overlay')) overlay++;
         }
 
         return {
@@ -478,7 +535,8 @@ export class MaterialFactory {
             opaque,
             transparent,
             cutout,
-            doubleSided
+            doubleSided,
+            overlay
         };
     }
 

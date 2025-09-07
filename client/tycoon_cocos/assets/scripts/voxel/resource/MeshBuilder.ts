@@ -1,16 +1,18 @@
-import { Vec3, Vec2, utils } from 'cc';
+import { Vec3, Vec2, Vec4, Color, utils } from 'cc';
 import { ResolvedModel, ResolvedElement, ResolvedFace } from './ModelParser';
 
 export interface VoxelMeshData {
     vertices: VoxelVertex[];
     indices: number[];
     textureGroups: Map<string, TextureGroup>; // 按纹理分组
+    hasOverlay?: boolean; // 是否包含overlay层
 }
 
 export interface VoxelVertex {
     position: Vec3;
     normal: Vec3;
-    uv: Vec2;
+    texCoord: Vec4;  // xy: 主纹理UV, zw: overlay纹理UV
+    color: Color;    // 用于tintindex颜色调制
     ao: number;      // 环境光遮蔽
     light: number;   // 光照等级
 }
@@ -44,9 +46,17 @@ export class MeshBuilder {
             textureGroups: new Map()
         };
 
-        // 构建每个元素的几何体
-        for (const element of model.elements) {
-            this.buildElementMesh(element, context, meshData);
+        // 检查是否有overlay系统需求
+        const hasOverlayElements = this.hasOverlaySystem(model);
+        
+        if (hasOverlayElements) {
+            // 使用overlay系统处理
+            this.buildOverlayMesh(model, context, meshData);
+        } else {
+            // 构建每个元素的几何体（传统方式）
+            for (const element of model.elements) {
+                this.buildElementMesh(element, context, meshData);
+            }
         }
 
         // 应用方块级别的旋转
@@ -170,16 +180,35 @@ export class MeshBuilder {
         const ao = shade ? this.calculateAO(positions, normal, context) : [1, 1, 1, 1];
         const light = this.calculateLight(positions, context);
 
+        // 检测是否是overlay纹理
+        const isOverlay = this.isOverlayTexture(texture);
+        const hasTint = faceData.tintindex !== undefined && faceData.tintindex >= 0;
+        
+        // 确定tint颜色
+        const tintColor = hasTint ? 
+            new Color(127, 255, 76, 255) : // 草地绿色
+            Color.WHITE;
+
         // 创建四个顶点
         for (let i = 0; i < 4; i++) {
             const vertex: VoxelVertex = {
                 position: positions[i].clone(),
                 normal: normal.clone(),
-                uv: uvs[i].clone(),
+                texCoord: new Vec4(
+                    uvs[i].x, uvs[i].y,  // xy: 主纹理UV
+                    isOverlay ? uvs[i].x : 0, // z: overlay U
+                    isOverlay ? uvs[i].y : 0  // w: overlay V
+                ),
+                color: tintColor,
                 ao: ao[i],
                 light: light[i]
             };
             textureGroup.vertices.push(vertex);
+        }
+        
+        // 标记mesh包含overlay
+        if (isOverlay) {
+            meshData.hasOverlay = true;
         }
 
         // 创建两个三角形（四边形）
@@ -329,6 +358,236 @@ export class MeshBuilder {
     }
 
     /**
+     * 检查纹理是否为overlay类型
+     * @param texture 纹理路径
+     * @returns 是否为overlay
+     */
+    private static isOverlayTexture(texture: string): boolean {
+        return texture.includes('overlay');
+    }
+
+    /**
+     * 检查模型是否使用overlay系统
+     * @param model 解析后的模型
+     * @returns 是否使用overlay系统
+     */
+    private static hasOverlaySystem(model: ResolvedModel): boolean {
+        // 检查是否有多个element且包含overlay纹理
+        if (model.elements.length < 2) return false;
+        
+        for (const element of model.elements) {
+            for (const [, face] of element.faces) {
+                if (this.isOverlayTexture(face.texture)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 构建overlay系统的网格
+     * @param model 解析后的模型
+     * @param context 构建上下文
+     * @param meshData 目标网格数据
+     */
+    private static buildOverlayMesh(model: ResolvedModel, context: MeshBuildContext, meshData: VoxelMeshData): void {
+        // 分离base和overlay元素
+        const baseElements: ResolvedElement[] = [];
+        const overlayElements: ResolvedElement[] = [];
+        
+        for (const element of model.elements) {
+            let hasOverlay = false;
+            for (const [, face] of element.faces) {
+                if (this.isOverlayTexture(face.texture)) {
+                    hasOverlay = true;
+                    break;
+                }
+            }
+            if (hasOverlay) {
+                overlayElements.push(element);
+            } else {
+                baseElements.push(element);
+            }
+        }
+
+        // 为每个base element的每个面构建顶点
+        for (const baseElement of baseElements) {
+            this.buildOverlayElementMesh(baseElement, overlayElements, context, meshData);
+        }
+    }
+
+    /**
+     * 构建支持overlay的元素网格
+     * @param baseElement 基础元素
+     * @param overlayElements overlay元素列表
+     * @param context 构建上下文
+     * @param meshData 目标网格数据
+     */
+    private static buildOverlayElementMesh(
+        baseElement: ResolvedElement,
+        overlayElements: ResolvedElement[],
+        context: MeshBuildContext,
+        meshData: VoxelMeshData
+    ): void {
+        const [fromX, fromY, fromZ] = baseElement.from;
+        const [toX, toY, toZ] = baseElement.to;
+
+        // 将 0-16 坐标系转换为 -0.5 到 0.5 的方块单位
+        const from = new Vec3(
+            fromX / 16 - 0.5,
+            fromY / 16 - 0.5,
+            fromZ / 16 - 0.5
+        );
+        const to = new Vec3(
+            toX / 16 - 0.5,
+            toY / 16 - 0.5,
+            toZ / 16 - 0.5
+        );
+
+        // 定义立方体的面
+        const faces = [
+            { name: 'north', normal: new Vec3(0, 0, -1), positions: [
+                new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z),
+                new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
+            ]},
+            { name: 'south', normal: new Vec3(0, 0, 1), positions: [
+                new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z),
+                new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
+            ]},
+            { name: 'west', normal: new Vec3(-1, 0, 0), positions: [
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z),
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
+            ]},
+            { name: 'east', normal: new Vec3(1, 0, 0), positions: [
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z),
+                new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
+            ]},
+            { name: 'down', normal: new Vec3(0, -1, 0), positions: [
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z),
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z)
+            ]},
+            { name: 'up', normal: new Vec3(0, 1, 0), positions: [
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z),
+                new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
+            ]}
+        ];
+
+        // 处理每个面
+        for (const faceInfo of faces) {
+            const baseFace = baseElement.faces.get(faceInfo.name);
+            if (!baseFace) continue;
+
+            // 查找对应的overlay面
+            let overlayFace: ResolvedFace | null = null;
+            for (const overlayElement of overlayElements) {
+                const face = overlayElement.faces.get(faceInfo.name);
+                if (face) {
+                    overlayFace = face;
+                    break;
+                }
+            }
+
+            // 构建合并的面几何体
+            this.buildOverlayFaceGeometry(
+                faceInfo.positions,
+                faceInfo.normal,
+                baseFace,
+                overlayFace,
+                baseElement.shade,
+                context,
+                meshData
+            );
+        }
+    }
+
+    /**
+     * 构建支持overlay的面几何体
+     * @param positions 面的顶点位置
+     * @param normal 面的法线
+     * @param baseFace 基础面数据
+     * @param overlayFace overlay面数据（可能为null）
+     * @param shade 是否启用阴影
+     * @param context 构建上下文
+     * @param meshData 目标网格数据
+     */
+    private static buildOverlayFaceGeometry(
+        positions: Vec3[],
+        normal: Vec3,
+        baseFace: ResolvedFace,
+        overlayFace: ResolvedFace | null,
+        shade: boolean,
+        context: MeshBuildContext,
+        meshData: VoxelMeshData
+    ): void {
+        const baseTexture = baseFace.texture;
+        
+        // 使用base纹理作为key，统一管理
+        if (!meshData.textureGroups.has(baseTexture)) {
+            meshData.textureGroups.set(baseTexture, {
+                texture: baseTexture,
+                vertices: [],
+                indices: [],
+                transparent: this.isTransparentTexture(baseTexture)
+            });
+        }
+
+        const textureGroup = meshData.textureGroups.get(baseTexture)!;
+        const baseIndex = textureGroup.vertices.length;
+
+        // 计算基础UV
+        const baseUVs = this.calculateFaceUVs(baseFace);
+        // 计算overlay UV（如果存在）
+        const overlayUVs = overlayFace ? this.calculateFaceUVs(overlayFace) : [new Vec2(0, 0), new Vec2(0, 0), new Vec2(0, 0), new Vec2(0, 0)];
+
+        // 计算AO和光照值
+        const ao = shade ? this.calculateAO(positions, normal, context) : [1, 1, 1, 1];
+        const light = this.calculateLight(positions, context);
+
+        // 确定tint颜色（优先使用overlay的tint）
+        const hasTint = (overlayFace && overlayFace.tintindex !== undefined && overlayFace.tintindex >= 0) ||
+                       (baseFace.tintindex !== undefined && baseFace.tintindex >= 0);
+        const tintColor = hasTint ? 
+            new Color(127, 255, 76, 255) : // 草地绿色
+            Color.WHITE;
+
+        // 创建四个顶点
+        for (let i = 0; i < 4; i++) {
+            const vertex: VoxelVertex = {
+                position: positions[i].clone(),
+                normal: normal.clone(),
+                texCoord: new Vec4(
+                    baseUVs[i].x, baseUVs[i].y,      // xy: 主纹理UV
+                    overlayUVs[i].x, overlayUVs[i].y // zw: overlay纹理UV
+                ),
+                color: tintColor,
+                ao: ao[i],
+                light: light[i]
+            };
+            textureGroup.vertices.push(vertex);
+        }
+        
+        // 标记mesh包含overlay
+        if (overlayFace) {
+            meshData.hasOverlay = true;
+        }
+
+        // 创建两个三角形（四边形）
+        const ao0 = ao[0], ao1 = ao[1], ao2 = ao[2], ao3 = ao[3];
+        if (ao0 + ao2 > ao1 + ao3) {
+            textureGroup.indices.push(
+                baseIndex + 0, baseIndex + 1, baseIndex + 2,
+                baseIndex + 0, baseIndex + 2, baseIndex + 3
+            );
+        } else {
+            textureGroup.indices.push(
+                baseIndex + 0, baseIndex + 1, baseIndex + 3,
+                baseIndex + 1, baseIndex + 2, baseIndex + 3
+            );
+        }
+    }
+
+    /**
      * 合并网格数据（用于批处理）
      * @param meshDataArray 网格数据数组
      * @returns 合并后的网格数据
@@ -398,17 +657,20 @@ export class MeshBuilder {
         const positions: number[] = [];
         const normals: number[] = [];
         const uvs: number[] = [];
+        const uvs2: number[] = [];
 
         for (const vertex of vertices) {
             positions.push(vertex.position.x, vertex.position.y, vertex.position.z);
             normals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
-            uvs.push(vertex.uv.x, vertex.uv.y);
+            uvs.push(vertex.texCoord.x, vertex.texCoord.y);   // 主UV
+            uvs2.push(vertex.texCoord.z, vertex.texCoord.w);  // overlay UV
         }
 
         const geometryData = {
             positions,
             normals,
             uvs,
+            uvs2,
             indices: new Uint16Array(indices)
         };
 

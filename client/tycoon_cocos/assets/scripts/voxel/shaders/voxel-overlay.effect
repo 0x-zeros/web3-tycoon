@@ -1,0 +1,322 @@
+// Copyright (c) 2017-2023 Xiamen Yaji Software Co., Ltd.
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: voxel-overlay-vs
+      frag: voxel-overlay-fs
+      rasterizerState:
+        cullMode: back
+      properties: &commonProps
+        mainTexture:      { value: white }
+        overlayTexture:   { value: white }
+        skyTexture:       { value: white }
+        timer:            { value: 0.0 }
+        daylight:         { value: 1.0 }
+        fogDistance:      { value: 150.0 }
+        ortho:            { value: 0 }
+        
+  - name: cutout
+    passes:
+    - vert: voxel-overlay-vs
+      frag: voxel-overlay-cutout-fs
+      rasterizerState:
+        cullMode: none
+      properties:
+        <<: *commonProps
+        alphaThreshold:   { value: 0.5 }
+        
+  - name: transparent
+    passes:
+    - vert: voxel-overlay-vs
+      frag: voxel-overlay-transparent-fs
+      priority: 200
+      rasterizerState:
+        cullMode: none
+      depthStencilState:
+        depthWrite: false
+        depthFunc: less
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: one
+          blendDstAlpha: one_minus_src_alpha
+      properties:
+        <<: *commonProps
+        transparency:     { value: 0.8 }
+}%
+
+CCProgram voxel-overlay-vs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+  
+  uniform VoxelUniforms {
+    float timer;
+    float daylight;
+    float fogDistance;
+    float ortho;
+  };
+
+  in vec3 a_position;
+  in vec3 a_normal;
+  in vec2 a_texCoord;
+  in vec2 a_texCoord1;  // overlay UV
+  in float a_ao;
+  in float a_light;
+  in vec4 a_color;      // tint color
+
+  out vec2 v_uv;
+  out vec2 v_uv2;       // overlay UV
+  out float v_ao;
+  out float v_light;
+  out float v_fogFactor;
+  out float v_fogHeight;
+  out float v_diffuse;
+  out vec4 v_tintColor;
+
+  const float PI = 3.14159265;
+  const vec3 LIGHT_DIRECTION = normalize(vec3(-1.0, 1.0, -1.0));
+
+  void main() {
+    vec4 worldPos = cc_matWorld * vec4(a_position, 1.0);
+    gl_Position = cc_matViewProj * worldPos;
+    
+    v_uv = a_texCoord;
+    v_uv2 = a_texCoord1;
+    v_ao = 0.3 + (1.0 - a_ao) * 0.7;
+    v_light = a_light;
+    v_tintColor = a_color;
+    
+    vec3 worldNormal = normalize((cc_matWorld * vec4(a_normal, 0.0)).xyz);
+    v_diffuse = max(0.0, dot(worldNormal, LIGHT_DIRECTION));
+    
+    if (ortho > 0.5) {
+      v_fogFactor = 0.0;
+      v_fogHeight = 0.0;
+    } else {
+      float cameraDistance = distance(cc_cameraPos.xyz, worldPos.xyz);
+      v_fogFactor = pow(clamp(cameraDistance / fogDistance, 0.0, 1.0), 4.0);
+      
+      float dy = worldPos.y - cc_cameraPos.y;
+      float dx = distance(worldPos.xz, cc_cameraPos.xz);
+      v_fogHeight = (atan(dy, dx) + PI / 2.0) / PI;
+    }
+  }
+}%
+
+CCProgram voxel-overlay-fs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  
+  uniform sampler2D mainTexture;
+  uniform sampler2D overlayTexture;
+  uniform sampler2D skyTexture;
+  
+  uniform VoxelUniforms {
+    float timer;
+    float daylight;
+    float fogDistance;
+    float ortho;
+  };
+
+  in vec2 v_uv;
+  in vec2 v_uv2;
+  in float v_ao;
+  in float v_light;
+  in float v_fogFactor;
+  in float v_fogHeight;
+  in float v_diffuse;
+  in vec4 v_tintColor;
+
+  layout(location = 0) out vec4 fragColor;
+
+  vec3 calculateLighting(vec4 texColor, float ao, float diffuse, float light) {
+    bool isCloud = all(equal(texColor.rgb, vec3(1.0, 1.0, 1.0)));
+    if (isCloud && ortho > 0.5) {
+      discard;
+    }
+    
+    float df = isCloud ? 1.0 - diffuse * 0.2 : diffuse;
+    float aoFinal = isCloud ? 1.0 - (1.0 - ao) * 0.2 : ao;
+    
+    aoFinal = min(1.0, aoFinal + light);
+    df = min(1.0, df + light);
+    
+    float lightValue = min(1.0, daylight + light);
+    vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
+    vec3 ambient = vec3(lightValue * 0.3 + 0.2);
+    vec3 lightFinal = ambient + lightColor * df;
+    
+    return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
+  }
+
+  void main() {
+    vec4 baseColor = texture(mainTexture, v_uv);
+    vec4 overlayColor = texture(overlayTexture, v_uv2);
+    
+    // 检查是否需要丢弃片段
+    if (all(equal(baseColor.rgb, vec3(1.0, 0.0, 1.0)))) {
+      discard;
+    }
+    
+    // 混合基础纹理和overlay纹理
+    vec4 finalTexColor = baseColor;
+    if (overlayColor.a > 0.0) {
+      // 应用tint到overlay纹理
+      vec3 tintedOverlay = overlayColor.rgb * v_tintColor.rgb;
+      // Alpha混合overlay到基础纹理
+      finalTexColor.rgb = mix(baseColor.rgb, tintedOverlay, overlayColor.a);
+    }
+    
+    vec3 finalColor = calculateLighting(finalTexColor, v_ao, v_diffuse, v_light);
+    
+    vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor, 0.0, 1.0));
+    
+    fragColor = vec4(finalColor, finalTexColor.a);
+  }
+}%
+
+CCProgram voxel-overlay-cutout-fs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  
+  uniform sampler2D mainTexture;
+  uniform sampler2D overlayTexture;
+  uniform sampler2D skyTexture;
+  
+  uniform VoxelUniforms {
+    float timer;
+    float daylight;
+    float fogDistance;
+    float ortho;
+  };
+  uniform CutoutParams {
+    float alphaThreshold;
+  };
+
+  in vec2 v_uv;
+  in vec2 v_uv2;
+  in float v_ao;
+  in float v_light;
+  in float v_fogFactor;
+  in float v_fogHeight;
+  in float v_diffuse;
+  in vec4 v_tintColor;
+
+  layout(location = 0) out vec4 fragColor;
+
+  vec3 calculateLighting(vec4 texColor, float ao, float diffuse, float light) {
+    float df = diffuse;
+    float aoFinal = ao;
+    
+    aoFinal = min(1.0, aoFinal + light);
+    df = min(1.0, df + light);
+    
+    float lightValue = min(1.0, daylight + light);
+    vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
+    vec3 ambient = vec3(lightValue * 0.3 + 0.2);
+    vec3 lightFinal = ambient + lightColor * df;
+    
+    return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
+  }
+
+  void main() {
+    vec4 baseColor = texture(mainTexture, v_uv);
+    vec4 overlayColor = texture(overlayTexture, v_uv2);
+    
+    // 混合纹理
+    vec4 finalTexColor = baseColor;
+    if (overlayColor.a > 0.0) {
+      vec3 tintedOverlay = overlayColor.rgb * v_tintColor.rgb;
+      finalTexColor.rgb = mix(baseColor.rgb, tintedOverlay, overlayColor.a);
+    }
+    
+    if (finalTexColor.a < alphaThreshold) {
+      discard;
+    }
+    
+    if (all(equal(finalTexColor.rgb, vec3(1.0, 0.0, 1.0)))) {
+      discard;
+    }
+    
+    vec3 finalColor = calculateLighting(finalTexColor, v_ao, v_diffuse, v_light);
+    
+    vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor, 0.0, 1.0));
+    
+    fragColor = vec4(finalColor, 1.0);
+  }
+}%
+
+CCProgram voxel-overlay-transparent-fs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  
+  uniform sampler2D mainTexture;
+  uniform sampler2D overlayTexture;
+  uniform sampler2D skyTexture;
+  
+  uniform VoxelUniforms {
+    float timer;
+    float daylight;
+    float fogDistance;
+    float ortho;
+  };
+  uniform TransparentParams {
+    float transparency;
+  };
+
+  in vec2 v_uv;
+  in vec2 v_uv2;
+  in float v_ao;
+  in float v_light;
+  in float v_fogFactor;
+  in float v_fogHeight;
+  in float v_diffuse;
+  in vec4 v_tintColor;
+
+  layout(location = 0) out vec4 fragColor;
+
+  vec3 calculateLighting(vec4 texColor, float ao, float diffuse, float light) {
+    float df = diffuse;
+    float aoFinal = ao;
+    
+    aoFinal = min(1.0, aoFinal + light);
+    df = min(1.0, df + light);
+    
+    float lightValue = min(1.0, daylight + light);
+    vec3 lightColor = vec3(lightValue * 0.3 + 0.2);
+    vec3 ambient = vec3(lightValue * 0.5 + 0.2);
+    vec3 lightFinal = ambient + lightColor * df * 0.8;
+    
+    return clamp(texColor.rgb * lightFinal * aoFinal, vec3(0.0), vec3(1.0));
+  }
+
+  void main() {
+    vec4 baseColor = texture(mainTexture, v_uv);
+    vec4 overlayColor = texture(overlayTexture, v_uv2);
+    
+    if (all(equal(baseColor.rgb, vec3(1.0, 0.0, 1.0)))) {
+      discard;
+    }
+    
+    // 混合纹理
+    vec4 finalTexColor = baseColor;
+    if (overlayColor.a > 0.0) {
+      vec3 tintedOverlay = overlayColor.rgb * v_tintColor.rgb;
+      finalTexColor.rgb = mix(baseColor.rgb, tintedOverlay, overlayColor.a);
+    }
+    
+    vec3 finalColor = calculateLighting(finalTexColor, v_ao, v_diffuse, v_light);
+    
+    vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
+    finalColor = mix(finalColor, skyColor, clamp(v_fogFactor * 0.5, 0.0, 1.0));
+    
+    float alpha = finalTexColor.a * transparency;
+    fragColor = vec4(finalColor, alpha);
+  }
+}%

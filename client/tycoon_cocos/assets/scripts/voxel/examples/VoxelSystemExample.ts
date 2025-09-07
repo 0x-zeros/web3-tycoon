@@ -123,6 +123,7 @@ export class VoxelSystemExample extends Component {
 
             // 2. 创建节点
             const blockNode = new Node(`Block_${blockInfo.id.replace('minecraft:', '')}`);
+            blockNode.position = blockInfo.position; // 设置方块在场景中的位置
             this.containerNode!.addChild(blockNode);
             blockInfo.node = blockNode;
 

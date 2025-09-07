@@ -64,8 +64,9 @@ export class MeshBuilder {
             this.applyBlockRotation(meshData, context.blockRotation);
         }
 
-        // 应用方块位置偏移
-        this.applyBlockTransform(meshData, context.blockPosition);
+        // 注意：不应用方块位置偏移，顶点坐标保持以原点为中心(-0.5到+0.5)
+        // 方块在场景中的位置应该通过Node的position属性来控制
+        // this.applyBlockTransform(meshData, context.blockPosition);
 
         return meshData;
     }

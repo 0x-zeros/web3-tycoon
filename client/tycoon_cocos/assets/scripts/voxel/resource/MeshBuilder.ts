@@ -40,6 +40,8 @@ export class MeshBuilder {
      * @returns 网格数据
      */
     static buildMesh(model: ResolvedModel, context: MeshBuildContext): VoxelMeshData {
+        console.log(`[MeshBuilder] buildMesh: 开始构建网格, elements数量=${model.elements.length}`);
+        
         const meshData: VoxelMeshData = {
             vertices: [],
             indices: [],
@@ -48,6 +50,7 @@ export class MeshBuilder {
 
         // 检查是否有overlay系统需求
         const hasOverlayElements = this.hasOverlaySystem(model);
+        console.log(`[MeshBuilder] buildMesh: hasOverlayElements=${hasOverlayElements}`);
         
         if (hasOverlayElements) {
             // 使用overlay系统处理
@@ -67,6 +70,11 @@ export class MeshBuilder {
         // 注意：不应用方块位置偏移，顶点坐标保持以原点为中心(-0.5到+0.5)
         // 方块在场景中的位置应该通过Node的position属性来控制
         // this.applyBlockTransform(meshData, context.blockPosition);
+
+        console.log(`[MeshBuilder] buildMesh: 网格构建完成, textureGroups数量=${meshData.textureGroups.size}`);
+        for (const [texture, group] of meshData.textureGroups) {
+            console.log(`[MeshBuilder]   - 纹理组: ${texture}, 顶点数=${group.vertices.length}, 索引数=${group.indices.length}`);
+        }
 
         return meshData;
     }

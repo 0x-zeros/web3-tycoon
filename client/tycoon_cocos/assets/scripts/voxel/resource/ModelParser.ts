@@ -266,7 +266,10 @@ export class ModelParser {
      * 生成 cube_all 几何体（所有面使用相同纹理）
      */
     private generateCubeAllElements(textureMap: Map<string, string>): ResolvedElement[] {
+        // 查找#all纹理变量，在纹理映射中key带#前缀
         const texture = textureMap.get('#all') || 'minecraft:block/missing';
+        console.log(`[ModelParser] generateCubeAllElements: 使用纹理 ${texture}, textureMap:`, textureMap);
+        
         const faces = new Map<string, ResolvedFace>();
 
         const faceNames = ['north', 'south', 'east', 'west', 'up', 'down'];
@@ -292,6 +295,7 @@ export class ModelParser {
     private generateCubeColumnElements(textureMap: Map<string, string>): ResolvedElement[] {
         const sideTexture = textureMap.get('#side') || 'minecraft:block/missing';
         const endTexture = textureMap.get('#end') || 'minecraft:block/missing';
+        console.log(`[ModelParser] generateCubeColumnElements: side=${sideTexture}, end=${endTexture}`);
         
         const faces = new Map<string, ResolvedFace>();
         
@@ -326,6 +330,7 @@ export class ModelParser {
      */
     private generateCrossElements(textureMap: Map<string, string>): ResolvedElement[] {
         const texture = textureMap.get('#cross') || 'minecraft:block/missing';
+        console.log(`[ModelParser] generateCrossElements: 使用纹理 ${texture}`);
 
         return [
             // 第一个平面 (从 NW 到 SE)

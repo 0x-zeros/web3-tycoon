@@ -143,8 +143,11 @@ export class VoxelSystemExample extends Component {
     private async createBlockSubMeshes(blockNode: Node, meshData: any, blockId: string): Promise<void> {
         let subMeshIndex = 0;
 
+        console.log(`[VoxelSystemExample] createBlockSubMeshes: textureGroups数量=${meshData.textureGroups.size}`);
         for (const [texturePath, textureGroup] of meshData.textureGroups) {
             try {
+                console.log(`[VoxelSystemExample]   处理纹理组: ${texturePath}, 顶点数=${textureGroup.vertices.length}`);
+                
                 // 1. 创建子节点
                 const subMeshNode = new Node(`SubMesh_${subMeshIndex}`);
                 blockNode.addChild(subMeshNode);
@@ -155,6 +158,7 @@ export class VoxelSystemExample extends Component {
                     console.warn(`[VoxelSystemExample] 子网格创建失败: ${texturePath}`);
                     continue;
                 }
+                console.log(`[VoxelSystemExample]   mesh创建成功: ${texturePath}`);
 
                 // 3. 添加MeshRenderer组件
                 const meshRenderer = subMeshNode.addComponent(MeshRenderer);

@@ -150,19 +150,73 @@ export class ResourcePackLoader {
     }
 
     private async indexTextures(): Promise<void> {
-        const textureNames = [
-            'stone', 'oak_log', 'oak_log_top', 'oak_planks',
-            'grass_block_top', 'grass_block_side', 'dirt',
-            'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'short_grass', 'fern'
-        ];
+        // 基于已加载的 models 解析并建立纹理索引
+        let count = 0;
+        this.index.textures.clear();
 
-        for (const textureName of textureNames) {
-            const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${textureName}`;
-            this.index.textures.set(`minecraft:block/${textureName}`, resourcePath);
+        this.index.models.forEach((model, modelId) => {
+            if (!model || !model.textures) return;
+
+            // 1) 为每个 textures 条目建立直达索引
+            for (const [key, value] of Object.entries(model.textures)) {
+                const fullTexId = this.normalizeTextureId(value); // e.g. minecraft:block/grass_block_top
+                const tailName = fullTexId.replace('minecraft:block/', '');
+                const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${tailName}`;
+                if (!this.index.textures.has(fullTexId)) {
+                    this.index.textures.set(fullTexId, resourcePath);
+                    count++;
+                }
+
+                // 2) 方便通过 "模型名_键" 访问（例如 grass_block_top）
+                const modelName = modelId.replace('minecraft:block/', '');
+                const aliasId = `minecraft:block/${modelName}_${key}`;
+                if (!this.index.textures.has(aliasId)) {
+                    this.index.textures.set(aliasId, resourcePath);
+                    count++;
+                }
+            }
+
+            // 3) 给模型名本身增加聚合别名（选择一个合理默认：side > top > all > 任意一项）
+            const aggregateId = modelId; // e.g. minecraft:block/grass_block
+            if (!this.index.textures.has(aggregateId)) {
+                const preferred = this.pickPreferredTexture(model.textures);
+                if (preferred) {
+                    const fullTexId = this.normalizeTextureId(preferred);
+                    const tailName = fullTexId.replace('minecraft:block/', '');
+                    const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${tailName}`;
+                    this.index.textures.set(aggregateId, resourcePath);
+                    count++;
+                }
+            }
+        });
+
+        console.log(`[ResourcePackLoader] 已解析并索引纹理: ${count}`);
+    }
+
+    /** 将多种写法规范化为 minecraft:block/<name> */
+    private normalizeTextureId(value: string): string {
+        if (!value) return 'minecraft:block/missingno';
+        // 去掉可能的前缀 '#'
+        if (value.startsWith('#')) {
+            // 此类引用应由调用方用别名解析，这里简单返回去掉 '#'
+            value = value.substring(1);
         }
+        // 常见写法："minecraft:block/xxx" | "block/xxx" | "minecraft:xxx" | "xxx"
+        if (value.startsWith('minecraft:block/')) return value;
+        if (value.startsWith('block/')) return `minecraft:block/${value.substring('block/'.length)}`;
+        if (value.startsWith('minecraft:')) return `minecraft:block/${value.substring('minecraft:'.length)}`;
+        return `minecraft:block/${value}`;
+    }
 
-        console.log(`[ResourcePackLoader] 已索引 ${textureNames.length} 个纹理`);
+    /** 选择一个最合适的聚合贴图（side > top > all > 第一个）*/
+    private pickPreferredTexture(textures: { [key: string]: string } | undefined): string | null {
+        if (!textures) return null;
+        const order = ['side', 'top', 'all', 'front', 'north', 'east', 'south', 'west', 'up', 'down'];
+        for (const k of order) {
+            if (textures[k]) return textures[k];
+        }
+        const firstKey = Object.keys(textures)[0];
+        return firstKey ? textures[firstKey] : null;
     }
 
     private async loadJsonAsset(path: string): Promise<any> {

@@ -61,6 +61,10 @@ export class VoxelSystemExample extends Component {
         // await this.createTestBlocks();
 
         this.setSmallWorldConfig();
+        
+        // 显示发光方块信息
+        this.logGlowingBlocksInfo();
+        
         await this.generateLargeWorld();
 
 
@@ -211,9 +215,38 @@ export class VoxelSystemExample extends Component {
             });
         }
 
+        // 生成发光方块（随机放置）
+        console.log('[VoxelSystemExample] 生成发光方块...');
+        const glowingBlockTypes = this.getAvailableGlowingBlocks();
+        if (glowingBlockTypes.length > 0) {
+            const glowingCount = Math.floor(this.worldSize * this.worldSize * this.glowingBlockDensity);
+            console.log(`[VoxelSystemExample] 发现 ${glowingBlockTypes.length} 种发光方块，将生成 ${glowingCount} 个发光方块`);
+            
+            for (let i = 0; i < glowingCount; i++) {
+                const x = Math.floor(Math.random() * this.worldSize);
+                const z = Math.floor(Math.random() * this.worldSize);
+                const y = 2 + Math.floor(Math.random() * 3); // 高度2-4
+                const glowingType = glowingBlockTypes[Math.floor(Math.random() * glowingBlockTypes.length)];
+                const worldX = x + offsetX;
+                const worldZ = z + offsetZ;
+                
+                // 检查发光等级
+                const lightLevel = this.voxelSystem!.getBlockDefinition(glowingType)?.lightLevel || 0;
+                console.log(`[VoxelSystemExample] 添加发光方块: ${glowingType} (光照等级: ${lightLevel}) at (${worldX}, ${y}, ${worldZ})`);
+                
+                blocks.push({
+                    id: glowingType,
+                    position: new Vec3(worldX, y, worldZ)
+                });
+            }
+        } else {
+            console.warn('[VoxelSystemExample] 没有找到可用的发光方块类型');
+        }
+
         console.log(`[VoxelSystemExample] 总共需要创建 ${blocks.length} 个方块`);
         console.log(`[VoxelSystemExample] 基础方块: ${this.worldSize * this.worldSize} 个`);
         console.log(`[VoxelSystemExample] 植物方块: ${plantCount} 个`);
+        console.log(`[VoxelSystemExample] 发光方块: ${glowingBlockTypes.length > 0 ? Math.floor(this.worldSize * this.worldSize * this.glowingBlockDensity) : 0} 个`);
 
         // 分批创建方块以避免内存问题
         const totalBatches = Math.ceil(blocks.length / this.batchSize);
@@ -487,6 +520,63 @@ export class VoxelSystemExample extends Component {
     }
 
     /**
+     * 获取可用的发光方块类型（动态检测）
+     */
+    private getAvailableGlowingBlocks(): string[] {
+        if (!this.voxelSystem) {
+            console.warn('[VoxelSystemExample] 体素系统未初始化，返回默认发光方块列表');
+            return this.getGlowingBlockTypes();
+        }
+
+        const allBlocks = this.voxelSystem.getAllBlockIds();
+        console.log(`[VoxelSystemExample] 扫描 ${allBlocks.length} 个方块类型，查找发光方块...`);
+        
+        const glowingBlocks = allBlocks.filter(blockId => {
+            const blockDef = this.voxelSystem!.getBlockDefinition(blockId);
+            const lightLevel = blockDef ? blockDef.lightLevel : 0;
+            if (lightLevel > 0) {
+                console.log(`[VoxelSystemExample] 发现发光方块: ${blockId} (光照等级: ${lightLevel})`);
+                return true;
+            }
+            return false;
+        });
+
+        console.log(`[VoxelSystemExample] 总共发现 ${glowingBlocks.length} 种发光方块:`, glowingBlocks);
+        
+        if (glowingBlocks.length === 0) {
+            console.warn('[VoxelSystemExample] 没有找到发光方块，使用默认列表');
+            return this.getGlowingBlockTypes();
+        }
+        
+        return glowingBlocks;
+    }
+
+    /**
+     * 显示发光方块详细信息
+     */
+    public logGlowingBlocksInfo(): void {
+        if (!this.voxelSystem) {
+            console.warn('[VoxelSystemExample] 体素系统未初始化');
+            return;
+        }
+
+        console.log('[VoxelSystemExample] 发光方块详细信息:');
+        const glowingBlocks = this.getAvailableGlowingBlocks();
+        
+        if (glowingBlocks.length === 0) {
+            console.log('  没有找到发光方块');
+            return;
+        }
+
+        console.log(`  发现 ${glowingBlocks.length} 种发光方块:`);
+        glowingBlocks.forEach((blockId, index) => {
+            const blockDef = this.voxelSystem!.getBlockDefinition(blockId);
+            const lightLevel = blockDef ? blockDef.lightLevel : 0;
+            console.log(`    ${index + 1}. ${blockId} - 光照等级: ${lightLevel}`);
+        });
+    }
+
+    /**
      * 验证世界生成结果
      */
     private validateWorldGeneration(): void {
@@ -557,18 +647,34 @@ export class VoxelSystemExample extends Component {
         console.log('[VoxelSystemExample] 按层统计方块数量:');
         
         const layerStats = new Map<number, number>();
+        const glowingStats = new Map<number, number>();
+        
         this.testBlocks.forEach(block => {
             if (block.node && block.node.isValid) {
                 const y = block.position.y;
                 layerStats.set(y, (layerStats.get(y) || 0) + 1);
+                
+                // 统计发光方块
+                const blockDef = this.voxelSystem?.getBlockDefinition(block.id);
+                if (blockDef && blockDef.lightLevel > 0) {
+                    glowingStats.set(y, (glowingStats.get(y) || 0) + 1);
+                }
             }
         });
         
         // 按y坐标排序显示
         const sortedLayers = Array.from(layerStats.entries()).sort((a, b) => a[0] - b[0]);
         sortedLayers.forEach(([y, count]) => {
-            console.log(`[VoxelSystemExample]   y=${y}: ${count} 个方块`);
+            const glowingCount = glowingStats.get(y) || 0;
+            const glowingInfo = glowingCount > 0 ? ` (其中发光方块: ${glowingCount})` : '';
+            console.log(`[VoxelSystemExample]   y=${y}: ${count} 个方块${glowingInfo}`);
         });
+        
+        // 发光方块总体统计
+        const totalGlowing = Array.from(glowingStats.values()).reduce((sum, count) => sum + count, 0);
+        if (totalGlowing > 0) {
+            console.log(`[VoxelSystemExample] 发光方块总计: ${totalGlowing} 个`);
+        }
     }
 
     /**
@@ -889,6 +995,19 @@ export class VoxelSystemExample extends Component {
         console.log(`  发光方块密度: ${this.glowingBlockDensity} (${Math.floor(this.worldSize * this.worldSize * this.glowingBlockDensity)} 个发光方块)`);
         console.log(`  批次大小: ${this.batchSize}`);
         console.log(`  批次延迟: ${this.batchDelay}ms`);
+        
+        // 显示可用的发光方块类型
+        if (this.voxelSystem) {
+            const glowingBlocks = this.getAvailableGlowingBlocks();
+            console.log(`  可用发光方块类型: ${glowingBlocks.length} 种`);
+            if (glowingBlocks.length > 0) {
+                console.log(`  发光方块列表:`, glowingBlocks.slice(0, 5));
+                if (glowingBlocks.length > 5) {
+                    console.log(`    ... 还有 ${glowingBlocks.length - 5} 种`);
+                }
+            }
+        }
+        
         console.log(`  预计总方块数: ${this.worldSize * this.worldSize + Math.floor(this.worldSize * this.worldSize * this.plantDensity) + Math.floor(this.worldSize * this.worldSize * this.glowingBlockDensity)}`);
     }
 

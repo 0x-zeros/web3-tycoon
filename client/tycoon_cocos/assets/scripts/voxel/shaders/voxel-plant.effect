@@ -1,0 +1,180 @@
+// Copyright (c) 2017-2023 Xiamen Yaji Software Co., Ltd.
+// 体素植物着色器 - 专门用于交叉模型植物（花朵、草、蕨类等）
+CCEffect %{
+  techniques:
+  - name: plant
+    passes:
+    - vert: voxel-plant-vs
+      frag: voxel-plant-fs
+      rasterizerState:
+        cullMode: none          # 双面渲染
+      depthStencilState:
+        depthWrite: true
+        depthFunc: less
+      properties:
+        mainTexture:      { value: white }
+        skyTexture:       { value: white }
+        timer:            { value: 0.0 }
+        daylight:         { value: 1.0 }
+        fogDistance:      { value: 150.0 }
+        ortho:            { value: 0 }
+        windStrength:     { value: 0.1 }
+        windSpeed:        { value: 1.0 }
+        alphaThreshold:   { value: 0.1 }
+        tintColor:        { value: [1.0, 1.0, 1.0, 1.0] }
+        plantHeight:      { value: 1.0 }
+}%
+
+CCProgram voxel-plant-vs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+  
+  uniform PlantUniforms {
+    float timer;
+    float daylight;
+    float fogDistance;
+    float ortho;
+    float windStrength;
+    float windSpeed;
+    float plantHeight;
+  };
+
+  in vec3 a_position;
+  in vec3 a_normal;
+  in vec2 a_texCoord;
+  in float a_ao;
+  in float a_light;
+
+  out vec2 v_uv;
+  out float v_ao;
+  out float v_light;
+  out float v_fogFactor;
+  out float v_fogHeight;
+  out float v_diffuse;
+  out float v_facing;  // 面向摄像机的程度
+
+  const float PI = 3.14159265;
+  const vec3 LIGHT_DIRECTION = normalize(vec3(-1.0, 1.0, -1.0));
+
+  void main() {
+    vec4 worldPos = cc_matWorld * vec4(a_position, 1.0);
+    
+    // 风动画效果（只影响植物顶部）
+    if (windStrength > 0.0) {
+      float windPhase = timer * windSpeed;
+      float windX = sin(windPhase + worldPos.x * 0.3 + worldPos.z * 0.2) * windStrength;
+      float windZ = cos(windPhase * 0.8 + worldPos.z * 0.4 + worldPos.x * 0.1) * windStrength * 0.7;
+      
+      // 根据高度调节摆动幅度，越高摆动越大
+      float heightFactor = (a_position.y + 0.5) / max(plantHeight, 0.1);
+      heightFactor = clamp(heightFactor, 0.0, 1.0);
+      heightFactor = heightFactor * heightFactor; // 平方衰减，底部基本不动
+      
+      worldPos.x += windX * heightFactor;
+      worldPos.z += windZ * heightFactor;
+    }
+    
+    gl_Position = cc_matViewProj * worldPos;
+    
+    v_uv = a_texCoord;
+    v_ao = 0.3 + (1.0 - a_ao) * 0.7;
+    v_light = a_light;
+    
+    // 计算世界法线
+    vec3 worldNormal = normalize((cc_matWorld * vec4(a_normal, 0.0)).xyz);
+    
+    // 植物使用特殊的光照计算，考虑双面
+    float frontDiffuse = max(0.0, dot(worldNormal, LIGHT_DIRECTION));
+    float backDiffuse = max(0.0, dot(-worldNormal, LIGHT_DIRECTION));
+    v_diffuse = max(frontDiffuse, backDiffuse * 0.6); // 背面光照稍弱
+    
+    // 计算面向摄像机的程度（用于调整亮度）
+    vec3 viewDir = normalize(cc_cameraPos.xyz - worldPos.xyz);
+    v_facing = abs(dot(worldNormal, viewDir));
+    
+    // 雾效果计算
+    if (ortho > 0.5) {
+      v_fogFactor = 0.0;
+      v_fogHeight = 0.0;
+    } else {
+      float cameraDistance = distance(cc_cameraPos.xyz, worldPos.xyz);
+      v_fogFactor = pow(clamp(cameraDistance / fogDistance, 0.0, 1.0), 4.0);
+      
+      float dy = worldPos.y - cc_cameraPos.y;
+      float dx = distance(worldPos.xz, cc_cameraPos.xz);
+      v_fogHeight = (atan(dy, dx) + PI / 2.0) / PI;
+    }
+  }
+}%
+
+CCProgram voxel-plant-fs %{
+  precision mediump float;
+  #include <builtin/uniforms/cc-global>
+  
+  uniform sampler2D mainTexture;
+  uniform sampler2D skyTexture;
+  
+  uniform PlantUniforms {
+    float timer;
+    float daylight;
+    float fogDistance;
+    float ortho;
+    float windStrength;
+    float windSpeed;
+    float alphaThreshold;
+    vec4 tintColor;
+  };
+
+  in vec2 v_uv;
+  in float v_ao;
+  in float v_light;
+  in float v_fogFactor;
+  in float v_fogHeight;
+  in float v_diffuse;
+  in float v_facing;
+
+  layout(location = 0) out vec4 fragColor;
+
+  void main() {
+    vec4 texColor = texture(mainTexture, v_uv);
+    
+    // Alpha test - 植物通常有锐利的边缘
+    if (texColor.a < alphaThreshold) {
+      discard;
+    }
+    
+    // 丢弃magenta像素（缺失纹理标记）
+    if (texColor.rgb == vec3(1.0, 0.0, 1.0)) {
+      discard;
+    }
+    
+    // 应用颜色调节
+    texColor.rgb *= tintColor.rgb;
+    
+    // 植物专用光照计算
+    float ao = v_ao;
+    float df = v_diffuse;
+    
+    // 根据面向程度调整亮度，避免侧面过暗
+    float facingBoost = 0.3 + v_facing * 0.7;
+    ao = min(1.0, ao + v_light + facingBoost * 0.1);
+    df = min(1.0, df + v_light);
+    
+    // 植物使用稍微不同的光照模型，更柔和
+    float lightValue = min(1.0, daylight + v_light);
+    vec3 lightColor = vec3(lightValue * 0.4 + 0.3); // 更明亮的基础光
+    vec3 ambient = vec3(lightValue * 0.4 + 0.3);
+    vec3 light = ambient + lightColor * df * 0.8; // 减少直射光的强度
+    
+    // 植物添加一点半透明感
+    vec3 finalColor = clamp(texColor.rgb * light * ao, vec3(0.0), vec3(1.0));
+    
+    // 应用雾效果（植物雾效果稍弱）
+    vec3 skyColor = texture(skyTexture, vec2(timer, v_fogHeight)).rgb;
+    finalColor = mix(finalColor, skyColor, v_fogFactor * 0.8);
+    
+    // 保持原始alpha
+    fragColor = vec4(finalColor, texColor.a);
+  }
+}%

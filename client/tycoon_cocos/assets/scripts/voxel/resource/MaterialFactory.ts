@@ -1,11 +1,13 @@
-import { Material, Texture2D, renderer } from 'cc';
+import { Material, Texture2D, gfx } from 'cc';
 import { TextureManager } from './TextureManager';
 
 export enum MaterialType {
     OPAQUE = 'opaque',
     TRANSPARENT = 'transparent',
     CUTOUT = 'cutout',
-    DOUBLE_SIDED = 'double_sided'
+    DOUBLE_SIDED = 'double_sided',
+    PLANT = 'plant',
+    EMISSIVE = 'emissive'
 }
 
 export interface MaterialConfig {
@@ -14,21 +16,25 @@ export interface MaterialConfig {
     alphaTest?: number;
     emissive?: boolean;
     emissiveIntensity?: number;
+    emissiveColor?: [number, number, number, number];
     doubleSided?: boolean;
+    windStrength?: number;
+    windSpeed?: number;
+    flickerSpeed?: number;
+    flickerAmount?: number;
+    transparency?: number;
 }
 
 export class MaterialFactory {
     private textureManager: TextureManager;
     private materialCache: Map<string, Material> = new Map();
-    private shaderCache: Map<string, renderer.EffectAsset> = new Map();
+    private shaderCache: Map<string, any> = new Map();
 
-    // 内置着色器路径
+    // 体素专用着色器
     private static readonly SHADERS = {
-        UNLIT_OPAQUE: 'builtin-unlit',
-        UNLIT_TRANSPARENT: 'builtin-unlit',
-        UNLIT_CUTOUT: 'builtin-unlit',
-        STANDARD_OPAQUE: 'builtin-standard',
-        STANDARD_TRANSPARENT: 'builtin-standard'
+        VOXEL_BLOCK: 'voxel-block',
+        VOXEL_PLANT: 'voxel-plant', 
+        VOXEL_EMISSIVE: 'voxel-emissive'
     };
 
     constructor(textureManager: TextureManager) {
@@ -74,41 +80,53 @@ export class MaterialFactory {
             return null;
         }
 
-        // 选择着色器
-        const shaderName = this.selectShader(config);
+        // 选择着色器和技术
+        const shaderInfo = this.selectShaderAndTechnique(config);
         
         // 创建材质
         const material = new Material();
         material.initialize({
-            effectName: shaderName
+            effectName: shaderInfo.shader,
+            technique: shaderInfo.technique
         });
 
         // 设置纹理
         material.setProperty('mainTexture', textureInfo.texture);
+        
+        // 设置天空盒纹理（如果可用）
+        if (textureInfo.skyTexture) {
+            material.setProperty('skyTexture', textureInfo.skyTexture);
+        }
 
-        // 配置材质属性
+        // 设置体素着色器通用参数
+        this.setVoxelShaderUniforms(material, config);
+
+        // 配置材质属性（渲染状态等）
         this.configureMaterial(material, config);
 
         return material;
     }
 
     /**
-     * 选择适当的着色器
+     * 选择适当的着色器和技术
      * @param config 材质配置
-     * @returns 着色器名称
+     * @returns 着色器信息
      */
-    private selectShader(config: MaterialConfig): string {
+    private selectShaderAndTechnique(config: MaterialConfig): { shader: string, technique: string } {
         switch (config.type) {
             case MaterialType.OPAQUE:
-                return MaterialFactory.SHADERS.UNLIT_OPAQUE;
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'opaque' };
             case MaterialType.TRANSPARENT:
-                return MaterialFactory.SHADERS.UNLIT_TRANSPARENT;
-            case MaterialType.CUTOUT:
-                return MaterialFactory.SHADERS.UNLIT_CUTOUT;
             case MaterialType.DOUBLE_SIDED:
-                return MaterialFactory.SHADERS.UNLIT_TRANSPARENT;
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'transparent' };
+            case MaterialType.CUTOUT:
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'cutout' };
+            case MaterialType.PLANT:
+                return { shader: MaterialFactory.SHADERS.VOXEL_PLANT, technique: 'plant' };
+            case MaterialType.EMISSIVE:
+                return { shader: MaterialFactory.SHADERS.VOXEL_EMISSIVE, technique: 'emissive' };
             default:
-                return MaterialFactory.SHADERS.UNLIT_OPAQUE;
+                return { shader: MaterialFactory.SHADERS.VOXEL_BLOCK, technique: 'opaque' };
         }
     }
 
@@ -135,6 +153,12 @@ export class MaterialFactory {
             case MaterialType.DOUBLE_SIDED:
                 this.configureDoubleSidedMaterial(pass, config);
                 break;
+            case MaterialType.PLANT:
+                this.configurePlantMaterial(pass, config);
+                break;
+            case MaterialType.EMISSIVE:
+                this.configureEmissiveMaterial(pass, config);
+                break;
         }
 
         // 发光配置
@@ -144,83 +168,100 @@ export class MaterialFactory {
     }
 
     /**
+     * 设置体素着色器通用参数
+     */
+    private setVoxelShaderUniforms(material: Material, config: MaterialConfig): void {
+        // 通用参数
+        material.setProperty('timer', 0.0);
+        material.setProperty('daylight', 1.0);
+        material.setProperty('fogDistance', 150.0);
+        material.setProperty('ortho', 0);
+        
+        // 根据材质类型设置特定参数
+        switch (config.type) {
+            case MaterialType.CUTOUT:
+                material.setProperty('alphaThreshold', config.alphaTest || 0.5);
+                break;
+                
+            case MaterialType.TRANSPARENT:
+            case MaterialType.DOUBLE_SIDED:
+                material.setProperty('transparency', config.transparency || 0.8);
+                break;
+                
+            case MaterialType.PLANT:
+                material.setProperty('windStrength', config.windStrength || 0.1);
+                material.setProperty('windSpeed', config.windSpeed || 1.0);
+                material.setProperty('alphaThreshold', config.alphaTest || 0.1);
+                material.setProperty('tintColor', [1.0, 1.0, 1.0, 1.0]);
+                material.setProperty('plantHeight', 1.0);
+                break;
+                
+            case MaterialType.EMISSIVE:
+                const emissiveColor = config.emissiveColor || [1.0, 0.8, 0.3, 1.0];
+                material.setProperty('emissiveColor', emissiveColor);
+                material.setProperty('emissiveIntensity', config.emissiveIntensity || 2.0);
+                material.setProperty('flickerSpeed', config.flickerSpeed || 0.0);
+                material.setProperty('flickerAmount', config.flickerAmount || 0.0);
+                material.setProperty('bloomIntensity', 1.0);
+                break;
+        }
+    }
+    
+    /**
      * 配置不透明材质
      */
     private configureOpaqueMaterial(pass: any, config: MaterialConfig): void {
-        // 不透明材质设置
-        pass.setBlend(
-            false, // 不启用混合
-            renderer.BlendFactor.ONE,
-            renderer.BlendFactor.ZERO,
-            renderer.BlendOp.ADD,
-            renderer.BlendFactor.ONE,
-            renderer.BlendFactor.ZERO,
-            renderer.BlendOp.ADD
-        );
-
-        pass.setDepthStencilState(
-            true,  // 深度测试
-            true,  // 深度写入
-            renderer.ComparisonFunc.LESS
-        );
-
-        pass.setCullMode(renderer.CullMode.BACK);
+        // 注意：新的着色器系统主要通过technique控制渲染状态
+        // 这里只需要基本配置
+        // 大部分渲染状态已在effect文件中定义
     }
 
     /**
      * 配置透明材质
      */
     private configureTransparentMaterial(pass: any, config: MaterialConfig): void {
-        // 透明混合设置
-        pass.setBlend(
-            true, // 启用混合
-            renderer.BlendFactor.SRC_ALPHA,
-            renderer.BlendFactor.ONE_MINUS_SRC_ALPHA,
-            renderer.BlendOp.ADD,
-            renderer.BlendFactor.ONE,
-            renderer.BlendFactor.ONE_MINUS_SRC_ALPHA,
-            renderer.BlendOp.ADD
-        );
-
-        pass.setDepthStencilState(
-            true,  // 深度测试
-            false, // 不写入深度（透明物体）
-            renderer.ComparisonFunc.LESS
-        );
-
-        pass.setCullMode(renderer.CullMode.BACK);
-
-        // 设置渲染队列为透明
-        pass.setPhase(renderer.RenderPhase.TRANSPARENT);
+        // 透明材质的渲染状态已在effect文件的technique中定义
+        // 这里主要处理动态参数
     }
 
     /**
      * 配置裁切材质（alpha test）
      */
     private configureCutoutMaterial(pass: any, config: MaterialConfig): void {
-        // 裁切材质（类似不透明但使用alpha test）
-        pass.setBlend(
-            false,
-            renderer.BlendFactor.ONE,
-            renderer.BlendFactor.ZERO,
-            renderer.BlendOp.ADD,
-            renderer.BlendFactor.ONE,
-            renderer.BlendFactor.ZERO,
-            renderer.BlendOp.ADD
-        );
-
-        pass.setDepthStencilState(
-            true,  // 深度测试
-            true,  // 深度写入
-            renderer.ComparisonFunc.LESS
-        );
-
-        pass.setCullMode(renderer.CullMode.BACK);
-
-        // 设置alpha test阈值
-        const alphaTest = config.alphaTest || 0.5;
-        pass.setProperty('alphaThreshold', alphaTest);
+        // Alpha test材质的渲染状态已在effect文件中定义
     }
+
+    /**
+     * 配置植物材质
+     */
+    private configurePlantMaterial(pass: any, config: MaterialConfig): void {
+        // 植物材质的双面渲染等已在effect文件中定义
+    }
+    
+    /**
+     * 配置发光材质
+     */
+    private configureEmissiveMaterial(pass: any, config: MaterialConfig): void {
+        // 发光材质的渲染状态已在effect文件中定义
+    }
+
+    /**
+     * 更新材质动画参数（由外部定期调用）
+     */
+    public updateAnimationUniforms(material: Material, deltaTime: number): void {
+        // 更新时间参数
+        const currentTime = (material.getProperty('timer') as number || 0) + deltaTime;
+        material.setProperty('timer', currentTime);
+    }
+    
+    /**
+     * 设置环境参数
+     */
+    public setEnvironmentUniforms(material: Material, daylight: number, fogDistance: number): void {
+        material.setProperty('daylight', daylight);
+        material.setProperty('fogDistance', fogDistance);
+    }
+
 
     /**
      * 配置双面材质
@@ -229,8 +270,8 @@ export class MaterialFactory {
         // 继承透明材质设置
         this.configureTransparentMaterial(pass, config);
         
-        // 禁用背面剔除
-        pass.setCullMode(renderer.CullMode.NONE);
+        // 注意：双面渲染状态主要在effect文件中定义
+        // cullMode: none 已经在voxel-plant.effect中设置
     }
 
     /**

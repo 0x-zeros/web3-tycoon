@@ -113,7 +113,7 @@ export class ResourcePackLoader {
         // 加载基础模板模型
         const templateModels = [
             'cube_all', 'cube_column', 'cross', 'cube',
-            'cube_bottom_top', 'orientable', 'orientable_with_bottom'
+            'cube_bottom_top', 'orientable', 'orientable_with_bottom', 'cube_column_horizontal'
         ];
 
         for (const template of templateModels) {
@@ -130,7 +130,7 @@ export class ResourcePackLoader {
 
         // 加载具体方块模型
         const blockModels = [
-            'stone', 'stone_mirrored', 'oak_log', 'oak_planks', 'grass_block',
+            'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
             'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves',
             'dandelion', 'poppy', 'short_grass', 'fern'
         ];

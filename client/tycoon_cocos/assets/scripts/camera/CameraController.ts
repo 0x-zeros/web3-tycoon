@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween, v3 } from 'cc';
+import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween, v3, TweenEasing } from 'cc';
 import { 
     CameraMode, 
     CameraConfig, 
@@ -629,8 +629,43 @@ export class CameraController extends BaseCameraController {
     /**
      * 获取缓动函数
      */
-    private _getEasingFunction(): string {
-        return this.config.transition.easing;
+    private _getEasingFunction(): TweenEasing | ((k: number) => number) {
+        // 兼容 CSS 风格的 easing 命名到 Cocos Tween 的映射
+        const easing = (this.config.transition.easing || '').trim();
+
+        // 允许直接使用的 Cocos easing 列表
+        const allowed: Set<string> = new Set([
+            'linear',
+            'quadIn', 'quadOut', 'quadInOut',
+            'cubicIn', 'cubicOut', 'cubicInOut',
+            'quartIn', 'quartOut', 'quartInOut',
+            'quintIn', 'quintOut', 'quintInOut',
+            'sineIn', 'sineOut', 'sineInOut',
+            'expoIn', 'expoOut', 'expoInOut',
+            'circIn', 'circOut', 'circInOut',
+            'elasticIn', 'elasticOut', 'elasticInOut',
+            'backIn', 'backOut', 'backInOut',
+            'bounceIn', 'bounceOut', 'bounceInOut',
+        ]);
+
+        if (allowed.has(easing)) {
+            return easing as TweenEasing;
+        }
+
+        const map: Record<string, TweenEasing> = {
+            // CSS 常见命名到 Cocos 内置
+            'linear': 'linear',
+            'ease': 'sineInOut',
+            'ease-in': 'sineIn',
+            'ease-out': 'sineOut',
+            'ease-in-out': 'sineInOut',
+            // 变体（可能出现的简写/无连字符形式）
+            'easein': 'sineIn',
+            'easeout': 'sineOut',
+            'easeinout': 'sineInOut',
+        };
+
+        return map[easing] ?? ('quartOut' as TweenEasing);
     }
 
     // ========================= 输入处理 =========================

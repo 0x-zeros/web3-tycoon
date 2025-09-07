@@ -134,7 +134,7 @@ export class TransitionConfig {
     public rotationDuration: number = 0.8;
 
     @property({ displayName: "缓动类型", tooltip: "缓动类型" })
-    public easing: string = 'ease-out';
+    public easing: string = 'quartOut';
 }
 
 /**
@@ -202,7 +202,7 @@ export const DEFAULT_CAMERA_CONFIG: CameraConfig = (() => {
     // 过渡配置
     config.transition.positionDuration = 1.0;
     config.transition.rotationDuration = 0.8;
-    config.transition.easing = 'ease-out';
+    config.transition.easing = 'quartOut';
     
     // 调试模式
     config.debugMode = true;

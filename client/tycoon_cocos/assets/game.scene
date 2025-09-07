@@ -282,7 +282,7 @@
     "__type__": "TransitionConfig",
     "positionDuration": 1,
     "rotationDuration": 0.8,
-    "easing": "ease-out"
+    "easing": "quartOut"
   },
   {
     "__type__": "CameraBounds",

@@ -105,8 +105,11 @@ export class MeshBuilder {
             toZ / 16 - 0.5
         );
 
-        // 定义立方体的面（逆时针顺序，从外部观看）
-        const faces = [
+        // 通过判断 element 在 x 或 z 轴上是否为一个平面来确定是否为 cross 类型
+        const isCrossElement = (element.to[0] - element.from[0] < 0.1) || (element.to[2] - element.from[2] < 0.1);
+
+        // 原始的立方体面顶点顺序
+        const cubeFaces = [
             { name: 'north', normal: new Vec3(0, 0, -1), positions: [
                 new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z),
                 new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
@@ -133,6 +136,36 @@ export class MeshBuilder {
             ]}
         ];
 
+        // 修正后的 cross 类型面顶点顺序
+        const crossFaces = [
+            { name: 'north', normal: new Vec3(0, 0, -1), positions: [ // -Z
+                new Vec3(from.x, from.y, from.z), new Vec3(to.x, from.y, from.z),
+                new Vec3(to.x, to.y, from.z), new Vec3(from.x, to.y, from.z)
+            ]},
+            { name: 'south', normal: new Vec3(0, 0, 1), positions: [ // +Z
+                new Vec3(to.x, from.y, to.z), new Vec3(from.x, from.y, to.z),
+                new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z)
+            ]},
+            { name: 'west', normal: new Vec3(-1, 0, 0), positions: [ // -X
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z),
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z)
+            ]},
+            { name: 'east', normal: new Vec3(1, 0, 0), positions: [ // +X
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z),
+                new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
+            ]},
+            { name: 'down', normal: new Vec3(0, -1, 0), positions: [ // -Y
+                new Vec3(from.x, from.y, to.z), new Vec3(to.x, from.y, to.z),
+                new Vec3(to.x, from.y, from.z), new Vec3(from.x, from.y, from.z)
+            ]},
+            { name: 'up', normal: new Vec3(0, 1, 0), positions: [ // +Y
+                new Vec3(from.x, to.y, from.z), new Vec3(to.x, to.y, from.z),
+                new Vec3(to.x, to.y, to.z), new Vec3(from.x, to.y, to.z)
+            ]}
+        ];
+
+        const faces = isCrossElement ? crossFaces : cubeFaces;
+
         // 处理每个面
         for (const faceInfo of faces) {
             const faceData = element.faces.get(faceInfo.name);
@@ -145,7 +178,8 @@ export class MeshBuilder {
                 faceData,
                 element.shade,
                 context,
-                meshData
+                meshData,
+                isCrossElement
             );
         }
     }
@@ -165,7 +199,8 @@ export class MeshBuilder {
         faceData: ResolvedFace,
         shade: boolean,
         context: MeshBuildContext,
-        meshData: VoxelMeshData
+        meshData: VoxelMeshData,
+        isCrossElement: boolean = false
     ): void {
         const texture = faceData.texture;
         
@@ -183,7 +218,7 @@ export class MeshBuilder {
         const baseIndex = textureGroup.vertices.length;
 
         // 计算UV坐标
-        const uvs = this.calculateFaceUVs(faceData);
+        const uvs = this.calculateFaceUVs(faceData, isCrossElement);
 
         // 计算AO和光照值
         const ao = shade ? this.calculateAO(positions, normal, context) : [1, 1, 1, 1];
@@ -243,16 +278,30 @@ export class MeshBuilder {
      * @param faceData 面数据
      * @returns UV坐标数组
      */
-    private static calculateFaceUVs(faceData: ResolvedFace): Vec2[] {
+    private static calculateFaceUVs(faceData: ResolvedFace, isCross: boolean = false): Vec2[] {
         const [u1, v1, u2, v2] = faceData.uv;
         
-        // 基础UV坐标（左下、右下、右上、左上）
-        let uvs = [
-            new Vec2(u1 / 16, 1 - v2 / 16), // 左下
-            new Vec2(u2 / 16, 1 - v2 / 16), // 右下
-            new Vec2(u2 / 16, 1 - v1 / 16), // 右上
-            new Vec2(u1 / 16, 1 - v1 / 16)  // 左上
-        ];
+        let uvs: Vec2[];
+
+        if (isCross) {
+            // Cross 类型使用翻转的V坐标来修正上下颠倒问题
+            // 顶点顺序: BL, BR, TR, TL
+            // UV 坐标顺序需要对应
+            uvs = [
+                new Vec2(u1 / 16, 1 - v1 / 16), // 在纹理中是左上角，对应几何体的左下角
+                new Vec2(u2 / 16, 1 - v1 / 16), // 右上角 -> 右下角
+                new Vec2(u2 / 16, 1 - v2 / 16), // 右下角 -> 右上角
+                new Vec2(u1 / 16, 1 - v2 / 16)  // 左下角 -> 左上角
+            ];
+        } else {
+            // 基础UV坐标（左下、右下、右上、左上）
+            uvs = [
+                new Vec2(u1 / 16, 1 - v2 / 16), // 左下
+                new Vec2(u2 / 16, 1 - v2 / 16), // 右下
+                new Vec2(u2 / 16, 1 - v1 / 16), // 右上
+                new Vec2(u1 / 16, 1 - v1 / 16)  // 左上
+            ];
+        }
 
         // 应用面旋转
         if (faceData.rotation !== 0) {
@@ -461,15 +510,15 @@ export class MeshBuilder {
                 new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
             ]},
             { name: 'south', normal: new Vec3(0, 0, 1), positions: [
-                new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z),
-                new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
+                new Vec3(to.x, from.y, to.z), new Vec3(from.x, from.y, to.z),
+                new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z)
             ]},
             { name: 'west', normal: new Vec3(-1, 0, 0), positions: [
-                new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z),
-                new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z),
+                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z)
             ]},
             { name: 'east', normal: new Vec3(1, 0, 0), positions: [
-                new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z),
+                new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z),
                 new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
             ]},
             { name: 'down', normal: new Vec3(0, -1, 0), positions: [

@@ -337,7 +337,7 @@ export class ModelParser {
             {
                 from: [0.8, 0, 8],
                 to: [15.2, 16, 8],
-                shade: true,
+                shade: false,
                 faces: new Map([
                     ['north', { uv: [0, 0, 16, 16], texture, rotation: 0 }],
                     ['south', { uv: [0, 0, 16, 16], texture, rotation: 0 }]
@@ -347,7 +347,7 @@ export class ModelParser {
             {
                 from: [8, 0, 0.8],
                 to: [8, 16, 15.2],
-                shade: true,
+                shade: false,
                 faces: new Map([
                     ['west', { uv: [0, 0, 16, 16], texture, rotation: 0 }],
                     ['east', { uv: [0, 0, 16, 16], texture, rotation: 0 }]

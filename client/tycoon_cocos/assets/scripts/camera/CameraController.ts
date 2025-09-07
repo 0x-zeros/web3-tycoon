@@ -384,7 +384,7 @@ export class CameraController extends BaseCameraController {
      * 应用等距视角模式
      */
     private _applyIsometricMode(immediate: boolean): void {
-        console.log(`[CameraController] 应用等距视角模式`);
+        // console.log(`[CameraController] 应用等距视角模式`);
 
         const config = this.config.isometric;
         
@@ -424,9 +424,9 @@ export class CameraController extends BaseCameraController {
         */
        
 
-        console.log(`[CameraController] forward=${forward}`);
-        console.log(`[CameraController] lookAtTarget=${this._lookAtTarget}`);
-        console.log(`[CameraController] config=${JSON.stringify(config)}`);
+        // console.log(`[CameraController] forward=${forward}`);
+        // console.log(`[CameraController] lookAtTarget=${this._lookAtTarget}`);
+        // console.log(`[CameraController] config=${JSON.stringify(config)}`);
 
         let dir = new Vec3();
         const actualDistance = config.distance + this._runtimeDistanceOffset;
@@ -438,7 +438,7 @@ export class CameraController extends BaseCameraController {
         camPos = Vec3.subtract(camPos, this._lookAtTarget, dir);
         // Vec3.add(camPos, dir, this._lookAtTarget); // 相对于目标点的位置
 
-        console.log(`[CameraController] targetPos=${camPos}`);
+        // console.log(`[CameraController] targetPos=${camPos}`);
 
         // 设置FOV
         if (this.camera) {

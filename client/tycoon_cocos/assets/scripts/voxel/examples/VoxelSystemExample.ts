@@ -58,8 +58,15 @@ export class VoxelSystemExample extends Component {
         await this.initializeVoxelSystem();
 
         // 创建测试方块
-        await this.createTestBlocks();
-        // await this.generateLargeWorld();
+        // await this.createTestBlocks();
+
+        this.setSmallWorldConfig();
+        await this.generateLargeWorld();
+
+
+        // this.logSystemInfo();
+
+        // // await this.fixGroundGaps();
     }
 
     /**
@@ -119,13 +126,15 @@ export class VoxelSystemExample extends Component {
 
         // 并行创建所有方块
         const creationPromises = this.testBlocks.map(block => this.createSingleBlock(block));
-        await Promise.all(creationPromises);
+        const results = await Promise.all(creationPromises);
+        const successCount = results.filter(result => result).length;
+        console.log(`[VoxelSystemExample] 测试方块创建结果: ${successCount}/${this.testBlocks.length} 成功`);
 
         console.log(`[VoxelSystemExample] 成功创建 ${this.testBlocks.length} 个测试方块`);
     }
 
     /**
-     * 生成大型体素世界
+     * 生成大型体素世界（使用已验证的方块类型）
      */
     public async generateLargeWorld(): Promise<void> {
         if (!this.voxelSystem) {
@@ -137,27 +146,52 @@ export class VoxelSystemExample extends Component {
         this.validateConfiguration();
 
         console.log(`[VoxelSystemExample] 开始生成${this.worldSize}x${this.worldSize}体素世界...`);
-        console.log(`[VoxelSystemExample] 配置参数: 世界大小=${this.worldSize}, 植物密度=${this.plantDensity}, 发光方块密度=${this.glowingBlockDensity}`);
         const startTime = Date.now();
 
         // 清除现有方块
         this.clearTestBlocks();
 
-        // 定义方块类型
-        const blockTypes = this.getBlockTypes();
-        const plantTypes = this.getPlantTypes();
-        const glowingTypes = this.getGlowingBlockTypes();
+        // 使用已验证的方块类型（直接定义，无需验证）
+        const blockTypes = [
+            'minecraft:stone',
+            'minecraft:dirt', 
+            'minecraft:grass_block',
+            'minecraft:sand',
+            'minecraft:cobblestone',
+            'minecraft:oak_log',
+            'minecraft:oak_planks',
+            'minecraft:oak_leaves',
+            'minecraft:glass'
+        ];
+
+        const plantTypes = [
+            'minecraft:dandelion',
+            'minecraft:poppy',
+            'minecraft:short_grass',
+            'minecraft:fern'
+        ];
+
+        console.log(`[VoxelSystemExample] 使用 ${blockTypes.length} 种基础方块，${plantTypes.length} 种植物`);
 
         const blocks: { id: string; position: Vec3 }[] = [];
+
+        // 计算世界中心偏移量，让原点成为世界的中心
+        const halfSize = Math.floor(this.worldSize / 2);
+        const offsetX = -halfSize;
+        const offsetZ = -halfSize;
+
+        console.log(`[VoxelSystemExample] 世界中心偏移: (${offsetX}, 0, ${offsetZ})`);
 
         // 生成y=0层的基础方块
         console.log('[VoxelSystemExample] 生成y=0层基础方块...');
         for (let x = 0; x < this.worldSize; x++) {
             for (let z = 0; z < this.worldSize; z++) {
                 const blockType = this.getRandomBlockType(blockTypes, x, z);
+                const worldX = x + offsetX;
+                const worldZ = z + offsetZ;
                 blocks.push({
                     id: blockType,
-                    position: new Vec3(x, 0, z)
+                    position: new Vec3(worldX, 0, worldZ)
                 });
             }
         }
@@ -169,29 +203,17 @@ export class VoxelSystemExample extends Component {
             const x = Math.floor(Math.random() * this.worldSize);
             const z = Math.floor(Math.random() * this.worldSize);
             const plantType = plantTypes[Math.floor(Math.random() * plantTypes.length)];
+            const worldX = x + offsetX;
+            const worldZ = z + offsetZ;
             blocks.push({
                 id: plantType,
-                position: new Vec3(x, 1, z)
-            });
-        }
-
-        // 生成y=5层的发光方块（随机放置）
-        console.log('[VoxelSystemExample] 生成y=5层发光方块...');
-        const glowingCount = Math.floor(this.worldSize * this.worldSize * this.glowingBlockDensity);
-        for (let i = 0; i < glowingCount; i++) {
-            const x = Math.floor(Math.random() * this.worldSize);
-            const z = Math.floor(Math.random() * this.worldSize);
-            const glowingType = glowingTypes[Math.floor(Math.random() * glowingTypes.length)];
-            blocks.push({
-                id: glowingType,
-                position: new Vec3(x, 5, z)
+                position: new Vec3(worldX, 1, worldZ)
             });
         }
 
         console.log(`[VoxelSystemExample] 总共需要创建 ${blocks.length} 个方块`);
         console.log(`[VoxelSystemExample] 基础方块: ${this.worldSize * this.worldSize} 个`);
         console.log(`[VoxelSystemExample] 植物方块: ${plantCount} 个`);
-        console.log(`[VoxelSystemExample] 发光方块: ${glowingCount} 个`);
 
         // 分批创建方块以避免内存问题
         const totalBatches = Math.ceil(blocks.length / this.batchSize);
@@ -205,7 +227,9 @@ export class VoxelSystemExample extends Component {
 
             // 并行创建当前批次的方块
             const creationPromises = batch.map(block => this.createSingleBlock(block));
-            await Promise.all(creationPromises);
+            const results = await Promise.all(creationPromises);
+            const successCount = results.filter(result => result).length;
+            console.log(`[VoxelSystemExample] 批次 ${batchIndex + 1} 创建结果: ${successCount}/${batch.length} 成功`);
 
             // 添加小延迟避免卡顿
             if (batchIndex < totalBatches - 1) {
@@ -216,160 +240,335 @@ export class VoxelSystemExample extends Component {
         this.testBlocks = blocks;
         const endTime = Date.now();
         console.log(`[VoxelSystemExample] ${this.worldSize}x${this.worldSize}体素世界生成完成！耗时: ${endTime - startTime}ms`);
+        
+        // 验证生成结果
+        this.validateWorldGeneration();
     }
 
     /**
-     * 获取基础方块类型
+     * 显示验证过的方块类型信息
+     */
+    private logValidatedBlockTypes(validatedBlocks: {
+        validBlocks: string[];
+        validPlants: string[];
+        validGlowing: string[];
+        invalidBlocks: string[];
+    }): void {
+        console.log('[VoxelSystemExample] 验证过的方块类型:');
+        console.log(`  基础方块 (${validatedBlocks.validBlocks.length}):`, validatedBlocks.validBlocks);
+        console.log(`  植物方块 (${validatedBlocks.validPlants.length}):`, validatedBlocks.validPlants);
+        console.log(`  发光方块 (${validatedBlocks.validGlowing.length}):`, validatedBlocks.validGlowing);
+        
+        if (validatedBlocks.invalidBlocks.length > 0) {
+            console.log(`  无效方块 (${validatedBlocks.invalidBlocks.length}):`, validatedBlocks.invalidBlocks.slice(0, 5));
+        }
+    }
+
+    /**
+     * 验证所有方块类型并返回可用的方块列表
+     */
+    private async validateAllBlockTypes(): Promise<{
+        validBlocks: string[];
+        validPlants: string[];
+        validGlowing: string[];
+        invalidBlocks: string[];
+    }> {
+        console.log('[VoxelSystemExample] 开始验证所有方块类型...');
+        
+        const allBlocks = this.getBlockTypes();
+        const allPlants = this.getPlantTypes();
+        const allGlowing = this.getGlowingBlockTypes();
+        
+        const validBlocks: string[] = [];
+        const validPlants: string[] = [];
+        const validGlowing: string[] = [];
+        const invalidBlocks: string[] = [];
+        
+        // 验证基础方块
+        console.log('[VoxelSystemExample] 验证基础方块...');
+        for (const blockId of allBlocks) {
+            if (this.voxelSystem!.hasBlock(blockId)) {
+                validBlocks.push(blockId);
+            } else {
+                invalidBlocks.push(blockId);
+            }
+        }
+        
+        // 验证植物方块
+        console.log('[VoxelSystemExample] 验证植物方块...');
+        for (const blockId of allPlants) {
+            if (this.voxelSystem!.hasBlock(blockId)) {
+                validPlants.push(blockId);
+            } else {
+                invalidBlocks.push(blockId);
+            }
+        }
+        
+        // 验证发光方块 - 暂时跳过
+        console.log('[VoxelSystemExample] 跳过发光方块验证 - 暂时注释掉');
+        /*
+        for (const blockId of allGlowing) {
+            if (this.voxelSystem!.hasBlock(blockId)) {
+                validGlowing.push(blockId);
+            } else {
+                invalidBlocks.push(blockId);
+            }
+        }
+        */
+        
+        console.log(`[VoxelSystemExample] 验证结果:`);
+        console.log(`  有效基础方块: ${validBlocks.length}/${allBlocks.length}`);
+        console.log(`  有效植物方块: ${validPlants.length}/${allPlants.length}`);
+        console.log(`  有效发光方块: ${validGlowing.length}/${allGlowing.length}`);
+        console.log(`  无效方块总数: ${invalidBlocks.length}`);
+        
+        if (invalidBlocks.length > 0) {
+            console.log(`[VoxelSystemExample] 无效方块列表:`, invalidBlocks.slice(0, 10));
+        }
+        
+        // 如果某些类型没有有效方块，使用动态生成
+        if (validBlocks.length === 0) {
+            console.warn('[VoxelSystemExample] 没有有效的基础方块，使用动态生成');
+            const availableBlocks = this.voxelSystem!.getAllBlockIds();
+            validBlocks.push(...this.generateDynamicBlockList(availableBlocks, 'basic'));
+        }
+        
+        if (validPlants.length === 0) {
+            console.warn('[VoxelSystemExample] 没有有效的植物方块，使用动态生成');
+            const availableBlocks = this.voxelSystem!.getAllBlockIds();
+            validPlants.push(...this.generateDynamicBlockList(availableBlocks, 'plant'));
+        }
+        
+        if (validGlowing.length === 0) {
+            console.warn('[VoxelSystemExample] 没有有效的发光方块，跳过发光方块生成');
+        }
+        
+        return {
+            validBlocks,
+            validPlants,
+            validGlowing,
+            invalidBlocks
+        };
+    }
+
+    /**
+     * 检查方块类型可用性并返回安全的方块列表
+     */
+    private getSafeBlockTypes(): string[] {
+        const allBlockTypes = this.getBlockTypes();
+        const availableBlocks = this.voxelSystem!.getAllBlockIds();
+        const safeBlocks = allBlockTypes.filter(blockId => availableBlocks.indexOf(blockId) !== -1);
+        
+        console.log(`[VoxelSystemExample] 基础方块类型检查: ${safeBlocks.length}/${allBlockTypes.length} 可用`);
+        
+        if (safeBlocks.length === 0) {
+            console.warn('[VoxelSystemExample] 没有可用的基础方块类型，使用动态生成列表');
+            return this.generateDynamicBlockList(availableBlocks, 'basic');
+        }
+        
+        return safeBlocks;
+    }
+
+    /**
+     * 动态生成方块类型列表
+     */
+    private generateDynamicBlockList(availableBlocks: string[], category: string): string[] {
+        console.log(`[VoxelSystemExample] 动态生成${category}方块列表...`);
+        
+        let patterns: string[] = [];
+        
+        switch (category) {
+            case 'basic':
+                patterns = ['stone', 'dirt', 'grass', 'sand', 'cobble', 'gravel'];
+                break;
+            case 'plant':
+                patterns = ['grass', 'flower', 'fern', 'bush', 'dandelion', 'poppy'];
+                break;
+            case 'glowing':
+                patterns = ['torch', 'glow', 'lamp', 'fire', 'lantern'];
+                break;
+        }
+        
+        const dynamicBlocks = availableBlocks.filter(blockId => {
+            return patterns.some(pattern => blockId.includes(pattern));
+        });
+        
+        console.log(`[VoxelSystemExample] 动态生成${category}方块: ${dynamicBlocks.length} 个`);
+        
+        if (dynamicBlocks.length === 0) {
+            console.warn(`[VoxelSystemExample] 动态生成失败，使用前几个可用方块`);
+            return availableBlocks.slice(0, 5);
+        }
+        
+        return dynamicBlocks;
+    }
+
+    /**
+     * 获取基础方块类型（使用已验证可用的方块）
      */
     private getBlockTypes(): string[] {
         return [
-            // 基础方块
+            // 已验证可用的基础方块
             'minecraft:stone',
             'minecraft:dirt',
             'minecraft:grass_block',
             'minecraft:sand',
             'minecraft:cobblestone',
-            'minecraft:gravel',
-            'minecraft:clay',
-            'minecraft:coarse_dirt',
-            'minecraft:podzol',
-            'minecraft:mycelium',
             
-            // 木质方块
+            // 已验证可用的木质方块
             'minecraft:oak_log',
-            'minecraft:birch_log',
-            'minecraft:spruce_log',
-            'minecraft:jungle_log',
-            'minecraft:acacia_log',
-            'minecraft:dark_oak_log',
             'minecraft:oak_planks',
-            'minecraft:birch_planks',
-            'minecraft:spruce_planks',
-            'minecraft:jungle_planks',
-            'minecraft:acacia_planks',
-            'minecraft:dark_oak_planks',
-            
-            // 矿物方块
-            'minecraft:coal_ore',
-            'minecraft:iron_ore',
-            'minecraft:gold_ore',
-            'minecraft:diamond_ore',
-            'minecraft:emerald_ore',
-            'minecraft:lapis_ore',
-            'minecraft:redstone_ore',
-            'minecraft:copper_ore',
-            
-            // 装饰方块
             'minecraft:oak_leaves',
-            'minecraft:birch_leaves',
-            'minecraft:spruce_leaves',
-            'minecraft:jungle_leaves',
-            'minecraft:acacia_leaves',
-            'minecraft:dark_oak_leaves',
-            'minecraft:glass',
-            'minecraft:ice',
-            'minecraft:snow_block',
-            'minecraft:water',
-            'minecraft:lava'
+            
+            // 已验证可用的装饰方块
+            'minecraft:glass'
         ];
     }
 
     /**
-     * 获取植物类型
+     * 获取安全的植物类型
+     */
+    private getSafePlantTypes(): string[] {
+        const allPlantTypes = this.getPlantTypes();
+        const availableBlocks = this.voxelSystem!.getAllBlockIds();
+        const safePlants = allPlantTypes.filter(blockId => availableBlocks.indexOf(blockId) !== -1);
+        
+        console.log(`[VoxelSystemExample] 植物类型检查: ${safePlants.length}/${allPlantTypes.length} 可用`);
+        
+        if (safePlants.length === 0) {
+            console.warn('[VoxelSystemExample] 没有可用的植物类型，使用动态生成列表');
+            return this.generateDynamicBlockList(availableBlocks, 'plant');
+        }
+        
+        return safePlants;
+    }
+
+    /**
+     * 获取安全的发光方块类型
+     */
+    private getSafeGlowingBlockTypes(): string[] {
+        const allGlowingTypes = this.getGlowingBlockTypes();
+        const availableBlocks = this.voxelSystem!.getAllBlockIds();
+        const safeGlowing = allGlowingTypes.filter(blockId => availableBlocks.indexOf(blockId) !== -1);
+        
+        console.log(`[VoxelSystemExample] 发光方块类型检查: ${safeGlowing.length}/${allGlowingTypes.length} 可用`);
+        
+        if (safeGlowing.length === 0) {
+            console.warn('[VoxelSystemExample] 没有可用的发光方块类型，使用动态生成列表');
+            return this.generateDynamicBlockList(availableBlocks, 'glowing');
+        }
+        
+        return safeGlowing;
+    }
+
+    /**
+     * 获取植物类型（使用已验证可用的植物）
      */
     private getPlantTypes(): string[] {
         return [
+            // 已验证可用的植物
             'minecraft:dandelion',
             'minecraft:poppy',
-            'minecraft:blue_orchid',
-            'minecraft:allium',
-            'minecraft:azure_bluet',
-            'minecraft:red_tulip',
-            'minecraft:orange_tulip',
-            'minecraft:white_tulip',
-            'minecraft:pink_tulip',
-            'minecraft:oxeye_daisy',
-            'minecraft:cornflower',
-            'minecraft:lily_of_the_valley',
-            'minecraft:sunflower',
-            'minecraft:lilac',
-            'minecraft:rose_bush',
-            'minecraft:peony',
-            'minecraft:tall_grass',
             'minecraft:short_grass',
-            'minecraft:fern',
-            'minecraft:large_fern',
-            'minecraft:dead_bush',
-            'minecraft:cactus',
-            'minecraft:sugar_cane',
-            'minecraft:bamboo',
-            'minecraft:kelp',
-            'minecraft:seagrass',
-            'minecraft:sea_pickle',
-            'minecraft:vine',
-            'minecraft:lily_pad',
-            'minecraft:nether_wart',
-            'minecraft:crimson_fungus',
-            'minecraft:warped_fungus',
-            'minecraft:crimson_roots',
-            'minecraft:warped_roots',
-            'minecraft:nether_sprouts',
-            'minecraft:weeping_vines',
-            'minecraft:twisting_vines'
+            'minecraft:fern'
         ];
     }
 
     /**
-     * 获取发光方块类型
+     * 获取发光方块类型（保守列表）
      */
     private getGlowingBlockTypes(): string[] {
         return [
-            'minecraft:glowstone',
-            'minecraft:sea_lantern',
-            'minecraft:end_rod',
-            'minecraft:beacon',
-            'minecraft:redstone_lamp',
+            // 最基础的发光方块
             'minecraft:torch',
-            'minecraft:wall_torch',
-            'minecraft:redstone_torch',
-            'minecraft:redstone_wall_torch',
-            'minecraft:soul_torch',
-            'minecraft:soul_wall_torch',
-            'minecraft:lantern',
-            'minecraft:soul_lantern',
-            'minecraft:campfire',
-            'minecraft:soul_campfire',
-            'minecraft:fire',
-            'minecraft:soul_fire',
-            'minecraft:end_crystal',
-            'minecraft:respawn_anchor',
-            'minecraft:conduit',
-            'minecraft:jack_o_lantern',
-            'minecraft:shroomlight',
-            'minecraft:magma_block',
-            'minecraft:lava',
-            'minecraft:end_portal',
-            'minecraft:nether_portal',
-            'minecraft:end_gateway',
-            'minecraft:lightning_rod',
-            'minecraft:candle',
-            'minecraft:white_candle',
-            'minecraft:orange_candle',
-            'minecraft:magenta_candle',
-            'minecraft:light_blue_candle',
-            'minecraft:yellow_candle',
-            'minecraft:lime_candle',
-            'minecraft:pink_candle',
-            'minecraft:gray_candle',
-            'minecraft:light_gray_candle',
-            'minecraft:cyan_candle',
-            'minecraft:purple_candle',
-            'minecraft:blue_candle',
-            'minecraft:brown_candle',
-            'minecraft:green_candle',
-            'minecraft:red_candle',
-            'minecraft:black_candle'
+            'minecraft:glowstone',
+            'minecraft:redstone_lamp'
         ];
+    }
+
+    /**
+     * 验证世界生成结果
+     */
+    private validateWorldGeneration(): void {
+        console.log('[VoxelSystemExample] 验证世界生成结果...');
+        
+        // 统计实际创建的节点数量
+        const actualNodes = this.testBlocks.filter(block => block.node && block.node.isValid).length;
+        const expectedNodes = this.testBlocks.length;
+        
+        console.log(`[VoxelSystemExample] 预期方块数: ${expectedNodes}, 实际创建节点数: ${actualNodes}`);
+        
+        if (actualNodes < expectedNodes) {
+            console.warn(`[VoxelSystemExample] 警告: 有 ${expectedNodes - actualNodes} 个方块创建失败！`);
+        }
+        
+        // 检查y=0层的连续性
+        this.checkGroundContinuity();
+        
+        // 统计各层方块数量
+        this.statisticsByLayer();
+    }
+
+    /**
+     * 检查地面连续性
+     */
+    private checkGroundContinuity(): void {
+        console.log('[VoxelSystemExample] 检查地面连续性...');
+        
+        const groundBlocks = this.testBlocks.filter(block => 
+            block.position.y === 0 && block.node && block.node.isValid
+        );
+        
+        console.log(`[VoxelSystemExample] y=0层实际方块数: ${groundBlocks.length}`);
+        console.log(`[VoxelSystemExample] 预期y=0层方块数: ${this.worldSize * this.worldSize}`);
+        
+        if (groundBlocks.length < this.worldSize * this.worldSize) {
+            console.warn(`[VoxelSystemExample] 警告: y=0层有 ${this.worldSize * this.worldSize - groundBlocks.length} 个空隙！`);
+            
+            // 找出缺失的位置
+            const existingPositions = new Set();
+            groundBlocks.forEach(block => {
+                const key = `${block.position.x},${block.position.z}`;
+                existingPositions.add(key);
+            });
+            
+            const missingPositions = [];
+            for (let x = 0; x < this.worldSize; x++) {
+                for (let z = 0; z < this.worldSize; z++) {
+                    const key = `${x},${z}`;
+                    if (!existingPositions.has(key)) {
+                        missingPositions.push({ x, z });
+                    }
+                }
+            }
+            
+            if (missingPositions.length > 0) {
+                console.warn(`[VoxelSystemExample] 缺失位置示例:`, missingPositions.slice(0, 10));
+            }
+        } else {
+            console.log('[VoxelSystemExample] ✓ y=0层地面连续，无空隙');
+        }
+    }
+
+    /**
+     * 按层统计方块数量
+     */
+    private statisticsByLayer(): void {
+        console.log('[VoxelSystemExample] 按层统计方块数量:');
+        
+        const layerStats = new Map<number, number>();
+        this.testBlocks.forEach(block => {
+            if (block.node && block.node.isValid) {
+                const y = block.position.y;
+                layerStats.set(y, (layerStats.get(y) || 0) + 1);
+            }
+        });
+        
+        // 按y坐标排序显示
+        const sortedLayers = Array.from(layerStats.entries()).sort((a, b) => a[0] - b[0]);
+        sortedLayers.forEach(([y, count]) => {
+            console.log(`[VoxelSystemExample]   y=${y}: ${count} 个方块`);
+        });
     }
 
     /**
@@ -411,6 +610,10 @@ export class VoxelSystemExample extends Component {
      * 根据位置获取随机方块类型（用于创建地形变化）
      */
     private getRandomBlockType(blockTypes: string[], x: number, z: number): string {
+
+        //随机返回blockTypes中的一个
+        return blockTypes[Math.floor(Math.random() * blockTypes.length)];
+
         // 使用位置作为种子创建伪随机数，确保相同位置总是生成相同的方块
         const seed = x * 1000 + z;
         const random = this.seededRandom(seed);
@@ -466,15 +669,19 @@ export class VoxelSystemExample extends Component {
     /**
      * 创建单个方块
      */
-    private async createSingleBlock(blockInfo: { id: string; position: Vec3; node?: Node }): Promise<void> {
+    private async createSingleBlock(blockInfo: { id: string; position: Vec3; node?: Node }): Promise<boolean> {
         try {
-            console.log(`[VoxelSystemExample] 创建方块: ${blockInfo.id}`);
+            // 检查方块类型是否存在
+            if (!this.voxelSystem!.hasBlock(blockInfo.id)) {
+                console.warn(`[VoxelSystemExample] 方块类型不存在: ${blockInfo.id}`);
+                return false;
+            }
 
             // 1. 生成网格数据
             const meshData = await this.voxelSystem!.generateBlockMesh(blockInfo.id, blockInfo.position);
             if (!meshData) {
-                console.warn(`[VoxelSystemExample] 方块网格生成失败: ${blockInfo.id}`);
-                return;
+                console.warn(`[VoxelSystemExample] 方块网格生成失败: ${blockInfo.id} at (${blockInfo.position.x}, ${blockInfo.position.y}, ${blockInfo.position.z})`);
+                return false;
             }
 
             // 2. 创建节点
@@ -484,22 +691,40 @@ export class VoxelSystemExample extends Component {
             blockInfo.node = blockNode;
 
             // 3. 为每个纹理组创建子网格
-            await this.createBlockSubMeshes(blockNode, meshData, blockInfo.id);
+            const subMeshSuccess = await this.createBlockSubMeshes(blockNode, meshData, blockInfo.id);
+            if (!subMeshSuccess) {
+                console.warn(`[VoxelSystemExample] 子网格创建失败: ${blockInfo.id}`);
+                // 清理已创建的节点
+                if (blockNode && blockNode.isValid) {
+                    blockNode.destroy();
+                    blockInfo.node = undefined;
+                }
+                return false;
+            }
 
-            console.log(`[VoxelSystemExample] 方块创建成功: ${blockInfo.id}`);
+            return true;
 
         } catch (error) {
-            console.error(`[VoxelSystemExample] 创建方块失败: ${blockInfo.id}`, error);
+            console.error(`[VoxelSystemExample] 创建方块失败: ${blockInfo.id} at (${blockInfo.position.x}, ${blockInfo.position.y}, ${blockInfo.position.z})`, error);
+            return false;
         }
     }
 
     /**
      * 为方块创建子网格（按纹理分组）
      */
-    private async createBlockSubMeshes(blockNode: Node, meshData: any, blockId: string): Promise<void> {
+    private async createBlockSubMeshes(blockNode: Node, meshData: any, blockId: string): Promise<boolean> {
         let subMeshIndex = 0;
+        let successCount = 0;
+        let totalGroups = meshData.textureGroups.size;
 
-        console.log(`[VoxelSystemExample] createBlockSubMeshes: textureGroups数量=${meshData.textureGroups.size}`);
+        console.log(`[VoxelSystemExample] createBlockSubMeshes: textureGroups数量=${totalGroups}`);
+        
+        if (totalGroups === 0) {
+            console.warn(`[VoxelSystemExample] 没有纹理组数据: ${blockId}`);
+            return false;
+        }
+
         for (const [texturePath, textureGroup] of meshData.textureGroups) {
             try {
                 console.log(`[VoxelSystemExample]   处理纹理组: ${texturePath}, 顶点数=${textureGroup.vertices.length}`);
@@ -529,11 +754,21 @@ export class VoxelSystemExample extends Component {
                 }
 
                 subMeshIndex++;
+                successCount++;
 
             } catch (error) {
                 console.error(`[VoxelSystemExample] 创建子网格失败: ${texturePath}`, error);
             }
         }
+
+        const success = successCount > 0;
+        if (!success) {
+            console.error(`[VoxelSystemExample] 所有子网格创建失败: ${blockId}`);
+        } else if (successCount < totalGroups) {
+            console.warn(`[VoxelSystemExample] 部分子网格创建失败: ${blockId} (${successCount}/${totalGroups})`);
+        }
+
+        return success;
     }
 
     /**
@@ -593,7 +828,55 @@ export class VoxelSystemExample extends Component {
         const availableBlocks = this.voxelSystem.getAllBlockIds();
         console.log(`[VoxelSystemExample] 可用方块 (${availableBlocks.length}):`, availableBlocks);
         
+        // 分析可用方块类型
+        this.analyzeAvailableBlocks(availableBlocks);
+        
         this.voxelSystem.logSystemStats();
+    }
+
+    /**
+     * 分析可用的方块类型
+     */
+    private analyzeAvailableBlocks(availableBlocks: string[]): void {
+        console.log('[VoxelSystemExample] 分析可用方块类型...');
+        
+        // 分类统计
+        const categories = {
+            basic: 0,
+            wood: 0,
+            ore: 0,
+            plant: 0,
+            glowing: 0,
+            other: 0
+        };
+        
+        availableBlocks.forEach(blockId => {
+            if (blockId.includes('stone') || blockId.includes('dirt') || blockId.includes('sand') || 
+                blockId.includes('grass') || blockId.includes('cobble') || blockId.includes('gravel')) {
+                categories.basic++;
+            } else if (blockId.includes('log') || blockId.includes('plank') || blockId.includes('leaves')) {
+                categories.wood++;
+            } else if (blockId.includes('ore') || blockId.includes('coal') || blockId.includes('iron') || 
+                      blockId.includes('gold') || blockId.includes('diamond') || blockId.includes('emerald')) {
+                categories.ore++;
+            } else if (blockId.includes('flower') || blockId.includes('grass') || blockId.includes('fern') || 
+                      blockId.includes('bush') || blockId.includes('cactus') || blockId.includes('vine')) {
+                categories.plant++;
+            } else if (blockId.includes('torch') || blockId.includes('glow') || blockId.includes('lamp') || 
+                      blockId.includes('fire') || blockId.includes('lantern') || blockId.includes('candle')) {
+                categories.glowing++;
+            } else {
+                categories.other++;
+            }
+        });
+        
+        console.log('[VoxelSystemExample] 方块类型统计:');
+        console.log(`  基础方块: ${categories.basic} 个`);
+        console.log(`  木质方块: ${categories.wood} 个`);
+        console.log(`  矿物方块: ${categories.ore} 个`);
+        console.log(`  植物方块: ${categories.plant} 个`);
+        console.log(`  发光方块: ${categories.glowing} 个`);
+        console.log(`  其他方块: ${categories.other} 个`);
     }
 
     /**
@@ -643,6 +926,85 @@ export class VoxelSystemExample extends Component {
         this.batchSize = 2000;
         this.batchDelay = 100;
         console.log('[VoxelSystemExample] 已设置为大世界配置');
+    }
+
+    /**
+     * 修复地面空隙（补充缺失的方块）
+     */
+    public async fixGroundGaps(): Promise<void> {
+        if (!this.voxelSystem) {
+            console.error('[VoxelSystemExample] 体素系统未初始化');
+            return;
+        }
+
+        console.log('[VoxelSystemExample] 开始修复地面空隙...');
+        
+        // 找出缺失的地面方块位置
+        const existingPositions = new Set();
+        this.testBlocks.forEach(block => {
+            if (block.position.y === 0 && block.node && block.node.isValid) {
+                const key = `${block.position.x},${block.position.z}`;
+                existingPositions.add(key);
+            }
+        });
+        
+        const missingPositions = [];
+        for (let x = 0; x < this.worldSize; x++) {
+            for (let z = 0; z < this.worldSize; z++) {
+                const key = `${x},${z}`;
+                if (!existingPositions.has(key)) {
+                    missingPositions.push({ x, z });
+                }
+            }
+        }
+        
+        if (missingPositions.length === 0) {
+            console.log('[VoxelSystemExample] 地面无空隙，无需修复');
+            return;
+        }
+        
+        console.log(`[VoxelSystemExample] 发现 ${missingPositions.length} 个空隙，开始补充...`);
+        
+        // 补充缺失的方块
+        const blockTypes = this.getBlockTypes();
+        const blocksToAdd = [];
+        
+        for (const pos of missingPositions) {
+            const blockType = this.getRandomBlockType(blockTypes, pos.x, pos.z);
+            blocksToAdd.push({
+                id: blockType,
+                position: new Vec3(pos.x, 0, pos.z)
+            });
+        }
+        
+        // 分批创建缺失的方块
+        const batchSize = Math.min(100, blocksToAdd.length);
+        const totalBatches = Math.ceil(blocksToAdd.length / batchSize);
+        
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const startIndex = batchIndex * batchSize;
+            const endIndex = Math.min(startIndex + batchSize, blocksToAdd.length);
+            const batch = blocksToAdd.slice(startIndex, endIndex);
+            
+            console.log(`[VoxelSystemExample] 修复批次 ${batchIndex + 1}/${totalBatches} (${batch.length} 个方块)`);
+            
+            const creationPromises = batch.map(block => this.createSingleBlock(block));
+            const results = await Promise.all(creationPromises);
+            const successCount = results.filter(result => result).length;
+            console.log(`[VoxelSystemExample] 修复批次 ${batchIndex + 1} 创建结果: ${successCount}/${batch.length} 成功`);
+            
+            if (batchIndex < totalBatches - 1) {
+                await new Promise(resolve => setTimeout(resolve, this.batchDelay));
+            }
+        }
+        
+        // 更新testBlocks数组
+        this.testBlocks.push(...blocksToAdd);
+        
+        console.log(`[VoxelSystemExample] 地面空隙修复完成，补充了 ${blocksToAdd.length} 个方块`);
+        
+        // 重新验证
+        this.validateWorldGeneration();
     }
 
     /**

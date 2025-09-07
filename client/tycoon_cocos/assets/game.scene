@@ -205,10 +205,10 @@
     "node": {
       "__id__": 2
     },
-    "_enabled": true,
+    "_enabled": false,
     "__prefab": null,
-    "enableDebugDisplay": true,
-    "enableKeyboardSwitching": true,
+    "enableDebugDisplay": false,
+    "enableKeyboardSwitching": false,
     "enableCameraDemo": false,
     "debugPosition": "top-left",
     "updateInterval": 0.1,
@@ -483,7 +483,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 960.0000000000001,
+      "x": 960,
       "y": 540,
       "z": 0
     },
@@ -575,7 +575,7 @@
     "_priority": 1,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 581.5143603133159,
+    "_orthoHeight": 540,
     "_near": 1,
     "_far": 1000,
     "_color": {
@@ -713,7 +713,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920.0000000000002,
+      "width": 1920,
       "height": 1080
     },
     "_anchorPoint": {
@@ -1480,7 +1480,7 @@
     "camera": {
       "__id__": 3
     },
-    "worldSize": 30,
+    "worldSize": 15,
     "plantDensity": 0.1,
     "glowingBlockDensity": 0.05,
     "batchSize": 1000,

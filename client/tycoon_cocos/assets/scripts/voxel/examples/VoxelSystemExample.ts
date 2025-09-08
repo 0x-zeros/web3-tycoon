@@ -6,8 +6,7 @@ import { MeshBuilder } from '../resource/MeshBuilder';
 const { ccclass, property } = _decorator;
 
 /**
- * 体素系统测试组件
- * 用于验证新的 Minecraft 资源包渲染系统
+ * 测试地图生成
  */
 @ccclass('VoxelSystemExample')
 export class VoxelSystemExample extends Component {

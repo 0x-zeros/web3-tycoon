@@ -12,6 +12,7 @@ import { _decorator, Component, Node, resources, Prefab, instantiate, director }
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { GameMap } from './core/GameMap';
+import { VoxelSystem } from '../voxel/VoxelSystem';
 
 const { ccclass, property } = _decorator;
 
@@ -105,6 +106,9 @@ export class MapManager extends Component {
         
         // 注册事件监听器
         this.registerEventListeners();
+
+        // voxelSystem //resourcePackPath
+        VoxelSystem.getInstance().initialize();
 
         this.log('MapManager ready');
     }

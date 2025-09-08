@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="256,256" pivot="0.5,0.5" extention="Button">
+  <controller name="button" pages="0,up,1,down,2,over" selected="0"/>
   <displayList>
-    <graph id="n1_105vo" name="n1" xy="128,128" pivot="0.5,0.5" anchor="true" size="220,220" type="rect" fillColor="#0066ccff">
+    <graph id="n3_105vo" name="n3" xy="0,0" size="256,256" type="rect" lineColor="#ff6666ff" fillColor="#03ffffff"/>
+    <graph id="n1_105vo" name="n1" xy="128,128" pivot="0.5,0.5" anchor="true" size="220,220" type="rect" fillColor="#806699cc">
+      <gearDisplay controller="button" pages="1,2"/>
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <loader id="n0_105vo" name="tilePic" xy="128,163" pivot="0.5,0.5" anchor="true" size="128,128" url="ui://82r0pzopmumqiq" align="center" vAlign="middle" clearOnPublish="true">
+    <loader id="n0_105vo" name="tileIcon" xy="128,163" pivot="0.5,0.5" anchor="true" size="128,128" url="ui://82r0pzopmumqiq" align="center" vAlign="middle" clearOnPublish="true">
       <relation target="" sidePair="width-width,height-height"/>
     </loader>
     <text id="n2_105vo" name="title" xy="37,31" size="180,55" font="font" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="空白地块">

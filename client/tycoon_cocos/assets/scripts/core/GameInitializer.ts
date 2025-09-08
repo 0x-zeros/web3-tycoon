@@ -44,6 +44,7 @@ export interface InitializationResult {
 }
 
 /**
+ * gameWorld or gameManager
  * 游戏初始化管理器
  * 单例模式，控制游戏的整体初始化流程
  */

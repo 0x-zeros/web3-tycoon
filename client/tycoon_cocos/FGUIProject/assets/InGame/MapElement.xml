@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1280,1280">
   <displayList>
+    <graph id="n2_105vo" name="n2" xy="0,0" size="1280,1280" type="rect" lineSize="2" lineColor="#ff6666cc" fillColor="#00ffffff">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
     <list id="n0_105vo" name="tiles" xy="0,0" size="1280,1280" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pim105voq">
       <relation target="" sidePair="width-width,height-height"/>
       <item title="1"/>

@@ -220,6 +220,15 @@ export abstract class UIBase extends Component {
         return child ? child as fgui.GList : null;
     }
 
+
+    /**
+     * 获取加载器
+     */
+    protected getLoader(name: string): fgui.GLoader | null {
+        const child = this.getChild(name);
+        return child ? child as fgui.GLoader : null;
+    }
+
     /**
      * 获取进度条
      */

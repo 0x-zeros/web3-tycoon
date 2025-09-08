@@ -1,4 +1,4 @@
-import { Vec3 } from 'cc';
+import { Vec3, Node, MeshRenderer } from 'cc';
 import { ResourcePackLoader, getGlobalResourcePackLoader } from './resource/ResourcePackLoader';
 import { TextureManager, initializeGlobalTextureManager, getGlobalTextureManager } from './resource/TextureManager';
 import { MaterialFactory, initializeGlobalMaterialFactory, getGlobalMaterialFactory } from './resource/MaterialFactory';
@@ -19,6 +19,7 @@ export class VoxelSystem {
     private materialFactory: MaterialFactory;
     private modelParser: ModelParser;
     private initialized: boolean = false;
+    private overlayEnabled: boolean = false; // overlay 功能开关（默认关闭）
 
     private constructor() {
         this.resourceLoader = getGlobalResourcePackLoader();
@@ -55,8 +56,8 @@ export class VoxelSystem {
             // 2. 初始化纹理管理器
             await this.textureManager.initialize();
             
-            // 3. 预加载常用纹理
-            //await this.textureManager.preloadCommonTextures();
+            // 3. 预加载常用纹理（关闭，按需加载以加快启动）
+            // await this.textureManager.preloadCommonTextures();
             
             // 4. 确保方块注册表已初始化
             if (!BlockRegistry.exists('minecraft:stone')) {
@@ -122,21 +123,23 @@ export class VoxelSystem {
                 blockId: blockId // 传递方块ID用于光照计算
             };
 
-            // 通用 Overlay 检测：如果模型任一元素的侧面使用 *_side_overlay 纹理，则采用双子网格方案
-            const overlayInfo = this.detectOverlayInfo(model);
-            if (overlayInfo) {
-                console.log(`[VoxelSystem] 检测到 overlay 方案: ${blockId} overlay=${overlayInfo.overlaySideTexture}`);
-                const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(meshBuildContext);
+            if (this.overlayEnabled) {
+                // 通用 Overlay 检测：如果模型任一元素的侧面使用 *_side_overlay 纹理，则采用双子网格方案
+                const overlayInfo = this.detectOverlayInfo(model);
+                if (overlayInfo) {
+                    console.log(`[VoxelSystem] 检测到 overlay 方案: ${blockId} overlay=${overlayInfo.overlaySideTexture}`);
+                    const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(meshBuildContext);
 
-                const meshData: VoxelMeshData = {
-                    vertices: [],
-                    indices: [],
-                    textureGroups: new Map(),
-                    hasOverlay: true,
-                    overlayMeshes: { base: baseMesh, overlay: overlayMesh },
-                    overlayInfo
-                };
-                return meshData;
+                    const meshData: VoxelMeshData = {
+                        vertices: [],
+                        indices: [],
+                        textureGroups: new Map(),
+                        hasOverlay: true,
+                        overlayMeshes: { base: baseMesh, overlay: overlayMesh },
+                        overlayInfo
+                    };
+                    return meshData;
+                }
             }
 
             const meshData = MeshBuilder.buildMesh(model, meshBuildContext);
@@ -268,6 +271,93 @@ export class VoxelSystem {
      */
     getAllBlockIds(): string[] {
         return BlockRegistry.getAllBlockIds();
+    }
+
+    /**
+     * 设置 overlay 功能开关
+     */
+    setOverlayEnabled(enabled: boolean): void {
+        this.overlayEnabled = !!enabled;
+        console.log(`[VoxelSystem] Overlay 功能 ${this.overlayEnabled ? '已开启' : '已关闭'}`);
+    }
+
+    /**
+     * 查询 overlay 功能是否开启
+     */
+    isOverlayEnabled(): boolean {
+        return this.overlayEnabled;
+    }
+
+    /**
+     * 返回常用的基础方块 ID 列表（不扫描 blockstates，固定清单）
+     */
+    getCommonBlockIds(): string[] {
+        return [
+            'minecraft:stone',
+            'minecraft:dirt',
+            'minecraft:grass_block',
+            'minecraft:sand',
+            'minecraft:cobblestone',
+            'minecraft:oak_log',
+            'minecraft:oak_planks',
+            'minecraft:oak_leaves',
+            'minecraft:glass'
+        ];
+    }
+
+    /**
+     * 生成一个方块 Node 并挂到 parent 下（按需加载资源，内部封装网格与材质创建）
+     */
+    async createBlockNode(parent: Node, blockId: string, position: Vec3): Promise<Node | null> {
+        try {
+            if (!this.initialized) {
+                console.error('[VoxelSystem] 系统未初始化');
+                return null;
+            }
+
+            // 生成网格数据
+            const meshData = await this.generateBlockMesh(blockId, position);
+            if (!meshData) return null;
+
+            // 创建方块节点
+            const blockNode = new Node(`Block_${blockId.replace('minecraft:', '')}`);
+            blockNode.position = position;
+            parent.addChild(blockNode);
+
+            // Overlay 情况暂不在此处处理，统一走普通纹理组（overlay 分支可后续打开）
+            if (meshData.textureGroups.size === 0) {
+                console.warn('[VoxelSystem] 纹理组为空，取消创建:', blockId);
+                blockNode.destroy();
+                return null;
+            }
+
+            for (const [texturePath, textureGroup] of meshData.textureGroups) {
+                if (!textureGroup || textureGroup.vertices.length === 0) continue;
+
+                const subNode = new Node('SubMesh');
+                blockNode.addChild(subNode);
+
+                // 网格
+                const mesh = MeshBuilder.createCocosMesh({
+                    vertices: [],
+                    indices: [],
+                    textureGroups: new Map([[texturePath, textureGroup]])
+                } as any, texturePath);
+                if (!mesh) continue;
+
+                const mr = subNode.addComponent(MeshRenderer);
+                mr.mesh = mesh;
+
+                // 材质
+                const material = await this.createBlockMaterial(blockId);
+                if (material) mr.material = material;
+            }
+
+            return blockNode;
+        } catch (e) {
+            console.error('[VoxelSystem] createBlockNode 失败:', blockId, e);
+            return null;
+        }
     }
 
     /**

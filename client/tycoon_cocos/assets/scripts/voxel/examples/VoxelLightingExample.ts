@@ -261,56 +261,8 @@ export class VoxelLightingExample extends Component {
             
             console.log(`[VoxelLightingExample] 成功生成方块网格: ${block.id}, 纹理组数量: ${meshData.textureGroups.size}`);
 
-            // 创建方块材质
-            const material = await this.voxelSystem!.createBlockMaterial(block.id);
-            if (!material) {
-                console.warn(`[VoxelLightingExample] 无法创建方块材质: ${block.id}`);
-                return;
-            }
-
-            // 创建方块节点
-            const blockNode = new Node(`Block_${block.id}_${block.position.x}_${block.position.y}_${block.position.z}`);
-            blockNode.setParent(this.node);
-            blockNode.setPosition(block.position);
-
-            // 检查是否为通用 overlay 双子网格
-            if ((meshData as any).hasOverlay && (meshData as any).overlayMeshes && (meshData as any).overlayInfo) {
-                const overlayMeshes = (meshData as any).overlayMeshes;
-                const overlayInfo = (meshData as any).overlayInfo;
-                console.log(`[VoxelLightingExample] 创建 overlay 双子网格: ${block.id}`);
-                await this.createOverlayBlockNode(blockNode, overlayMeshes, overlayInfo);
-            } else {
-                // 普通方块的纹理组处理
-                for (const [texture, group] of meshData.textureGroups) {
-                    if (group.vertices.length === 0) continue;
-
-                    const subNode = new Node(`${texture.replace(/[^a-zA-Z0-9]/g, '_')}`);
-                    subNode.setParent(blockNode);
-
-                    // 创建网格 - 使用MeshBuilder而不是MaterialFactory
-                    const meshDataForGroup = {
-                        vertices: [],
-                        indices: [],
-                        textureGroups: new Map([[texture, group]])
-                    };
-                    const mesh = MeshBuilder.createCocosMesh(meshDataForGroup, texture);
-                    if (mesh) {
-                        const meshRenderer = subNode.addComponent(MeshRenderer);
-                        meshRenderer.mesh = mesh;
-                        meshRenderer.material = material;
-
-                        // 设置发光方块的光照值
-                        const blockDef = BlockRegistry.getBlock(block.id);
-                        if (blockDef && blockDef.lightLevel > 0) {
-                            console.log(`[VoxelLightingExample] 设置发光方块材质属性: ${block.id}, 光照等级: ${blockDef.lightLevel}`);
-                            // 发光方块不需要额外的材质属性，光照效果由着色器处理
-                            // 着色器会根据顶点的light属性自动处理发光
-                        }
-                    }
-                }
-            }
-
-            this.blockNodes.push(blockNode);
+            const node = await this.voxelSystem!.createBlockNode(this.node, block.id, block.position);
+            if (node) this.blockNodes.push(node);
 
         } catch (error) {
             console.error(`[VoxelLightingExample] 创建方块节点失败 ${block.id}:`, error);

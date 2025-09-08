@@ -777,39 +777,11 @@ export class VoxelSystemExample extends Component {
      */
     private async createSingleBlock(blockInfo: { id: string; position: Vec3; node?: Node }): Promise<boolean> {
         try {
-            // 检查方块类型是否存在
-            if (!this.voxelSystem!.hasBlock(blockInfo.id)) {
-                console.warn(`[VoxelSystemExample] 方块类型不存在: ${blockInfo.id}`);
-                return false;
-            }
-
-            // 1. 生成网格数据
-            const meshData = await this.voxelSystem!.generateBlockMesh(blockInfo.id, blockInfo.position);
-            if (!meshData) {
-                console.warn(`[VoxelSystemExample] 方块网格生成失败: ${blockInfo.id} at (${blockInfo.position.x}, ${blockInfo.position.y}, ${blockInfo.position.z})`);
-                return false;
-            }
-
-            // 2. 创建节点
-            const blockNode = new Node(`Block_${blockInfo.id.replace('minecraft:', '')}`);
-            blockNode.position = blockInfo.position; // 设置方块在场景中的位置
-            this.containerNode!.addChild(blockNode);
-            blockInfo.node = blockNode;
-
-            // 3. 为每个纹理组创建子网格
-            const subMeshSuccess = await this.createBlockSubMeshes(blockNode, meshData, blockInfo.id);
-            if (!subMeshSuccess) {
-                console.warn(`[VoxelSystemExample] 子网格创建失败: ${blockInfo.id}`);
-                // 清理已创建的节点
-                if (blockNode && blockNode.isValid) {
-                    blockNode.destroy();
-                    blockInfo.node = undefined;
-                }
-                return false;
-            }
-
+            if (!this.voxelSystem) return false;
+            const node = await this.voxelSystem.createBlockNode(this.containerNode!, blockInfo.id, blockInfo.position);
+            if (!node) return false;
+            blockInfo.node = node;
             return true;
-
         } catch (error) {
             console.error(`[VoxelSystemExample] 创建方块失败: ${blockInfo.id} at (${blockInfo.position.x}, ${blockInfo.position.y}, ${blockInfo.position.z})`, error);
             return false;

@@ -53,9 +53,14 @@ export class ResourcePackLoader {
     private resourcePackPath: string;
     private index: ResourceIndex;
     private loaded: boolean = false;
+    // 性能开关：是否进行目录全量扫描（默认关闭，按需解析+缓存）
+    private fullScan: boolean = false;
 
-    constructor(resourcePackPath: string = 'voxel/default') {
+    constructor(resourcePackPath: string = 'voxel/default', options?: { fullScan?: boolean }) {
         this.resourcePackPath = resourcePackPath;
+        if (options && typeof options.fullScan === 'boolean') {
+            this.fullScan = options.fullScan;
+        }
         this.index = {
             blockstates: new Map(),
             models: new Map(),
@@ -74,7 +79,14 @@ export class ResourcePackLoader {
             await this.loadBlockStates();
             await this.loadModels();
             await this.indexTextures();
-            await this.indexTexturesFromDirectory();
+            if (this.fullScan) {
+                await this.indexTexturesFromDirectory();
+            } else {
+                // 后台异步补全目录索引，不阻塞启动
+                setTimeout(() => {
+                    this.indexTexturesFromDirectory().catch(() => {});
+                }, 0);
+            }
             
             this.loaded = true;
             console.log('[ResourcePackLoader] 资源包加载完成');

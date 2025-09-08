@@ -2,6 +2,8 @@
 
 本设计文档整理了在 **Cocos Creator 3.x** 中实现 Minecraft 风格的 `grass_block` 渲染方案。
 
+grass_block 只是block举例，不止草方块。菌岩（nylium）、**菌丝（mycelium）**等也有 *_side_overlay 的做法。思路相同：底层侧面是主体纹理，上面再叠一层带 tint 或特殊颜色的 overlay。 请根据模型有 2 个 elements 这个标准来通用化。
+
 思路是：同一方块画两次——一次不透明基础层（top/bottom/side），一次半透明 overlay 层（仅四个侧面，乘以生物群系颜色）。
 
 ---

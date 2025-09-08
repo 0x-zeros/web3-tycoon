@@ -58,14 +58,14 @@ export class VoxelSystemExample extends Component {
         await this.initializeVoxelSystem();
 
         // 创建测试方块
-        // await this.createTestBlocks();
+        await this.createTestBlocks();
 
-        this.setSmallWorldConfig();
         
         // 显示发光方块信息
         this.logGlowingBlocksInfo();
         
-        await this.generateLargeWorld();
+        // this.setSmallWorldConfig();
+        // await this.generateLargeWorld();
 
 
         // this.logSystemInfo();
@@ -817,9 +817,16 @@ export class VoxelSystemExample extends Component {
     }
 
     /**
-     * 为方块创建子网格（按纹理分组）
+     * 为方块创建子网格（支持草方块双子网格和普通纹理组）
      */
     private async createBlockSubMeshes(blockNode: Node, meshData: any, blockId: string): Promise<boolean> {
+        // 检查是否为通用 overlay 双子网格
+        if (meshData.hasOverlay && meshData.overlayMeshes && meshData.overlayInfo) {
+            console.log(`[VoxelSystemExample] 检测到 overlay 方块，使用双子网格渲染: ${blockId}`);
+            return await this.createOverlayBlock(blockNode, meshData.overlayMeshes, meshData.overlayInfo);
+        }
+        
+        // 普通方块的纹理组处理
         let subMeshIndex = 0;
         let successCount = 0;
         let totalGroups = meshData.textureGroups.size;
@@ -839,8 +846,14 @@ export class VoxelSystemExample extends Component {
                 const subMeshNode = new Node(`SubMesh_${subMeshIndex}`);
                 blockNode.addChild(subMeshNode);
 
-                // 2. 创建网格
-                const mesh = MeshBuilder.createCocosMesh(meshData, texturePath);
+                // 2. 为普通方块创建单纹理网格（简化处理）
+                const meshDataForGroup = {
+                    vertices: [],
+                    indices: [],
+                    textureGroups: new Map([[texturePath, textureGroup]])
+                };
+                
+                const mesh = MeshBuilder.createCocosMesh(meshDataForGroup, texturePath);
                 if (!mesh) {
                     console.warn(`[VoxelSystemExample] 子网格创建失败: ${texturePath}`);
                     continue;
@@ -851,7 +864,7 @@ export class VoxelSystemExample extends Component {
                 const meshRenderer = subMeshNode.addComponent(MeshRenderer);
                 meshRenderer.mesh = mesh;
 
-                // 4. 创建并设置材质
+                // 4. 使用体素系统创建材质
                 const material = await this.voxelSystem!.createBlockMaterial(blockId);
                 if (material) {
                     meshRenderer.material = material;
@@ -875,6 +888,81 @@ export class VoxelSystemExample extends Component {
         }
 
         return success;
+    }
+    
+    /**
+     * 使用体素系统创建草方块（简化版，依赖VoxelSystem的封装）
+     */
+    private async createGrassBlockFromSystem(blockNode: Node, grassMesh: any, blockId: string): Promise<boolean> {
+        try {
+            console.log(`[VoxelSystemExample] 使用体素系统创建草方块: ${blockId}`);
+            
+            // 直接使用VoxelSystem封装好的grassMesh，创建 MeshRenderer
+            const meshRenderer = blockNode.addComponent(MeshRenderer);
+            meshRenderer.mesh = grassMesh;
+            
+            // 使用体素系统的材质创建方法
+            const material = await this.voxelSystem!.createBlockMaterial(blockId);
+            if (material) {
+                meshRenderer.material = material;
+                console.log(`[VoxelSystemExample] 草方块材质设置成功: ${blockId}`);
+            }
+            
+            return true;
+            
+        } catch (error) {
+            console.error(`[VoxelSystemExample] 草方块创建失败: ${blockId}`, error);
+            return false;
+        }
+    }
+
+    /**
+     * 创建通用 overlay 方块（双子网格）
+     */
+    private async createOverlayBlock(
+        blockNode: Node,
+        overlayMeshes: { base: any; overlay: any },
+        overlayInfo: { baseSideTexture: string; overlaySideTexture: string }
+    ): Promise<boolean> {
+        try {
+            const meshRendererBase = blockNode.addComponent(MeshRenderer);
+            meshRendererBase.mesh = overlayMeshes.base;
+
+            // 基础材质：使用 base 侧面纹理名推导的主贴图（仍沿用 createBlockMaterial 按方块ID自动选择）
+            const baseMaterial = await this.voxelSystem!.createBlockMaterial('minecraft:' + overlayInfo.baseSideTexture.replace('_side', ''));
+            if (baseMaterial) {
+                meshRendererBase.material = baseMaterial;
+            }
+
+            // Overlay 子节点
+            const overlayNode = new Node('Overlay');
+            blockNode.addChild(overlayNode);
+            const meshRendererOverlay = overlayNode.addComponent(MeshRenderer);
+            meshRendererOverlay.mesh = overlayMeshes.overlay;
+
+            // Overlay 材质
+            const materialFactory = (this.voxelSystem as any).materialFactory;
+            if (materialFactory && materialFactory.createOverlayBlockMaterial) {
+                const overlayMat = await materialFactory.createOverlayBlockMaterial(
+                    overlayInfo.baseSideTexture,
+                    overlayInfo.overlaySideTexture
+                );
+                if (overlayMat) {
+                    // 默认设置草地绿色，可扩展为 biome 查询
+                    materialFactory.setOverlayUniforms(overlayMat, [0.5, 1.0, 0.3, 1.0]);
+                    meshRendererOverlay.material = overlayMat;
+                } else {
+                    meshRendererOverlay.material = baseMaterial;
+                }
+            } else {
+                meshRendererOverlay.material = baseMaterial;
+            }
+
+            return true;
+        } catch (e) {
+            console.error('[VoxelSystemExample] 创建 overlay 方块失败', e);
+            return false;
+        }
     }
 
     /**

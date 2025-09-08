@@ -273,31 +273,39 @@ export class VoxelLightingExample extends Component {
             blockNode.setParent(this.node);
             blockNode.setPosition(block.position);
 
-            // 为每个纹理组创建子节点（支持多纹理方块）
-            for (const [texture, group] of meshData.textureGroups) {
-                if (group.vertices.length === 0) continue;
+            // 检查是否为通用 overlay 双子网格
+            if ((meshData as any).hasOverlay && (meshData as any).overlayMeshes && (meshData as any).overlayInfo) {
+                const overlayMeshes = (meshData as any).overlayMeshes;
+                const overlayInfo = (meshData as any).overlayInfo;
+                console.log(`[VoxelLightingExample] 创建 overlay 双子网格: ${block.id}`);
+                await this.createOverlayBlockNode(blockNode, overlayMeshes, overlayInfo);
+            } else {
+                // 普通方块的纹理组处理
+                for (const [texture, group] of meshData.textureGroups) {
+                    if (group.vertices.length === 0) continue;
 
-                const subNode = new Node(`${texture.replace(/[^a-zA-Z0-9]/g, '_')}`);
-                subNode.setParent(blockNode);
+                    const subNode = new Node(`${texture.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                    subNode.setParent(blockNode);
 
-                // 创建网格 - 使用MeshBuilder而不是MaterialFactory
-                const meshDataForGroup = {
-                    vertices: [],
-                    indices: [],
-                    textureGroups: new Map([[texture, group]])
-                };
-                const mesh = MeshBuilder.createCocosMesh(meshDataForGroup, texture);
-                if (mesh) {
-                    const meshRenderer = subNode.addComponent(MeshRenderer);
-                    meshRenderer.mesh = mesh;
-                    meshRenderer.material = material;
+                    // 创建网格 - 使用MeshBuilder而不是MaterialFactory
+                    const meshDataForGroup = {
+                        vertices: [],
+                        indices: [],
+                        textureGroups: new Map([[texture, group]])
+                    };
+                    const mesh = MeshBuilder.createCocosMesh(meshDataForGroup, texture);
+                    if (mesh) {
+                        const meshRenderer = subNode.addComponent(MeshRenderer);
+                        meshRenderer.mesh = mesh;
+                        meshRenderer.material = material;
 
-                    // 设置发光方块的光照值
-                    const blockDef = BlockRegistry.getBlock(block.id);
-                    if (blockDef && blockDef.lightLevel > 0) {
-                        console.log(`[VoxelLightingExample] 设置发光方块材质属性: ${block.id}, 光照等级: ${blockDef.lightLevel}`);
-                        // 发光方块不需要额外的材质属性，光照效果由着色器处理
-                        // 着色器会根据顶点的light属性自动处理发光
+                        // 设置发光方块的光照值
+                        const blockDef = BlockRegistry.getBlock(block.id);
+                        if (blockDef && blockDef.lightLevel > 0) {
+                            console.log(`[VoxelLightingExample] 设置发光方块材质属性: ${block.id}, 光照等级: ${blockDef.lightLevel}`);
+                            // 发光方块不需要额外的材质属性，光照效果由着色器处理
+                            // 着色器会根据顶点的light属性自动处理发光
+                        }
                     }
                 }
             }
@@ -308,6 +316,90 @@ export class VoxelLightingExample extends Component {
             console.error(`[VoxelLightingExample] 创建方块节点失败 ${block.id}:`, error);
             console.error(`[VoxelLightingExample] 错误堆栈:`, error.stack);
         }
+    }
+    
+    /**
+     * 创建草方块节点（双子网格）
+     */
+    private async createGrassBlockNode(
+        blockNode: Node,
+        grassMesh: any,
+        blockId: string,
+        baseMaterial: any
+    ): Promise<void> {
+        // 已废弃：改用通用 overlay 流程。保留占位以兼容旧调用。
+        console.warn('[VoxelLightingExample] createGrassBlockNode 已废弃，跳过。');
+        return;
+    }
+
+    /**
+     * 创建通用 overlay 方块节点
+     */
+    private async createOverlayBlockNode(
+        blockNode: Node,
+        overlayMeshes: { base: any; overlay: any },
+        overlayInfo: { baseSideTexture: string; overlaySideTexture: string }
+    ): Promise<void> {
+        try {
+            const baseNode = new Node('OverlayBase');
+            baseNode.setParent(blockNode);
+            const baseMr = baseNode.addComponent(MeshRenderer);
+            baseMr.mesh = overlayMeshes.base;
+
+            const overlayNode = new Node('OverlayTop');
+            overlayNode.setParent(blockNode);
+            const overlayMr = overlayNode.addComponent(MeshRenderer);
+            overlayMr.mesh = overlayMeshes.overlay;
+
+            const materialFactory = (this.voxelSystem as any).materialFactory;
+            if (materialFactory && materialFactory.createOverlayBlockMaterial) {
+                const overlayMat = await materialFactory.createOverlayBlockMaterial(
+                    overlayInfo.baseSideTexture,
+                    overlayInfo.overlaySideTexture
+                );
+                if (overlayMat) {
+                    materialFactory.setOverlayUniforms(overlayMat, [0.5, 1.0, 0.3, 1.0]);
+                    overlayMr.material = overlayMat;
+                }
+
+                const baseMat = await this.voxelSystem!.createBlockMaterial('minecraft:' + overlayInfo.baseSideTexture.replace('_side', ''));
+                if (baseMat) baseMr.material = baseMat;
+            }
+        } catch (e) {
+            console.error('[VoxelLightingExample] 创建 overlay 方块节点失败:', e);
+        }
+    }
+    
+    /**
+     * 创建草方块 Overlay 材质
+     */
+    private async createGrassOverlayMaterial(): Promise<any | null> {
+        if (!this.voxelSystem) {
+            return null;
+        }
+        
+        try {
+            // 获取 MaterialFactory
+            const materialFactory = (this.voxelSystem as any).materialFactory;
+            if (materialFactory && materialFactory.createOverlayBlockMaterial) {
+                const overlayMaterial = await materialFactory.createOverlayBlockMaterial(
+                    'grass_block_side',
+                    'grass_block_side_overlay'
+                );
+                
+                if (overlayMaterial && materialFactory.setOverlayUniforms) {
+                    // 设置生物群系颜色（草地绿色）
+                    materialFactory.setOverlayUniforms(overlayMaterial, [0.5, 1.0, 0.3, 1.0]);
+                    console.log(`[VoxelLightingExample] 草方块Overlay材质创建成功`);
+                }
+                
+                return overlayMaterial;
+            }
+        } catch (error) {
+            console.error('[VoxelLightingExample] Overlay材质创建失败:', error);
+        }
+        
+        return null;
     }
 
     /**
@@ -387,7 +479,7 @@ export class VoxelLightingExample extends Component {
 
     private waitOneFrame(): Promise<void> {
         return new Promise(resolve => {
-            director.once(director.EVENT_AFTER_UPDATE, resolve);
+            director.once((director.constructor as any).EVENT_AFTER_UPDATE, resolve);
         });
     }
 

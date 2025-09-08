@@ -16,5 +16,8 @@
     <component id="n4_ue83" name="n4" src="mumq1" fileName="TopLeftCorner.xml" xy="5,7">
       <relation target="" sidePair="left-left,top-top"/>
     </component>
+    <component id="n5_105vo" name="n5" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="2,1004" size="124,76">
+      <Button title="地块"/>
+    </component>
   </displayList>
 </component>

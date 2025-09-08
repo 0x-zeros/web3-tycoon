@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="256,256">
+  <displayList>
+    <graph id="n1_105vo" name="n1" xy="32,32" size="193,182" type="rect" fillColor="#0066ccff"/>
+    <loader id="n0_105vo" name="n0" xy="0,0" size="256,256" url="ui://82r0pzopmumqiq" align="center" vAlign="middle"/>
+  </displayList>
+</component>

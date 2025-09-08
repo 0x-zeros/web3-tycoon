@@ -74,6 +74,7 @@ export class ResourcePackLoader {
             await this.loadBlockStates();
             await this.loadModels();
             await this.indexTextures();
+            await this.indexTexturesFromDirectory();
             
             this.loaded = true;
             console.log('[ResourcePackLoader] 资源包加载完成');
@@ -89,84 +90,95 @@ export class ResourcePackLoader {
     }
 
     private async loadBlockStates(): Promise<void> {
-        const blockstateNames = [
-            'stone', 'oak_log', 'oak_planks', 'grass_block', 'dirt',
-            'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'short_grass', 'fern',
-            'glowstone' // 添加发光石
-        ];
+        const dir = `${this.resourcePackPath}/assets/minecraft/blockstates`;
+        const dirInfo: any = (resources as any).getDirWithPath ? (resources as any).getDirWithPath(dir) : null;
+        const paths: string[] = Array.isArray(dirInfo) ? dirInfo.map((i: any) => i.path) : (dirInfo?.paths || []);
 
-        for (const name of blockstateNames) {
+        if (paths.length === 0) {
+            console.warn('[ResourcePackLoader] blockstates 目录为空或未找到，回退至内置列表');
+            const fallback = [
+                'stone', 'oak_log', 'oak_planks', 'grass_block', 'dirt',
+                'sand', 'cobblestone', 'glass', 'oak_leaves',
+                'dandelion', 'poppy', 'short_grass', 'fern', 'glowstone'
+            ];
+            for (const name of fallback) {
+                await this.tryLoadBlockStateByName(name);
+            }
+            return;
+        }
+
+        for (const path of paths) {
             try {
-                const path = `${this.resourcePackPath}/assets/minecraft/blockstates/${name}`;
                 const jsonAsset = await this.loadJsonAsset(path);
                 if (jsonAsset) {
+                    const name = path.split('/').pop()!;
                     this.index.blockstates.set(`minecraft:${name}`, jsonAsset);
-                    console.log(`[ResourcePackLoader] 已加载 blockstate: minecraft:${name}`);
                 }
-            } catch (error) {
-                console.warn(`[ResourcePackLoader] 无法加载 blockstate: ${name}`, error);
+            } catch (e) {
+                console.warn('[ResourcePackLoader] 加载 blockstate 失败:', path, e);
             }
+        }
+        console.log(`[ResourcePackLoader] 扫描加载 blockstates: ${this.index.blockstates.size}`);
+    }
+
+    private async tryLoadBlockStateByName(name: string): Promise<void> {
+        try {
+            const path = `${this.resourcePackPath}/assets/minecraft/blockstates/${name}`;
+            const jsonAsset = await this.loadJsonAsset(path);
+            if (jsonAsset) {
+                this.index.blockstates.set(`minecraft:${name}`, jsonAsset);
+                console.log(`[ResourcePackLoader] 已加载 blockstate: minecraft:${name}`);
+            }
+        } catch (error) {
+            console.warn(`[ResourcePackLoader] 无法加载 blockstate: ${name}`, error);
         }
     }
 
     private async loadModels(): Promise<void> {
-        // 加载基础模板模型
-        const templateModels = [
-            'cube_all', 'cube_column', 'cross', 'cube',
-            'cube_bottom_top', 'orientable', 'orientable_with_bottom', 'cube_column_horizontal'
-        ];
+        const dir = `${this.resourcePackPath}/assets/minecraft/models/block`;
+        const dirInfo: any = (resources as any).getDirWithPath ? (resources as any).getDirWithPath(dir) : null;
+        const paths: string[] = Array.isArray(dirInfo) ? dirInfo.map((i: any) => i.path) : (dirInfo?.paths || []);
 
-        for (const template of templateModels) {
-            try {
-                const path = `${this.resourcePackPath}/assets/minecraft/models/block/${template}`;
-                const jsonAsset = await this.loadJsonAsset(path);
-                if (jsonAsset) {
-                    this.index.models.set(`minecraft:block/${template}`, jsonAsset);
-                }
-            } catch (error) {
-                console.warn(`[ResourcePackLoader] 无法加载模板模型: ${template}`);
+        if (paths.length === 0) {
+            console.warn('[ResourcePackLoader] models/block 目录为空或未找到，回退至内置列表');
+            const fallback = [
+                'cube_all', 'cube_column', 'cross', 'cube',
+                'cube_bottom_top', 'orientable', 'orientable_with_bottom', 'cube_column_horizontal',
+                'block', 'leaves', 'tinted_cross',
+                'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
+                'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves', 'dandelion', 'poppy', 'short_grass', 'fern',
+                'glowstone'
+            ];
+            for (const name of fallback) {
+                await this.tryLoadModelByName(name);
             }
+            return;
         }
 
-        // 额外加载常用的父模型（非模板，但经常被作为 parent 使用）
-        const parentBaseModels = [
-            'block',          // block/block.json（提供 display 等）
-            'leaves',         // 叶子基础模型（包含 elements）
-            'tinted_cross'    // 植物基础模型（包含 elements）
-        ];
-        for (const base of parentBaseModels) {
+        for (const path of paths) {
             try {
-                const path = `${this.resourcePackPath}/assets/minecraft/models/block/${base}`;
                 const jsonAsset = await this.loadJsonAsset(path);
                 if (jsonAsset) {
-                    this.index.models.set(`minecraft:block/${base}`, jsonAsset);
-                    console.log(`[ResourcePackLoader] 已加载父模型: minecraft:block/${base}`);
+                    const name = path.split('/').pop()!;
+                    this.index.models.set(`minecraft:block/${name}`, jsonAsset);
                 }
-            } catch (error) {
-                console.warn(`[ResourcePackLoader] 无法加载父模型: ${base}`);
+            } catch (e) {
+                console.warn('[ResourcePackLoader] 加载模型失败:', path, e);
             }
         }
+        console.log(`[ResourcePackLoader] 扫描加载 models: ${this.index.models.size}`);
+    }
 
-        // 加载具体方块模型
-        const blockModels = [
-            'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
-            'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves',
-            'dandelion', 'poppy', 'short_grass', 'fern',
-            'glowstone' // 添加发光石模型
-        ];
-
-        for (const model of blockModels) {
-            try {
-                const path = `${this.resourcePackPath}/assets/minecraft/models/block/${model}`;
-                const jsonAsset = await this.loadJsonAsset(path);
-                if (jsonAsset) {
-                    this.index.models.set(`minecraft:block/${model}`, jsonAsset);
-                    console.log(`[ResourcePackLoader] 已加载 model: minecraft:block/${model}`);
-                }
-            } catch (error) {
-                console.warn(`[ResourcePackLoader] 无法加载模型: ${model}`, error);
+    private async tryLoadModelByName(name: string): Promise<void> {
+        try {
+            const path = `${this.resourcePackPath}/assets/minecraft/models/block/${name}`;
+            const jsonAsset = await this.loadJsonAsset(path);
+            if (jsonAsset) {
+                this.index.models.set(`minecraft:block/${name}`, jsonAsset);
+                console.log(`[ResourcePackLoader] 已加载 model: minecraft:block/${name}`);
             }
+        } catch (error) {
+            console.warn(`[ResourcePackLoader] 无法加载模型: ${name}`, error);
         }
     }
 
@@ -187,6 +199,10 @@ export class ResourcePackLoader {
                 const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${tailName}`;
                 if (!this.index.textures.has(fullTexId)) {
                     this.index.textures.set(fullTexId, resourcePath);
+                    // 额外添加常见别名，避免路径不规范导致找不到
+                    this.index.textures.set(tailName, resourcePath);
+                    this.index.textures.set(`block/${tailName}`, resourcePath);
+                    this.index.textures.set(`minecraft:${tailName}`, resourcePath);
                     count++;
                 }
 
@@ -216,6 +232,33 @@ export class ResourcePackLoader {
         console.log(`[ResourcePackLoader] 已解析并索引纹理: ${count}`);
     }
 
+    /** 扫描纹理目录，补全所有可用纹理索引（包括 overlay 等未被模型直接引用的项） */
+    private async indexTexturesFromDirectory(): Promise<void> {
+        const dir = `${this.resourcePackPath}/assets/minecraft/textures/block`;
+        const dirInfo: any = (resources as any).getDirWithPath ? (resources as any).getDirWithPath(dir) : null;
+        const paths: string[] = Array.isArray(dirInfo) ? dirInfo.map((i: any) => i.path) : (dirInfo?.paths || []);
+        let added = 0;
+
+        for (let p of paths) {
+            // 目录扫描可能返回子资源（/texture 或 /spriteFrame），统一回退到基路径
+            p = this.normalizeBaseResourcePath(p);
+            const name = p.split('/').pop()!; // e.g. grass_block_side_overlay
+            const resourcePath = `${dir}/${name}`;
+            const fullKey = `minecraft:block/${name}`;
+            if (!this.index.textures.has(fullKey)) {
+                this.index.textures.set(fullKey, resourcePath);
+                this.index.textures.set(name, resourcePath);
+                this.index.textures.set(`block/${name}`, resourcePath);
+                this.index.textures.set(`minecraft:${name}`, resourcePath);
+                added++;
+            }
+        }
+
+        if (added > 0) {
+            console.log(`[ResourcePackLoader] 纹理目录索引补全: +${added}`);
+        }
+    }
+
     /** 将多种写法规范化为 minecraft:block/<name> */
     private normalizeTextureId(value: string): string {
         if (!value) return 'minecraft:block/missingno';
@@ -229,6 +272,17 @@ export class ResourcePackLoader {
         if (value.startsWith('block/')) return `minecraft:block/${value.substring('block/'.length)}`;
         if (value.startsWith('minecraft:')) return `minecraft:block/${value.substring('minecraft:'.length)}`;
         return `minecraft:block/${value}`;
+    }
+
+    /**
+     * 规范化目录项路径，去掉末尾的子资源后缀（如 /texture, /spriteFrame）
+     */
+    private normalizeBaseResourcePath(path: string): string {
+        if (!path) return path;
+        if (path.endsWith('/texture') || path.endsWith('/spriteFrame')) {
+            return path.substring(0, path.lastIndexOf('/'));
+        }
+        return path;
     }
 
     /** 选择一个最合适的聚合贴图（side > top > all > 第一个）*/
@@ -255,7 +309,13 @@ export class ResourcePackLoader {
     }
 
     async loadTexture(texturePath: string): Promise<Texture2D | null> {
-        const resourcePath = this.index.textures.get(texturePath);
+        // 归一化查询键，并为常见写法提供容错
+        const normalized = this.normalizeTextureId(texturePath);
+        const resourcePath = this.index.textures.get(normalized)
+            || this.index.textures.get(texturePath)
+            || this.index.textures.get(texturePath.replace(/^minecraft:/, 'minecraft:block/'))
+            || this.index.textures.get(texturePath.replace(/^block\//, 'minecraft:block/'))
+            || this.index.textures.get(texturePath.replace(/^minecraft:block\//, 'minecraft:block/'));
         if (!resourcePath) {
             console.warn(`[ResourcePackLoader] 纹理路径未找到: ${texturePath}`);
             return null;

@@ -107,13 +107,16 @@ export class MaterialFactory {
             if (config.overlayTexture) {
                 const overlayTextureInfo = await this.textureManager.loadTexture(config.overlayTexture);
                 if (overlayTextureInfo && overlayTextureInfo.texture) {
-                    material.setProperty('overlayTexture', overlayTextureInfo.texture);
+                    material.setProperty('u_OverlayTex', overlayTextureInfo.texture);
                     console.log(`[MaterialFactory] Overlay纹理加载成功: ${config.overlayTexture}`);
                 } else {
                     console.warn(`[MaterialFactory] Overlay纹理加载失败: ${config.overlayTexture}`);
                     // 使用白色纹理作为fallback
-                    material.setProperty('overlayTexture', textureInfo.texture);
+                    material.setProperty('u_OverlayTex', textureInfo.texture);
                 }
+                
+                // 设置默认的overlay uniform参数
+                this.setOverlayUniforms(material);
             }
             
             // // 设置天空盒纹理（如果可用）
@@ -295,7 +298,23 @@ export class MaterialFactory {
      */
     private configureOverlayMaterial(pass: any, config: MaterialConfig): void {
         // overlay材质的渲染状态已在effect文件中定义
-        // 主要处理双纹理和混合相关的设置
+        console.log('[MaterialFactory] 配置overlay材质参数');
+    }
+    
+    /**
+     * 设置overlay材质的生物群系颜色
+     * @param material 材质对象
+     * @param biomeColor 生物群系颜色 [r, g, b, a]
+     * @param inflate 顶点膀胀参数（防止Z-fighting）
+     */
+    public setOverlayUniforms(
+        material: Material, 
+        biomeColor: [number, number, number, number] = [0.5, 1.0, 0.3, 1.0], // 默认草地绿色
+        inflate: number = 0.001
+    ): void {
+        material.setProperty('u_BiomeColor', biomeColor);
+        material.setProperty('u_Inflate', inflate);
+        console.log(`[MaterialFactory] 设置overlay uniform: biomeColor=${biomeColor}, inflate=${inflate}`);
     }
 
     /**

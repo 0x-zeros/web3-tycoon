@@ -56,7 +56,7 @@ export class VoxelSystem {
             await this.textureManager.initialize();
             
             // 3. 预加载常用纹理
-            await this.textureManager.preloadCommonTextures();
+            //await this.textureManager.preloadCommonTextures();
             
             // 4. 确保方块注册表已初始化
             if (!BlockRegistry.exists('minecraft:stone')) {
@@ -122,13 +122,59 @@ export class VoxelSystem {
                 blockId: blockId // 传递方块ID用于光照计算
             };
 
+            // 通用 Overlay 检测：如果模型任一元素的侧面使用 *_side_overlay 纹理，则采用双子网格方案
+            const overlayInfo = this.detectOverlayInfo(model);
+            if (overlayInfo) {
+                console.log(`[VoxelSystem] 检测到 overlay 方案: ${blockId} overlay=${overlayInfo.overlaySideTexture}`);
+                const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(meshBuildContext);
+
+                const meshData: VoxelMeshData = {
+                    vertices: [],
+                    indices: [],
+                    textureGroups: new Map(),
+                    hasOverlay: true,
+                    overlayMeshes: { base: baseMesh, overlay: overlayMesh },
+                    overlayInfo
+                };
+                return meshData;
+            }
+
             const meshData = MeshBuilder.buildMesh(model, meshBuildContext);
-            console.log(`[VoxelSystem] 方块网格生成成功: ${blockId}`);
-            
+            console.log(`[VoxelSystem] 普通方块网格生成成功: ${blockId}`);
             return meshData;
 
         } catch (error) {
             console.error(`[VoxelSystem] 生成方块网格失败: ${blockId}`, error);
+            return null;
+        }
+    }
+
+    /**
+     * 检测模型是否具有侧面 overlay 纹理（如 *_side_overlay）
+     * 返回基础侧面纹理和 overlay 侧面纹理
+     */
+    private detectOverlayInfo(model: any): { baseSideTexture: string; overlaySideTexture: string } | null {
+        try {
+            // 扫描所有元素的四个侧面纹理
+            const sideNames = ['north', 'south', 'east', 'west'];
+            for (const element of model.elements || []) {
+                for (const side of sideNames) {
+                    const face = element.faces?.get ? element.faces.get(side) : element.faces?.[side];
+                    if (!face || !face.texture) continue;
+                    const tex: string = face.texture;
+                    if (tex.includes('_side_overlay')) {
+                        const overlaySideTexture = tex.replace('minecraft:block/', '');
+                        const baseSideTexture = overlaySideTexture.replace('_side_overlay', '_side');
+                        return {
+                            baseSideTexture,
+                            overlaySideTexture
+                        };
+                    }
+                }
+            }
+            return null;
+        } catch (e) {
+            console.warn('[VoxelSystem] detectOverlayInfo 失败，按普通方块处理', e);
             return null;
         }
     }
@@ -180,9 +226,22 @@ export class VoxelSystem {
      * @returns 纹理路径
      */
     private getBlockMainTexture(blockId: string): string {
-        // 简化实现：直接使用方块ID作为纹理名
-        const textureName = blockId.replace('minecraft:', '');
-        return `minecraft:block/${textureName}`;
+        // 规范化输入，支持以下形式：
+        // - "minecraft:grass_block"
+        // - "minecraft:block/grass_block"
+        // - "block/grass_block"
+        // - "grass_block"
+        let id = blockId.trim();
+        if (id.startsWith('minecraft:block/')) {
+            return id;
+        }
+        if (id.startsWith('minecraft:')) {
+            id = id.substring('minecraft:'.length);
+        }
+        if (id.startsWith('block/')) {
+            id = id.substring('block/'.length);
+        }
+        return `minecraft:block/${id}`;
     }
 
     /**

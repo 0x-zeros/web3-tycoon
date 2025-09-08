@@ -1,0 +1,89 @@
+// Copyright (c) 2017-2023 Xiamen Yaji Software Co., Ltd.
+// 体素方块Overlay着色器 - 用于草方块的生物群系染色层
+CCEffect %{
+  techniques:
+  - name: overlay
+    passes:
+    - vert: vert
+      frag: frag
+      rasterizerState:
+        cullMode: back            # 只背面剔除
+      depthStencilState:
+        depthTest: true
+        depthWrite: false         # 关键：overlay不写深度
+      blendState:
+        targets:
+        - blend: true             # 开混合
+          blendEq: add
+          blendSrc: src_alpha     # 预乘或非预乘都可；若你用预乘贴图，改为 one, one_minus_src_alpha
+          blendDst: one_minus_src_alpha
+          blendAlphaEq: add
+          blendSrcAlpha: one
+          blendDstAlpha: one_minus_src_alpha
+    properties:
+      u_OverlayTex:   { value: white }
+      u_BiomeColor:   { value: [0.5, 1.0, 0.3, 1.0] }
+      u_Inflate:      { value: 0.001 }
+}%
+
+CCProgram vert %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+  in vec3 a_position;
+  in vec3 a_normal;
+  in vec2 a_texCoord;
+  in vec4 a_color;
+
+  uniform Constants {
+    vec4 u_BiomeColor;      // xyz=rgb, w 可留作强度或 1
+    float u_Inflate;        // 顶点微膨胀用，单位：像素/世界单位（按你世界尺度调）
+  };
+
+  out vec2 v_uv;
+  out vec4 v_color;
+
+  void main () {
+    // 顶点微膨胀（可选，用于杜绝 overlay 与底层同平面 Z-fight）
+    vec3 pos = a_position + a_normal * u_Inflate;
+
+    vec4 worldPos = cc_matWorld * vec4(pos, 1.0);
+    gl_Position = cc_matViewProj * worldPos;
+    v_uv = a_texCoord;
+
+    // 顶点颜色可预放 AO 等，这里保持为 1
+    v_color = a_color;
+  }
+}%
+
+CCProgram frag %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+
+  in vec2 v_uv;
+  in vec4 v_color;
+
+  uniform sampler2D u_OverlayTex;
+  uniform Constants {
+    vec4 u_BiomeColor;
+    float u_Inflate;
+  };
+
+  layout(location = 0) out vec4 fragColor;
+
+  void main() {
+    vec4 c = texture(u_OverlayTex, v_uv);
+
+    // 生物群系 tint（只乘 rgb）
+    c.rgb *= u_BiomeColor.rgb;
+
+    // 如果你想"shade:false"的感觉更强，可弱化 AO/阴影，这里简单用顶点色乘 1
+    // c.rgb *= v_color.rgb; // 需要的话再开
+
+    // 透明度使用纹理自身
+    if (c.a <= 0.01) discard;
+
+    fragColor = c;
+  }
+}%

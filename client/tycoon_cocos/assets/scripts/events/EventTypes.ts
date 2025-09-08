@@ -72,7 +72,9 @@ export const EventTypes = {
         /** 地图配置更新 */
         MapConfigUpdated: "game_map_config_updated",
         /** 请求切换地图 */
-        RequestMapChange: "game_request_map_change"
+        RequestMapChange: "game_request_map_change",
+        /** 地面点击 */
+        GroundClicked: "game_ground_clicked"
     },
 
     /** 地产相关事件 */

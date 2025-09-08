@@ -13,6 +13,7 @@ import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { GameMap } from './core/GameMap';
 import { VoxelSystem } from '../voxel/VoxelSystem';
+import { GridGround, GridGroundConfig } from './GridGround';
 
 const { ccclass, property } = _decorator;
 
@@ -111,6 +112,12 @@ export class MapManager extends Component {
         VoxelSystem.getInstance().initialize();
 
         this.log('MapManager ready');
+        
+        //创建网格地面（可选，根据游戏需求调用）
+        const gridGround = this.createGridGround();
+        if (this.mapContainer) {
+            this.mapContainer.addChild(gridGround);
+        }
     }
 
     protected onDestroy(): void {
@@ -138,7 +145,7 @@ export class MapManager extends Component {
                 }
 
                 try {
-                    const configData = asset.json;
+                    const configData = (asset as any).json;
                     if (configData && configData.maps) {
                         configData.maps.forEach((config: MapConfig) => {
                             this._mapConfigs.set(config.id, config);
@@ -387,6 +394,31 @@ export class MapManager extends Component {
             console.error('[MapManager] 地图切换失败:', result.error);
         }
     }
+
+    /**
+     * 创建网格地面
+     * 使用 GeometryRenderer 绘制网格线，支持鼠标点击检测
+     * @param config 可选的网格地面配置
+     */
+    public createGridGround(config?: GridGroundConfig): Node {
+        // 创建地面节点
+        const groundNode = new Node('GridGround');
+        
+        // 添加 GridGround 组件
+        const gridGroundComponent = groundNode.addComponent(GridGround);
+        
+        // 如果提供了配置，应用配置
+        if (config) {
+            gridGroundComponent.createWithConfig(config);
+        }
+        
+        // 设置位置（以原点为中心）
+        groundNode.setPosition(0, 0, 0);
+        
+        this.log('Grid ground created successfully with GridGround component');
+        return groundNode;
+    }
+
 
     /**
      * 调试日志输出

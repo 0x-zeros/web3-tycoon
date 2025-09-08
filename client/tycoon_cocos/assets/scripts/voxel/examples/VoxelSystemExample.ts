@@ -935,28 +935,30 @@ export class VoxelSystemExample extends Component {
             }
 
             // Overlay 子节点
-            const overlayNode = new Node('Overlay');
-            blockNode.addChild(overlayNode);
-            const meshRendererOverlay = overlayNode.addComponent(MeshRenderer);
-            meshRendererOverlay.mesh = overlayMeshes.overlay;
+            // const overlayNode = new Node('Overlay');
+            // blockNode.addChild(overlayNode);
+            // const meshRendererOverlay = overlayNode.addComponent(MeshRenderer);
+            // meshRendererOverlay.mesh = overlayMeshes.overlay;
 
-            // Overlay 材质
-            const materialFactory = (this.voxelSystem as any).materialFactory;
-            if (materialFactory && materialFactory.createOverlayBlockMaterial) {
-                const overlayMat = await materialFactory.createOverlayBlockMaterial(
-                    overlayInfo.baseSideTexture,
-                    overlayInfo.overlaySideTexture
-                );
-                if (overlayMat) {
-                    // 默认设置草地绿色，可扩展为 biome 查询
-                    materialFactory.setOverlayUniforms(overlayMat, [0.5, 1.0, 0.3, 1.0]);
-                    meshRendererOverlay.material = overlayMat;
-                } else {
-                    meshRendererOverlay.material = baseMaterial;
-                }
-            } else {
-                meshRendererOverlay.material = baseMaterial;
-            }
+            // // Overlay 材质
+            // const materialFactory = (this.voxelSystem as any).materialFactory;
+            // if (materialFactory && materialFactory.createOverlayBlockMaterial) {
+            //     const overlayMat = await materialFactory.createOverlayBlockMaterial(
+            //         overlayInfo.baseSideTexture,
+            //         overlayInfo.overlaySideTexture
+            //     );
+            //     if (overlayMat) {
+            //         // 默认设置草地绿色，可扩展为 biome 查询
+            //         materialFactory.setOverlayUniforms(overlayMat, [0.5, 1.0, 0.3, 1.0]);
+            //         meshRendererOverlay.material = overlayMat;
+            //     } else {
+            //         meshRendererOverlay.material = baseMaterial;
+            //     }
+            // } else {
+            //     meshRendererOverlay.material = baseMaterial;
+            // }
+            //
+            // meshRendererOverlay.material = baseMaterial;
 
             return true;
         } catch (e) {

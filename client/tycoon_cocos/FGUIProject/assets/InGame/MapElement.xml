@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1024,1024">
+<component size="1280,1280">
   <displayList>
-    <list id="n0_105vo" name="tiles" xy="0,0" size="1024,1024" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pim105voq" autoClearItems="true">
+    <list id="n0_105vo" name="tiles" xy="0,0" size="1280,1280" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pim105voq">
       <relation target="" sidePair="width-width,height-height"/>
       <item title="1"/>
       <item title="地块 01"/>

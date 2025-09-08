@@ -4,6 +4,8 @@ import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
+import { UIManager } from "../core/UIManager";
+import { UIMapElement } from "./UIMapElement";
 
 const { ccclass } = _decorator;
 
@@ -15,6 +17,9 @@ export class UIInGame extends UIBase {
 
 
     private m_btn_dice:fgui.GButton;
+    private m_btn_mapElement:fgui.GButton;
+
+    private m_mapElementUI:UIMapElement;
 
     // ================ 玩家信息组件 ================
     /** 玩家名称文本 */
@@ -73,8 +78,21 @@ export class UIInGame extends UIBase {
     private _setupComponents(): void {
 
         this.m_btn_dice = this.getChild('n1').asCom.getChild('n2') as fgui.GButton;
+        this.m_btn_mapElement = this.getChild('btn_mapElement') as fgui.GButton;
+        console.log('this.m_btn_mapElement', this.m_btn_mapElement);
 
-        console.log('this.m_btn_dice', this.m_btn_dice);
+
+        //m_mapElementUI
+        const mapElementComponent = this.getChild('mapElement').asCom;
+        this.m_mapElementUI = mapElementComponent.node.addComponent(UIMapElement);
+        // 设置UI名称和面板引用
+        this.m_mapElementUI.setUIName("MapElement");
+        this.m_mapElementUI.setPanel(mapElementComponent);
+        // 初始化
+        this.m_mapElementUI.init();
+
+        //hide
+        this.m_mapElementUI.hide();
 
         // 玩家信息组件
         this._playerNameText = this.getText("txtPlayerName");
@@ -128,6 +146,10 @@ export class UIInGame extends UIBase {
             this.m_btn_dice.onClick(this._onRollDiceClick, this);
         }
 
+        if(this.m_btn_mapElement){
+            this.m_btn_mapElement.onClick(this.onMapElementClick, this);
+        }
+
         // 绑定按钮事件
         if (this._rollDiceBtn) {
             console.log('添加 投掷骰子事件');
@@ -173,6 +195,10 @@ export class UIInGame extends UIBase {
         if(this.m_btn_dice){
             console.log('移除 投掷骰子事件1');
             this.m_btn_dice.offClick(this._onRollDiceClick, this);
+        }
+
+        if(this.m_btn_mapElement){
+            this.m_btn_mapElement.offClick(this.onMapElementClick, this);
         }
 
         // 解绑按钮事件
@@ -248,6 +274,19 @@ export class UIInGame extends UIBase {
             playerId: Blackboard.instance.get("currentPlayerId"),
             source: "in_game_ui"
         });
+    }
+
+
+    /**
+     * 地图元素按钮点击
+     */
+    private onMapElementClick(): void {
+        console.log("[UIInGame] Map element clicked");
+
+        // UIManager.instance.registerMapElementUI("InGame", "MapElement");
+        // UIManager.instance.showUI("MapElement");
+
+        this.m_mapElementUI.show();
     }
 
     /**

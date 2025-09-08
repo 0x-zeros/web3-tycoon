@@ -9,6 +9,7 @@ import * as fgui from "fairygui-cc";
 // 导入UI类以便在静态方法中使用
 import { UIModeSelect } from "../game/UIModeSelect";
 import { UIInGame } from "../game/UIInGame";
+import { UIMapElement } from "../game/UIMapElement";
 
 /**
  * UI构造函数接口 - Component类构造函数
@@ -792,6 +793,16 @@ export class UIManager {
             cache: true,
             isWindow: false
         }, UIInGame);
+    }
+
+
+    public registerMapElementUI(packageName: string, componentName: string = "MapElement"): void {
+        this.registerUI<UIMapElement>("MapElement", {
+            packageName,
+            componentName,
+            cache: true,
+            isWindow: false
+        }, UIMapElement);
     }
 
     /**

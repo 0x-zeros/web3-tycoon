@@ -344,12 +344,12 @@ export class MaterialFactory {
         console.warn('[MaterialFactory] 创建缺失纹理后备材质');
         
         const material = new Material();
-        const initResult = material.initialize({
+        material.initialize({
             effectName: 'voxel/shaders/voxel-block',
             technique: 0 // 后备材质使用 opaque 技术
         });
         
-        if (!initResult || !material.passes || material.passes.length === 0) {
+        if (!material.passes || material.passes.length === 0) {
             console.error('[MaterialFactory] 后备材质创建失败');
             return null;
         }

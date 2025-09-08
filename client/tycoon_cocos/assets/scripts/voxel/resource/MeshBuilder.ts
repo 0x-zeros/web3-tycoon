@@ -1,4 +1,4 @@
-import { Vec3, Vec2, Vec4, Color, utils } from 'cc';
+import { Vec3, Vec2, Vec4, Color, Mesh, gfx, utils } from 'cc';
 import { ResolvedModel, ResolvedElement, ResolvedFace } from './ModelParser';
 import { AOCalculator } from '../lighting/AOCalculator';
 import { VoxelLightingSystem } from '../lighting/VoxelLightingSystem';
@@ -778,35 +778,34 @@ export class MeshBuilder {
             return null;
         }
 
-        // 构建Cocos Creator几何数据
+        // 构建Cocos Creator几何数据（遵循官方 MeshUtils 字段，避免直接写 Mesh.struct/data）
         const positions: number[] = [];
         const normals: number[] = [];
         const uvs: number[] = [];
-        const uvs2: number[] = [];
-        const aos: number[] = [];      // 环境光遮蔽
-        const lights: number[] = [];   // 光照等级
+        const uvs1: number[] = [];     // 第二套UV，用于overlay
+        const colors: number[] = [];   // 顶点颜色，用 RG 存 ao/light
 
         for (const vertex of vertices) {
             positions.push(vertex.position.x, vertex.position.y, vertex.position.z);
             normals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
             uvs.push(vertex.texCoord.x, vertex.texCoord.y);   // 主UV
-            uvs2.push(vertex.texCoord.z, vertex.texCoord.w);  // overlay UV
-            aos.push(vertex.ao);         // AO值
-            lights.push(vertex.light);   // 光照值
+            // overlay UV 存入第二套UV（a_texCoord1）
+            uvs1.push(vertex.texCoord.z, vertex.texCoord.w);
+            // 将 AO 和 Light 打包进颜色（a_color）：R=AO, G=Light, B=0, A=1
+            colors.push(vertex.ao, vertex.light, 0.0, 1.0);
         }
 
         const geometryData = {
             positions,
             normals,
             uvs,
-            uvs2,
-            aos,      // 添加AO属性
-            lights,   // 添加光照属性
-            indices: new Uint16Array(indices)
-        };
+            uvs1,
+            colors,
+            indices: Array.from(indices)
+        } as any; // 按官方 IGeometry 约定
 
-        // 使用完整的几何数据，包含AO和光照属性
-        return MeshBuilder.createMeshWithCustomAttributes(geometryData);
+        // 使用引擎提供的工具创建静态网格
+        return utils.MeshUtils.createMesh(geometryData);
     }
 
     /**
@@ -823,7 +822,6 @@ export class MeshBuilder {
         lights: number[];
         indices: Uint16Array;
     }): any {
-        const { Mesh, gfx, utils } = require('cc');
 
         try {
             const vertexCount = geometryData.positions.length / 3;

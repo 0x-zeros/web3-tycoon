@@ -39,11 +39,13 @@ CCProgram voxel-emissive-vs %{
     float flickerAmount;
   };
 
+  // 语义同 voxel-block：
+  // a_texCoord1 作为第二套UV，a_color.r/g 分别为 AO/Light
   in vec3 a_position;
   in vec3 a_normal;
   in vec2 a_texCoord;
-  in float a_ao;
-  in float a_light;
+  in vec2 a_texCoord1;
+  in vec4 a_color;
 
   out vec2 v_uv;
   out float v_ao;
@@ -63,8 +65,8 @@ CCProgram voxel-emissive-vs %{
     gl_Position = cc_matViewProj * worldPos;
     
     v_uv = a_texCoord;
-    v_ao = 0.3 + (1.0 - a_ao) * 0.7;
-    v_light = a_light;
+    v_ao = 0.3 + (1.0 - a_color.r) * 0.7;
+    v_light = a_color.g;
     v_timer = timer;
     v_daylight = daylight;
     

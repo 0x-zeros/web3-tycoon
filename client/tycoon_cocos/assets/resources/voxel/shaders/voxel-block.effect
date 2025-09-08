@@ -59,11 +59,17 @@ CCProgram voxel-block-vs %{
     float ortho;
   };
 
+  // 顶点属性标准语义：
+  // - a_position: 位置
+  // - a_normal: 法线
+  // - a_texCoord: 主UV
+  // - a_texCoord1: 第二套UV（用于 overlay 等）
+  // - a_color: 顶点颜色，R/G 通道分别打包 AO / Light
   in vec3 a_position;
   in vec3 a_normal;
   in vec2 a_texCoord;
-  in float a_ao;
-  in float a_light;
+  in vec2 a_texCoord1;
+  in vec4 a_color;
 
   out vec2 v_uv;
   out float v_ao;
@@ -80,8 +86,8 @@ CCProgram voxel-block-vs %{
     gl_Position = cc_matViewProj * worldPos;
     
     v_uv = a_texCoord;
-    v_ao = 0.3 + (1.0 - a_ao) * 0.7;
-    v_light = a_light;
+    v_ao = 0.3 + (1.0 - a_color.r) * 0.7; // 从 a_color 解包 AO
+    v_light = a_color.g; // 从 a_color 解包 Light
     
     vec3 worldNormal = normalize((cc_matWorld * vec4(a_normal, 0.0)).xyz);
     v_diffuse = max(0.0, dot(worldNormal, LIGHT_DIRECTION));

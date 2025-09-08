@@ -20,7 +20,7 @@ import {
     find
 } from 'cc';
 import { EventBus } from '../events/EventBus';
-import { EventTypes } from '../events/EventTypes';
+import { EventTypes, Input3DEventData } from '../events/EventTypes';
 
 const { ccclass, property, executeInEditMode } = _decorator;
 
@@ -174,30 +174,83 @@ export class GridGround extends Component {
     private registerClickEvents(): void {
         if (!this.enableClickDetection) return;
 
-        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        this.log('Click events registered');
+        // 优先使用 EventBus 的输入事件
+        EventBus.on(EventTypes.Input3D.MouseDown, this.onEventBusMouseDown, this);
+        
+        // 如果 EventBus 没有输入事件，回退到直接监听
+        // input.on(Input.EventType.MOUSE_DOWN, this.onDirectMouseDown, this);
+        
+        this.log('Click events registered (EventBus + Direct input)');
     }
 
     /**
      * 取消注册点击事件
      */
     private unregisterClickEvents(): void {
-        input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+        // 取消 EventBus 事件
+        EventBus.off(EventTypes.Input3D.MouseDown, this.onEventBusMouseDown, this);
+        
+        // 取消直接输入事件
+        // input.off(Input.EventType.MOUSE_DOWN, this.onDirectMouseDown, this);
+        
         this.log('Click events unregistered');
     }
 
     /**
-     * 鼠标点击事件处理
+     * EventBus 鼠标点击事件处理
      */
-    private onMouseDown(event: EventMouse): void {
+    private onEventBusMouseDown(data: Input3DEventData): void {
+        if (data.button !== 0) return; // 只处理左键点击
+        if (!this._isInitialized || !this.cam) return;
+
+        // 创建模拟的 EventMouse 对象用于射线检测
+        const mockEvent = {
+            getLocationX: () => data.screenX,
+            getLocationY: () => data.screenY,
+            getButton: () => 0 // 左键
+        } as EventMouse;
+
+        // 进行射线检测
+        const intersectionPoint = this.performRaycast(mockEvent, this.cam);
+        if (intersectionPoint) {
+            this.handleGroundClick(intersectionPoint);
+        }
+    }
+
+    /**
+     * 直接输入鼠标点击事件处理（备用方案）
+     */
+    private onDirectMouseDown(event: EventMouse): void {
         if (event.getButton() !== EventMouse.BUTTON_LEFT) return;
         if (!this._isInitialized || !this.cam) return;
+
+        // 同时通过 EventBus 发送输入事件（如果还没有输入管理器的话）
+        this.forwardInputEventToEventBus(event);
 
         // 进行射线检测
         const intersectionPoint = this.performRaycast(event, this.cam);
         if (intersectionPoint) {
             this.handleGroundClick(intersectionPoint);
         }
+    }
+
+    /**
+     * 将直接输入事件转发到 EventBus（临时方案）
+     */
+    private forwardInputEventToEventBus(event: EventMouse): void {
+        const inputData: Input3DEventData = {
+            type: 'mouse_down',
+            screenX: event.getLocationX(),
+            screenY: event.getLocationY(),
+            button: event.getButton(),
+            originalEvent: event,
+            timestamp: Date.now()
+        };
+
+        // 异步发送，避免重复处理
+        this.scheduleOnce(() => {
+            EventBus.emit(EventTypes.Input3D.MouseDown, inputData);
+        }, 0);
     }
 
     /**

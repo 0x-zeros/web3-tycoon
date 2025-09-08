@@ -115,6 +115,48 @@ EventBus.on(EventTypes.Game.GroundClicked, (data: GridClickData) => {
 }, this);
 ```
 
+### 输入事件处理机制
+
+GridGround 组件使用双重输入事件处理机制：
+
+1. **EventBus 输入事件**（推荐）：
+   ```typescript
+   // 监听 EventBus 的输入事件
+   EventBus.on(EventTypes.Input3D.MouseDown, (data: Input3DEventData) => {
+       // 处理输入事件
+   }, this);
+   ```
+
+2. **直接输入监听**（备用）：
+   - 如果没有专门的输入管理器，组件会直接监听 Cocos Creator 的 `input` 事件
+   - 同时会将直接输入事件转发到 EventBus，保持事件系统的统一性
+
+### 自定义输入管理器
+
+如果你有专门的输入管理器，可以让它发送 EventBus 输入事件：
+
+```typescript
+// 输入管理器示例
+export class InputManager extends Component {
+    protected onLoad() {
+        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+    }
+    
+    private onMouseDown(event: EventMouse) {
+        const inputData: Input3DEventData = {
+            type: 'mouse_down',
+            screenX: event.getLocationX(),
+            screenY: event.getLocationY(),
+            button: event.getButton(),
+            originalEvent: event,
+            timestamp: Date.now()
+        };
+        
+        EventBus.emit(EventTypes.Input3D.MouseDown, inputData);
+    }
+}
+```
+
 ### 事件数据结构
 
 ```typescript

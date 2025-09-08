@@ -53,14 +53,11 @@ export class ResourcePackLoader {
     private resourcePackPath: string;
     private index: ResourceIndex;
     private loaded: boolean = false;
-    // 性能开关：是否进行目录全量扫描（默认关闭，按需解析+缓存）
-    private fullScan: boolean = false;
+    // （已弃用）目录全量扫描，启动慢。改为仅按需解析与懒索引。
+    // private fullScan: boolean = false;
 
-    constructor(resourcePackPath: string = 'voxel/default', options?: { fullScan?: boolean }) {
+    constructor(resourcePackPath: string = 'voxel/default', _options?: { fullScan?: boolean }) {
         this.resourcePackPath = resourcePackPath;
-        if (options && typeof options.fullScan === 'boolean') {
-            this.fullScan = options.fullScan;
-        }
         this.index = {
             blockstates: new Map(),
             models: new Map(),
@@ -79,14 +76,7 @@ export class ResourcePackLoader {
             await this.loadBlockStates();
             await this.loadModels();
             await this.indexTextures();
-            if (this.fullScan) {
-                await this.indexTexturesFromDirectory();
-            } else {
-                // 后台异步补全目录索引，不阻塞启动
-                setTimeout(() => {
-                    this.indexTexturesFromDirectory().catch(() => {});
-                }, 0);
-            }
+            // 全量扫描已禁用。如需补全特定纹理，可按需调用 indexTexturesFromDirectory()
             
             this.loaded = true;
             console.log('[ResourcePackLoader] 资源包加载完成');
@@ -102,35 +92,15 @@ export class ResourcePackLoader {
     }
 
     private async loadBlockStates(): Promise<void> {
-        const dir = `${this.resourcePackPath}/assets/minecraft/blockstates`;
-        const dirInfo: any = (resources as any).getDirWithPath ? (resources as any).getDirWithPath(dir) : null;
-        const paths: string[] = Array.isArray(dirInfo) ? dirInfo.map((i: any) => i.path) : (dirInfo?.paths || []);
-
-        if (paths.length === 0) {
-            console.warn('[ResourcePackLoader] blockstates 目录为空或未找到，回退至内置列表');
-            const fallback = [
-                'stone', 'oak_log', 'oak_planks', 'grass_block', 'dirt',
-                'sand', 'cobblestone', 'glass', 'oak_leaves',
-                'dandelion', 'poppy', 'short_grass', 'fern', 'glowstone'
-            ];
-            for (const name of fallback) {
-                await this.tryLoadBlockStateByName(name);
-            }
-            return;
+        // 精简：不扫描目录，仅加载常用列表，减少启动开销
+        const common = [
+            'stone', 'oak_log', 'oak_planks', 'grass_block', 'dirt',
+            'sand', 'cobblestone', 'glass', 'oak_leaves',
+            'dandelion', 'poppy', 'short_grass', 'fern', 'glowstone'
+        ];
+        for (const name of common) {
+            await this.tryLoadBlockStateByName(name);
         }
-
-        for (const path of paths) {
-            try {
-                const jsonAsset = await this.loadJsonAsset(path);
-                if (jsonAsset) {
-                    const name = path.split('/').pop()!;
-                    this.index.blockstates.set(`minecraft:${name}`, jsonAsset);
-                }
-            } catch (e) {
-                console.warn('[ResourcePackLoader] 加载 blockstate 失败:', path, e);
-            }
-        }
-        console.log(`[ResourcePackLoader] 扫描加载 blockstates: ${this.index.blockstates.size}`);
     }
 
     private async tryLoadBlockStateByName(name: string): Promise<void> {
@@ -147,38 +117,20 @@ export class ResourcePackLoader {
     }
 
     private async loadModels(): Promise<void> {
-        const dir = `${this.resourcePackPath}/assets/minecraft/models/block`;
-        const dirInfo: any = (resources as any).getDirWithPath ? (resources as any).getDirWithPath(dir) : null;
-        const paths: string[] = Array.isArray(dirInfo) ? dirInfo.map((i: any) => i.path) : (dirInfo?.paths || []);
-
-        if (paths.length === 0) {
-            console.warn('[ResourcePackLoader] models/block 目录为空或未找到，回退至内置列表');
-            const fallback = [
-                'cube_all', 'cube_column', 'cross', 'cube',
-                'cube_bottom_top', 'orientable', 'orientable_with_bottom', 'cube_column_horizontal',
-                'block', 'leaves', 'tinted_cross',
-                'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
-                'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves', 'dandelion', 'poppy', 'short_grass', 'fern',
-                'glowstone'
-            ];
-            for (const name of fallback) {
-                await this.tryLoadModelByName(name);
-            }
-            return;
+        // 精简：不扫描目录，仅加载常用模板与常用方块模型
+        const templates = [
+            'cube_all', 'cube_column', 'cross', 'cube',
+            'cube_bottom_top', 'orientable', 'orientable_with_bottom', 'cube_column_horizontal',
+            'block', 'leaves', 'tinted_cross'
+        ];
+        const commons = [
+            'stone', 'stone_mirrored', 'oak_log', 'oak_log_horizontal', 'oak_planks', 'grass_block',
+            'dirt', 'sand', 'cobblestone', 'glass', 'oak_leaves', 'dandelion', 'poppy', 'short_grass', 'fern',
+            'glowstone'
+        ];
+        for (const name of [...templates, ...commons]) {
+            await this.tryLoadModelByName(name);
         }
-
-        for (const path of paths) {
-            try {
-                const jsonAsset = await this.loadJsonAsset(path);
-                if (jsonAsset) {
-                    const name = path.split('/').pop()!;
-                    this.index.models.set(`minecraft:block/${name}`, jsonAsset);
-                }
-            } catch (e) {
-                console.warn('[ResourcePackLoader] 加载模型失败:', path, e);
-            }
-        }
-        console.log(`[ResourcePackLoader] 扫描加载 models: ${this.index.models.size}`);
     }
 
     private async tryLoadModelByName(name: string): Promise<void> {

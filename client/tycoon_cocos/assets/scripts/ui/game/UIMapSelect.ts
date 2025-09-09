@@ -49,20 +49,15 @@ export class UIMapSelect extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 获取地图列表
-        this._mapList = this.getList("mapList");
-        
-        // 获取预览区域组件
-        this._previewImage = this.getLoader("previewImage");
-        this._mapNameText = this.getText("mapName");
-        this._mapDescText = this.getText("mapDescription");
-        this._playerCountText = this.getText("playerCount");
-        
+       
         // 获取按钮
         this._startButton = this.getButton("btnStart");
         this._editButton = this.getButton("btnEdit");
-        this._refreshButton = this.getButton("btnRefresh");
+        // this._refreshButton = this.getButton("btnRefresh");
 
+         // 获取地图列表
+         this._mapList = this.getList("mapList");
+        
         // 设置列表渲染器
         if (this._mapList) {
             this._mapList.itemRenderer = this._renderMapItem.bind(this);
@@ -90,6 +85,7 @@ export class UIMapSelect extends UIBase {
         }
 
         console.log(`[UIMapSelect] 已加载 ${this._availableMaps.length} 个可用地图`);
+        console.log(`[UIMapSelect] 已加载地图: ${this._availableMaps.map(map => map.name).join(', ')}`);
     }
 
     /**
@@ -98,13 +94,17 @@ export class UIMapSelect extends UIBase {
     private _renderMapItem(index: number, item: fgui.GObject): void {
         if (index >= this._availableMaps.length) return;
 
-        const mapConfig = this._availableMaps[index];
+        const mapConfig: MapConfig = this._availableMaps[index];
+        console.log(`[UIMapSelect] 渲染地图: ${mapConfig.name}, index: ${index}, mapConfig: ${mapConfig}`);
+
+        const mapItem = item.asCom as fgui.GButton;
+        mapItem.data = index; //自定义的数据，这个数据FairyGUI不做解析，按原样发布到最后的描述文件中
         
         // 获取列表项组件
-        const nameText = item.getChild("mapName")?.asTextField;
-        const typeText = item.getChild("mapType")?.asTextField;
-        const statusIcon = item.getChild("statusIcon")?.asLoader;
-        const lockIcon = item.getChild("lockIcon")?.asLoader;
+        const nameText = mapItem.getChild("mapName") as fgui.GTextField;
+        const typeText = mapItem.getChild("mapType") as fgui.GTextField;
+        const statusIcon = mapItem.getChild("statusIcon") as fgui.GLoader;
+        const lockIcon = mapItem.getChild("lockIcon") as fgui.GLoader;
 
         // 设置地图信息
         if (nameText) nameText.text = mapConfig.name;
@@ -120,10 +120,9 @@ export class UIMapSelect extends UIBase {
         }
 
         // 设置选择状态
-        const bgButton = item.getChild("background")?.asButton;
-        if (bgButton) {
-            bgButton.selected = (this._selectedMapId === mapConfig.id);
-        }
+        mapItem.selected = (this._selectedMapId === mapConfig.id);
+
+        mapItem.onClick(this._onMapItemClick, this);
     }
 
     /**
@@ -152,9 +151,9 @@ export class UIMapSelect extends UIBase {
         this._updateMapPreview(mapConfig);
 
         // 更新列表选择状态
-        if (this._mapList) {
-            this._mapList.refreshVirtualList();
-        }
+        // if (this._mapList) {
+        //     this._mapList.refreshVirtualList(); //会导致cocos 卡死，why?
+        // }
 
         console.log(`[UIMapSelect] 选择了地图: ${mapConfig.name}`);
     }
@@ -194,13 +193,14 @@ export class UIMapSelect extends UIBase {
     protected bindEvents(): void {
         // 绑定按钮事件
         this._startButton?.onClick(this._onStartClick, this);
-        this._editButton?.onClick(this._onBackClick, this);
+        this._editButton?.onClick(this._onEditClick, this);
         this._refreshButton?.onClick(this._onRefreshClick, this);
 
-        // 绑定列表选择事件
-        if (this._mapList) {
-            this._mapList.on(fgui.Event.CLICK_ITEM, this._onMapItemClick, this);
-        }
+        // // 绑定列表选择事件
+        // 和 mapItem.onClick 传过去的evt不一样，这边传进去的evt.sender为undefined，mapItem.onClick 传去的就是mapItem
+        // if (this._mapList) {
+        //     this._mapList.on(fgui.Event.CLICK_ITEM, this._onMapItemClick, this);
+        // }
 
         // 监听地图配置更新事件
         EventBus.on(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
@@ -212,13 +212,13 @@ export class UIMapSelect extends UIBase {
     protected unbindEvents(): void {
         // 解绑按钮事件
         this._startButton?.offClick(this._onStartClick, this);
-        this._editButton?.offClick(this._onBackClick, this);
+        this._editButton?.offClick(this._onEditClick, this);
         this._refreshButton?.offClick(this._onRefreshClick, this);
 
-        // 解绑列表事件
-        if (this._mapList) {
-            this._mapList.off(fgui.Event.CLICK_ITEM, this._onMapItemClick, this);
-        }
+        // // 解绑列表事件
+        // if (this._mapList) {
+        //     this._mapList.off(fgui.Event.CLICK_ITEM, this._onMapItemClick, this);
+        // }
 
         // 解绑全局事件
         EventBus.off(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
@@ -324,7 +324,8 @@ export class UIMapSelect extends UIBase {
      * 地图列表项点击
      */
     private _onMapItemClick(evt: fgui.Event): void {
-        const index = evt.data as number;
+        // console.log(`[UIMapSelect] 地图列表项点击: ${evt.sender}`);
+        const index = (evt.sender as fgui.GButton).data;
         this._selectMap(index);
     }
 

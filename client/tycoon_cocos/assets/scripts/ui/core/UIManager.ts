@@ -757,7 +757,8 @@ export class UIManager {
 
             // 3. 注册UI界面
             UIManager.instance.registerModeSelectUI(UIManager.PRELOAD_PACKAGES[1]);
-            UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[2]);
+            UIManager.instance.registerMapSelectUI(UIManager.PRELOAD_PACKAGES[2]);
+            UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[3]);
 
             // 4. 显示初始界面
             await UIManager.instance.showModeSelect();

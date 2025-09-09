@@ -65,7 +65,7 @@ export class MapManager extends Component {
     public mapConfigPath: string = "data/configs/maps_config";
 
     @property({ displayName: "启用调试模式", tooltip: "是否输出详细的调试信息" })
-    public debugMode: boolean = false;
+    public debugMode: boolean = true;
 
     // 单例实例
     private static _instance: MapManager | null = null;
@@ -252,12 +252,12 @@ export class MapManager extends Component {
 
             // 实例化地图
             const mapInstance = instantiate(prefab);
-            const mapComponent = mapInstance.getComponent(GameMap);
+            const mapComponent = mapInstance.addComponent(GameMap);
 
-            if (!mapComponent) {
-                mapInstance.destroy();
-                return { success: false, error: '地图预制体缺少GameMap组件' };
-            }
+            // if (!mapComponent) {
+            //     mapInstance.destroy();
+            //     return { success: false, error: '地图预制体缺少GameMap组件' };
+            // }
 
             // 添加到容器
             const container = this.mapContainer || director.getScene();
@@ -368,7 +368,7 @@ export class MapManager extends Component {
         const result = await this.loadMap(data.mapId, data.isEdit);
         if (result.success) {
             // 发送游戏开始事件
-            console.log("[MapManager] 🚀 Map loaded successfully, emitting GameStart event...");
+            console.log("[MapManager] loadMap成功, 发送GameStart事件");
             EventBus.emit(EventTypes.Game.GameStart, {
                 mode: "single_player", // 这里可以根据实际情况调整
                 mapId: data.mapId,
@@ -377,6 +377,7 @@ export class MapManager extends Component {
             });
         } else {
             // 发送加载失败事件
+            console.error('[MapManager] loadMap失败:', result.error);
             EventBus.emit(EventTypes.Game.MapLoadFailed, {
                 mapId: data.mapId,
                 isEdit: data.isEdit,

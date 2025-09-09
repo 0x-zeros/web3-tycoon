@@ -8,11 +8,13 @@
  * @version 1.0.0
  */
 
-import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, resources, JsonAsset, instantiate, Prefab, tween, find } from 'cc';
+import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, resources, JsonAsset, instantiate, Prefab, tween, find, Color } from 'cc';
 import { MapData, MapTileData, TileType, PathResult } from '../types/MapTypes';
 import { PlayerData } from '../types/GameTypes';
 import { MapTile, TileInteractionResult } from './MapTile';
 import { CameraController } from '../../camera/CameraController';
+import { MapManager } from '../MapManager';
+import { MapConfig } from '../MapManager';
 import { input } from 'cc';
 import { Input } from 'cc';
 
@@ -158,23 +160,113 @@ export class GameMap extends Component {
         lastMousePos: Vec3.ZERO.clone(),
         dragStartPos: Vec3.ZERO.clone()
     };
+
+    /** 地图配置 */
+    private _mapConfig: MapConfig | null = null;
+    
+    /** 是否为编辑模式 */
+    private _isEditMode: boolean = false;
     
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
-        this.initializeComponents();
-        this.setupMouseEvents();
+        // onLoad 中不再自动初始化，等待外部调用 init
+        console.log('[GameMap] Component loaded, waiting for init()');
     }
     
     protected start(): void {
-        // 延迟一帧确保所有组件准备就绪
-        this.scheduleOnce(() => {
-            this.initializeMap();
-        }, 0);
+        // start 中也不自动初始化
+        // 初始化将通过 init 方法由外部控制
     }
     
     protected onDestroy(): void {
         this.cleanup();
+    }
+
+    // ========================= 公共初始化方法 =========================
+    
+    /**
+     * 初始化地图组件
+     * @param config 地图配置
+     * @param isEdit 是否为编辑模式
+     */
+    public async init(config: MapConfig, isEdit: boolean): Promise<void> {
+        console.log('[GameMap] Initializing with config:', config.id, 'isEdit:', isEdit);
+        
+        // 保存配置
+        this._mapConfig = config;
+        this._isEditMode = isEdit;
+        
+        // 从 config 获取地图数据路径
+        // 优先使用 mapDataPath，其次使用 prefabPath，最后使用默认值
+        if (config.mapDataPath) {
+            this.mapDataPath = config.mapDataPath;
+        } else if (config.prefabPath) {
+            // 从 prefabPath 推导数据路径（假设数据文件与预制体在类似位置）
+            this.mapDataPath = config.prefabPath.replace('prefabs', 'data').replace('.prefab', '');
+        }
+        
+        // 自动创建 tilesContainer
+        if (!this.tilesContainer) {
+            this.tilesContainer = new Node('TilesContainer');
+            this.node.addChild(this.tilesContainer);
+            console.log('[GameMap] Created TilesContainer');
+        }
+        
+        // 自动获取主摄像机
+        if (!this.mainCamera) {
+            const cameraNode = find('Main Camera');
+            if (cameraNode) {
+                this.mainCamera = cameraNode.getComponent(Camera);
+                console.log('[GameMap] Found Main Camera');
+            } else {
+                // 尝试从 CameraController 获取
+                this.mainCamera = CameraController.getMainCamera();
+                if (this.mainCamera) {
+                    console.log('[GameMap] Got camera from CameraController');
+                } else {
+                    console.warn('[GameMap] No camera found');
+                }
+            }
+        }
+        
+        // 编辑模式下创建网格地面
+        if (isEdit) {
+            this.createEditModeGrid();
+        }
+        
+        // 初始化组件
+        this.initializeComponents();
+        this.setupMouseEvents();
+        
+        // 初始化地图数据
+        await this.initializeMap();
+    }
+    
+    /**
+     * 创建编辑模式的网格地面
+     */
+    private createEditModeGrid(): void {
+        console.log('[GameMap] Creating edit mode grid ground');
+        
+        // 调用 MapManager 的封装方法
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const gridGround = mapManager.createGridGround({
+                step: 1,
+                halfSize: 30,
+                color: new Color(100, 100, 100, 255),
+                y: 0,
+                enableClickDetection: true,
+                enableSnapping: true
+            });
+            
+            // 添加到当前地图节点
+            this.node.addChild(gridGround);
+            console.log('[GameMap] Edit mode grid ground created and added');
+        } else {
+            console.error('[GameMap] MapManager not found, cannot create grid ground');
+        }
     }
     
     // ========================= 初始化方法 =========================

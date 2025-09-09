@@ -14,8 +14,6 @@ import {
     Camera, 
     Color, 
     Vec3,
-    input,
-    Input,
     EventMouse,
     find
 } from 'cc';
@@ -217,41 +215,6 @@ export class GridGround extends Component {
         }
     }
 
-    /**
-     * 直接输入鼠标点击事件处理（备用方案）
-     */
-    private onDirectMouseDown(event: EventMouse): void {
-        if (event.getButton() !== EventMouse.BUTTON_LEFT) return;
-        if (!this._isInitialized || !this.cam) return;
-
-        // 同时通过 EventBus 发送输入事件（如果还没有输入管理器的话）
-        this.forwardInputEventToEventBus(event);
-
-        // 进行射线检测
-        const intersectionPoint = this.performRaycast(event, this.cam);
-        if (intersectionPoint) {
-            this.handleGroundClick(intersectionPoint);
-        }
-    }
-
-    /**
-     * 将直接输入事件转发到 EventBus（临时方案）
-     */
-    private forwardInputEventToEventBus(event: EventMouse): void {
-        const inputData: Input3DEventData = {
-            type: 'mouse_down',
-            screenX: event.getLocationX(),
-            screenY: event.getLocationY(),
-            button: event.getButton(),
-            originalEvent: event,
-            timestamp: Date.now()
-        };
-
-        // 异步发送，避免重复处理
-        this.scheduleOnce(() => {
-            EventBus.emit(EventTypes.Input3D.MouseDown, inputData);
-        }, 0);
-    }
 
     /**
      * 执行射线与平面相交检测（纯数学计算）

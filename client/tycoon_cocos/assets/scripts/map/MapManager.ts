@@ -29,6 +29,8 @@ export interface MapConfig {
     description: string;
     /** 预制体路径 */
     prefabPath: string;
+    /** 地图数据路径 */
+    mapDataPath?: string;
     /** 预览图路径 */
     previewImagePath?: string;
     /** 支持的玩家数量 */
@@ -112,12 +114,6 @@ export class MapManager extends Component {
         VoxelSystem.getInstance().initialize();
 
         this.log('MapManager ready');
-        
-        //创建网格地面（可选，根据游戏需求调用）
-        const gridGround = this.createGridGround();
-        if (this.mapContainer) {
-            this.mapContainer.addChild(gridGround);
-        }
     }
 
     protected onDestroy(): void {
@@ -252,12 +248,12 @@ export class MapManager extends Component {
 
             // 实例化地图
             const mapInstance = instantiate(prefab);
+            
+            // 添加 GameMap 组件
             const mapComponent = mapInstance.addComponent(GameMap);
-
-            // if (!mapComponent) {
-            //     mapInstance.destroy();
-            //     return { success: false, error: '地图预制体缺少GameMap组件' };
-            // }
+            
+            // 初始化地图组件，传入 config 和 isEdit
+            await mapComponent.init(config, isEdit);
 
             // 添加到容器
             const container = this.mapContainer || director.getScene();

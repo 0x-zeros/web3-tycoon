@@ -177,7 +177,7 @@ export abstract class Card extends Component {
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
-        this.initializeCard();
+        this.initializeCardInternal();
         this.initializeUI();
         this.setupEventHandlers();
     }
@@ -195,7 +195,7 @@ export abstract class Card extends Component {
     /**
      * 初始化卡牌
      */
-    private initializeCard(): void {
+    private initializeCardInternal(): void {
         this._cardId = this.generateCardId();
         this._createTime = Date.now();
         
@@ -394,6 +394,14 @@ export abstract class Card extends Component {
         } finally {
             this._isUsingCard = false;
         }
+    }
+
+    /**
+     * 供管理器调用的上下文式使用接口
+     * 子类应在 executeCardEffect 中实现具体效果
+     */
+    public async useCard(context: CardUseContext): Promise<CardUseResult> {
+        return await this.executeCardEffect(context);
     }
     
     /**

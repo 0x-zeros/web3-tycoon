@@ -104,15 +104,19 @@ export class MapManager extends Component {
     }
 
     protected async start(): Promise<void> {
-        // 加载地图配置
-        await this.loadMapConfigs();
+        try {
+            // 加载地图配置
+            await this.loadMapConfigs();
+        } catch (err) {
+            console.error('[MapManager] 地图配置加载失败，继续以降级模式运行:', err);
+        }
         
         // 注册事件监听器
         this.registerEventListeners();
-
+        
         // voxelSystem //resourcePackPath
         VoxelSystem.getInstance().initialize();
-
+        
         this.log('MapManager ready');
     }
 
@@ -132,11 +136,11 @@ export class MapManager extends Component {
      * 加载地图配置文件
      */
     private async loadMapConfigs(): Promise<void> {
-        return new Promise<void>((resolve) => {
+        return new Promise<void>((resolve, reject) => {
             resources.load(this.mapConfigPath, (err, asset) => {
                 if (err) {
                     console.error('[MapManager] 加载地图配置失败:', err);
-                    resolve();
+                    reject(err);
                     return;
                 }
 
@@ -148,11 +152,11 @@ export class MapManager extends Component {
                         });
                         this.log(`已加载 ${this._mapConfigs.size} 个地图配置`);
                     }
+                    resolve();
                 } catch (error) {
                     console.error('[MapManager] 解析地图配置失败:', error);
+                    reject(error);
                 }
-
-                resolve();
             });
         });
     }

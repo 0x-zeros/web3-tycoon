@@ -419,9 +419,9 @@ export class UIManager {
 
             // 显示UI
             if (config.isWindow) {
-                await this._showAsWindow(uiInstance, config);
+                this._showAsWindow(uiInstance, config);
             } else {
-                await this._showAsComponent(uiInstance);
+                this._showAsComponent(uiInstance);
             }
 
             uiInstance.show(data);
@@ -449,7 +449,7 @@ export class UIManager {
     /**
      * 隐藏UI
      */
-    public async hideUI(uiName: string): Promise<void> {
+    public hideUI(uiName: string): void {
         const uiInstance = this._activeUIs.get(uiName);
         if (!uiInstance) {
             warn(`[UIManager] UI ${uiName} not active!`);
@@ -519,17 +519,13 @@ export class UIManager {
     /**
      * 隐藏所有UI
      */
-    public async hideAllUI(except?: string[]): Promise<void> {
-        const promises: Promise<void>[] = [];
-        
-        for (const uiName of this._activeUIs.keys()) {
+    public hideAllUI(except?: string[]): void {
+        for (const uiName of Array.from(this._activeUIs.keys())) {
             if (except && except.indexOf(uiName) !== -1) {
                 continue;
             }
-            promises.push(this.hideUI(uiName));
+            this.hideUI(uiName);
         }
-
-        await Promise.all(promises);
     }
 
     /**
@@ -878,7 +874,7 @@ export class UIManager {
     private async _createUIInstance<T extends UIBase>(
         uiName: string, 
         config: UIConfig, 
-        constructor: UIConstructor<T>
+        constructor: UIConstructor
     ): Promise<T | null> {
         try {
             // 使用FairyGUI创建组件
@@ -896,7 +892,7 @@ export class UIManager {
             fguiComponent.node.name = uiName;
 
             // 创建UI逻辑实例，添加到FairyGUI节点上
-            const uiInstance = fguiComponent.node.addComponent(constructor) as T;
+            const uiInstance = fguiComponent.node.addComponent(constructor) as unknown as T;
             
             // 设置UI名称和面板引用
             uiInstance.setUIName(uiName);
@@ -921,7 +917,7 @@ export class UIManager {
     /**
      * 作为窗口显示
      */
-    private async _showAsWindow(uiInstance: UIBase, config: UIConfig): Promise<void> {
+    private _showAsWindow(uiInstance: UIBase, config: UIConfig): void {
         if (!this._groot) {
             throw new Error("GRoot not initialized");
         }
@@ -941,7 +937,7 @@ export class UIManager {
     /**
      * 作为组件显示
      */
-    private async _showAsComponent(uiInstance: UIBase): Promise<void> {
+    private _showAsComponent(uiInstance: UIBase): void {
         if (!this._groot) {
             throw new Error("GRoot not initialized");
         }

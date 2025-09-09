@@ -479,7 +479,7 @@ export class CardManager extends Component {
         };
         
         // 执行卡片使用
-        const result = await cardComponent.useCard(context);
+        const result = await (cardComponent as any).useCard(context);
         
         // 更新统计
         this._usageStats.totalUses++;
@@ -533,7 +533,7 @@ export class CardManager extends Component {
         }
         
         // 初始化卡片
-        cardComponent.initializeCard(cardData, cardInstance);
+        (cardComponent as any).initializeCard(cardData, cardInstance);
         
         return cardComponent;
     }

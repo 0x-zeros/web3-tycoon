@@ -259,8 +259,7 @@ export class GameMap extends Component {
                 halfSize: 30,
                 color: new Color(100, 100, 100, 255),
                 y: 0,
-                enableClickDetection: true,
-                enableSnapping: true
+                enableClickDetection: true
             });
             
             // 添加到当前地图节点
@@ -330,8 +329,8 @@ export class GameMap extends Component {
             // 加载地图数据
             await this.loadMapData();
             
-            // 创建地块
-            await this.createTiles();
+            // 创建地块（同步）
+            this.createTiles();//todo
             
             // 设置摄像机位置
             this.setupCamera();
@@ -368,7 +367,7 @@ export class GameMap extends Component {
                 
                 try {
                     this._mapData = jsonAsset.json as MapData;
-                    console.log('[Map] 地图数据加载成功:', this._mapData.mapName);
+                    console.log('[Map] 地图数据加载成功:', this._mapData.metadata.name);
                     resolve();
                 } catch (parseError) {
                     console.error('[Map] 解析地图数据失败:', parseError);
@@ -381,18 +380,14 @@ export class GameMap extends Component {
     /**
      * 创建所有地块
      */
-    private async createTiles(): Promise<void> {
+    private createTiles(): void {
         if (!this._mapData || !this.tilesContainer) {
             throw new Error('地图数据或容器节点不存在');
         }
         
-        const promises: Promise<void>[] = [];
-        
         for (const tileData of this._mapData.tiles) {
-            promises.push(this.createSingleTile(tileData));
+            this.createSingleTile(tileData);
         }
-        
-        await Promise.all(promises);
         
         console.log(`[Map] 创建了 ${this._tileInstances.size} 个地块`);
     }
@@ -400,7 +395,7 @@ export class GameMap extends Component {
     /**
      * 创建单个地块
      */
-    private async createSingleTile(tileData: MapTileData): Promise<void> {
+    private createSingleTile(tileData: MapTileData): void {
         //console.log(`[Map] 创建地块: ${tileData.name} (${JSON.stringify(tileData)})`);
 
         const prefab = this.getTilePrefab(tileData.type);
@@ -473,7 +468,7 @@ export class GameMap extends Component {
         }
         
         // 如果地图数据中有摄像机配置，使用配置的位置
-        if (this._mapData.cameraConfig?.defaultPosition) {
+        if (this._mapData.sceneConfig?.cameraPosition) {
             // this.mainCamera.node.setPosition(this._mapData.cameraConfig.defaultPosition);
 
             //defaultRotation
@@ -636,7 +631,7 @@ export class GameMap extends Component {
         }
         
         // 从当前地块离开
-        const currentTile = this.getTile(player.currentTile);
+        const currentTile = this.getTile(player.currentTileId);
         if (currentTile) {
             currentTile.playerLeave(player);
         }

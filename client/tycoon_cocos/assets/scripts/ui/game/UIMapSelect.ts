@@ -26,7 +26,7 @@ export class UIMapSelect extends UIBase {
     /** 开始游戏按钮 */
     private _startButton: fgui.GButton | null = null;
     /** 返回按钮 */
-    private _backButton: fgui.GButton | null = null;
+    private _editButton: fgui.GButton | null = null;
     /** 刷新按钮 */
     private _refreshButton: fgui.GButton | null = null;
 
@@ -60,7 +60,7 @@ export class UIMapSelect extends UIBase {
         
         // 获取按钮
         this._startButton = this.getButton("btnStart");
-        this._backButton = this.getButton("btnBack");
+        this._editButton = this.getButton("btnEdit");
         this._refreshButton = this.getButton("btnRefresh");
 
         // 设置列表渲染器
@@ -194,7 +194,7 @@ export class UIMapSelect extends UIBase {
     protected bindEvents(): void {
         // 绑定按钮事件
         this._startButton?.onClick(this._onStartClick, this);
-        this._backButton?.onClick(this._onBackClick, this);
+        this._editButton?.onClick(this._onBackClick, this);
         this._refreshButton?.onClick(this._onRefreshClick, this);
 
         // 绑定列表选择事件
@@ -212,7 +212,7 @@ export class UIMapSelect extends UIBase {
     protected unbindEvents(): void {
         // 解绑按钮事件
         this._startButton?.offClick(this._onStartClick, this);
-        this._backButton?.offClick(this._onBackClick, this);
+        this._editButton?.offClick(this._onBackClick, this);
         this._refreshButton?.offClick(this._onRefreshClick, this);
 
         // 解绑列表事件
@@ -269,18 +269,32 @@ export class UIMapSelect extends UIBase {
      * 开始游戏按钮点击
      */
     private _onStartClick(): void {
+        console.log("[UIMapSelect] Start map");
+        this.doStartMap(false);
+    }
+
+    /**
+     * 编辑按钮点击
+     */
+    private _onEditClick(): void {
+        console.log("[UIMapSelect] Edit map");
+        this.doStartMap(true);
+    }
+
+
+    private doStartMap(isEdit: boolean): void {
         if (!this._selectedMapId || !this._selectedMapConfig) {
             console.warn('[UIMapSelect] No map selected');
             return;
         }
 
-        if (!this._selectedMapConfig.unlocked) {
+        if (!isEdit && !this._selectedMapConfig.unlocked) {
             console.warn('[UIMapSelect] Selected map is locked');
             // 这里可以显示解锁提示
             return;
         }
 
-        console.log(`[UIMapSelect] 开始游戏，地图: ${this._selectedMapConfig.name}`);
+        console.log(`[UIMapSelect] ${isEdit ? '编辑' : '开始'}游戏，地图: ${this._selectedMapConfig.name}`);
 
         // 保存选择的地图信息
         Blackboard.instance.set("selectedMapId", this._selectedMapId, true);
@@ -289,25 +303,12 @@ export class UIMapSelect extends UIBase {
         // 发送地图选择事件
         EventBus.emit(EventTypes.Game.MapSelected, {
             mapId: this._selectedMapId,
+            isEdit: isEdit,
             mapConfig: this._selectedMapConfig,
             source: "map_select"
         });
 
         // 隐藏当前界面
-        this.hide();
-    }
-
-    /**
-     * 返回按钮点击
-     */
-    private _onBackClick(): void {
-        console.log("[UIMapSelect] Back to mode select");
-
-        // 发送返回模式选择事件
-        EventBus.emit(EventTypes.UI.ShowModeSelect, {
-            source: "map_select_back"
-        });
-
         this.hide();
     }
 

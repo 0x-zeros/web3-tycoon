@@ -5,11 +5,8 @@
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
     <image id="n10_mumq" name="n10" src="mumq5" fileName="images/bg.png" xy="651,94"/>
-    <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="215,644">
+    <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="161,749" size="364,130">
       <Button title="开始游戏"/>
-    </component>
-    <component id="n9_mumq" name="btn1" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="214,811">
-      <Button title="？"/>
     </component>
     <image id="n12_mumq" name="n12" src="mumq7" fileName="images/logo.png" xy="-154,-148" size="993,993"/>
   </displayList>

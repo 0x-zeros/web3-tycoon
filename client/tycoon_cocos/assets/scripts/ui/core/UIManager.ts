@@ -10,6 +10,7 @@ import * as fgui from "fairygui-cc";
 import { UIModeSelect } from "../game/UIModeSelect";
 import { UIInGame } from "../game/UIInGame";
 import { UIMapElement } from "../game/UIMapElement";
+import { UIMapSelect } from "../game/UIMapSelect";
 
 /**
  * UI构造函数接口 - Component类构造函数
@@ -60,7 +61,7 @@ export class UIManager {
     /** 公共依赖包列表 */
     private static readonly COMMON_PACKAGES = ["Common"];
     /** 预加载包列表 */
-    private static readonly PRELOAD_PACKAGES = ["Common", "ModeSelect", "InGame"];
+    private static readonly PRELOAD_PACKAGES = ["Common", "ModeSelect", "MapSelect", "InGame"];
     /** 已注册的UI配置 */
     private _uiConfigs: Map<string, UIConfig> = new Map();
     /** UI构造函数 */
@@ -796,13 +797,13 @@ export class UIManager {
     }
 
 
-    public registerMapElementUI(packageName: string, componentName: string = "MapElement"): void {
-        this.registerUI<UIMapElement>("MapElement", {
+    public registerMapSelectUI(packageName: string, componentName: string = "Main"): void {
+        this.registerUI<UIMapSelect>("MapSelect", {
             packageName,
             componentName,
             cache: true,
             isWindow: false
-        }, UIMapElement);
+        }, UIMapSelect);
     }
 
     /**
@@ -820,37 +821,31 @@ export class UIManager {
     }
 
     /**
+     * 便捷方法 - 显示地图选择界面
+     */
+    public async showMapSelect(): Promise<UIMapSelect | null> {
+        return this.showUI<UIMapSelect>("MapSelect");
+    }
+
+    /**
      * 设置全局UI事件监听器
      */
     private _setupGlobalUIEventListeners(): void {
         // 监听显示主菜单事件
         EventBus.on(EventTypes.UI.ShowMainMenu, async (data) => {
-            console.log("[UISystem] ShowMainMenu event received:", data);
+            console.log("[UISystem] UI.ShowMainMenu event received:", data);
             await this.showModeSelect();
         }, this);
 
-        EventBus.on(EventTypes.Game.GameStart, async (data) => {
-            console.log("[UISystem] 🎮 Game.GameStart event received:", data);
-            console.log("[UISystem] Current UI state:", {
-                activeUIs: Array.from(this._activeUIs.keys()),
-                cachedUIs: Array.from(this._uiCache.keys()),
-                isInitialized: this._inited
-            });
+        //showMapSelect
+        EventBus.on(EventTypes.UI.ShowMapSelect, async (data) => {
+            console.log("[UISystem] UI.ShowMapSelect event received:", data);
+            await this.showMapSelect();
+        }, this);
 
-            try {
-                console.log("[UISystem] Attempting to show InGame UI...");
-                const result = await this.showInGame();
-                console.log("[UISystem] ✅ showInGame result:", result ? result.constructor.name : 'null');
-                
-                if (result) {
-                    console.log("[UISystem] ✅ InGame UI successfully shown");
-                } else {
-                    console.error("[UISystem] ❌ showInGame returned null");
-                }
-            } catch (error) {
-                console.error("[UISystem] ❌ showInGame error:", error);
-                console.error("[UISystem] Error stack:", error.stack);
-            }
+        EventBus.on(EventTypes.Game.GameStart, async (data) => {
+            console.log("[UISystem] Game.GameStart event received:", data);
+            await this.showInGame();
         }, this);
 
         // 监听其他全局UI事件

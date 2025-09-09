@@ -9,8 +9,6 @@
     <component id="mumq6" name="CardList.xml" path="/"/>
     <image id="ue83a" name="card11.png" path="/images/"/>
     <component id="ue83b" name="Card.xml" path="/components/"/>
-    <image id="ue83c" name="circle.png" path="/images/"/>
-    <image id="ue83d" name="rectangle.png" path="/images/"/>
     <component id="ue83f" name="Player.xml" path="/components/"/>
     <image id="ue83g" name="capy1.png" path="/images/player/"/>
     <image id="ue83h" name="capy2.png" path="/images/player/"/>

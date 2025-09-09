@@ -5,7 +5,7 @@
   "__editorExtras__": {},
   "_native": "",
   "_effectAsset": {
-    "__uuid__": "cdede56d-b864-4429-88e9-9497c90c5d26",
+    "__uuid__": "616db815-1309-4015-9c2a-980e2295d941",
     "__expectedType__": "cc.EffectAsset"
   },
   "_techIdx": 0,
@@ -26,15 +26,6 @@
     }
   ],
   "_props": [
-    {
-      "mainTexture": {
-        "__uuid__": "582b02ae-5eb4-4ac7-91d1-1074cb300c61@6c48a",
-        "__expectedType__": "cc.Texture2D"
-      },
-      "skyTexture": {
-        "__uuid__": "7696c29c-8c3c-49ab-819d-d1a6492ecb5a@6c48a",
-        "__expectedType__": "cc.Texture2D"
-      }
-    }
+    {}
   ]
 }

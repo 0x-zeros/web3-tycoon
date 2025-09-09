@@ -196,14 +196,8 @@ export class UIModeSelect extends UIBase {
         Blackboard.instance.set("gameMode", "single_player", true);
 
         // 显示地图选择界面
-        // EventBus.emit(EventTypes.UI.ShowMapSelect, {
-        //     gameMode: "single_player",
-        //     source: "mode_select"
-        // });
-
-        console.log("[UIModeSelect] 🚀 Emitting GameStart event...");
-        EventBus.emit(EventTypes.Game.GameStart, {
-            mode: "single_player",
+        EventBus.emit(EventTypes.UI.ShowMapSelect, {
+            gameMode: "single_player",
             source: "mode_select"
         });
 
@@ -272,20 +266,7 @@ export class UIModeSelect extends UIBase {
      * 游戏开始事件
      */
     private _onGameStart(data: any): void {
-        console.log("[UIModeSelect] 🎮 GameStart listener called:", data);
-        console.log("[UIModeSelect] Current visibility:", {
-            isShowing: this.isShowing,
-            node: this.node?.name || 'No node'
-        });
-        
-        try {
-            // 隐藏模式选择界面
-            console.log("[UIModeSelect] Attempting to hide...");
-            this.hide();
-            console.log("[UIModeSelect] ✅ Successfully hidden");
-        } catch (error) {
-            console.error("[UIModeSelect] ❌ Error hiding:", error);
-        }
+        this.hide();
     }
 
     /**

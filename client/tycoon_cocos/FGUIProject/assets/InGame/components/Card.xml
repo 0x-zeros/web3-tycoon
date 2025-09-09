@@ -6,7 +6,7 @@
       <relation target="" sidePair="width-width,height-height"/>
     </image>
     <graph id="n1_ue83" name="n1" xy="37,96" size="111,108" type="eclipse" lineSize="0" fillColor="#b2edf2c0"/>
-    <image id="n3_ue83" name="n3" src="ue83d" fileName="images/rectangle.png" xy="94,131" pivot="0.5,0.5" anchor="true" size="173,236">
+    <image id="n3_ue83" name="n3" src="ue83d" fileName="images/rectangle.png" xy="94,131" pivot="0.5,0.5" anchor="true" size="173,236" pkg="82r0pzop">
       <gearDisplay controller="button" pages="1,2,3"/>
     </image>
     <text id="n2_ue83" name="title" xy="42,123" size="104,39" fontSize="28" color="#8e8148" align="center" vAlign="middle" autoSize="none" text=""/>

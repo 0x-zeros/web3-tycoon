@@ -5,7 +5,7 @@
   "__editorExtras__": {},
   "_native": "",
   "_effectAsset": {
-    "__uuid__": "857ae486-dc57-473d-a54e-85fccc98b1f4",
+    "__uuid__": "56ec775b-2d95-4389-b82f-4fa5e69168e0",
     "__expectedType__": "cc.EffectAsset"
   },
   "_techIdx": 0,
@@ -24,11 +24,6 @@
     }
   ],
   "_props": [
-    {
-      "skyTexture": {
-        "__uuid__": "7696c29c-8c3c-49ab-819d-d1a6492ecb5a@6c48a",
-        "__expectedType__": "cc.Texture2D"
-      }
-    }
+    {}
   ]
 }

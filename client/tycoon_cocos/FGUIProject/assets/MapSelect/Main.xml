@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1920,1080">
+  <displayList>
+    <list id="n0_105vo" name="mapList" xy="153,115" size="1608,556" layout="flow_hz" overflow="scroll" lineGap="32" colGap="32" defaultItem="ui://8joqc56j105vo1" autoClearItems="true">
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+    </list>
+    <component id="n1_105vo" name="btnStart" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="315,747" size="512,128">
+      <Button title="开始游戏"/>
+    </component>
+    <component id="n3_105vo" name="btnEdit" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="1078,747" size="512,128">
+      <Button title="编辑地图"/>
+    </component>
+  </displayList>
+</component>

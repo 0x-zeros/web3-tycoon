@@ -460,22 +460,14 @@ export class GameInitializer extends Component {
      * 游戏开始事件处理
      */
     private async onGameStart(data: any): Promise<void> {
-        console.log('[GameInitializer] 🎮 GameStart listener called:', data);
-        console.log('[GameInitializer] Current game state:', {
-            hasMapManager: !!this.mapManager
-        });
+        console.log('[GameInitializer] GameStart listener called:', data);
         
         try {
-            // 检查是否已经有地图信息（由MapManager处理）
             if (data.mapId) {
                 console.log(`[GameInitializer] 游戏将在地图 ${data.mapId} 上开始`);
             } else {
                 console.warn('[GameInitializer] 游戏开始事件缺少地图信息');
             }
-            
-            // 显示游戏内UI
-            // TODO: 这里需要根据实际的UIManager API来显示游戏内界面
-            console.log('准备显示游戏内UI');
             
         } catch (error) {
             console.error('游戏启动失败:', error);

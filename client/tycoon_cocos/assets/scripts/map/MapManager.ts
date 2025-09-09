@@ -223,7 +223,7 @@ export class MapManager extends Component {
     /**
      * 加载并切换到指定地图
      */
-    public async loadMap(mapId: string): Promise<MapLoadResult> {
+    public async loadMap(mapId: string, isEdit: boolean): Promise<MapLoadResult> {
         this.log(`准备加载地图: ${mapId}`);
 
         // 检查地图配置
@@ -232,7 +232,7 @@ export class MapManager extends Component {
             return { success: false, error: '地图配置不存在' };
         }
 
-        if (!config.unlocked) {
+        if (!isEdit && !config.unlocked) {
             return { success: false, error: '地图未解锁' };
         }
 
@@ -362,22 +362,24 @@ export class MapManager extends Component {
     /**
      * 处理地图选择事件
      */
-    private async onMapSelected(data: { mapId: string }): Promise<void> {
-        this.log(`收到地图选择事件: ${data.mapId}`);
+    private async onMapSelected(data: { mapId: string, isEdit: boolean }): Promise<void> {
+        this.log(`收到地图选择事件: mapId=${data.mapId}, isEdit=${data.isEdit}`);
         
-        const result = await this.loadMap(data.mapId);
+        const result = await this.loadMap(data.mapId, data.isEdit);
         if (result.success) {
             // 发送游戏开始事件
             console.log("[MapManager] 🚀 Map loaded successfully, emitting GameStart event...");
             EventBus.emit(EventTypes.Game.GameStart, {
                 mode: "single_player", // 这里可以根据实际情况调整
                 mapId: data.mapId,
+                isEdit: data.isEdit,
                 source: "map_select"
             });
         } else {
             // 发送加载失败事件
             EventBus.emit(EventTypes.Game.MapLoadFailed, {
                 mapId: data.mapId,
+                isEdit: data.isEdit,
                 error: result.error
             });
         }
@@ -386,10 +388,10 @@ export class MapManager extends Component {
     /**
      * 处理地图切换请求
      */
-    private async onMapChangeRequest(data: { fromMapId: string; toMapId: string }): Promise<void> {
+    private async onMapChangeRequest(data: { fromMapId: string; toMapId: string, isEdit?: boolean }): Promise<void> {
         this.log(`地图切换请求: ${data.fromMapId} -> ${data.toMapId}`);
         
-        const result = await this.loadMap(data.toMapId);
+        const result = await this.loadMap(data.toMapId, data.isEdit || false);
         if (!result.success) {
             console.error('[MapManager] 地图切换失败:', result.error);
         }

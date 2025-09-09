@@ -16,8 +16,8 @@
     <component id="n4_ue83" name="n4" src="mumq1" fileName="TopLeftCorner.xml" xy="5,7">
       <relation target="" sidePair="left-left,top-top"/>
     </component>
-    <component id="n5_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="-37,1003" size="202,78">
-      <Button title="地块" titleFontSize="22"/>
+    <component id="n5_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="5,394" size="106,82">
+      <Button title="地块"/>
     </component>
     <component id="n7_105vo" name="mapElement" src="105vop" fileName="MapElement.xml" xy="590,88" scale="0.5,0.5">
       <relation target="" sidePair="center-center,middle-middle"/>

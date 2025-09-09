@@ -70,11 +70,14 @@ interface CameraControlConfig {
  */
 @ccclass('GameMap')
 export class GameMap extends Component {
+
+    //常量，所有地图数据文件都放在这个目录下
+    private MAP_DATA_DIR = 'data/maps/';
     
     // ========================= 编辑器属性 =========================
     
     @property({ displayName: "地图数据文件", tooltip: "JSON格式的地图数据文件路径" })
-    public mapDataPath: string = 'data/maps/test_map';
+    public mapDataPath: string = this.MAP_DATA_DIR + 'test_map';
     
     @property({ displayName: "地块容器节点", type: Node, tooltip: "用于放置所有地块的父节点" })
     public tilesContainer: Node | null = null;
@@ -202,8 +205,7 @@ export class GameMap extends Component {
         if (config.mapDataPath) {
             this.mapDataPath = config.mapDataPath;
         } else if (config.prefabPath) {
-            // 从 prefabPath 推导数据路径（假设数据文件与预制体在类似位置）
-            this.mapDataPath = config.prefabPath.replace('prefabs', 'data').replace('.prefab', '');
+            this.mapDataPath = this.MAP_DATA_DIR + config.id;
         }
         
         // 自动创建 tilesContainer
@@ -399,6 +401,8 @@ export class GameMap extends Component {
      * 创建单个地块
      */
     private async createSingleTile(tileData: MapTileData): Promise<void> {
+        //console.log(`[Map] 创建地块: ${tileData.name} (${JSON.stringify(tileData)})`);
+
         const prefab = this.getTilePrefab(tileData.type);
         if (!prefab) {
             console.error(`[Map] 找不到地块类型 ${tileData.type} 的预制件`);

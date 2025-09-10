@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1920,1080" opaque="false">
+  <controller name="mode" pages="0,play,1,editor" selected="1"/>
   <displayList>
     <component id="n0_ue83" name="n0" src="mumq6" fileName="CardList.xml" xy="286,869" scale="0.8,0.8">
       <relation target="" sidePair="middle-middle,bottom-bottom"/>
@@ -16,11 +17,12 @@
     <component id="n4_ue83" name="n4" src="mumq1" fileName="TopLeftCorner.xml" xy="5,7">
       <relation target="" sidePair="left-left,top-top"/>
     </component>
-    <component id="n5_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="5,394" size="106,82">
-      <Button title="地块"/>
-    </component>
     <component id="n7_105vo" name="mapElement" src="105vop" fileName="MapElement.xml" xy="590,88" scale="0.5,0.5">
       <relation target="" sidePair="center-center,middle-middle"/>
+    </component>
+    <component id="n8_105vo" name="editor" src="105vor" fileName="components/Editor.xml" xy="4,287">
+      <gearDisplay controller="mode" pages="1"/>
+      <relation target="" sidePair="left-left"/>
     </component>
   </displayList>
 </component>

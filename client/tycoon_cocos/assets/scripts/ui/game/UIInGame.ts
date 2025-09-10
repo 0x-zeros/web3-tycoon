@@ -6,6 +6,7 @@ import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
+import { UIEditor } from "./UIEditor";
 
 const { ccclass } = _decorator;
 
@@ -17,9 +18,10 @@ export class UIInGame extends UIBase {
 
 
     private m_btn_dice:fgui.GButton;
-    private m_btn_mapElement:fgui.GButton;
 
     private m_mapElementUI:UIMapElement;
+    private m_editorUI:UIEditor;
+    private m_modeController: fgui.Controller;
 
     // ================ 玩家信息组件 ================
     /** 玩家名称文本 */
@@ -78,8 +80,18 @@ export class UIInGame extends UIBase {
     private _setupComponents(): void {
 
         this.m_btn_dice = this.getChild('n1').asCom.getChild('n2') as fgui.GButton;
-        this.m_btn_mapElement = this.getChild('btn_mapElement') as fgui.GButton;
-        console.log('this.m_btn_mapElement', this.m_btn_mapElement);
+        
+        // 获取editor组件并设置UIEditor
+        const editorComponent = this.getChild('editor').asCom;
+        this.m_editorUI = editorComponent.node.addComponent(UIEditor);
+        // 设置UI名称和面板引用
+        this.m_editorUI.setUIName("Editor");
+        this.m_editorUI.setPanel(editorComponent);
+        // 初始化
+        this.m_editorUI.init();
+        
+        // 使用主界面的mode控制器
+        this.m_modeController = this.getController('mode');
 
 
         //m_mapElementUI
@@ -93,6 +105,9 @@ export class UIInGame extends UIBase {
 
         //hide
         this.m_mapElementUI.hide();
+        
+        // 根据GameMap的编辑模式设置控制器
+        this.updateModeController();
 
         // 玩家信息组件
         this._playerNameText = this.getText("txtPlayerName");
@@ -122,6 +137,23 @@ export class UIInGame extends UIBase {
     }
 
     /**
+     * 更新模式控制器
+     */
+    private updateModeController(): void {
+        // 让UIEditor自己处理可见性
+        if (this.m_editorUI) {
+            this.m_editorUI.updateEditorVisibility();
+            
+            // 获取编辑模式状态并设置mode控制器
+            const isEditMode = this.m_editorUI.node.active;
+            if (this.m_modeController) {
+                // 0:play模式 1:editor模式
+                this.m_modeController.selectedIndex = isEditMode ? 1 : 0;
+            }
+        }
+    }
+    
+    /**
      * 设置默认值
      */
     private _setupDefaultValues(): void {
@@ -144,10 +176,6 @@ export class UIInGame extends UIBase {
         if(this.m_btn_dice){
             console.log('添加 投掷骰子事件1');
             this.m_btn_dice.onClick(this._onRollDiceClick, this);
-        }
-
-        if(this.m_btn_mapElement){
-            this.m_btn_mapElement.onClick(this.onMapElementClick, this);
         }
 
         // 绑定按钮事件
@@ -186,6 +214,9 @@ export class UIInGame extends UIBase {
         Blackboard.instance.watch("currentRound", this._onRoundChange, this);
         Blackboard.instance.watch("currentPlayer", this._onCurrentPlayerChange, this);
         Blackboard.instance.watch("gameTime", this._onGameTimeChange, this);
+        
+        // 监听Toggle地图元素UI事件
+        EventBus.on(EventTypes.UI.ToggleMapElement, this._onToggleMapElement, this);
     }
 
     /**
@@ -195,10 +226,6 @@ export class UIInGame extends UIBase {
         if(this.m_btn_dice){
             console.log('移除 投掷骰子事件1');
             this.m_btn_dice.offClick(this._onRollDiceClick, this);
-        }
-
-        if(this.m_btn_mapElement){
-            this.m_btn_mapElement.offClick(this.onMapElementClick, this);
         }
 
         // 解绑按钮事件
@@ -217,6 +244,9 @@ export class UIInGame extends UIBase {
         if (this._bagBtn) {
             this._bagBtn.offClick(this._onBagClick, this);
         }
+        
+        // 解绑Toggle地图元素UI事件
+        EventBus.off(EventTypes.UI.ToggleMapElement, this._onToggleMapElement, this);
 
         // 调用父类解绑
         super.unbindEvents();
@@ -278,10 +308,10 @@ export class UIInGame extends UIBase {
 
 
     /**
-     * 地图元素按钮点击 - Toggle功能
+     * Toggle地图元素UI事件处理
      */
-    private onMapElementClick(): void {
-        console.log("[UIInGame] Map element clicked");
+    private _onToggleMapElement(): void {
+        console.log("[UIInGame] Toggle map element UI");
 
         // 检查UI是否已显示，如果显示则隐藏，如果隐藏则显示
         if (this.m_mapElementUI.isShowing) {
@@ -329,6 +359,7 @@ export class UIInGame extends UIBase {
             source: "in_game_ui"
         });
     }
+    
 
     // ================== 游戏事件处理 ==================
 

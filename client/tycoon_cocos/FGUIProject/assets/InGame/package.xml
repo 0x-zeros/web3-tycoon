@@ -20,6 +20,7 @@
     <component id="105von" name="NPC.xml" path="/components/"/>
     <component id="105vop" name="MapElement.xml" path="/" exported="true"/>
     <component id="105voq" name="Tile.xml" path="/components/"/>
+    <component id="105vor" name="Editor.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

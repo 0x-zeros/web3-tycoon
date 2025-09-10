@@ -32,7 +32,11 @@ export const EventTypes = {
         /** 按钮点击 */
         ButtonClick: "ui_button_click",
         /** 面板关闭 */
-        PanelClose: "ui_panel_close"
+        PanelClose: "ui_panel_close",
+        /** 地图元素选中 */
+        MapElementSelected: "ui_map_element_selected",
+        /** 切换地图元素UI显示 */
+        ToggleMapElement: "ui_toggle_map_element"
     },
 
     /** 游戏逻辑事件 */

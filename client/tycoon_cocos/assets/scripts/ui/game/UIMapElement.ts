@@ -156,7 +156,23 @@ export class UIMapElement extends UIBase {
 
     private onTileClick(evt: fgui.Event): void {
         const tile = evt.sender as GButton;
+        const index = this.m_tiles.getChildIndex(tile);
+        const blockId = this.m_blockIds[index];
+        const blockDefinition = VoxelSystem.getInstance().getBlockDefinition(blockId);
+        
         console.log("[UIMapElement] tile clicked: ", tile.title);
+        
+        // 获取tileIcon的spriteFrame
+        const tileIcon = tile.getChild("tileIcon") as fgui.GLoader;
+        const spriteFrame = tileIcon ? tileIcon.texture : null;
+        
+        // 发送选中事件，携带完整数据
+        EventBus.emit(EventTypes.UI.MapElementSelected, {
+            blockId: blockId,
+            blockName: blockDefinition?.displayName || "",
+            spriteFrame: spriteFrame,  // 传递spriteFrame以便共享
+            index: index
+        });
     }
     
 

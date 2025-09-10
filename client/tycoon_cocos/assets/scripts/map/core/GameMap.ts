@@ -246,6 +246,13 @@ export class GameMap extends Component {
     }
     
     /**
+     * 获取当前是否为编辑模式
+     */
+    public get isEditMode(): boolean {
+        return this._isEditMode;
+    }
+    
+    /**
      * 创建编辑模式的网格地面
      */
     private createEditModeGrid(): void {

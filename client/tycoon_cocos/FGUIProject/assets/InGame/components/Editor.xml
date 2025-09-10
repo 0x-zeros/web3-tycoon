@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="512,512">
+  <displayList>
+    <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="14,352" size="256,82">
+      <Button title="Tile toggle"/>
+    </component>
+    <component id="n1_105vo" name="tile" src="105voq" fileName="components/Tile.xml" xy="14,59"/>
+  </displayList>
+</component>

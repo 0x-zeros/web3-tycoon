@@ -282,33 +282,57 @@ export class GridGround extends Component {
 
     /**
      * 处理地面点击
+     * 算法：将网格看作由多个BoxCollider组成，每个格子是一个Box
+     * 计算点击位置落在哪个Box中，返回该Box的中心位置和索引
      */
     private handleGroundClick(worldPos: Vec3, button: number = 0): void {
-        // 计算本地坐标（相对于网格中心）
+        // ========== 1. 计算点击的格子索引 ==========
+        // 把网格想象成多个BoxCollider组成的阵列
+        // 每个Box的大小是 step x step，中心在格子中央
+        
+        // 计算点击位置落在哪个格子（BoxCollider）中
+        // 注意：Math.floor 处理负数时的行为（-0.5 -> -1）
+        const gridX = Math.floor(worldPos.x / this.step);
+        const gridZ = Math.floor(worldPos.z / this.step);
+        
+        // 格子索引（BoxCollider的索引）
+        const gridIndex = { x: gridX, z: gridZ };
+        
+        // ========== 2. 计算该格子（BoxCollider）的中心位置 ==========
+        // 每个BoxCollider的中心位置计算：
+        // 左下角位置 + 半个格子大小
+        const boxCenterX = gridX * this.step + this.step * 0.5;
+        const boxCenterZ = gridZ * this.step + this.step * 0.5;
+        
+        // 对齐后的位置（BoxCollider的中心）
+        let snappedPos = new Vec3(boxCenterX, worldPos.y, boxCenterZ);
+        
+        // 如果禁用对齐，则使用原始点击位置
+        if (!this.enableSnapping) {
+            snappedPos = worldPos.clone();
+        }
+        
+        // ========== 3. 计算本地坐标（相对于网格中心） ==========
         const localPos = new Vec3(
             worldPos.x,
             worldPos.y - this.y,
             worldPos.z
         );
-
-        // 计算网格对齐坐标
-        let snappedPos = worldPos.clone();
-        let gridIndex = { x: 0, z: 0 };
         
-        if (this.enableSnapping) {
-            snappedPos = new Vec3(
-                Math.round(worldPos.x / this.step) * this.step,
-                worldPos.y,
-                Math.round(worldPos.z / this.step) * this.step
-            );
-            
-            gridIndex = {
-                x: Math.round(worldPos.x / this.step),
-                z: Math.round(worldPos.z / this.step)
-            };
+        // ========== 4. 调试输出 ==========
+        if (this.debugMode) {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('[GridGround] 点击检测 - BoxCollider计算');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log(`原始点击位置: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
+            console.log(`命中的格子索引: [${gridIndex.x}, ${gridIndex.z}]`);
+            console.log(`该格子的范围: X[${gridX * this.step}, ${(gridX + 1) * this.step}], Z[${gridZ * this.step}, ${(gridZ + 1) * this.step}]`);
+            console.log(`格子中心（对齐位置）: (${snappedPos.x.toFixed(2)}, ${snappedPos.y.toFixed(2)}, ${snappedPos.z.toFixed(2)})`);
+            console.log(`鼠标按键: ${button === 0 ? '左键' : button === 2 ? '右键' : '其他'}`);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         }
-
-        // 创建点击数据
+        
+        // ========== 5. 创建点击数据 ==========
         const clickData: GridClickData = {
             worldPosition: worldPos.clone(),
             localPosition: localPos.clone(),
@@ -317,13 +341,8 @@ export class GridGround extends Component {
             groundComponent: this,
             button: button
         };
-
-        // 调试输出
-        this.log(`Grid clicked at world: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
-        this.log(`Grid index: (${gridIndex.x}, ${gridIndex.z})`);
-        this.log(`Snapped to: (${snappedPos.x.toFixed(2)}, ${snappedPos.y.toFixed(2)}, ${snappedPos.z.toFixed(2)})`);
-
-        // 发送事件
+        
+        // ========== 6. 发送事件 ==========
         EventBus.emit(EventTypes.Game.GroundClicked, clickData);
     }
 

@@ -54,7 +54,76 @@ export class UIMapElement extends UIBase {
      * 设置默认值
      */
     private _setupDefaultValues(): void {
-
+        // 默认选中第一个地图元素
+        this._selectFirstElement();
+    }
+    
+    /**
+     * 选中默认地图元素 (minecraft:stone)
+     */
+    private _selectFirstElement(): void {
+        if (this.m_blockIds.length > 0) {
+            // 延迟一帧执行，确保列表已经渲染完成
+            this.scheduleOnce(() => {
+                this._selectElementById('minecraft:stone');
+            }, 0);
+        }
+    }
+    
+    /**
+     * 根据blockId选中地图元素
+     * @param blockId 方块ID
+     */
+    private _selectElementById(blockId: string): void {
+        const index = this.m_blockIds.indexOf(blockId);
+        if (index === -1) {
+            console.warn(`[UIMapElement] Block ID not found: ${blockId}, falling back to first element`);
+            // 如果找不到指定的blockId，回退到选中第一个元素
+            this._selectElementByIndex(0);
+            return;
+        }
+        
+        this._selectElementByIndex(index);
+    }
+    
+    /**
+     * 根据索引选中地图元素
+     * @param index 元素索引
+     */
+    private _selectElementByIndex(index: number): void {
+        if (index < 0 || index >= this.m_blockIds.length) {
+            console.warn(`[UIMapElement] Invalid index: ${index}`);
+            return;
+        }
+        
+        const blockId = this.m_blockIds[index];
+        const blockDefinition = VoxelSystem.getInstance().getBlockDefinition(blockId);
+        
+        if (!blockDefinition) {
+            console.warn(`[UIMapElement] Block definition not found for: ${blockId}`);
+            return;
+        }
+        
+        // 获取对应的tile对象
+        const tile = this.m_tiles.getChildAt(index) as GButton;
+        if (!tile) {
+            console.warn(`[UIMapElement] Tile not found at index: ${index}`);
+            return;
+        }
+        
+        // 获取tileIcon的spriteFrame
+        const tileIcon = tile.getChild("tileIcon") as fgui.GLoader;
+        const spriteFrame = tileIcon ? tileIcon.texture : null;
+        
+        // 发送选中事件，携带完整数据
+        EventBus.emit(EventTypes.UI.MapElementSelected, {
+            blockId: blockId,
+            blockName: blockDefinition.displayName,
+            spriteFrame: spriteFrame,
+            index: index
+        });
+        
+        console.log(`[UIMapElement] Default selected: ${blockDefinition.displayName} (${blockId})`);
     }
 
     /**

@@ -1,174 +1,74 @@
 /**
  * 地图组件
  * 
- * 负责单个地图的加载、渲染、玩家移动路径计算等核心功能
- * 作为单个地图的控制器，协调该地图内各个地块和玩家的交互
+ * 负责单个地图的加载、渲染、保存等核心功能
+ * 使用新的组件化架构管理MapTile和MapObject
  * 
  * @author Web3 Tycoon Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
-import { _decorator, Component, Node, Vec3, Camera, geometry, PhysicsSystem, resources, JsonAsset, instantiate, Prefab, tween, find, Color } from 'cc';
-import { MapData, MapTileData, TileType, PathResult } from '../types/MapTypes';
-import { PlayerData } from '../types/GameTypes';
-import { MapTile, TileInteractionResult } from './MapTile';
+import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color } from 'cc';
+import { MapTile } from './MapTile';
+import { MapObject } from './MapObject';
+import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData } from '../data/MapDataTypes';
 import { CameraController } from '../../camera/CameraController';
-import { MapManager } from '../MapManager';
 import { MapConfig } from '../MapManager';
-import { input } from 'cc';
-import { Input } from 'cc';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
-import { GridClickData } from '../GridGround';
-import { getWeb3BlockByBlockId, isWeb3Object } from '../../voxel/Web3BlockTypes';
+import { GridGround, GridClickData } from '../GridGround';
+import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile } from '../../voxel/Web3BlockTypes';
+import { Vec2 } from 'cc';
+import { sys } from 'cc';
 
 const { ccclass, property } = _decorator;
 
 /**
- * 地图加载配置接口
- */
-interface MapLoadConfig {
-    /** 地图数据文件路径 */
-    mapDataPath: string;
-    /** 地块预制件路径映射 */
-    tilePrefabPaths: { [key in TileType]: string };
-    /** 是否启用动画加载 */
-    enableLoadAnimation: boolean;
-    /** 加载动画持续时间 */
-    loadAnimationDuration: number;
-}
-
-/**
- * 玩家移动配置接口
- */
-interface PlayerMovementConfig {
-    /** 移动速度（单位/秒） */
-    moveSpeed: number;
-    /** 移动动画类型 */
-    animationType: 'linear' | 'smooth' | 'bounce';
-    /** 是否显示移动路径 */
-    showMovePath: boolean;
-    /** 路径高亮颜色 */
-    pathHighlightColor: string;
-}
-
-/**
- * 摄像机控制配置接口
- */
-interface CameraControlConfig {
-    /** 是否启用摄像机控制 */
-    enableCameraControl: boolean;
-    /** 缩放范围 */
-    zoomRange: { min: number; max: number };
-    /** 旋转范围 */
-    rotationRange: { min: number; max: number };
-    /** 移动边界 */
-    moveBounds: { x: number; z: number };
-    /** 控制敏感度 */
-    sensitivity: number;
-}
-
-/**
  * 地图组件主类
- * 继承自Cocos Creator Component，可挂载到场景节点
+ * 使用组件化架构管理地块和物体
  */
 @ccclass('GameMap')
 export class GameMap extends Component {
 
-    //常量，所有地图数据文件都放在这个目录下
-    private MAP_DATA_DIR = 'data/maps/';
+    // 常量定义
+    private readonly MAP_DATA_DIR = 'data/maps/';
+    private readonly DEFAULT_MAP_ID = 'default_map';
     
     // ========================= 编辑器属性 =========================
     
-    @property({ displayName: "地图数据文件", tooltip: "JSON格式的地图数据文件路径" })
-    public mapDataPath: string = this.MAP_DATA_DIR + 'test_map';
+    @property({ displayName: "地图ID", tooltip: "地图的唯一标识符" })
+    public mapId: string = 'default_map';
     
     @property({ displayName: "地块容器节点", type: Node, tooltip: "用于放置所有地块的父节点" })
     public tilesContainer: Node | null = null;
     
+    @property({ displayName: "物体容器节点", type: Node, tooltip: "用于放置所有物体的父节点" })
+    public objectsContainer: Node | null = null;
+    
     @property({ displayName: "主摄像机", type: Camera, tooltip: "场景主摄像机" })
     public mainCamera: Camera | null = null;
     
-    @property({ displayName: "启用鼠标控制", tooltip: "是否启用鼠标点击和拖拽控制" })
-    public enableMouseControl: boolean = true;
+    @property({ displayName: "启用编辑模式", tooltip: "是否启用编辑模式" })
+    public enableEditMode: boolean = false;
     
-    @property({ displayName: "移动速度", tooltip: "玩家移动动画速度" })
-    public playerMoveSpeed: number = 3.0;
-    
-    @property({ displayName: "启用调试模式", tooltip: "显示调试信息和辅助线" })
+    @property({ displayName: "启用调试模式", tooltip: "显示调试信息" })
     public debugMode: boolean = false;
-    
-    // ========================= 地块预制件引用 =========================
-    
-    @property({ displayName: "起点地块预制件", type: Prefab })
-    public startTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "地产地块预制件", type: Prefab })
-    public propertyTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "机会地块预制件", type: Prefab })
-    public chanceTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "空白地块预制件", type: Prefab })
-    public emptyTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "监狱地块预制件", type: Prefab })
-    public jailTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "费用地块预制件", type: Prefab })
-    public feeTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "奖励地块预制件", type: Prefab })
-    public bonusTilePrefab: Prefab | null = null;
-    
-    @property({ displayName: "卡片站预制件", type: Prefab })
-    public cardStationTilePrefab: Prefab | null = null;
     
     // ========================= 私有属性 =========================
     
-    /** 当前地图数据 */
-    private _mapData: MapData | null = null;
+    /** 地块数组 (y=0层) */
+    private _tiles: MapTile[] = [];
     
-    /** 地块实例映射表 */
-    private _tileInstances: Map<number, MapTile> = new Map();
+    /** 物体数组 (y=1层) */
+    private _objects: MapObject[] = [];
     
-    /** 地块节点映射表 */
-    private _tileNodes: Map<number, Node> = new Map();
+    /** 地块索引 (格式: "x_z") */
+    private _tileIndex: Map<string, MapTile> = new Map();
     
-    /** 路径缓存 */
-    private _pathCache: Map<string, PathResult> = new Map();
+    /** 物体索引 (格式: "x_z") */
+    private _objectIndex: Map<string, MapObject> = new Map();
     
-    /** 是否已初始化 */
-    private _isInitialized: boolean = false;
-    
-    /** 当前选中的地块 */
-    private _selectedTile: MapTile | null = null;
-    
-    /** 移动配置 */
-    private _moveConfig: PlayerMovementConfig = {
-        moveSpeed: 3.0,
-        animationType: 'smooth',
-        showMovePath: true,
-        pathHighlightColor: '#ffff00'
-    };
-    
-    /** 摄像机控制配置 */
-    private _cameraConfig: CameraControlConfig = {
-        enableCameraControl: true,
-        zoomRange: { min: 2, max: 10 },
-        rotationRange: { min: 0, max: 360 },
-        moveBounds: { x: 20, z: 20 },
-        sensitivity: 1.0
-    };
-    
-    /** 鼠标控制状态 */
-    private _mouseControlState = {
-        isDragging: false,
-        lastMousePos: Vec3.ZERO.clone(),
-        dragStartPos: Vec3.ZERO.clone()
-    };
-
     /** 地图配置 */
     private _mapConfig: MapConfig | null = null;
     
@@ -178,28 +78,25 @@ export class GameMap extends Component {
     /** 体素系统 */
     private _voxelSystem: VoxelSystem | null = null;
     
-    /** 存储已放置的方块 */
-    private _placedBlocks: Map<string, Node> = new Map();
-    
     /** 当前选中的方块ID */
     private _currentSelectedBlockId: string | null = null;
+    
+    /** 是否已初始化 */
+    private _isInitialized: boolean = false;
+    
+    /** 地图数据（用于保存） */
+    private _mapSaveData: MapSaveData | null = null;
     
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
-        // onLoad 中不再自动初始化，等待外部调用 init
         console.log('[GameMap] Component loaded, waiting for init()');
-    }
-    
-    protected start(): void {
-        // start 中也不自动初始化
-        // 初始化将通过 init 方法由外部控制
     }
     
     protected onDestroy(): void {
         this.cleanup();
     }
-
+    
     // ========================= 公共初始化方法 =========================
     
     /**
@@ -213,30 +110,63 @@ export class GameMap extends Component {
         // 保存配置
         this._mapConfig = config;
         this._isEditMode = isEdit;
+        this.enableEditMode = isEdit;
+        this.mapId = config.id || this.DEFAULT_MAP_ID;
         
-        // 从 config 获取地图数据路径
-        // 优先使用 mapDataPath，其次使用 prefabPath，最后使用默认值
-        if (config.mapDataPath) {
-            this.mapDataPath = config.mapDataPath;
-        } else if (config.prefabPath) {
-            this.mapDataPath = this.MAP_DATA_DIR + config.id;
+        // 创建容器节点
+        this.ensureContainers();
+        
+        // 获取摄像机（必须在创建网格之前）
+        this.findMainCamera();
+        
+        // 编辑模式初始化
+        if (isEdit) {
+            // 先初始化体素系统
+            await this.initializeVoxelSystem();
+            // 再创建网格（需要相机已经初始化）
+            this.createEditModeGrid();
         }
         
-        // 自动创建 tilesContainer
+        // 尝试加载已保存的地图数据
+        const loaded = await this.loadMap(this.mapId);
+        if (!loaded && isEdit) {
+            // 如果没有保存的地图，创建空地图
+            this.createEmptyMap();
+        }
+        
+        this._isInitialized = true;
+        console.log('[GameMap] Initialization completed');
+    }
+    
+    /**
+     * 确保容器节点存在
+     */
+    private ensureContainers(): void {
+        // 创建地块容器
         if (!this.tilesContainer) {
             this.tilesContainer = new Node('TilesContainer');
             this.node.addChild(this.tilesContainer);
             console.log('[GameMap] Created TilesContainer');
         }
         
-        // 自动获取主摄像机
+        // 创建物体容器
+        if (!this.objectsContainer) {
+            this.objectsContainer = new Node('ObjectsContainer');
+            this.node.addChild(this.objectsContainer);
+            console.log('[GameMap] Created ObjectsContainer');
+        }
+    }
+    
+    /**
+     * 查找主摄像机
+     */
+    private findMainCamera(): void {
         if (!this.mainCamera) {
             const cameraNode = find('Main Camera');
             if (cameraNode) {
                 this.mainCamera = cameraNode.getComponent(Camera);
                 console.log('[GameMap] Found Main Camera');
             } else {
-                // 尝试从 CameraController 获取
                 this.mainCamera = CameraController.getMainCamera();
                 if (this.mainCamera) {
                     console.log('[GameMap] Got camera from CameraController');
@@ -245,26 +175,6 @@ export class GameMap extends Component {
                 }
             }
         }
-        
-        // 编辑模式下创建网格地面和初始化体素系统
-        if (isEdit) {
-            this.createEditModeGrid();
-            await this.initializeVoxelSystem();
-        }
-        
-        // 初始化组件
-        this.initializeComponents();
-        this.setupMouseEvents();
-        
-        // 初始化地图数据
-        await this.initializeMap();
-    }
-    
-    /**
-     * 获取当前是否为编辑模式
-     */
-    public get isEditMode(): boolean {
-        return this._isEditMode;
     }
     
     /**
@@ -290,10 +200,64 @@ export class GameMap extends Component {
     }
     
     /**
+     * 创建编辑模式网格
+     */
+    private createEditModeGrid(): void {
+        // 创建网格地面节点
+        const gridNode = new Node('GridGround');
+        gridNode.setParent(this.node);
+        
+        // 添加GridGround组件
+        const gridGround = gridNode.addComponent(GridGround);
+        
+        // 配置网格参数
+        gridGround.step = 1;
+        gridGround.halfSize = 50;
+        gridGround.color = new Color(130, 130, 130, 255);
+        gridGround.y = 0;
+        gridGround.enableClickDetection = true;
+        gridGround.enableSnapping = true;
+        gridGround.debugMode = this.debugMode;
+        gridGround.cam = this.mainCamera;
+        
+        // 手动调用初始化（如果组件还没有start）
+        if (this.mainCamera) {
+            gridGround.createWithConfig({
+                step: 1,
+                halfSize: 50,
+                color: new Color(130, 130, 130, 255),
+                y: 0,
+                enableClickDetection: true,
+                camera: this.mainCamera
+            });
+        }
+        
+        console.log('[GameMap] Edit mode grid created with GridGround component');
+    }
+    
+    /**
+     * 创建空地图
+     */
+    private createEmptyMap(): void {
+        this._mapSaveData = {
+            mapId: this.mapId,
+            mapName: `Map ${this.mapId}`,
+            version: '1.0.0',
+            createTime: Date.now(),
+            updateTime: Date.now(),
+            gameMode: 'edit',
+            tiles: [],
+            objects: []
+        };
+        console.log('[GameMap] Created empty map');
+    }
+    
+    // ========================= 地块/物体管理 =========================
+    
+    /**
      * 处理方块选中事件
      */
     private onMapElementSelected(data: any): void {
-        // 保存当前选中的方块ID
         this._currentSelectedBlockId = data.blockId || null;
         console.log(`[GameMap] Selected block: ${this._currentSelectedBlockId}`);
     }
@@ -305,859 +269,431 @@ export class GameMap extends Component {
         if (!this._isEditMode || !this._voxelSystem) return;
         
         const position = data.snappedPosition.clone();
-        console.log(`[GameMap] Ground clicked at (${position.x}, ${position.y}, ${position.z}), button: ${data.button}`);
-        
-        // 根据方块类型决定高度
-        if (this._currentSelectedBlockId) {
-            const web3Block = getWeb3BlockByBlockId(this._currentSelectedBlockId);
-            if (web3Block && web3Block.category === 'object') {
-                position.y = 1; // 物体类型放在 y=1
-                console.log(`[GameMap] Placing object at y=1: ${this._currentSelectedBlockId}`);
-            } else {
-                position.y = 0; // 地块类型放在 y=0
-                console.log(`[GameMap] Placing tile at y=0: ${this._currentSelectedBlockId}`);
-            }
-        } else {
-            position.y = 0; // 默认y=0
-        }
-        
-        const posKey = `${position.x}_${position.y}_${position.z}`;
+        const gridPos = new Vec2(Math.floor(position.x), Math.floor(position.z));
         
         if (data.button === 0) {
             // 左键：放置方块
             if (!this._currentSelectedBlockId) {
-                console.log('[GameMap] No block selected for placement');
+                console.warn('[GameMap] No block selected');
                 return;
             }
-            console.log(`[GameMap] Attempting to place block with key: ${posKey}`);
-            await this.placeBlock(this._currentSelectedBlockId, position, posKey);
+            
+            // 根据方块类型决定放置高度
+            const blockInfo = getWeb3BlockByBlockId(this._currentSelectedBlockId);
+            if (!blockInfo) {
+                console.warn(`[GameMap] Unknown block: ${this._currentSelectedBlockId}`);
+                return;
+            }
+            
+            const typeId = blockInfo.typeId as number;
+            if (isWeb3Tile(typeId)) {
+                // 地块类型，放置在y=0
+                await this.placeTileAt(this._currentSelectedBlockId, gridPos);
+            } else if (isWeb3Object(typeId)) {
+                // 物体类型，放置在y=1
+                await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
+            }
+            
         } else if (data.button === 2) {
-            // 右键：删除方块（需要检测两个高度）
-            console.log(`[GameMap] Attempting to remove block at position: (${data.snappedPosition.x}, *, ${data.snappedPosition.z})`);
-            this.removeBlockAtPosition(data.snappedPosition);
-            
-            // 打印当前所有已放置的方块
-            console.log('[GameMap] Current placed blocks:');
-            this._placedBlocks.forEach((block, key) => {
-                console.log(`  - ${key}`);
-            });
+            // 右键：删除方块
+            this.removeElementAt(gridPos);
         }
     }
     
     /**
-     * 放置方块
+     * 在指定位置放置地块
      */
-    private async placeBlock(blockId: string, position: Vec3, posKey: string): Promise<void> {
-        // 如果该位置已有方块，先删除
-        if (this._placedBlocks.has(posKey)) {
-            this.removeBlock(posKey);
+    private async placeTileAt(blockId: string, gridPos: Vec2): Promise<void> {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        
+        // 如果该位置已有地块，先移除
+        const existingTile = this._tileIndex.get(key);
+        if (existingTile) {
+            this.removeTile(existingTile);
         }
         
-        // 如果是放置物体（y=1），检查并清除同位置的其他物体
-        // 如果是放置地块（y=0），检查并清除同位置的其他地块
-        const web3Block = getWeb3BlockByBlockId(blockId);
-        if (web3Block) {
-            if (web3Block.category === 'object') {
-                // 放置物体时，只替换同层的物体
-                const sameLayerKey = `${position.x}_1_${position.z}`;
-                if (this._placedBlocks.has(sameLayerKey) && sameLayerKey !== posKey) {
-                    this.removeBlock(sameLayerKey);
-                }
-            } else {
-                // 放置地块时，只替换同层的地块
-                const sameLayerKey = `${position.x}_0_${position.z}`;
-                if (this._placedBlocks.has(sameLayerKey) && sameLayerKey !== posKey) {
-                    this.removeBlock(sameLayerKey);
-                }
-            }
-        }
-        
-        try {
-            // 创建新方块
-            const blockNode = await this._voxelSystem!.createBlockNode(
-                this.tilesContainer || this.node,
-                blockId,
-                position
-            );
-            
-            if (blockNode) {
-                this._placedBlocks.set(posKey, blockNode);
-                console.log(`[GameMap] Placed block ${blockId} at ${posKey} (y=${position.y})`);
-            }
-        } catch (error) {
-            console.error(`[GameMap] Failed to place block: ${error}`);
-        }
-    }
-    
-    /**
-     * 删除方块
-     */
-    private removeBlock(posKey: string): void {
-        const block = this._placedBlocks.get(posKey);
-        if (block && block.isValid) {
-            block.destroy();
-            this._placedBlocks.delete(posKey);
-            console.log(`[GameMap] Removed block at ${posKey}`);
-        } else {
-            console.log(`[GameMap] No block found at ${posKey}`);
-        }
-    }
-    
-    /**
-     * 在指定位置删除方块（检查两个高度）
-     */
-    private removeBlockAtPosition(basePosition: Vec3): void {
-        let removed = false;
-        
-        // 优先检查 y=1 的物体（上层）
-        const objectKey = `${basePosition.x}_1_${basePosition.z}`;
-        if (this._placedBlocks.has(objectKey)) {
-            this.removeBlock(objectKey);
-            console.log(`[GameMap] Removed object at y=1: ${objectKey}`);
-            removed = true;
-        }
-        
-        // 如果没有删除上层物体，再检查 y=0 的地块（下层）
-        if (!removed) {
-            const tileKey = `${basePosition.x}_0_${basePosition.z}`;
-            if (this._placedBlocks.has(tileKey)) {
-                this.removeBlock(tileKey);
-                console.log(`[GameMap] Removed tile at y=0: ${tileKey}`);
-            } else {
-                console.log(`[GameMap] No block found at position (${basePosition.x}, *, ${basePosition.z})`);
-            }
-        }
-    }
-    
-    /**
-     * 创建编辑模式的网格地面
-     */
-    private createEditModeGrid(): void {
-        console.log('[GameMap] Creating edit mode grid ground');
-        
-        // 调用 MapManager 的封装方法
-        const mapManager = MapManager.getInstance();
-        if (mapManager) {
-            const gridGround = mapManager.createGridGround({
-                step: 1,
-                halfSize: 30,
-                color: new Color(100, 100, 100, 255),
-                y: 0,
-                enableClickDetection: true
-            });
-            
-            // 添加到当前地图节点
-            this.node.addChild(gridGround);
-            console.log('[GameMap] Edit mode grid ground created and added');
-        } else {
-            console.error('[GameMap] MapManager not found, cannot create grid ground');
-        }
-    }
-    
-    // ========================= 初始化方法 =========================
-    
-    /**
-     * 初始化组件
-     */
-    private initializeComponents(): void {
-        // 创建地块容器（如果不存在）
-        if (!this.tilesContainer) {
-            this.tilesContainer = new Node('TilesContainer');
-            this.tilesContainer.setParent(this.node);
-        }
-        
-        // 获取主摄像机（通过CameraController统一管理）
-        if (!this.mainCamera) {
-            this.mainCamera = CameraController.getMainCamera();
-      
-            if (!this.mainCamera) {
-                console.error('[GameMap] 无法通过CameraController获取主摄像机，请确保CameraController已正确初始化');
-            }
-        }
-        
-        // 更新移动配置
-        this._moveConfig.moveSpeed = this.playerMoveSpeed;
-        
-        console.log('[Map] 组件初始化完成');
-    }
-    
-    /**
-     * 设置鼠标事件
-     */
-    private setupMouseEvents(): void {
-        if (!this.enableMouseControl) {
-            return;
-        }
-        
-
-        // TODO: 根据Cocos Creator版本调整事件处理方式
-        // 这里需要在Canvas或者其他合适的节点上监听全局鼠标事件
-        
-        //bug
-        // this.node.on(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        // this.node.on(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
-        // this.node.on(Node.EventType.MOUSE_UP, this.onMouseUp, this);
-        // this.node.on(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
-
-        //如果你要在 3D Node 上做点击交互，要走 射线检测（Raycast），而不是直接监听 Node 的鼠标事件。
-        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-    }
-    
-    /**
-     * 初始化地图
-     */
-    private async initializeMap(): Promise<void> {
-        try {
-            console.log('[Map] 开始加载地图...');
-            
-            // 加载地图数据
-            await this.loadMapData();
-            
-            // 创建地块（同步）
-            this.createTiles();//todo
-            
-            // 设置摄像机位置
-            this.setupCamera();
-            
-            // 缓存路径
-            this.buildPathCache();
-            
-            this._isInitialized = true;
-            
-            console.log('[Map] 地图初始化完成');
-            
-            // 触发地图加载完成事件
-            this.node.emit('map-loaded', { mapData: this._mapData });
-            
-        } catch (error) {
-            console.error('[Map] 地图初始化失败:', error);
-            this.node.emit('map-load-error', { error });
-        }
-    }
-    
-    /**
-     * 加载地图数据
-     */
-    private async loadMapData(): Promise<void> {
-        return new Promise((resolve, reject) => {
-
-            //resources.load 只能加载在resources目录下的资源，所以需要把data/maps/test_map.json 放到resources目录下
-            resources.load(this.mapDataPath, JsonAsset, (err, jsonAsset) => {
-                if (err) {
-                    console.error('[Map] 加载地图数据失败:', err);
-                    reject(err);
-                    return;
-                }
-                
-                try {
-                    this._mapData = jsonAsset.json as MapData;
-                    console.log('[Map] 地图数据加载成功:', this._mapData.metadata.name);
-                    resolve();
-                } catch (parseError) {
-                    console.error('[Map] 解析地图数据失败:', parseError);
-                    reject(parseError);
-                }
-            });
-        });
-    }
-    
-    /**
-     * 创建所有地块
-     */
-    private createTiles(): void {
-        if (!this._mapData || !this.tilesContainer) {
-            throw new Error('地图数据或容器节点不存在');
-        }
-        
-        for (const tileData of this._mapData.tiles) {
-            this.createSingleTile(tileData);
-        }
-        
-        console.log(`[Map] 创建了 ${this._tileInstances.size} 个地块`);
-    }
-    
-    /**
-     * 创建单个地块
-     */
-    private createSingleTile(tileData: MapTileData): void {
-        //console.log(`[Map] 创建地块: ${tileData.name} (${JSON.stringify(tileData)})`);
-
-        const prefab = this.getTilePrefab(tileData.type);
-        if (!prefab) {
-            console.error(`[Map] 找不到地块类型 ${tileData.type} 的预制件`);
-            return;
-        }
-        
-        // 实例化预制件
-        const tileNode = instantiate(prefab);
-        tileNode.name = `Tile_${tileData.id}_${tileData.name}`;
+        // 创建新地块节点
+        const tileNode = new Node(`Tile_${gridPos.x}_${gridPos.y}`);
         tileNode.setParent(this.tilesContainer!);
         
-        // 获取MapTile组件
-        const tileComponent = tileNode.getComponent(MapTile);
-        if (!tileComponent) {
-            console.error(`[Map] 地块预制件 ${tileData.type} 缺少MapTile组件`);
-            tileNode.destroy();
+        // 添加MapTile组件
+        const tile = tileNode.addComponent(MapTile);
+        await tile.initialize(blockId, gridPos);
+        
+        // 添加到管理数组和索引
+        this._tiles.push(tile);
+        this._tileIndex.set(key, tile);
+        
+        console.log(`[GameMap] Placed tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+    }
+    
+    /**
+     * 在指定位置放置物体
+     */
+    private async placeObjectAt(blockId: string, gridPos: Vec2): Promise<void> {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        
+        // 如果该位置已有物体，先移除
+        const existingObject = this._objectIndex.get(key);
+        if (existingObject) {
+            this.removeObject(existingObject);
+        }
+        
+        // 创建新物体节点
+        const objectNode = new Node(`Object_${gridPos.x}_${gridPos.y}`);
+        objectNode.setParent(this.objectsContainer!);
+        
+        // 添加MapObject组件
+        const object = objectNode.addComponent('MapObject') as MapObject;
+        await object.initialize(blockId, gridPos);
+        
+        // 添加到管理数组和索引
+        this._objects.push(object);
+        this._objectIndex.set(key, object);
+        
+        console.log(`[GameMap] Placed object ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+    }
+    
+    /**
+     * 移除指定位置的元素（优先移除物体）
+     */
+    private removeElementAt(gridPos: Vec2): void {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        
+        // 优先检查并移除物体（y=1层）
+        const object = this._objectIndex.get(key);
+        if (object) {
+            this.removeObject(object);
+            console.log(`[GameMap] Removed object at (${gridPos.x}, ${gridPos.y})`);
             return;
         }
         
-        // 初始化地块数据
-        tileComponent.initializeTile(tileData);
-        
-        // 监听地块事件
-        tileNode.on('game-event', this.onTileEvent, this);
-        
-        // 保存引用
-        this._tileInstances.set(tileData.id, tileComponent);
-        this._tileNodes.set(tileData.id, tileNode);
-        
-        if (this.debugMode) {
-            console.log(`[Map] 创建地块: ${tileData.name} (${tileData.type})`);
-        }
-    }
-    
-    /**
-     * 获取地块类型对应的预制件
-     */
-    private getTilePrefab(tileType: TileType): Prefab | null {
-        switch (tileType) {
-            case TileType.START:
-                return this.startTilePrefab;
-            case TileType.PROPERTY:
-                return this.propertyTilePrefab;
-            case TileType.CHANCE:
-                return this.chanceTilePrefab;
-            case TileType.EMPTY:
-                return this.emptyTilePrefab;
-            case TileType.JAIL:
-                return this.jailTilePrefab;
-            case TileType.TAX:
-                return this.feeTilePrefab;
-            case TileType.FREE_PARKING:
-                return this.bonusTilePrefab;
-            case TileType.CARD_STATION:
-                return this.cardStationTilePrefab;
-            default:
-                console.warn(`[Map] 未支持的地块类型: ${tileType}`);
-                return this.emptyTilePrefab; // 默认使用空白地块
-        }
-    }
-    
-    /**
-     * 设置摄像机
-     */
-    private setupCamera(): void {
-        if (!this.mainCamera || !this._mapData) {
+        // 然后检查并移除地块（y=0层）
+        const tile = this._tileIndex.get(key);
+        if (tile) {
+            this.removeTile(tile);
+            console.log(`[GameMap] Removed tile at (${gridPos.x}, ${gridPos.y})`);
             return;
         }
         
-        // 如果地图数据中有摄像机配置，使用配置的位置
-        if (this._mapData.sceneConfig?.cameraPosition) {
-            // this.mainCamera.node.setPosition(this._mapData.cameraConfig.defaultPosition);
-
-            //defaultRotation
-            // this.mainCamera.node.setRotationFromEuler(45, 0, 0);
-        } else {
-            // 否则计算地图中心位置
-            const center = this.calculateMapCenter();
-            // this.mainCamera.node.setPosition(center.x, 8, center.z + 5); // 45度俯视角度
-            // this.mainCamera.node.setRotationFromEuler(45, 0, 0);
-        }
-        
-        console.log('[Map] 摄像机设置完成');
+        console.log(`[GameMap] No element found at (${gridPos.x}, ${gridPos.y})`);
     }
     
     /**
-     * 计算地图中心位置
+     * 移除地块
      */
-    private calculateMapCenter(): Vec3 {
-        if (!this._mapData || this._mapData.tiles.length === 0) {
-            return Vec3.ZERO;
+    private removeTile(tile: MapTile): void {
+        const gridPos = tile.getGridPosition();
+        const key = `${gridPos.x}_${gridPos.y}`;
+        
+        // 从索引中移除
+        this._tileIndex.delete(key);
+        
+        // 从数组中移除
+        const index = this._tiles.indexOf(tile);
+        if (index >= 0) {
+            this._tiles.splice(index, 1);
         }
         
-        let minX = Infinity, maxX = -Infinity;
-        let minZ = Infinity, maxZ = -Infinity;
-        
-        for (const tile of this._mapData.tiles) {
-            minX = Math.min(minX, tile.position.x);
-            maxX = Math.max(maxX, tile.position.x);
-            minZ = Math.min(minZ, tile.position.z);
-            maxZ = Math.max(maxZ, tile.position.z);
+        // 销毁节点
+        if (tile.node && tile.node.isValid) {
+            tile.node.destroy();
         }
-        
-        return new Vec3(
-            (minX + maxX) / 2,
-            0,
-            (minZ + maxZ) / 2
-        );
     }
     
     /**
-     * 构建路径缓存
+     * 移除物体
      */
-    private buildPathCache(): void {
-        if (!this._mapData) {
-            return;
+    private removeObject(object: MapObject): void {
+        const gridPos = object.getGridPosition();
+        const key = `${gridPos.x}_${gridPos.y}`;
+        
+        // 从索引中移除
+        this._objectIndex.delete(key);
+        
+        // 从数组中移除
+        const index = this._objects.indexOf(object);
+        if (index >= 0) {
+            this._objects.splice(index, 1);
         }
         
-        console.log('[Map] 开始构建路径缓存...');
-        
-        // 为常用路径组合建立缓存
-        // 这里可以预计算一些常用的路径，提高运行时性能
-        const tileIds = this._mapData.tiles.map(t => t.id);
-        
-        // 缓存相邻地块的路径（距离为1-6步的路径）
-        for (let i = 0; i < tileIds.length; i++) {
-            const fromId = tileIds[i];
-            for (let steps = 1; steps <= 6; steps++) {
-                const path = this.calculateMovePath(fromId, steps);
-                const cacheKey = `${fromId}-${steps}`;
-                this._pathCache.set(cacheKey, path);
-            }
-        }
-        
-        console.log(`[Map] 路径缓存构建完成，缓存了 ${this._pathCache.size} 条路径`);
+        // 销毁节点
+        object.destroyObject();
     }
     
-    // ========================= 公共接口方法 =========================
+    // ========================= 保存/加载 =========================
     
     /**
-     * 获取地块实例
-     * @param tileId 地块ID
+     * 保存地图
      */
-    public getTile(tileId: number): MapTile | null {
-        return this._tileInstances.get(tileId) || null;
-    }
-    
-    /**
-     * 获取地块节点
-     * @param tileId 地块ID
-     */
-    public getTileNode(tileId: number): Node | null {
-        return this._tileNodes.get(tileId) || null;
-    }
-    
-    /**
-     * 获取起点地块
-     */
-    public getStartTile(): MapTile | null {
-        if (!this._mapData) {
-            return null;
-        }
-        
-        return this.getTile(0); // 假设起点地块ID为0
-    }
-    
-    /**
-     * 计算玩家移动路径
-     * @param fromTileId 起始地块ID
-     * @param steps 移动步数
-     */
-    public calculateMovePath(fromTileId: number, steps: number): PathResult {
-        const cacheKey = `${fromTileId}-${steps}`;
-        
-        // 检查缓存
-        if (this._pathCache.has(cacheKey)) {
-            return this._pathCache.get(cacheKey)!;
-        }
-        
-        // 计算路径
-        const path = this.computeMovePath(fromTileId, steps);
-        
-        // 缓存结果
-        this._pathCache.set(cacheKey, path);
-        
-        return path;
-    }
-    
-    /**
-     * 实际计算移动路径的逻辑
-     */
-    private computeMovePath(fromTileId: number, steps: number): PathResult {
-        if (!this._mapData) {
-            return { tileIds: [], totalDistance: 0, isValid: false };
-        }
-        
-        const tileIds: number[] = [fromTileId];
-        let currentTileId = fromTileId;
-        let remainingSteps = steps;
-        
-        while (remainingSteps > 0) {
-            // 简单的循环路径计算（假设是20个地块的环形地图）
-            const nextTileId = (currentTileId + 1) % this._mapData.tiles.length;
-            tileIds.push(nextTileId);
-            currentTileId = nextTileId;
-            remainingSteps--;
-        }
-        
-        return {
-            tileIds: tileIds.slice(1), // 移除起点
-            totalDistance: steps,
-            isValid: true
-        };
-    }
-    
-    /**
-     * 玩家移动到指定地块
-     * @param player 玩家数据
-     * @param targetTileId 目标地块ID
-     * @param animated 是否播放移动动画
-     */
-    public async movePlayerToTile(player: PlayerData, targetTileId: number, animated: boolean = true): Promise<TileInteractionResult> {
-        const targetTile = this.getTile(targetTileId);
-        if (!targetTile) {
-            console.error(`[Map] 目标地块不存在: ${targetTileId}`);
-            return {
-                success: false,
-                message: '目标地块不存在',
-                events: []
+    public async saveMap(options?: MapSaveOptions): Promise<boolean> {
+        try {
+            // 收集地块数据
+            const tilesData: TileData[] = this._tiles.map(tile => tile.getData());
+            
+            // 收集物体数据
+            const objectsData: ObjectData[] = this._objects.map(obj => obj.getData());
+            
+            // 构建保存数据
+            const saveData: MapSaveData = {
+                mapId: this.mapId,
+                mapName: this._mapConfig?.name || `Map ${this.mapId}`,
+                version: '1.0.0',
+                createTime: this._mapSaveData?.createTime || Date.now(),
+                updateTime: Date.now(),
+                gameMode: this._isEditMode ? 'edit' : 'play',
+                tiles: tilesData,
+                objects: objectsData
             };
+            
+            // 添加游戏规则（如果需要）
+            if (options?.includeGameRules && this._mapConfig) {
+                saveData.gameRules = {
+                    startingMoney: 10000,
+                    passingBonus: 200,
+                    landingBonus: 400,
+                    maxPlayers: 4,
+                    minPlayers: 2
+                };
+            }
+            
+            // 保存到本地存储（Web平台）或文件系统（原生平台）
+            const saveKey = `map_${this.mapId}`;
+            const jsonStr = JSON.stringify(saveData, null, options?.compress ? 0 : 2);
+            
+            if (sys.isBrowser) {
+                // Web平台：保存到localStorage
+                localStorage.setItem(saveKey, jsonStr);
+                console.log(`[GameMap] Map saved to localStorage: ${saveKey}`);
+            } else {
+                // 原生平台：保存到文件
+                // TODO: 实现文件保存
+                console.log(`[GameMap] Map save to file not implemented yet`);
+            }
+            
+            // 更新内部数据
+            this._mapSaveData = saveData;
+            
+            console.log(`[GameMap] Map saved successfully with ${tilesData.length} tiles and ${objectsData.length} objects`);
+            return true;
+            
+        } catch (error) {
+            console.error('[GameMap] Failed to save map:', error);
+            return false;
         }
-        
-        // 从当前地块离开
-        const currentTile = this.getTile(player.currentTileId);
-        if (currentTile) {
-            currentTile.playerLeave(player);
-        }
-        
-        // 播放移动动画（如果启用）
-        if (animated && player.pieceNode) {
-            await this.playMoveAnimation(player.pieceNode, targetTile.getWorldPosition());
-        }
-        
-        // 到达新地块
-        const result = await targetTile.playerLandOn(player);
-        
-        console.log(`[Map] 玩家 ${player.nickname} 移动到地块 ${targetTile.getTileInfo().name}`);
-        
-        return result;
     }
     
     /**
-     * 沿路径移动玩家
-     * @param player 玩家数据
-     * @param path 移动路径
+     * 加载地图
      */
-    public async movePlayerAlongPath(player: PlayerData, path: PathResult): Promise<TileInteractionResult[]> {
-        if (!path.isValid || path.tileIds.length === 0) {
-            return [];
-        }
-        
-        const results: TileInteractionResult[] = [];
-        
-        // 依次经过路径上的每个地块
-        for (let i = 0; i < path.tileIds.length; i++) {
-            const tileId = path.tileIds[i];
-            const tile = this.getTile(tileId);
+    public async loadMap(mapId: string, options?: MapLoadOptions): Promise<boolean> {
+        try {
+            let mapData: MapSaveData | null = null;
             
-            if (!tile) {
-                console.error(`[Map] 路径上的地块不存在: ${tileId}`);
-                continue;
-            }
-            
-            const isLastTile = i === path.tileIds.length - 1;
-            
-            if (isLastTile) {
-                // 最后一个地块：停留
-                const result = await this.movePlayerToTile(player, tileId, true);
-                results.push(result);
-            } else {
-                // 中间地块：经过
-                const result = await tile.playerPassThrough(player);
-                results.push(result);
-                
-                // 播放经过动画
-                if (player.pieceNode) {
-                    await this.playMoveAnimation(player.pieceNode, tile.getWorldPosition(), 0.3);
+            // 尝试从本地存储加载（Web平台）
+            if (sys.isBrowser) {
+                const saveKey = `map_${mapId}`;
+                const jsonStr = localStorage.getItem(saveKey);
+                if (jsonStr) {
+                    mapData = JSON.parse(jsonStr);
+                    console.log(`[GameMap] Map loaded from localStorage: ${saveKey}`);
                 }
             }
-        }
-        
-        return results;
-    }
-    
-    /**
-     * 播放移动动画
-     * @param pieceNode 棋子节点
-     * @param targetPosition 目标位置
-     * @param duration 动画时长
-     */
-    private async playMoveAnimation(pieceNode: Node, targetPosition: Vec3, duration?: number): Promise<void> {
-        return new Promise((resolve) => {
-            const animDuration = duration || (1.0 / this._moveConfig.moveSpeed);
             
-            tween(pieceNode)
-                .to(animDuration, { position: targetPosition })
-                .call(() => {
-                    resolve();
-                })
-                .start();
-        });
+            // 如果本地没有，尝试从资源加载
+            if (!mapData) {
+                const resourcePath = `${this.MAP_DATA_DIR}${mapId}`;
+                try {
+                    const jsonAsset = await new Promise<JsonAsset>((resolve, reject) => {
+                        resources.load(resourcePath, JsonAsset, (err, asset) => {
+                            if (err) reject(err);
+                            else resolve(asset);
+                        });
+                    });
+                    mapData = jsonAsset.json as MapSaveData;
+                    console.log(`[GameMap] Map loaded from resources: ${resourcePath}`);
+                } catch (err) {
+                    console.log(`[GameMap] No saved map found for: ${mapId}`);
+                    return false;
+                }
+            }
+            
+            if (!mapData) {
+                return false;
+            }
+            
+            // 清空现有地图（如果需要）
+            if (options?.clearExisting !== false) {
+                this.clearMap();
+            }
+            
+            // 加载地块
+            let loadedTiles = 0;
+            for (const tileData of mapData.tiles) {
+                const tileNode = new Node(`Tile_${tileData.position.x}_${tileData.position.z}`);
+                tileNode.setParent(this.tilesContainer!);
+                
+                const tile = tileNode.addComponent(MapTile);
+                await tile.loadData(tileData);
+                
+                const key = `${tileData.position.x}_${tileData.position.z}`;
+                this._tiles.push(tile);
+                this._tileIndex.set(key, tile);
+                loadedTiles++;
+                
+                // 进度回调
+                if (options?.onProgress) {
+                    const progress = loadedTiles / (mapData.tiles.length + mapData.objects.length);
+                    options.onProgress(progress);
+                }
+            }
+            
+            // 加载物体
+            let loadedObjects = 0;
+            for (const objectData of mapData.objects) {
+                const objectNode = new Node(`Object_${objectData.position.x}_${objectData.position.z}`);
+                objectNode.setParent(this.objectsContainer!);
+                
+                const object = objectNode.addComponent('MapObject') as MapObject;
+                await object.loadData(objectData);
+                
+                const key = `${objectData.position.x}_${objectData.position.z}`;
+                this._objects.push(object);
+                this._objectIndex.set(key, object);
+                loadedObjects++;
+                
+                // 进度回调
+                if (options?.onProgress) {
+                    const progress = (loadedTiles + loadedObjects) / (mapData.tiles.length + mapData.objects.length);
+                    options.onProgress(progress);
+                }
+            }
+            
+            // 保存地图数据
+            this._mapSaveData = mapData;
+            this.mapId = mapData.mapId;
+            
+            console.log(`[GameMap] Map loaded successfully: ${loadedTiles} tiles, ${loadedObjects} objects`);
+            return true;
+            
+        } catch (error) {
+            console.error('[GameMap] Failed to load map:', error);
+            return false;
+        }
     }
     
     /**
-     * 高亮显示路径
-     * @param path 要高亮的路径
+     * 清空地图
      */
-    public highlightPath(path: PathResult): void {
-        // 清除之前的高亮
-        this.clearPathHighlight();
-        
-        if (!path.isValid) {
-            return;
-        }
-        
-        // 高亮路径上的地块
-        for (const tileId of path.tileIds) {
-            const tile = this.getTile(tileId);
-            if (tile) {
-                tile.setHighlighted(true);
+    public clearMap(): void {
+        // 清空地块
+        for (const tile of this._tiles) {
+            if (tile.node && tile.node.isValid) {
+                tile.node.destroy();
             }
         }
+        this._tiles = [];
+        this._tileIndex.clear();
+        
+        // 清空物体
+        for (const object of this._objects) {
+            object.destroyObject();
+        }
+        this._objects = [];
+        this._objectIndex.clear();
+        
+        console.log('[GameMap] Map cleared');
+    }
+    
+    // ========================= 查询方法 =========================
+    
+    /**
+     * 获取指定位置的地块
+     */
+    public getTileAt(x: number, z: number): MapTile | null {
+        const key = `${x}_${z}`;
+        return this._tileIndex.get(key) || null;
     }
     
     /**
-     * 清除路径高亮
+     * 获取指定位置的物体
      */
-    public clearPathHighlight(): void {
-        this._tileInstances.forEach(tile => {
-            tile.setHighlighted(false);
-        });
-    }
-    
-    /**
-     * 设置选中的地块
-     * @param tile 地块ID
-     */
-    public setSelectedTile(tile: number | MapTile | null): void {
-
-        let newTile: MapTile | null = null;
-        if (tile !== null) {
-            if (tile instanceof MapTile) {
-                newTile = tile;
-            } else {
-                newTile = this.getTile(tile);
-            }
-        }
-
-        // 清除之前的选中状态
-        if (this._selectedTile && this._selectedTile !== newTile) {
-            this._selectedTile.setSelected(false);
-        }
-        
-        // 设置新的选中状态
-        if (newTile !== null) {
-            this._selectedTile = newTile;
-            this._selectedTile.setSelected(true);
-        } else {
-            this._selectedTile = null;
-        }
-    }
-    
-    // ========================= 鼠标事件处理 =========================
-    
-    private onMouseDown(event: any): void {
-        if (!this.enableMouseControl) {
-            return;
-        }
-        
-        this._mouseControlState.isDragging = true;
-        this._mouseControlState.lastMousePos = event.getLocation();
-        this._mouseControlState.dragStartPos = event.getLocation();
-        
-        // 尝试射线检测选中地块
-        this.performRaycast(event);
-    }
-    
-    private onMouseMove(event: any): void {
-        if (!this.enableMouseControl || !this.mainCamera) {
-            return;
-        }
-        
-        const currentPos = event.getLocation();
-        
-        if (this._mouseControlState.isDragging) {
-            // 计算鼠标移动距离
-            const deltaX = currentPos.x - this._mouseControlState.lastMousePos.x;
-            const deltaY = currentPos.y - this._mouseControlState.lastMousePos.y;
-            
-            // 旋转摄像机
-            this.rotateCameraByDelta(deltaX, deltaY);
-            
-            this._mouseControlState.lastMousePos = currentPos;
-        }
-    }
-    
-    private onMouseUp(event: any): void {
-        this._mouseControlState.isDragging = false;
-    }
-    
-    private onMouseWheel(event: any): void {
-        if (!this.enableMouseControl || !this.mainCamera) {
-            return;
-        }
-        
-        // 缩放摄像机
-        const scrollY = event.getScrollY();
-        this.zoomCameraByDelta(scrollY);
-    }
-    
-    /**
-     * 执行射线检测
-     */
-    private performRaycast(event: any): void {
-        if (!this.mainCamera) {
-            return;
-        }
-        
-        // TODO: 实现射线检测逻辑
-        // 这里需要根据Cocos Creator的物理系统API来实现
-        // 基本流程是：鼠标位置 -> 世界坐标射线 -> 与地块碰撞检测
-        
-        // console.log('[Map] 射线检测功能待实现');
-
-        // 将屏幕坐标转成射线
-        const ray = this.mainCamera.screenPointToRay(event.getLocationX(), event.getLocationY());
-
-        // 用物理系统射线检测
-        if (PhysicsSystem.instance.raycastClosest(ray)) {
-            const result = PhysicsSystem.instance.raycastClosestResult;
-            // console.log('点击到了:', result.collider.node.name);
-
-            //如果点击到了map tile
-            const mapTile = result.collider.node.parent?.getComponent(MapTile)
-            if (mapTile) {
-                this.setSelectedTile(mapTile);
-            }
-        }
-    }
-    
-    /**
-     * 根据鼠标移动旋转摄像机
-     */
-    private rotateCameraByDelta(deltaX: number, deltaY: number): void {
-        if (!this.mainCamera) {
-            return;
-        }
-        
-        const rotationSpeed = this._cameraConfig.sensitivity * 0.5;
-        const currentRotation = this.mainCamera.node.eulerAngles;
-        
-        // 水平旋转（绕Y轴）
-        let newRotationY = currentRotation.y + deltaX * rotationSpeed;
-        
-        // 垂直旋转（绕X轴）
-        let newRotationX = currentRotation.x - deltaY * rotationSpeed;
-        newRotationX = Math.max(10, Math.min(80, newRotationX)); // 限制俯仰角度
-        
-        this.mainCamera.node.setRotationFromEuler(newRotationX, newRotationY, 0);
-    }
-    
-    /**
-     * 根据鼠标滚轮缩放摄像机
-     */
-    private zoomCameraByDelta(scrollDelta: number): void {
-        if (!this.mainCamera) {
-            return;
-        }
-        
-        const zoomSpeed = this._cameraConfig.sensitivity * 0.5;
-        const currentPos = this.mainCamera.node.position;
-        const zoomDirection = currentPos.clone().normalize();
-        
-        // 计算新位置
-        const zoomAmount = scrollDelta * zoomSpeed;
-        const newPos = currentPos.clone().add(zoomDirection.multiplyScalar(zoomAmount));
-        
-        // 限制缩放范围
-        const distance = newPos.length();
-        if (distance >= this._cameraConfig.zoomRange.min && distance <= this._cameraConfig.zoomRange.max) {
-            this.mainCamera.node.setPosition(newPos);
-        }
-    }
-    
-    // ========================= 事件处理 =========================
-    
-    /**
-     * 处理来自地块的事件
-     */
-    private onTileEvent(event: any): void {
-        const { type, data, source } = event.detail || event;
-        
-        console.log(`[Map] 收到地块事件: ${type}`, data);
-        
-        // 转发给游戏管理器或其他系统
-        this.node.emit('tile-event', { type, data, source });
-    }
-    
-    // ========================= 工具方法 =========================
-    
-    /**
-     * 获取地图数据
-     */
-    public getMapData(): MapData | null {
-        return this._mapData;
-    }
-    
-    /**
-     * 检查是否已初始化
-     */
-    public isInitialized(): boolean {
-        return this._isInitialized;
+    public getObjectAt(x: number, z: number): MapObject | null {
+        const key = `${x}_${z}`;
+        return this._objectIndex.get(key) || null;
     }
     
     /**
      * 获取所有地块
      */
     public getAllTiles(): MapTile[] {
-        return Array.from(this._tileInstances.values());
+        return [...this._tiles];
     }
+    
+    /**
+     * 获取所有物体
+     */
+    public getAllObjects(): MapObject[] {
+        return [...this._objects];
+    }
+    
+    /**
+     * 获取地图统计信息
+     */
+    public getMapStats(): any {
+        return {
+            tileCount: this._tiles.length,
+            objectCount: this._objects.length,
+            mapId: this.mapId,
+            isEditMode: this._isEditMode,
+            hasVoxelSystem: this._voxelSystem !== null
+        };
+    }
+    
+    // ========================= 清理 =========================
     
     /**
      * 清理资源
      */
     private cleanup(): void {
-        // 清理缓存
-        this._pathCache.clear();
-        this._tileInstances.clear();
-        this._tileNodes.clear();
+        // 清空地图
+        this.clearMap();
         
-        // 清理所有放置的方块
+        // 取消事件监听
         if (this._isEditMode) {
-            for (const [key, block] of this._placedBlocks) {
-                if (block && block.isValid) {
-                    block.destroy();
-                }
-            }
-            this._placedBlocks.clear();
-            
-            // 取消事件监听
             EventBus.off(EventTypes.Game.GroundClicked, this.onGroundClicked, this);
             EventBus.off(EventTypes.UI.MapElementSelected, this.onMapElementSelected, this);
-            
-            // 清空选中状态
-            this._currentSelectedBlockId = null;
         }
         
-        // 移除事件监听
-        // if (this.node.isValid) {
-        //     this.node.off(Node.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        //     this.node.off(Node.EventType.MOUSE_MOVE, this.onMouseMove, this);
-        //     this.node.off(Node.EventType.MOUSE_UP, this.onMouseUp, this);
-        //     this.node.off(Node.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
-        // }
-
-        input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+        // 清理引用
+        this._voxelSystem = null;
+        this._mapConfig = null;
+        this._mapSaveData = null;
+        this._currentSelectedBlockId = null;
         
-        console.log('[Map] 资源清理完成');
+        console.log('[GameMap] Cleanup completed');
+    }
+    
+    // ========================= Getters =========================
+    
+    /**
+     * 是否为编辑模式
+     */
+    public get isEditMode(): boolean {
+        return this._isEditMode;
     }
     
     /**
-     * 重新加载地图
+     * 是否已初始化
      */
-    public async reloadMap(): Promise<void> {
-        this.cleanup();
-        this._isInitialized = false;
-        await this.initializeMap();
+    public get isInitialized(): boolean {
+        return this._isInitialized;
+    }
+    
+    /**
+     * 获取地图ID
+     */
+    public get currentMapId(): string {
+        return this.mapId;
     }
 }

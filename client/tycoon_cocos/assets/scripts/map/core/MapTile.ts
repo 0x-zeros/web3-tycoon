@@ -1,711 +1,486 @@
 /**
- * 地块基类
+ * 地块组件
  * 
- * 所有地块类型的基础类，提供通用的地块行为和接口
- * 继承自Cocos Creator的Component，可以挂载到场景节点上
+ * Web3TileType的包装器，负责管理地块的渲染和交互
+ * 使用组件化架构，每个地块管理自己的节点和视觉表现
  * 
  * @author Web3 Tycoon Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
-import { _decorator, Component, Node, Vec3, Color, Material, MeshRenderer, BoxCollider, tween, Vec4, resources } from 'cc';
-import { MapTileData, TileType, TileState, Position3D } from '../types/MapTypes';
-import { PlayerData, GameEvent, GameEventType } from '../types/GameTypes';
-import { randomRangeInt } from 'cc';
-import { EventBus } from '../../events/EventBus';
-import { EventTypes, RaycastEventData } from '../../events/EventTypes';
+import { _decorator, Vec2, Vec3 } from 'cc';
+import { MapElement } from './MapElement';
+import { Web3TileType, getWeb3BlockByBlockId } from '../../voxel/Web3BlockTypes';
+import { TileData } from '../data/MapDataTypes';
 
-const { ccclass, property } = _decorator;
+const { ccclass } = _decorator;
 
 /**
- * 地块交互结果接口
- * 定义玩家与地块交互后的结果
- */
-export interface TileInteractionResult {
-    /** 是否成功执行交互 */
-    success: boolean;
-    /** 结果消息 */
-    message: string;
-    /** 是否需要等待用户输入（如选择购买） */
-    needUserInput?: boolean;
-    /** 产生的游戏事件 */
-    events?: GameEvent[];
-    /** 金钱变动 */
-    moneyChange?: number;
-    /** 是否阻止玩家继续移动 */
-    blockMovement?: boolean;
-}
-
-/**
- * 地块渲染配置接口
- * 用于配置地块的3D渲染表现
- */
-export interface TileRenderState {
-    /** 基础颜色 */
-    baseColor: Color;
-    /** 高亮颜色（选中或悬停时） */
-    highlightColor: Color;
-    /** 是否高亮显示 */
-    isHighlighted: boolean;
-    /** 是否被选中 */
-    isSelected: boolean;
-    /** 透明度 */
-    opacity: number;
-}
-
-/**
- * 地块基类
- * 提供所有地块的通用功能和接口定义
+ * 地块组件
+ * 完全重写的MapTile，作为Web3TileType的包装器
  */
 @ccclass('MapTile')
-export abstract class MapTile extends Component {
+export class MapTile extends MapElement {
     
-    // ========================= 编辑器属性 =========================
+    // ========================= 地块特有属性 =========================
     
-    @property({ displayName: "地块名称", tooltip: "显示在UI中的地块名称" })
-    public tileName: string = '';
+    /** 地产拥有者 (仅地产类型有效) */
+    private _owner: string | null = null;
     
-    @property({ displayName: "地块描述", multiline: true, tooltip: "地块的详细描述" })
-    public description: string = '';
+    /** 建筑等级 (0-4: 空地,小屋,洋房,大楼,地标) */
+    private _buildingLevel: number = 0;
     
-    @property({ displayName: "基础颜色", tooltip: "地块的默认颜色" })
-    public baseColor: Color = new Color(200, 200, 200, 255);
+    /** 地产价格 */
+    private _price: number = 0;
     
-    @property({ displayName: "高亮颜色", tooltip: "鼠标悬停或选中时的颜色" })
-    public highlightColor: Color = new Color(255, 255, 100, 255);
+    /** 各等级租金 */
+    private _rent: number[] = [];
     
-    @property({ displayName: "启用点击交互", tooltip: "是否响应鼠标点击" })
-    public enableClickInteraction: boolean = true;
+    /** 是否被抵押 */
+    private _mortgaged: boolean = false;
     
-    @property({ displayName: "启用悬停效果", tooltip: "是否响应鼠标悬停" })
-    public enableHoverEffect: boolean = true;
+    /** 是否可建造 */
+    private _canBuild: boolean = false;
     
-    // ========================= 私有属性 =========================
-    
-    /** 地块数据 */
-    protected _tileData: MapTileData | null = null;
-    
-    /** 当前状态 */
-    protected _currentState: TileState = TileState.NORMAL;
-    
-    /** 渲染状态 */
-    protected _renderState: TileRenderState;
-    
-    /** 网格渲染组件 */
-    protected _meshRenderer: MeshRenderer | null = null;
-    
-    /** 碰撞器组件 */
-    protected _collider: BoxCollider | null = null;
-    
-    /** 当前停留的玩家列表 */
-    protected _playersOnTile: PlayerData[] = [];
-    
-    /** 是否已初始化 */
-    protected _isInitialized: boolean = false;
-    
-    // ========================= 抽象属性（子类必须实现） =========================
-    
-    /** 地块类型（子类必须定义） */
-    public abstract get tileType(): TileType;
-    
-    // ========================= 生命周期方法 =========================
-    
-    protected onLoad(): void {
-        this.initializeRenderState();
-        this.setupComponents();
-        this.registerEventHandlers();
-    }
-    
-    protected start(): void {
-        // 等待一帧确保所有组件都已准备好
-        this.scheduleOnce(() => {
-            this.onTileReady();
-        }, 0);
-    }
-    
-    protected onDestroy(): void {
-        this.unregisterEventHandlers();
-        this.cleanup();
-    }
-    
-    // ========================= 初始化方法 =========================
+    // ========================= 初始化 =========================
     
     /**
-     * 初始化渲染状态
-     * 设置默认的渲染配置
+     * 初始化地块
+     * @param blockId 方块ID (如 "web3:property")
+     * @param gridPos 网格坐标
      */
-    protected initializeRenderState(): void {
-        this._renderState = {
-            baseColor: this.baseColor.clone(),
-            highlightColor: this.highlightColor.clone(),
-            isHighlighted: false,
-            isSelected: false,
-            opacity: 1.0
-        };
-    }
-    
-    /**
-     * 设置必要的组件
-     * 确保地块拥有渲染和碰撞检测能力
-     */
-    protected setupComponents(): void {
-        // 获取或创建MeshRenderer组件
-        this._meshRenderer = this.getComponent(MeshRenderer);
-        if (!this._meshRenderer) {
-            //从第一个子节点里获取
-            this._meshRenderer = this.node.children[0].getComponent(MeshRenderer);
-            if (!this._meshRenderer) {
-                this._meshRenderer = this.addComponent(MeshRenderer);
-                console.warn(`[MapTile] 地块 ${this.node.name} 缺少MeshRenderer组件，已自动添加`);
-            }
-        }
+    public async initialize(blockId: string, gridPos: Vec2): Promise<void> {
+        // 设置基础属性
+        this._blockId = blockId;
+        this._gridPosition = gridPos;
+        this._worldPosition = this.gridToWorld(gridPos, 0); // 地块在y=0层
         
-        // 获取或创建BoxCollider组件（用于点击检测）
-        this._collider = this.getComponent(BoxCollider);
-        if (!this._collider && this.enableClickInteraction) {
-            this._collider = this.node.children[0].getComponent(BoxCollider);
-            if (!this._collider) {
-                this._collider = this.addComponent(BoxCollider);
-                console.warn(`[MapTile] 地块 ${this.node.name} 缺少BoxCollider组件，已自动添加`);
-            }
-            this._collider.isTrigger = true; // 设置为触发器，用于检测点击
-        }
-    }
-    
-    /**
-     * 注册事件处理器
-     * 设置鼠标交互事件
-     */
-    protected registerEventHandlers(): void {
-        if (this.enableClickInteraction) {
-            // 监听3D射线检测事件（替代直接的鼠标事件）
-            EventBus.on(EventTypes.Input3D.RaycastHit, this.onRaycastHit, this);
-        }
-    }
-    
-    /**
-     * 取消注册事件处理器
-     */
-    protected unregisterEventHandlers(): void {
-        if (this.enableClickInteraction) {
-            // 取消监听3D射线检测事件
-            EventBus.off(EventTypes.Input3D.RaycastHit, this.onRaycastHit, this);
-        }
-    }
-    
-    /**
-     * 地块准备完成回调
-     * 在所有初始化完成后调用
-     */
-    protected onTileReady(): void {
-        this._isInitialized = true;
-        this.updateVisualAppearance();
-        console.log(`[MapTile] 地块 ${this.tileName} 初始化完成`);
-    }
-    
-    /**
-     * 清理资源
-     */
-    protected cleanup(): void {
-        this._playersOnTile = [];
-        this._tileData = null;
-    }
-    
-    // ========================= 公共接口方法 =========================
-    
-    /**
-     * 初始化地块数据
-     * @param tileData 地块配置数据
-     */
-    public initializeTile(tileData: MapTileData): void {
-        this._tileData = tileData;
-        this._currentState = tileData.state;
-        
-        // 更新基本属性
-        this.tileName = tileData.name;
-        this.description = tileData.description;
-        
-        // 应用渲染配置
-        if (tileData.renderConfig) {
-            this._renderState.baseColor = tileData.renderConfig.primaryColor;
-            if (tileData.renderConfig.secondaryColor) {
-                this._renderState.highlightColor = tileData.renderConfig.secondaryColor;
-            }
-        }
-        
-        // 设置3D位置
-        this.setPosition(tileData.position);
-        
-        // 调用子类的初始化逻辑
-        this.onTileInitialized(tileData);
-        
-        // 更新视觉表现
-        this.updateVisualAppearance();
-        
-        console.log(`[MapTile] 地块 ${this.tileName} (${this.tileType}) 数据初始化完成`);
-    }
-    
-    /**
-     * 设置地块的3D位置
-     * @param position 目标位置
-     */
-    public setPosition(position: Position3D): void {
-        const vec3Pos = new Vec3(position.x, position.y, position.z);
-        this.node.setPosition(vec3Pos);
-        
-        // 设置旋转（如果有的话）
-        if (position.rotation !== undefined) {
-            this.node.setRotationFromEuler(0, position.rotation, 0);
-        }
-    }
-    
-    /**
-     * 获取地块的世界位置
-     */
-    public getWorldPosition(): Vec3 {
-        const worldPos = new Vec3();
-        this.node.getWorldPosition(worldPos);
-        return worldPos;
-    }
-    
-    /**
-     * 玩家停留在此地块
-     * @param player 停留的玩家
-     */
-    public async playerLandOn(player: PlayerData): Promise<TileInteractionResult> {
-        console.log(`[MapTile] 玩家 ${player.nickname} 停留在地块 ${this.tileName}`);
-        
-        // 添加玩家到停留列表
-        if (!this._playersOnTile.find(p => p.id === player.id)) {
-            this._playersOnTile.push(player);
-        }
-        
-        // 更新玩家位置
-        player.currentTileId = this._tileData!.id;
-        
-        // 调用子类的停留处理逻辑
-        const result = await this.onPlayerLandOn(player);
-        
-        // 触发停留事件
-        this.emitGameEvent(GameEventType.PLAYER_MOVE, {
-            playerId: player.id,
-            tileId: this._tileData!.id,
-            tileName: this.tileName,
-            tileType: this.tileType
-        });
-        
-        return result;
-    }
-    
-    /**
-     * 玩家经过此地块（不停留）
-     * @param player 经过的玩家
-     */
-    public async playerPassThrough(player: PlayerData): Promise<TileInteractionResult> {
-        console.log(`[MapTile] 玩家 ${player.nickname} 经过地块 ${this.tileName}`);
-        
-        // 调用子类的经过处理逻辑
-        const result = await this.onPlayerPassThrough(player);
-        
-        return result;
-    }
-    
-    /**
-     * 玩家离开此地块
-     * @param player 离开的玩家
-     */
-    public playerLeave(player: PlayerData): void {
-        console.log(`[MapTile] 玩家 ${player.nickname} 离开地块 ${this.tileName}`);
-        
-        // 从停留列表中移除玩家
-        const index = this._playersOnTile.findIndex(p => p.id === player.id);
-        if (index !== -1) {
-            this._playersOnTile.splice(index, 1);
-        }
-        
-        // 调用子类的离开处理逻辑
-        this.onPlayerLeave(player);
-    }
-    
-    /**
-     * 设置地块状态
-     * @param newState 新的状态
-     */
-    public setState(newState: TileState): void {
-        const oldState = this._currentState;
-        this._currentState = newState;
-        
-        // 更新数据
-        if (this._tileData) {
-            this._tileData.state = newState;
-        }
-        
-        // 更新视觉表现
-        this.updateVisualAppearance();
-        
-        // 调用状态变化回调
-        this.onStateChanged(oldState, newState);
-        
-        console.log(`[MapTile] 地块 ${this.tileName} 状态变更: ${oldState} -> ${newState}`);
-    }
-    
-    /**
-     * 设置高亮状态
-     * @param highlighted 是否高亮
-     */
-    public setHighlighted(highlighted: boolean): void {
-        if (this._renderState.isHighlighted !== highlighted) {
-            this._renderState.isHighlighted = highlighted;
-            this.updateVisualAppearance();
-            
-            // 播放高亮动画
-            if (highlighted) {
-                this.playHighlightAnimation();
-            }
-        }
-    }
-    
-    /**
-     * 设置选中状态
-     * @param selected 是否选中
-     */
-    public setSelected(selected: boolean): void {
-        if (this._renderState.isSelected !== selected) {
-            this._renderState.isSelected = selected;
-            this.updateVisualAppearance();
-            
-            // 播放选中动画
-            if (selected) {
-                this.playSelectionAnimation();
-            }
-        }
-    }
-    
-    // ========================= 抽象方法（子类必须实现） =========================
-    
-    /**
-     * 子类初始化回调
-     * 子类可以重写此方法来执行特定的初始化逻辑
-     * @param tileData 地块数据
-     */
-    protected abstract onTileInitialized(tileData: MapTileData): void;
-    
-    /**
-     * 玩家停留处理
-     * 子类必须实现具体的停留逻辑
-     * @param player 停留的玩家
-     */
-    protected abstract onPlayerLandOn(player: PlayerData): Promise<TileInteractionResult>;
-    
-    /**
-     * 玩家经过处理
-     * 子类可以重写此方法来处理玩家经过的逻辑
-     * @param player 经过的玩家
-     */
-    protected onPlayerPassThrough(player: PlayerData): Promise<TileInteractionResult> {
-        // 默认实现：经过不触发特殊效果
-        return Promise.resolve({
-            success: true,
-            message: `玩家经过 ${this.tileName}`,
-            events: []
-        });
-    }
-    
-    /**
-     * 玩家离开处理
-     * 子类可以重写此方法来处理玩家离开的逻辑
-     * @param player 离开的玩家
-     */
-    protected onPlayerLeave(player: PlayerData): void {
-        // 默认实现：无特殊处理
-    }
-    
-    /**
-     * 状态变化回调
-     * 子类可以重写此方法来响应状态变化
-     * @param oldState 旧状态
-     * @param newState 新状态
-     */
-    protected onStateChanged(oldState: TileState, newState: TileState): void {
-        // 默认实现：无特殊处理
-    }
-    
-    /**
-     * 更新材质颜色
-     * @param color 要设置的颜色
-     */
-    private updateMaterialColor(color: Color): void {
-        
-        //https://docs.cocos.com/creator/3.8/manual/zh/shader/pass-parameter-list.html
-        //在 TypeScript 中可以使用 Material 类的 setProperty 方法以及 Pass 的 setUniform 方法进行设置，代码示例如下：
-        //mat.setProperty('emissive', Color.GREY); // 直接设置对应的 Uniform 变量
-        // mat.setProperty('albedo', Color.RED); 
-        // mat.setProperty('roughness', 0.2); // 仅设置对应的分量
-        // const h = mat.passes[0].getHandle('offset'); // 获取对应的 Uniform 的句柄
-        // mat.passes[0].setUniform(h, new Vec2(0.5, 0.5)); // 使用 ‘Pass.setUniform’ 设置 Uniform 属性
-
-        //在 Shader 中定义的 uniform 也可以使用上述代码进行设置，即使没有在 properties 中定义。
-        //未指定的 uniform，引擎将会在运行时根据自动分析出的数据类型给予默认值。更多关于默认值的内容，请参考下文说明。
-
-
-        if (!this._meshRenderer) {
-            console.warn(`[MapTile] 地块 ${this.tileName} 没有MeshRenderer组件`);
-            return;
-        }
-
-        const material = this._meshRenderer.materials[0];//getMaterialInstance(0);
-
-        // 尝试常见的颜色属性名
-        const propertyNames = 'mainColor' //['albedo', 'mainColor', 'baseColor', 'diffuse', 'u_color'];
-
-        // color = new Color(randomRangeInt(0, 255), randomRangeInt(0, 255), randomRangeInt(0, 255), 255);
-        material.setProperty(propertyNames, color);
-        console.log(`[MapTile] 成功设置地块 ${this.tileName} 颜色属性 '${propertyNames}' 为 ${color}`);
-
-
-        // // debug: 显示可用的材质属性
-        // if (material.passes && material.passes[0]) {
-        //     const pass = material.passes[0];
-        //     console.log('Available properties:', Object.keys(pass.properties || {}));
-        // }
-    }
-
-    /**
-     * 确保有材质实例
-     */
-    private ensureMaterialInstance(): void {
-        if (!this._meshRenderer) return;
-
-        let material = this._meshRenderer.getMaterialInstance(0);
-        if (!material) {
-            // 尝试创建默认材质
-            console.log(`[MapTile] 地块 ${this.tileName} 没有材质，尝试创建默认材质`);
-            
-            // 加载默认材质 - 使用内置标准材质
-            resources.load('effects/builtin-standard', Material, (err, mat) => {
-                if (!err && mat && this._meshRenderer) {
-                    this._meshRenderer.materials = [mat];
-                    console.log(`[MapTile] 地块 ${this.tileName} 已设置默认材质`);
-                    // 重新设置颜色
-                    this.updateVisualAppearance();
-                } else {
-                    console.error(`[MapTile] 无法加载默认材质:`, err);
-                }
-            });
-        }
-    }
-
-    // ========================= 事件处理方法 =========================
-    
-    /**
-     * 射线检测命中处理
-     */
-    protected onRaycastHit(data: RaycastEventData): void {
-        // 检查命中的是否是当前地块
-        if (data.node.parent === this.node) {//todo
-            console.log(`[MapTile] 射线命中地块: ${this.tileName}`);
-            
-            // 触发地块点击事件
-            this.emitGameEvent(GameEventType.PLAYER_MOVE, {
-                tileId: this._tileData?.id,
-                tileName: this.tileName,
-                tileType: this.tileType,
-                hitPoint: data.hitPoint
-            });
-            
-            // 调用子类的点击处理
-            this.onTileClicked(data);
-        }
-    }
-    
-    /**
-     * 鼠标点击处理（已弃用，使用射线检测）
-     * @deprecated 使用 onRaycastHit 代替
-     */
-    protected onMouseClick(event: any): void {
-        console.log(`[MapTile] 点击地块: ${this.tileName}`);
-    }
-    
-    /**
-     * 鼠标进入处理
-     */
-    protected onMouseEnter(event: any): void {
-        if (this.enableHoverEffect) {
-            this.setHighlighted(true);
-        }
-        
-        // 调用子类的悬停处理
-        this.onTileHoverEnter(event);
-    }
-    
-    /**
-     * 鼠标离开处理
-     */
-    protected onMouseLeave(event: any): void {
-        if (this.enableHoverEffect) {
-            this.setHighlighted(false);
-        }
-        
-        // 调用子类的悬停处理
-        this.onTileHoverLeave(event);
-    }
-    
-    /**
-     * 地块点击回调（子类可重写）
-     */
-    protected onTileClicked(data: RaycastEventData): void {
-        // 默认实现：设置高亮效果
-        this.setHighlighted(true);
-        
-        // 0.5秒后取消高亮
-        this.scheduleOnce(() => {
-            this.setHighlighted(false);
-        }, 0.2);
-    }
-    
-    /**
-     * 鼠标悬停进入回调（子类可重写）
-     */
-    protected onTileHoverEnter(_event: any): void {
-        // 默认实现：无特殊处理
-    }
-    
-    /**
-     * 鼠标悬停离开回调（子类可重写）
-     */
-    protected onTileHoverLeave(_event: any): void {
-        // 默认实现：无特殊处理
-    }
-    
-    // ========================= 渲染和动画方法 =========================
-    
-    /**
-     * 更新视觉表现
-     * 根据当前状态更新地块的视觉效果
-     */
-    protected updateVisualAppearance(): void {
-        if (!this._meshRenderer || !this._isInitialized) {
+        // 获取方块信息
+        const blockInfo = getWeb3BlockByBlockId(blockId);
+        if (!blockInfo) {
+            console.error(`[MapTile] Unknown block ID: ${blockId}`);
             return;
         }
         
-        // 计算当前显示颜色
-        let currentColor = this._renderState.baseColor.clone();
+        // 设置类型ID
+        this._typeId = blockInfo.typeId;
         
-        // 应用高亮效果
-        if (this._renderState.isHighlighted || this._renderState.isSelected) {
-            currentColor = this._renderState.highlightColor.clone();
-        }
+        // 设置节点位置
+        this.node.setPosition(this._worldPosition);
         
-        // 应用状态效果
-        switch (this._currentState) {
-            case TileState.BLOCKED:
-                // 被阻挡的地块变暗
-                currentColor.r *= 0.5;
-                currentColor.g *= 0.5;
-                currentColor.b *= 0.5;
+        // 创建视觉表现
+        await this.createVisual();
+        
+        // 设置碰撞器（用于点击检测）
+        this.setupCollider(new Vec3(1, 0.5, 1), new Vec3(0, 0.25, 0));
+        
+        // 初始化地块特有属性
+        this.initializeTileProperties();
+        
+        this._initialized = true;
+        console.log(`[MapTile] Initialized tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+    }
+    
+    /**
+     * 初始化地块特有属性
+     */
+    private initializeTileProperties(): void {
+        // 根据类型设置默认属性
+        switch (this._typeId) {
+            case Web3TileType.PROPERTY:
+                this._canBuild = true;
+                this._price = 1000; // 默认价格
+                this._rent = [50, 200, 600, 1400, 1700, 2000]; // 默认租金
                 break;
-            case TileState.SELECTED:
-                // 被选中的地块更亮
-                currentColor.r = Math.min(255, currentColor.r * 1.2);
-                currentColor.g = Math.min(255, currentColor.g * 1.2);
-                currentColor.b = Math.min(255, currentColor.b * 1.2);
+                
+                
+            case Web3TileType.CHANCE:
+            case Web3TileType.BONUS:
+            case Web3TileType.FEE:
+            case Web3TileType.CARD:
+            case Web3TileType.NEWS:
+            case Web3TileType.HOSPITAL:
+            case Web3TileType.EMPTY_LAND:
+                // 特殊地块不可建造
+                this._canBuild = false;
                 break;
         }
+    }
+    
+    // ========================= 抽象方法实现 =========================
+    
+    /**
+     * 获取元素类型
+     */
+    public getElementType(): 'tile' | 'object' {
+        return 'tile';
+    }
+    
+    /**
+     * 创建视觉表现
+     */
+    protected async createVisual(): Promise<void> {
+        // 使用体素系统创建地块渲染
+        await this.createVoxelRender(this._blockId, Vec3.ZERO);
         
-        // 应用透明度
-        currentColor.a = this._renderState.opacity * 255;
-        
-        // 更新材质颜色 - 修复版本
-        this.updateMaterialColor(currentColor);
+        // 如果是地产，可能需要创建建筑物的额外渲染
+        if (this._typeId === Web3TileType.PROPERTY && this._buildingLevel > 0) {
+            await this.updateBuildingVisual();
+        }
     }
     
     /**
-     * 播放高亮动画
+     * 获取序列化数据
      */
-    protected playHighlightAnimation(): void {
-        // 简单的缩放动画
-        tween(this.node)
-            .to(0.1, { scale: new Vec3(1.05, 1.05, 1.05) })
-            .to(0.1, { scale: new Vec3(1, 1, 1) })
-            .start();
-    }
-    
-    /**
-     * 播放选中动画
-     */
-    protected playSelectionAnimation(): void {
-        // 简单的上下浮动动画
-        const originalY = this.node.position.y;
-        tween(this.node)
-            .to(0.2, { position: new Vec3(this.node.position.x, originalY + 0.1, this.node.position.z) })
-            .to(0.2, { position: new Vec3(this.node.position.x, originalY, this.node.position.z) })
-            .start();
-    }
-    
-    // ========================= 工具方法 =========================
-    
-    /**
-     * 发射游戏事件
-     * @param eventType 事件类型
-     * @param eventData 事件数据
-     */
-    protected emitGameEvent(eventType: GameEventType | string, eventData: any): void {
-        // TODO: 这里需要与GameManager集成来发射事件
-        // 当前只是记录日志，实际实现时需要通过事件系统通知其他组件
-        console.log(`[MapTile] 发射游戏事件: ${eventType}`, eventData);
-        
-        // 示例：通过节点事件系统发射（需要在Map组件中监听）
-        this.node.emit('game-event', {
-            type: eventType,
-            data: eventData,
-            source: this
-        });
-    }
-    
-    /**
-     * 获取地块数据
-     */
-    public getTileData(): MapTileData | null {
-        return this._tileData;
-    }
-    
-    /**
-     * 获取当前状态
-     */
-    public getCurrentState(): TileState {
-        return this._currentState;
-    }
-    
-    /**
-     * 获取当前停留的玩家列表
-     */
-    public getPlayersOnTile(): PlayerData[] {
-        return [...this._playersOnTile];
-    }
-    
-    /**
-     * 检查是否有玩家停留
-     */
-    public hasPlayersOnTile(): boolean {
-        return this._playersOnTile.length > 0;
-    }
-    
-    /**
-     * 检查特定玩家是否停留在此地块
-     */
-    public hasPlayer(playerId: string): boolean {
-        return this._playersOnTile.some(p => p.id === playerId);
-    }
-    
-    /**
-     * 获取地块描述信息（用于UI显示）
-     */
-    public getTileInfo(): { name: string; description: string; type: TileType; state: TileState } {
-        return {
-            name: this.tileName,
-            description: this.description,
-            type: this.tileType,
-            state: this._currentState
+    public getData(): TileData {
+        const data: TileData = {
+            blockId: this._blockId,
+            typeId: this._typeId,
+            position: {
+                x: this._gridPosition.x,
+                z: this._gridPosition.y
+            }
         };
+        
+        // 添加地产特有数据
+        if (this._typeId === Web3TileType.PROPERTY) {
+            data.data = {
+                owner: this._owner || undefined,
+                level: this._buildingLevel,
+                price: this._price,
+                rent: this._rent,
+                mortgaged: this._mortgaged
+            };
+        }
+        
+        return data;
+    }
+    
+    /**
+     * 从数据恢复
+     */
+    public async loadData(data: TileData): Promise<void> {
+        // 初始化基础数据
+        await this.initialize(
+            data.blockId,
+            new Vec2(data.position.x, data.position.z)
+        );
+        
+        // 恢复地产特有数据
+        if (data.data) {
+            if (data.data.owner !== undefined) {
+                this._owner = data.data.owner;
+            }
+            if (data.data.level !== undefined) {
+                this._buildingLevel = data.data.level;
+                await this.updateBuildingVisual();
+            }
+            if (data.data.price !== undefined) {
+                this._price = data.data.price;
+            }
+            if (data.data.rent !== undefined) {
+                this._rent = data.data.rent;
+            }
+            if (data.data.mortgaged !== undefined) {
+                this._mortgaged = data.data.mortgaged;
+            }
+        }
+    }
+    
+    // ========================= 地块特有方法 =========================
+    
+    /**
+     * 是否可以建造
+     */
+    public canBuild(): boolean {
+        // 必须是地产类型
+        if (this._typeId !== Web3TileType.PROPERTY) {
+            return false;
+        }
+        
+        // 必须有拥有者
+        if (!this._owner) {
+            return false;
+        }
+        
+        // 不能被抵押
+        if (this._mortgaged) {
+            return false;
+        }
+        
+        // 不能超过最大等级
+        if (this._buildingLevel >= 4) {
+            return false;
+        }
+        
+        return this._canBuild;
+    }
+    
+    /**
+     * 获取拥有者
+     */
+    public getOwner(): string | null {
+        return this._owner;
+    }
+    
+    /**
+     * 设置拥有者
+     */
+    public setOwner(owner: string | null): void {
+        this._owner = owner;
+        console.log(`[MapTile] Set owner of tile at (${this._gridPosition.x}, ${this._gridPosition.y}) to ${owner}`);
+        
+        // TODO: 更新视觉效果（如改变颜色）
+    }
+    
+    /**
+     * 获取建筑等级
+     */
+    public getLevel(): number {
+        return this._buildingLevel;
+    }
+    
+    /**
+     * 设置建筑等级
+     */
+    public async setLevel(level: number): Promise<void> {
+        if (level < 0 || level > 4) {
+            console.warn(`[MapTile] Invalid building level: ${level}`);
+            return;
+        }
+        
+        const oldLevel = this._buildingLevel;
+        this._buildingLevel = level;
+        
+        console.log(`[MapTile] Building level changed from ${oldLevel} to ${level}`);
+        
+        // 更新建筑视觉
+        await this.updateBuildingVisual();
+    }
+    
+    /**
+     * 升级建筑
+     */
+    public async upgrade(): Promise<boolean> {
+        if (!this.canBuild()) {
+            return false;
+        }
+        
+        await this.setLevel(this._buildingLevel + 1);
+        return true;
+    }
+    
+    /**
+     * 降级建筑
+     */
+    public async downgrade(): Promise<boolean> {
+        if (this._buildingLevel <= 0) {
+            return false;
+        }
+        
+        await this.setLevel(this._buildingLevel - 1);
+        return true;
+    }
+    
+    /**
+     * 获取价格
+     */
+    public getPrice(): number {
+        return this._price;
+    }
+    
+    /**
+     * 设置价格
+     */
+    public setPrice(price: number): void {
+        this._price = price;
+    }
+    
+    /**
+     * 获取当前租金
+     */
+    public getRent(): number {
+        if (this._mortgaged) {
+            return 0; // 抵押的地产不收租
+        }
+        
+        if (this._buildingLevel >= 0 && this._buildingLevel < this._rent.length) {
+            return this._rent[this._buildingLevel];
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * 设置租金数组
+     */
+    public setRentArray(rent: number[]): void {
+        this._rent = rent;
+    }
+    
+    /**
+     * 是否被抵押
+     */
+    public isMortgaged(): boolean {
+        return this._mortgaged;
+    }
+    
+    /**
+     * 设置抵押状态
+     */
+    public setMortgaged(mortgaged: boolean): void {
+        this._mortgaged = mortgaged;
+        
+        if (mortgaged) {
+            console.log(`[MapTile] Tile at (${this._gridPosition.x}, ${this._gridPosition.y}) is mortgaged`);
+            // TODO: 更新视觉效果（如变暗）
+        } else {
+            console.log(`[MapTile] Tile at (${this._gridPosition.x}, ${this._gridPosition.y}) is unmortgaged`);
+            // TODO: 恢复正常视觉效果
+        }
+    }
+    
+    /**
+     * 计算升级成本
+     */
+    public getUpgradeCost(): number {
+        // 简单的升级成本计算
+        return this._price * 0.5 * (this._buildingLevel + 1);
+    }
+    
+    /**
+     * 计算抵押价值
+     */
+    public getMortgageValue(): number {
+        // 抵押价值为购买价格的一半
+        return this._price * 0.5;
+    }
+    
+    /**
+     * 更新建筑视觉
+     */
+    private async updateBuildingVisual(): Promise<void> {
+        // TODO: 根据建筑等级创建不同的建筑模型
+        // 例如：
+        // 0 - 空地（无额外模型）
+        // 1 - 小屋
+        // 2 - 洋房
+        // 3 - 大楼
+        // 4 - 地标建筑
+        
+        console.log(`[MapTile] Update building visual to level ${this._buildingLevel}`);
+        
+        // 暂时使用不同的方块表示不同等级
+        if (this._buildingLevel > 0) {
+            // 可以在y=1层放置建筑标识
+            // 或者改变地块本身的外观
+        }
+    }
+    
+    /**
+     * 获取地块信息（用于UI显示）
+     */
+    public getTileInfo(): any {
+        const info: any = {
+            blockId: this._blockId,
+            typeId: this._typeId,
+            position: { x: this._gridPosition.x, z: this._gridPosition.y },
+            typeName: this.getTypeName()
+        };
+        
+        // 添加地产特有信息
+        if (this._typeId === Web3TileType.PROPERTY) {
+            info.property = {
+                owner: this._owner,
+                level: this._buildingLevel,
+                levelName: this.getLevelName(),
+                price: this._price,
+                rent: this.getRent(),
+                upgradeCost: this.canBuild() ? this.getUpgradeCost() : null,
+                mortgaged: this._mortgaged,
+                mortgageValue: this.getMortgageValue()
+            };
+        }
+        
+        return info;
+    }
+    
+    /**
+     * 获取类型名称
+     */
+    private getTypeName(): string {
+        switch (this._typeId) {
+            case Web3TileType.EMPTY_LAND: return '空地';
+            case Web3TileType.PROPERTY: return '地产';
+            case Web3TileType.HOSPITAL: return '医院';
+            case Web3TileType.CHANCE: return '机会';
+            case Web3TileType.BONUS: return '奖励';
+            case Web3TileType.FEE: return '收费站';
+            case Web3TileType.CARD: return '卡片站';
+            case Web3TileType.NEWS: return '新闻站';
+            default: return '未知';
+        }
+    }
+    
+    /**
+     * 获取建筑等级名称
+     */
+    private getLevelName(): string {
+        switch (this._buildingLevel) {
+            case 0: return '空地';
+            case 1: return '小屋';
+            case 2: return '洋房';
+            case 3: return '大楼';
+            case 4: return '地标';
+            default: return '未知';
+        }
+    }
+    
+    /**
+     * 玩家踩到地块时的处理
+     */
+    public onPlayerLand(playerId: string): void {
+        console.log(`[MapTile] Player ${playerId} landed on tile at (${this._gridPosition.x}, ${this._gridPosition.y})`);
+        
+        // 根据地块类型处理不同的逻辑
+        switch (this._typeId) {
+            case Web3TileType.PROPERTY:
+                this.handlePropertyLand(playerId);
+                break;
+            case Web3TileType.CHANCE:
+                this.handleChanceLand(playerId);
+                break;
+            // ... 其他类型的处理
+        }
+    }
+    
+    /**
+     * 处理玩家踩到地产
+     */
+    private handlePropertyLand(playerId: string): void {
+        if (!this._owner) {
+            // 无主地产，可以购买
+            console.log(`[MapTile] Property available for purchase at price ${this._price}`);
+            // TODO: 触发购买事件
+        } else if (this._owner === playerId) {
+            // 自己的地产，可以升级
+            if (this.canBuild()) {
+                console.log(`[MapTile] Can upgrade property, cost: ${this.getUpgradeCost()}`);
+                // TODO: 触发升级事件
+            }
+        } else {
+            // 别人的地产，需要付租金
+            const rent = this.getRent();
+            console.log(`[MapTile] Need to pay rent: ${rent} to ${this._owner}`);
+            // TODO: 触发付租金事件
+        }
+    }
+    
+    /**
+     * 处理玩家踩到机会格
+     */
+    private handleChanceLand(playerId: string): void {
+        console.log(`[MapTile] Player ${playerId} landed on CHANCE, draw a card!`);
+        // TODO: 触发抽卡事件
     }
 }

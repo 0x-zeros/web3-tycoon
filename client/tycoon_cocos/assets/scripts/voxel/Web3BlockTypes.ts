@@ -176,14 +176,24 @@ export function getWeb3BlockByBlockId(blockId: string): Web3BlockInfo | undefine
     return WEB3_BLOCKS.find(block => block.id === blockId);
 }
 
-// 判断是否为物体类型
-export function isWeb3Object(blockId: string): boolean {
-    const block = getWeb3BlockByBlockId(blockId);
-    return block ? block.category === 'object' : false;
+// 判断是否为物体类型（支持blockId字符串或typeId数字）
+export function isWeb3Object(blockIdOrTypeId: string | number): boolean {
+    if (typeof blockIdOrTypeId === 'string') {
+        const block = getWeb3BlockByBlockId(blockIdOrTypeId);
+        return block ? block.category === 'object' : false;
+    } else {
+        // typeId >= 100 是物体类型
+        return blockIdOrTypeId >= 100 && blockIdOrTypeId <= 255;
+    }
 }
 
-// 判断是否为地块类型
-export function isWeb3Tile(blockId: string): boolean {
-    const block = getWeb3BlockByBlockId(blockId);
-    return block ? block.category === 'tile' : false;
+// 判断是否为地块类型（支持blockId字符串或typeId数字）
+export function isWeb3Tile(blockIdOrTypeId: string | number): boolean {
+    if (typeof blockIdOrTypeId === 'string') {
+        const block = getWeb3BlockByBlockId(blockIdOrTypeId);
+        return block ? block.category === 'tile' : false;
+    } else {
+        // typeId 0-99 是地块类型
+        return blockIdOrTypeId >= 0 && blockIdOrTypeId <= 99;
+    }
 }

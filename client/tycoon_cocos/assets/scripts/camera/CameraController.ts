@@ -98,6 +98,13 @@ export class CameraController extends BaseCameraController {
         d: false
     };
 
+    // 鼠标拖拽状态跟踪
+    private _mouseDragState = {
+        isDragging: false,
+        lastMousePos: new Vec3(0, 0, 0),
+        dragButton: -1 // 0=左键, 1=中键, 2=右键
+    };
+
     // Tween引用，用于相机动画
     private _positionTween: Tween<Vec3> | null = null;
     private _rotationTween: Tween<Vec3> | null = null;
@@ -337,13 +344,14 @@ export class CameraController extends BaseCameraController {
             input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
             
             // // 监听EventBus的3D输入事件 
-            // 鼠标控制： （实现有bug，测试下来没反应，暂时用不到，先不要了）
+            // 鼠标控制：
             //   - 滚轮 - 在topdown mode下缩放相机高度， 在isometric mode下缩放distance
+            //   - 中键拖拽 - 移动相机（类似WASD功能）
             //   - 右键拖拽 - 在等距模式下旋转相机 
-            // EventBus.on(EventTypes.Input3D.MouseDown, this.onMouseDown, this);
-            // EventBus.on(EventTypes.Input3D.MouseUp, this.onMouseUp, this);
-            // EventBus.on(EventTypes.Input3D.MouseMove, this.onMouseMove, this);
-            // EventBus.on(EventTypes.Input3D.MouseWheel, this.onMouseWheel, this);
+            EventBus.on(EventTypes.Input3D.MouseDown, this.onMouseDown, this);
+            EventBus.on(EventTypes.Input3D.MouseUp, this.onMouseUp, this);
+            EventBus.on(EventTypes.Input3D.MouseMove, this.onMouseMove, this);
+            EventBus.on(EventTypes.Input3D.MouseWheel, this.onMouseWheel, this);
         }
     }
 
@@ -356,10 +364,10 @@ export class CameraController extends BaseCameraController {
             input.off(Input.EventType.KEY_UP, this.onKeyUp, this);
 
             // // 移除EventBus的3D输入事件监听
-            // EventBus.off(EventTypes.Input3D.MouseDown, this.onMouseDown, this);
-            // EventBus.off(EventTypes.Input3D.MouseUp, this.onMouseUp, this);
-            // EventBus.off(EventTypes.Input3D.MouseMove, this.onMouseMove, this);
-            // EventBus.off(EventTypes.Input3D.MouseWheel, this.onMouseWheel, this);
+            EventBus.off(EventTypes.Input3D.MouseDown, this.onMouseDown, this);
+            EventBus.off(EventTypes.Input3D.MouseUp, this.onMouseUp, this);
+            EventBus.off(EventTypes.Input3D.MouseMove, this.onMouseMove, this);
+            EventBus.off(EventTypes.Input3D.MouseWheel, this.onMouseWheel, this);
         }
     }
 
@@ -791,9 +799,19 @@ export class CameraController extends BaseCameraController {
      * 处理EventBus鼠标按下事件
      */
     protected onMouseDown(eventData: Input3DEventData): void {
-        // 右键特殊处理
-        if (eventData.button === 2) { // 右键按钮
-            this.debugLog('Right mouse button pressed for camera control');
+        // 中键拖拽移动相机（类似WASD功能）
+        if (eventData.button === 1) { // 中键按钮
+            this._mouseDragState.isDragging = true;
+            this._mouseDragState.dragButton = 1;
+            this._mouseDragState.lastMousePos.set(eventData.screenX, eventData.screenY, 0);
+            console.log('[CameraController] 中键按下，开始拖拽移动');
+        }
+        // 右键拖拽旋转相机
+        else if (eventData.button === 2) { // 右键按钮
+            this._mouseDragState.isDragging = true;
+            this._mouseDragState.dragButton = 2;
+            this._mouseDragState.lastMousePos.set(eventData.screenX, eventData.screenY, 0);
+            console.log('[CameraController] 右键按下，开始拖拽旋转');
         }
     }
 
@@ -812,15 +830,33 @@ export class CameraController extends BaseCameraController {
      * 处理EventBus鼠标松开事件
      */
     protected onMouseUp(eventData: Input3DEventData): void {
-        // 处理鼠标松开逻辑
+        if (this._mouseDragState.isDragging) {
+            console.log(`[CameraController] 鼠标松开，结束拖拽 (按钮: ${this._mouseDragState.dragButton})`);
+            this._mouseDragState.isDragging = false;
+            this._mouseDragState.dragButton = -1;
+        }
     }
 
     /**
      * 处理EventBus鼠标移动事件
      */
     protected onMouseMove(eventData: Input3DEventData): void {
-        // 处理鼠标移动逻辑，用于拖拽旋转
-        // 这里可能需要根据实际需求实现拖拽逻辑
+        if (!this._mouseDragState.isDragging) return;
+
+        const currentMousePos = new Vec3(eventData.screenX, eventData.screenY, 0);
+        const deltaPos = new Vec3();
+        Vec3.subtract(deltaPos, currentMousePos, this._mouseDragState.lastMousePos);
+
+        if (this._mouseDragState.dragButton === 1) {
+            // 中键拖拽移动相机（类似WASD功能）
+            this._handleMouseDragMovement(deltaPos);
+        } else if (this._mouseDragState.dragButton === 2) {
+            // 右键拖拽旋转相机
+            this._handleMouseDragRotation(deltaPos);
+        }
+
+        // 更新上次鼠标位置
+        this._mouseDragState.lastMousePos.set(currentMousePos);
     }
 
     /**
@@ -828,27 +864,43 @@ export class CameraController extends BaseCameraController {
      */
     protected onMouseWheel(eventData: Input3DEventData): void {
         const scrollDelta = eventData.scrollDelta;
-        if (!scrollDelta) return;
+        if (!scrollDelta) {
+            console.warn('[CameraController] 鼠标滚轮事件缺少 scrollDelta 数据');
+            return;
+        }
         
         const scrollY = scrollDelta.y;
+        console.log(`[CameraController] 鼠标滚轮事件: scrollY=${scrollY}, 当前模式=${this._currentMode}`);
+        
+        // 限制 scrollY 的值，避免缩放过于敏感
+        // 将 scrollY 限制在 [-1, 1] 范围内，并应用适当的缩放因子
+        const clampedScrollY = Math.max(-1, Math.min(1, scrollY)) * 0.1;
+        console.log(`[CameraController] 限制后的 scrollY: ${clampedScrollY}`);
         
         if (this._currentMode === CameraMode.TOP_DOWN && this.config.topDown.allowZoom) {
             // 俯视模式：调整高度
             const config = this.config.topDown;
-            const newHeightOffset = this._runtimeHeightOffset - scrollY * config.zoomSpeed;
+            const newHeightOffset = this._runtimeHeightOffset - clampedScrollY * config.zoomSpeed;
             const actualHeight = config.height + newHeightOffset;
+            
+            console.log(`[CameraController] 俯视模式缩放: 当前高度偏移=${this._runtimeHeightOffset}, 新高度偏移=${newHeightOffset}, 实际高度=${actualHeight}`);
             
             // 限制在允许范围内
             if (actualHeight >= config.minHeight && actualHeight <= config.maxHeight) {
                 this._runtimeHeightOffset = newHeightOffset;
                 this._applyModeSettings(this._currentMode, true);
+                console.log(`[CameraController] 俯视模式缩放成功: 新高度=${actualHeight}`);
+            } else {
+                console.log(`[CameraController] 俯视模式缩放被限制: 高度=${actualHeight} 超出范围 [${config.minHeight}, ${config.maxHeight}]`);
             }
         } else if (this._currentMode === CameraMode.ISOMETRIC) {
             // 等距模式：调整距离
             const config = this.config.isometric;
-            const zoomSpeed = 2.0; // 等距模式的缩放速度
-            const newDistanceOffset = this._runtimeDistanceOffset + scrollY * zoomSpeed;
+            const zoomSpeed = 5.0; // 等距模式的缩放速度
+            const newDistanceOffset = this._runtimeDistanceOffset + clampedScrollY * zoomSpeed;
             const actualDistance = config.distance + newDistanceOffset;
+            
+            console.log(`[CameraController] 等距模式缩放: 当前距离偏移=${this._runtimeDistanceOffset}, 新距离偏移=${newDistanceOffset}, 实际距离=${actualDistance}`);
             
             // 限制距离在合理范围内 (5 到 50)
             const minDistance = 5;
@@ -857,7 +909,12 @@ export class CameraController extends BaseCameraController {
             if (actualDistance >= minDistance && actualDistance <= maxDistance) {
                 this._runtimeDistanceOffset = newDistanceOffset;
                 this._applyModeSettings(this._currentMode, true);
+                console.log(`[CameraController] 等距模式缩放成功: 新距离=${actualDistance}`);
+            } else {
+                console.log(`[CameraController] 等距模式缩放被限制: 距离=${actualDistance} 超出范围 [${minDistance}, ${maxDistance}]`);
             }
+        } else {
+            console.log(`[CameraController] 当前模式不支持缩放: 模式=${this._currentMode}, 俯视模式允许缩放=${this.config.topDown.allowZoom}`);
         }
     }
 
@@ -869,6 +926,66 @@ export class CameraController extends BaseCameraController {
     private _updateDebugInfo(): void {
         // 这里可以显示调试UI，暂时用控制台输出
         // 实际项目中可以集成到调试面板中
+    }
+
+    /**
+     * 处理鼠标拖拽移动（中键拖拽，类似WASD功能）
+     */
+    private _handleMouseDragMovement(deltaPos: Vec3): void {
+        // 根据相机模式调整移动速度
+        let moveSpeed = 0.1; // 默认移动速度（很慢）
+        
+        if (this._currentMode === CameraMode.ISOMETRIC) {
+            moveSpeed = 0.05; // 等距模式更慢，避免飞出屏幕 // 0.02-0.05
+        } else if (this._currentMode === CameraMode.TOP_DOWN) {
+            moveSpeed = 0.05; // 俯视模式稍快一些 //0.05-0.08
+        }
+        
+        // 将屏幕坐标转换为相机移动向量
+        // deltaPos.x: 水平移动 (左负右正)
+        // deltaPos.y: 垂直移动 (上正下负，需要翻转)
+        const moveVector = new Vec3(
+            -deltaPos.x * moveSpeed, // 水平移动
+            0, // 不改变高度
+            deltaPos.y * moveSpeed  // 垂直移动（翻转Y轴）
+        );
+        
+        console.log(`[CameraController] 鼠标拖拽移动: deltaPos=(${deltaPos.x.toFixed(2)}, ${deltaPos.y.toFixed(2)}), moveVector=(${moveVector.x.toFixed(2)}, ${moveVector.y.toFixed(2)}, ${moveVector.z.toFixed(2)})`);
+        
+        // 如果有移动输入，将移动向量转换到相机坐标系
+        if (moveVector.lengthSqr() > 0) {
+            // 获取相机的旋转（只取Y轴旋转，忽略俯仰角）
+            const cameraRotation = this.node.eulerAngles;
+            const yawAngle = cameraRotation.y;
+            
+            // 创建只包含Y轴旋转的四元数
+            const yawQuat = new Quat();
+            Quat.fromEuler(yawQuat, 0, yawAngle, 0);
+            
+            // 将移动向量转换到世界坐标系
+            const worldMoveVector = new Vec3();
+            Vec3.transformQuat(worldMoveVector, moveVector, yawQuat);
+            
+            // 更新观察目标点
+            Vec3.add(this._lookAtTarget, this._lookAtTarget, worldMoveVector);
+            
+            // 立即应用相机位置更新
+            this._applyModeSettings(this._currentMode, true);
+        }
+    }
+
+    /**
+     * 处理鼠标拖拽旋转（右键拖拽）
+     */
+    private _handleMouseDragRotation(deltaPos: Vec3): void {
+        // 右键拖拽旋转（仅在等距模式下）
+        if (this._currentMode === CameraMode.ISOMETRIC && this.config.isometric.allowRotation) {
+            // 降低旋转速度，让旋转更平滑
+            const rotationSpeed = this.config.isometric.rotationSpeed * 0.02; // 从0.1降低到0.02
+            this._runtimeYawOffset += deltaPos.x * rotationSpeed;
+            this._applyModeSettings(this._currentMode, true);
+            console.log(`[CameraController] 鼠标拖拽旋转: deltaX=${deltaPos.x.toFixed(2)}, 新Yaw偏移=${this._runtimeYawOffset.toFixed(2)}`);
+        }
     }
 }
 

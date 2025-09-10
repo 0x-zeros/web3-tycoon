@@ -170,3 +170,20 @@ export function getWeb3BlockById(id: string): Web3BlockInfo | undefined {
 export function getWeb3BlockByTypeId(typeId: number): Web3BlockInfo | undefined {
     return WEB3_BLOCKS.find(block => block.typeId === typeId);
 }
+
+// 根据blockId获取Web3方块信息
+export function getWeb3BlockByBlockId(blockId: string): Web3BlockInfo | undefined {
+    return WEB3_BLOCKS.find(block => block.id === blockId);
+}
+
+// 判断是否为物体类型
+export function isWeb3Object(blockId: string): boolean {
+    const block = getWeb3BlockByBlockId(blockId);
+    return block ? block.category === 'object' : false;
+}
+
+// 判断是否为地块类型
+export function isWeb3Tile(blockId: string): boolean {
+    const block = getWeb3BlockByBlockId(blockId);
+    return block ? block.category === 'tile' : false;
+}

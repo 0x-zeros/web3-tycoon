@@ -15,11 +15,13 @@ const { ccclass } = _decorator;
 @ccclass('UIMapElement')
 export class UIMapElement extends UIBase {
 
+    private m_tiles:fgui.GList;      // 地块列表
+    private m_objects:fgui.GList;    // 物体列表
 
-    private m_tiles:fgui.GList;
-
-    /** 方块ID列表 */
-    private m_blockIds:string[];
+    /** 地块ID列表 */
+    private m_tileIds:string[];
+    /** 物体ID列表 */
+    private m_objectIds:string[];
 
     /**
      * 初始化回调
@@ -34,20 +36,28 @@ export class UIMapElement extends UIBase {
      */
     private _setupComponents(): void {
 
-        //准备数据 - 使用Web3方块
-        this.m_blockIds = VoxelSystem.getInstance().getWeb3BlockIds();    
-        console.log("MapElement blockIds (Web3): ", this.m_blockIds);
-
+        // 获取Web3方块并分类
+        const allBlocks = VoxelSystem.getInstance().getAllWeb3Blocks();
+        const tileBlocks = allBlocks.filter(b => b.category === 'tile');
+        const objectBlocks = allBlocks.filter(b => b.category === 'object');
+        
+        // 设置地块列表
+        this.m_tileIds = tileBlocks.map(b => b.id);
         this.m_tiles = this.getList("tiles");
-        this.m_tiles.itemRenderer = this.renderListItem.bind(this);
-        this.m_tiles.numItems = this.m_blockIds.length;
-
-
-
-        //CocosCreator, onClickItem的第一个参数就是当前被点击的对象，可选的第二个对象是fgui.Event。
-        // this.m_tiles.on(fgui.Event.CLICK_ITEM, this.onTileClick, this);
-    
-        console.log("MapElement tiles: ", this.m_tiles.numChildren);
+        if (this.m_tiles) {
+            this.m_tiles.itemRenderer = this.renderTileItem.bind(this);
+            this.m_tiles.numItems = this.m_tileIds.length;
+            console.log("MapElement tiles count: ", this.m_tileIds.length);
+        }
+        
+        // 设置物体列表
+        this.m_objectIds = objectBlocks.map(b => b.id);
+        this.m_objects = this.getList("objects");
+        if (this.m_objects) {
+            this.m_objects.itemRenderer = this.renderObjectItem.bind(this);
+            this.m_objects.numItems = this.m_objectIds.length;
+            console.log("MapElement objects count: ", this.m_objectIds.length);
+        }
     }
 
     /**
@@ -62,10 +72,10 @@ export class UIMapElement extends UIBase {
      * 选中默认地图元素 (web3:empty_land)
      */
     private _selectFirstElement(): void {
-        if (this.m_blockIds.length > 0) {
+        if (this.m_tileIds && this.m_tileIds.length > 0) {
             // 延迟一帧执行，确保列表已经渲染完成
             this.scheduleOnce(() => {
-                this._selectElementById('web3:empty_land');
+                this._selectElementById('web3:empty_land', 'tile');
             }, 0);
         }
     }
@@ -73,30 +83,36 @@ export class UIMapElement extends UIBase {
     /**
      * 根据blockId选中地图元素
      * @param blockId 方块ID
+     * @param type 类型：'tile' 或 'object'
      */
-    private _selectElementById(blockId: string): void {
-        const index = this.m_blockIds.indexOf(blockId);
+    private _selectElementById(blockId: string, type: 'tile' | 'object' = 'tile'): void {
+        const ids = type === 'tile' ? this.m_tileIds : this.m_objectIds;
+        const index = ids.indexOf(blockId);
         if (index === -1) {
             console.warn(`[UIMapElement] Block ID not found: ${blockId}, falling back to first element`);
             // 如果找不到指定的blockId，回退到选中第一个元素
-            this._selectElementByIndex(0);
+            this._selectElementByIndex(0, type);
             return;
         }
         
-        this._selectElementByIndex(index);
+        this._selectElementByIndex(index, type);
     }
     
     /**
      * 根据索引选中地图元素
      * @param index 元素索引
+     * @param type 类型：'tile' 或 'object'
      */
-    private _selectElementByIndex(index: number): void {
-        if (index < 0 || index >= this.m_blockIds.length) {
+    private _selectElementByIndex(index: number, type: 'tile' | 'object' = 'tile'): void {
+        const ids = type === 'tile' ? this.m_tileIds : this.m_objectIds;
+        const list = type === 'tile' ? this.m_tiles : this.m_objects;
+        
+        if (index < 0 || index >= ids.length) {
             console.warn(`[UIMapElement] Invalid index: ${index}`);
             return;
         }
         
-        const blockId = this.m_blockIds[index];
+        const blockId = ids[index];
         
         // 获取Web3方块信息
         const web3Blocks = VoxelSystem.getInstance().getAllWeb3Blocks();
@@ -112,7 +128,7 @@ export class UIMapElement extends UIBase {
         }
         
         // 获取对应的tile对象
-        const tile = this.m_tiles.getChildAt(index) as GButton;
+        const tile = list.getChildAt(index) as GButton;
         if (!tile) {
             console.warn(`[UIMapElement] Tile not found at index: ${index}`);
             return;
@@ -127,10 +143,11 @@ export class UIMapElement extends UIBase {
             blockId: blockId,
             blockName: blockName,
             spriteFrame: spriteFrame,
-            index: index
+            index: index,
+            type: type
         });
         
-        console.log(`[UIMapElement] Default selected: ${blockName} (${blockId})`);
+        console.log(`[UIMapElement] Default selected: ${blockName} (${blockId}) type: ${type}`);
     }
 
     /**
@@ -176,13 +193,23 @@ export class UIMapElement extends UIBase {
 
     }
 
-    //items 处理
-    private renderListItem(index: number, obj: GObject): void {
+    // 渲染地块项
+    private renderTileItem(index: number, obj: GObject): void {
+        this.renderListItem(index, obj, this.m_tileIds, 'tile');
+    }
+    
+    // 渲染物体项
+    private renderObjectItem(index: number, obj: GObject): void {
+        this.renderListItem(index, obj, this.m_objectIds, 'object');
+    }
+
+    // 通用渲染方法
+    private renderListItem(index: number, obj: GObject, ids: string[], type: 'tile' | 'object'): void {
     
         const tile = obj.asCom as GButton;
 
         //web3:empty_land 等
-        const blockId = this.m_blockIds[index];
+        const blockId = ids[index];
         
         // 获取Web3方块信息
         const web3Blocks = VoxelSystem.getInstance().getAllWeb3Blocks();
@@ -234,13 +261,20 @@ export class UIMapElement extends UIBase {
             tileIcon.url = "texture/icons/default_block";
         }
 
-        tile.onClick(this.onTileClick, this);
+        // 根据类型绑定不同的点击事件
+        if (type === 'tile') {
+            tile.onClick((evt: fgui.Event) => this.onTileClick(evt, 'tile'), this);
+        } else {
+            tile.onClick((evt: fgui.Event) => this.onTileClick(evt, 'object'), this);
+        }
     }
 
-    private onTileClick(evt: fgui.Event): void {
+    private onTileClick(evt: fgui.Event, type: 'tile' | 'object'): void {
         const tile = evt.sender as GButton;
-        const index = this.m_tiles.getChildIndex(tile);
-        const blockId = this.m_blockIds[index];
+        const list = type === 'tile' ? this.m_tiles : this.m_objects;
+        const ids = type === 'tile' ? this.m_tileIds : this.m_objectIds;
+        const index = list.getChildIndex(tile);
+        const blockId = ids[index];
         
         // 获取Web3方块信息
         const web3Blocks = VoxelSystem.getInstance().getAllWeb3Blocks();
@@ -261,7 +295,8 @@ export class UIMapElement extends UIBase {
             blockId: blockId,
             blockName: blockName,
             spriteFrame: spriteFrame,  // 传递spriteFrame以便共享
-            index: index
+            index: index,
+            type: type
         });
     }
     

@@ -21,6 +21,7 @@ import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { GridClickData } from '../GridGround';
+import { getWeb3BlockByBlockId, isWeb3Object } from '../../voxel/Web3BlockTypes';
 
 const { ccclass, property } = _decorator;
 
@@ -304,7 +305,22 @@ export class GameMap extends Component {
         if (!this._isEditMode || !this._voxelSystem) return;
         
         const position = data.snappedPosition.clone();
-        position.y = 0; // 确保在y=0位置
+        console.log(`[GameMap] Ground clicked at (${position.x}, ${position.y}, ${position.z}), button: ${data.button}`);
+        
+        // 根据方块类型决定高度
+        if (this._currentSelectedBlockId) {
+            const web3Block = getWeb3BlockByBlockId(this._currentSelectedBlockId);
+            if (web3Block && web3Block.category === 'object') {
+                position.y = 1; // 物体类型放在 y=1
+                console.log(`[GameMap] Placing object at y=1: ${this._currentSelectedBlockId}`);
+            } else {
+                position.y = 0; // 地块类型放在 y=0
+                console.log(`[GameMap] Placing tile at y=0: ${this._currentSelectedBlockId}`);
+            }
+        } else {
+            position.y = 0; // 默认y=0
+        }
+        
         const posKey = `${position.x}_${position.y}_${position.z}`;
         
         if (data.button === 0) {
@@ -313,10 +329,18 @@ export class GameMap extends Component {
                 console.log('[GameMap] No block selected for placement');
                 return;
             }
+            console.log(`[GameMap] Attempting to place block with key: ${posKey}`);
             await this.placeBlock(this._currentSelectedBlockId, position, posKey);
         } else if (data.button === 2) {
-            // 右键：删除方块
-            this.removeBlock(posKey);
+            // 右键：删除方块（需要检测两个高度）
+            console.log(`[GameMap] Attempting to remove block at position: (${data.snappedPosition.x}, *, ${data.snappedPosition.z})`);
+            this.removeBlockAtPosition(data.snappedPosition);
+            
+            // 打印当前所有已放置的方块
+            console.log('[GameMap] Current placed blocks:');
+            this._placedBlocks.forEach((block, key) => {
+                console.log(`  - ${key}`);
+            });
         }
     }
     
@@ -329,6 +353,25 @@ export class GameMap extends Component {
             this.removeBlock(posKey);
         }
         
+        // 如果是放置物体（y=1），检查并清除同位置的其他物体
+        // 如果是放置地块（y=0），检查并清除同位置的其他地块
+        const web3Block = getWeb3BlockByBlockId(blockId);
+        if (web3Block) {
+            if (web3Block.category === 'object') {
+                // 放置物体时，只替换同层的物体
+                const sameLayerKey = `${position.x}_1_${position.z}`;
+                if (this._placedBlocks.has(sameLayerKey) && sameLayerKey !== posKey) {
+                    this.removeBlock(sameLayerKey);
+                }
+            } else {
+                // 放置地块时，只替换同层的地块
+                const sameLayerKey = `${position.x}_0_${position.z}`;
+                if (this._placedBlocks.has(sameLayerKey) && sameLayerKey !== posKey) {
+                    this.removeBlock(sameLayerKey);
+                }
+            }
+        }
+        
         try {
             // 创建新方块
             const blockNode = await this._voxelSystem!.createBlockNode(
@@ -339,7 +382,7 @@ export class GameMap extends Component {
             
             if (blockNode) {
                 this._placedBlocks.set(posKey, blockNode);
-                console.log(`[GameMap] Placed block ${blockId} at ${posKey}`);
+                console.log(`[GameMap] Placed block ${blockId} at ${posKey} (y=${position.y})`);
             }
         } catch (error) {
             console.error(`[GameMap] Failed to place block: ${error}`);
@@ -357,6 +400,32 @@ export class GameMap extends Component {
             console.log(`[GameMap] Removed block at ${posKey}`);
         } else {
             console.log(`[GameMap] No block found at ${posKey}`);
+        }
+    }
+    
+    /**
+     * 在指定位置删除方块（检查两个高度）
+     */
+    private removeBlockAtPosition(basePosition: Vec3): void {
+        let removed = false;
+        
+        // 优先检查 y=1 的物体（上层）
+        const objectKey = `${basePosition.x}_1_${basePosition.z}`;
+        if (this._placedBlocks.has(objectKey)) {
+            this.removeBlock(objectKey);
+            console.log(`[GameMap] Removed object at y=1: ${objectKey}`);
+            removed = true;
+        }
+        
+        // 如果没有删除上层物体，再检查 y=0 的地块（下层）
+        if (!removed) {
+            const tileKey = `${basePosition.x}_0_${basePosition.z}`;
+            if (this._placedBlocks.has(tileKey)) {
+                this.removeBlock(tileKey);
+                console.log(`[GameMap] Removed tile at y=0: ${tileKey}`);
+            } else {
+                console.log(`[GameMap] No block found at position (${basePosition.x}, *, ${basePosition.z})`);
+            }
         }
     }
     

@@ -17,7 +17,8 @@ import { MapConfig } from '../MapManager';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
-import { GridGround, GridClickData } from '../GridGround';
+import { GridGround } from '../GridGround';
+import { MapInteractionManager, MapInteractionData, MapInteractionEvent } from '../interaction/MapInteractionManager';
 import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile } from '../../voxel/Web3BlockTypes';
 import { Vec2 } from 'cc';
 import { sys } from 'cc';
@@ -81,6 +82,9 @@ export class GameMap extends Component {
     /** 当前选中的方块ID */
     private _currentSelectedBlockId: string | null = null;
     
+    /** 交互管理器 */
+    private _interactionManager: MapInteractionManager | null = null;
+    
     /** 是否已初始化 */
     private _isInitialized: boolean = false;
     
@@ -132,8 +136,10 @@ export class GameMap extends Component {
         if (isEdit) {
             // 先初始化体素系统
             await this.initializeVoxelSystem();
-            // 再创建网格（需要相机已经初始化）
+            // 创建网格（只用于视觉参考）
             this.createEditModeGrid();
+            // 初始化交互管理器
+            this.initializeInteractionManager();
         }
         
         // 尝试加载已保存的地图数据
@@ -196,9 +202,6 @@ export class GameMap extends Component {
                 this._voxelSystem = await VoxelSystem.quickInitialize();
             }
             
-            // 监听地面点击事件
-            EventBus.on(EventTypes.Game.GroundClicked, this.onGroundClicked, this);
-            
             // 监听方块选中事件
             EventBus.on(EventTypes.UI.MapElementSelected, this.onMapElementSelected, this);
             
@@ -236,7 +239,6 @@ export class GameMap extends Component {
                 halfSize: 50,
                 color: new Color(130, 130, 130, 255),
                 y: 0,
-                enableClickDetection: true,
                 camera: this.mainCamera
             });
         }
@@ -272,41 +274,74 @@ export class GameMap extends Component {
     }
     
     /**
-     * 处理地面点击事件
+     * 初始化交互管理器
      */
-    private async onGroundClicked(data: GridClickData): Promise<void> {
+    private initializeInteractionManager(): void {
+        // 添加MapInteractionManager组件
+        this._interactionManager = this.node.addComponent(MapInteractionManager);
+        this._interactionManager.targetCamera = this.mainCamera;
+        this._interactionManager.debugMode = this.debugMode;
+        
+        // 监听交互事件
+        EventBus.on(MapInteractionEvent.REQUEST_PLACE, this.onRequestPlace, this);
+        EventBus.on(MapInteractionEvent.REQUEST_REMOVE, this.onRequestRemove, this);
+        EventBus.on(MapInteractionEvent.ELEMENT_CLICKED, this.onElementClicked, this);
+        
+        console.log('[GameMap] Interaction manager initialized');
+    }
+    
+    /**
+     * 处理放置请求
+     */
+    private async onRequestPlace(data: MapInteractionData): Promise<void> {
         if (!this._isEditMode || !this._voxelSystem) return;
         
-        const position = data.snappedPosition.clone();
-        const gridPos = new Vec2(Math.floor(position.x), Math.floor(position.z));
+        const gridPos = data.gridPosition;
         
-        if (data.button === 0) {
-            // 左键：放置方块
-            if (!this._currentSelectedBlockId) {
-                console.warn('[GameMap] No block selected');
-                return;
-            }
-            
-            // 根据方块类型决定放置高度
-            const blockInfo = getWeb3BlockByBlockId(this._currentSelectedBlockId);
-            if (!blockInfo) {
-                console.warn(`[GameMap] Unknown block: ${this._currentSelectedBlockId}`);
-                return;
-            }
-            
-            const typeId = blockInfo.typeId as number;
-            if (isWeb3Tile(typeId)) {
-                // 地块类型，放置在y=0
-                await this.placeTileAt(this._currentSelectedBlockId, gridPos);
-            } else if (isWeb3Object(typeId)) {
-                // 物体类型，放置在y=1
-                await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
-            }
-            
-        } else if (data.button === 2) {
-            // 右键：删除方块
-            this.removeElementAt(gridPos);
+        // 左键：放置方块
+        if (!this._currentSelectedBlockId) {
+            console.warn('[GameMap] No block selected');
+            return;
         }
+        
+        // 根据方块类型决定放置高度
+        const blockInfo = getWeb3BlockByBlockId(this._currentSelectedBlockId);
+        if (!blockInfo) {
+            console.warn(`[GameMap] Unknown block: ${this._currentSelectedBlockId}`);
+            return;
+        }
+        
+        const typeId = blockInfo.typeId as number;
+        if (isWeb3Tile(typeId)) {
+            // 地块类型，放置在y=0
+            await this.placeTileAt(this._currentSelectedBlockId, gridPos);
+        } else if (isWeb3Object(typeId)) {
+            // 物体类型，放置在y=1
+            await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
+        }
+    }
+    
+    /**
+     * 处理删除请求
+     */
+    private onRequestRemove(data: MapInteractionData): void {
+        if (!this._isEditMode) return;
+        
+        const gridPos = data.gridPosition;
+        
+        // 右键：删除方块
+        this.removeElementAt(gridPos);
+    }
+    
+    /**
+     * 处理元素点击
+     */
+    private onElementClicked(data: MapInteractionData): void {
+        if (!this._isEditMode) return;
+        
+        console.log(`[GameMap] Element clicked: ${data.hitNode?.name} at grid (${data.gridPosition.x}, ${data.gridPosition.y})`);
+        
+        // TODO: 可以添加选中高亮等效果
     }
     
     /**
@@ -347,7 +382,8 @@ export class GameMap extends Component {
     private async placeObjectAt(blockId: string, gridPos: Vec2): Promise<void> {
         const key = `${gridPos.x}_${gridPos.y}`;
         
-        // 如果该位置已有物体，先移除
+        // 物体可以放在地块上面（y=1层），所以不检查地块
+        // 只检查该位置是否已有其他物体
         const existingObject = this._objectIndex.get(key);
         if (existingObject) {
             this.removeObject(existingObject);
@@ -778,8 +814,10 @@ export class GameMap extends Component {
         
         // 取消事件监听
         if (this._isEditMode) {
-            EventBus.off(EventTypes.Game.GroundClicked, this.onGroundClicked, this);
             EventBus.off(EventTypes.UI.MapElementSelected, this.onMapElementSelected, this);
+            EventBus.off(MapInteractionEvent.REQUEST_PLACE, this.onRequestPlace, this);
+            EventBus.off(MapInteractionEvent.REQUEST_REMOVE, this.onRequestRemove, this);
+            EventBus.off(MapInteractionEvent.ELEMENT_CLICKED, this.onElementClicked, this);
         }
         
         // 清理引用

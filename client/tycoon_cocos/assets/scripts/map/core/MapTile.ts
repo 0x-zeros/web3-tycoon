@@ -72,7 +72,8 @@ export class MapTile extends MapElement {
         await this.createVisual();
         
         // 设置碰撞器（用于点击检测）
-        this.setupCollider(new Vec3(1, 0.5, 1), new Vec3(0, 0.25, 0));
+        // 地块使用扁平的碰撞器
+        this.setupCollider(new Vec3(1, 0.1, 1), new Vec3(0, 0, 0));
         
         // 初始化地块特有属性
         this.initializeTileProperties();

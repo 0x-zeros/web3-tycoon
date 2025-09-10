@@ -78,7 +78,8 @@ export class MapObject extends MapElement {
         await this.createVisual();
         
         // 设置碰撞器（用于点击检测）
-        this.setupCollider(new Vec3(1, 1, 1), new Vec3(0, 0.5, 0));
+        // 物体使用立体的碰撞器
+        this.setupCollider(new Vec3(0.8, 1, 0.8), new Vec3(0, 0.5, 0));
         
         this._initialized = true;
         console.log(`[MapObject] Initialized object ${blockId} at (${gridPos.x}, ${gridPos.y})`);

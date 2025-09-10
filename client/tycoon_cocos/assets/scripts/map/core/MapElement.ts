@@ -244,12 +244,17 @@ export abstract class MapElement extends Component {
     
     /**
      * 转换网格坐标到世界坐标
-     * @param gridPos 网格坐标
+     * @param gridPos 网格坐标（格子索引）
      * @param y Y轴高度
-     * @returns 世界坐标
+     * @returns 世界坐标（格子中心）
      */
     protected gridToWorld(gridPos: Vec2, y: number = 0): Vec3 {
-        return new Vec3(gridPos.x, y, gridPos.y);
+        // 格子中心 = 格子索引 + 0.5
+        return new Vec3(
+            gridPos.x + 0.5,
+            y,
+            gridPos.y + 0.5
+        );
     }
     
     /**

@@ -15,7 +15,12 @@ import {
     Color, 
     Vec3,
     EventMouse,
-    find
+    find,
+    Node,
+    MeshRenderer,
+    Material,
+    utils,
+    primitives
 } from 'cc';
 import { EventBus } from '../events/EventBus';
 import { EventTypes, Input3DEventData } from '../events/EventTypes';
@@ -34,14 +39,13 @@ export interface GridGroundConfig {
     color?: Color;
     /** 网格所在的 Y 高度 */
     y?: number;
-    /** 是否启用点击检测 */
-    enableClickDetection?: boolean;
     /** 目标相机（如果不指定，自动查找 Main Camera） */
     camera?: Camera;
 }
 
 /**
- * 地面点击事件数据
+ * 地面点击事件数据（已废弃，保留以兼容旧代码）
+ * @deprecated 使用 MapInteractionData 代替
  */
 export interface GridClickData {
     /** 世界坐标位置 */
@@ -54,7 +58,7 @@ export interface GridClickData {
     gridIndex: { x: number, z: number };
     /** 地面组件 */
     groundComponent: Component;
-    /** 鼠标按键 (0=左键, 2=右键) */
+    /** 鼂标按键 (0=左键, 2=右键) */
     button: number;
 }
 
@@ -86,11 +90,27 @@ export class GridGround extends Component {
     @property({ tooltip: '调试模式' })
     public debugMode: boolean = false;
 
+    @property({ tooltip: '是否启用Mesh网格（用于调试点击偏移）' })
+    public enableMeshGrid: boolean = false; //谨慎打开，非常非常卡
+
+    @property({ tooltip: 'Mesh网格颜色' })
+    public meshGridColor: Color = new Color(0, 255, 0, 76); // 绿色，30%透明度
+
+    @property({ tooltip: 'Mesh网格高度（稍微高于网格线）' })
+    public meshGridHeight: number = 0.01;
+
     private _isInitialized: boolean = false;
+    private _meshGridNodes: Map<string, Node> = new Map();
+    private _highlightedGrid: Node | null = null;
+    private _meshGridContainer: Node | null = null;
 
     protected start(): void {
         this.log('GridGround start');
         this.initializeCamera();
+        
+        if (this.enableMeshGrid) {
+            this.createMeshGrid();
+        }
         
         if (this.enableClickDetection) {
             this.registerClickEvents();
@@ -105,6 +125,7 @@ export class GridGround extends Component {
     protected onDestroy(): void {
         this.log('GridGround onDestroy');
         this.unregisterClickEvents();
+        this.cleanupMeshGrid();
     }
 
     /**
@@ -119,6 +140,11 @@ export class GridGround extends Component {
         if (config.camera !== undefined) this.cam = config.camera;
         
         this.initializeCamera();
+        
+        // 如果启用了Mesh网格，创建它
+        if (this.enableMeshGrid) {
+            this.createMeshGrid();
+        }
     }
 
     /**
@@ -145,6 +171,151 @@ export class GridGround extends Component {
     }
 
     /**
+     * 创建Mesh网格平面
+     * 为每个网格单元创建一个半透明的平面，用于可视化调试
+     */
+    private createMeshGrid(): void {
+        this.log('Creating mesh grid for visualization...');
+        
+        // 创建容器节点
+        if (!this._meshGridContainer) {
+            this._meshGridContainer = new Node('MeshGridContainer');
+            this._meshGridContainer.setParent(this.node);
+        }
+        
+        // 计算网格数量和起始位置（确保对齐到整数网格）
+        const gridSize = Math.floor(this.halfSize / this.step);
+        const gridCount = gridSize * 2 + 1; // 包括中心格子
+        const startX = -gridSize * this.step;
+        const startZ = -gridSize * this.step;
+        
+        // 创建材质（半透明）
+        const material = new Material();
+        material.initialize({ effectName: 'builtin-unlit' });
+        
+        // 为每个网格单元创建一个平面
+        for (let i = 0; i < gridCount; i++) {
+            for (let j = 0; j < gridCount; j++) {
+                const x = startX + i * this.step;
+                const z = startZ + j * this.step;
+                const key = `${i}_${j}`;
+                
+                // 创建网格单元节点
+                const gridNode = new Node(`Grid_${i}_${j}`);
+                gridNode.setParent(this._meshGridContainer);
+                
+                // 创建平面几何体（使用扁平的盒子）
+                const boxGeometry = primitives.box({
+                    width: this.step * 0.95,  // 稍微小一点，显示网格线
+                    height: this.meshGridHeight,
+                    length: this.step * 0.95
+                });
+                
+                // 创建Mesh
+                const mesh = utils.MeshUtils.createMesh(boxGeometry);
+                if (mesh) {
+                    // 添加MeshRenderer
+                    const meshRenderer = gridNode.addComponent(MeshRenderer);
+                    meshRenderer.mesh = mesh;
+                    meshRenderer.material = material;
+                    
+                    // 设置位置（格子中心）
+                    gridNode.setPosition(
+                        x + this.step * 0.5,
+                        this.y + this.meshGridHeight * 0.5,
+                        z + this.step * 0.5
+                    );
+                    
+                    // 存储节点
+                    this._meshGridNodes.set(key, gridNode);
+                }
+            }
+        }
+        
+        // 更新材质颜色
+        this.updateMeshGridColor();
+        
+        this.log(`Created ${this._meshGridNodes.size} mesh grid cells`);
+    }
+    
+    /**
+     * 更新Mesh网格颜色
+     */
+    private updateMeshGridColor(): void {
+        if (!this._meshGridContainer) return;
+        
+        this._meshGridNodes.forEach(node => {
+            const meshRenderer = node.getComponent(MeshRenderer);
+            if (meshRenderer && meshRenderer.material) {
+                // 设置颜色（包含透明度）
+                const color = this.meshGridColor.clone();
+                meshRenderer.material.setProperty('mainColor', color);
+            }
+        });
+    }
+    
+    /**
+     * 高亮显示指定的网格单元
+     */
+    private highlightGridCell(gridX: number, gridZ: number): void {
+        // 恢复之前高亮的格子
+        if (this._highlightedGrid) {
+            const meshRenderer = this._highlightedGrid.getComponent(MeshRenderer);
+            if (meshRenderer && meshRenderer.material) {
+                meshRenderer.material.setProperty('mainColor', this.meshGridColor);
+            }
+        }
+        
+        // 找到对应的网格单元
+        const gridSize = Math.floor(this.halfSize / this.step);
+        const startIndex = -gridSize;
+        const i = gridX - startIndex;
+        const j = gridZ - startIndex;
+        const key = `${i}_${j}`;
+        
+        const gridNode = this._meshGridNodes.get(key);
+        if (gridNode) {
+            const meshRenderer = gridNode.getComponent(MeshRenderer);
+            if (meshRenderer && meshRenderer.material) {
+                // 设置高亮颜色（更亮的绿色）
+                const highlightColor = new Color(0, 255, 0, 180);
+                meshRenderer.material.setProperty('mainColor', highlightColor);
+                this._highlightedGrid = gridNode;
+                
+                // 3秒后恢复原色
+                setTimeout(() => {
+                    if (this._highlightedGrid === gridNode && meshRenderer.material) {
+                        meshRenderer.material.setProperty('mainColor', this.meshGridColor);
+                        this._highlightedGrid = null;
+                    }
+                }, 3000);
+            }
+        }
+    }
+    
+    /**
+     * 切换Mesh网格显示
+     */
+    public toggleMeshGrid(): void {
+        if (this._meshGridContainer) {
+            this._meshGridContainer.active = !this._meshGridContainer.active;
+            this.log(`Mesh grid ${this._meshGridContainer.active ? 'enabled' : 'disabled'}`);
+        }
+    }
+    
+    /**
+     * 清理Mesh网格资源
+     */
+    private cleanupMeshGrid(): void {
+        if (this._meshGridContainer) {
+            this._meshGridContainer.destroy();
+            this._meshGridContainer = null;
+        }
+        this._meshGridNodes.clear();
+        this._highlightedGrid = null;
+    }
+    
+    /**
      * 绘制网格线
      */
     private drawGrid(): void {
@@ -154,22 +325,30 @@ export class GridGround extends Component {
         if (!gr) return;
 
         const y = this.y;
-        const hs = this.halfSize;
         const s = Math.max(0.001, this.step);
+        
+        // 计算网格范围（确保在整数边界上）
+        const gridCount = Math.floor(this.halfSize / this.step);
+        const minX = -gridCount * this.step;
+        const maxX = gridCount * this.step;
+        const minZ = -gridCount * this.step;
+        const maxZ = gridCount * this.step;
 
         // 画 X 方向的平行线（沿 Z 轴方向）
-        for (let x = -hs; x <= hs; x += s) {
-            gr.addLine(new Vec3(x, y, -hs), new Vec3(x, y, hs), this.color);
+        // 网格线在整数位置，对应格子的边界
+        for (let x = minX; x <= maxX; x += s) {
+            gr.addLine(new Vec3(x, y, minZ), new Vec3(x, y, maxZ), this.color);
         }
         
         // 画 Z 方向的平行线（沿 X 轴方向）
-        for (let z = -hs; z <= hs; z += s) {
-            gr.addLine(new Vec3(-hs, y, z), new Vec3(hs, y, z), this.color);
+        for (let z = minZ; z <= maxZ; z += s) {
+            gr.addLine(new Vec3(minX, y, z), new Vec3(maxX, y, z), this.color);
         }
     }
 
     /**
-     * 注册点击事件
+     * 注册点击事件（已废弃）
+     * @deprecated 使用 MapInteractionManager 处理点击
      */
     private registerClickEvents(): void {
         if (!this.enableClickDetection) return;
@@ -185,7 +364,8 @@ export class GridGround extends Component {
     }
 
     /**
-     * 取消注册点击事件
+     * 取消注册点击事件（已废弃）
+     * @deprecated
      */
     private unregisterClickEvents(): void {
         // 取消 EventBus 事件
@@ -319,7 +499,12 @@ export class GridGround extends Component {
             worldPos.z
         );
         
-        // ========== 4. 调试输出 ==========
+        // ========== 4. 高亮显示点击的网格（如果启用了Mesh网格） ==========
+        if (this.enableMeshGrid) {
+            this.highlightGridCell(gridIndex.x, gridIndex.z);
+        }
+        
+        // ========== 5. 调试输出 ==========
         if (this.debugMode) {
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('[GridGround] 点击检测 - BoxCollider计算');
@@ -332,7 +517,7 @@ export class GridGround extends Component {
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         }
         
-        // ========== 5. 创建点击数据 ==========
+        // ========== 6. 创建点击数据 ==========
         const clickData: GridClickData = {
             worldPosition: worldPos.clone(),
             localPosition: localPos.clone(),
@@ -342,7 +527,7 @@ export class GridGround extends Component {
             button: button
         };
         
-        // ========== 6. 发送事件 ==========
+        // ========== 7. 发送事件 ==========
         EventBus.emit(EventTypes.Game.GroundClicked, clickData);
     }
 

@@ -879,6 +879,7 @@ export class CameraController extends BaseCameraController {
         
         if (this._currentMode === CameraMode.TOP_DOWN && this.config.topDown.allowZoom) {
             // 俯视模式：调整高度
+            // 统一方向：滚轮向上(clampedScrollY<0) -> 降低高度(放大)，滚轮向下(clampedScrollY>0) -> 提高高度(缩小)
             const config = this.config.topDown;
             const newHeightOffset = this._runtimeHeightOffset - clampedScrollY * config.zoomSpeed;
             const actualHeight = config.height + newHeightOffset;
@@ -895,9 +896,10 @@ export class CameraController extends BaseCameraController {
             }
         } else if (this._currentMode === CameraMode.ISOMETRIC) {
             // 等距模式：调整距离
+            // 统一方向：滚轮向上(clampedScrollY<0) -> 减小距离(放大)，滚轮向下(clampedScrollY>0) -> 增加距离(缩小)
             const config = this.config.isometric;
             const zoomSpeed = 5.0; // 等距模式的缩放速度
-            const newDistanceOffset = this._runtimeDistanceOffset + clampedScrollY * zoomSpeed;
+            const newDistanceOffset = this._runtimeDistanceOffset - clampedScrollY * zoomSpeed;
             const actualDistance = config.distance + newDistanceOffset;
             
             console.log(`[CameraController] 等距模式缩放: 当前距离偏移=${this._runtimeDistanceOffset}, 新距离偏移=${newDistanceOffset}, 实际距离=${actualDistance}`);

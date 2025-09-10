@@ -498,8 +498,27 @@ export class MaterialFactory {
             'sapling', 'vine', 'wheat', 'carrot', 'potato'
         ];
         
+        // Web3 方块中的 cross 类型方块（使用 cross 模型）
+        const web3CrossTextures = [
+            'bomb', 'bonus', 'card', 'chance', 'dog', 'empty_land', 'fee',
+            'fortune_god', 'hospital', 'land_god', 'news', 'poverty_god',
+            'property', 'roadblock', 'wealth_god'
+        ];
+        
         const lowerPath = texturePath.toLowerCase();
-        return plantTextures.some(plant => lowerPath.includes(plant));
+        
+        // 检查 minecraft 植物纹理
+        if (plantTextures.some(plant => lowerPath.includes(plant))) {
+            return true;
+        }
+        
+        // 检查 web3 cross 类型方块
+        if (lowerPath.includes('web3:block/') && 
+            web3CrossTextures.some(web3Block => lowerPath.includes(web3Block))) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**

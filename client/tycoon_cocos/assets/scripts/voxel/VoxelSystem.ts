@@ -6,6 +6,7 @@ import { ModelParser } from './resource/ModelParser';
 import { BlockStateParser } from './resource/BlockStateParser';
 import { MeshBuilder, VoxelMeshData } from './resource/MeshBuilder';
 import { BlockRegistry, BlockDefinition } from './core/VoxelBlock';
+import { WEB3_BLOCKS, getWeb3TileBlocks, getWeb3ObjectBlocks, getAllWeb3BlockIds, Web3BlockInfo } from './Web3BlockTypes';
 
 /**
  * 体素系统主类 - Minecraft 资源包渲染系统
@@ -232,15 +233,31 @@ export class VoxelSystem {
         // 规范化输入，支持以下形式：
         // - "minecraft:grass_block"
         // - "minecraft:block/grass_block"
+        // - "web3:empty_land"
+        // - "web3:block/empty_land"
         // - "block/grass_block"
         // - "grass_block"
         let id = blockId.trim();
+        
+        // 处理 web3 命名空间
+        if (id.startsWith('web3:block/')) {
+            return id;
+        }
+        if (id.startsWith('web3:')) {
+            const name = id.substring('web3:'.length);
+            return `web3:block/${name}`;
+        }
+        
+        // 处理 minecraft 命名空间
         if (id.startsWith('minecraft:block/')) {
             return id;
         }
         if (id.startsWith('minecraft:')) {
             id = id.substring('minecraft:'.length);
+            return `minecraft:block/${id}`;
         }
+        
+        // 处理无命名空间的情况（默认 minecraft）
         if (id.startsWith('block/')) {
             id = id.substring('block/'.length);
         }
@@ -270,7 +287,50 @@ export class VoxelSystem {
      * @returns 方块ID数组
      */
     getAllBlockIds(): string[] {
-        return BlockRegistry.getAllBlockIds();
+        // 优先返回Web3方块，然后是默认方块
+        const web3Ids = getAllWeb3BlockIds();
+        const defaultIds = BlockRegistry.getAllBlockIds();
+        
+        // 合并去重，Web3方块优先
+        const allIds = [...web3Ids];
+        for (const id of defaultIds) {
+            if (allIds.indexOf(id) === -1) {
+                allIds.push(id);
+            }
+        }
+        return allIds;
+    }
+
+    /**
+     * 获取所有Web3方块ID
+     * @returns Web3方块ID数组
+     */
+    getWeb3BlockIds(): string[] {
+        return getAllWeb3BlockIds();
+    }
+
+    /**
+     * 获取Web3地块类型方块
+     * @returns Web3地块方块信息数组
+     */
+    getWeb3TileBlocks(): Web3BlockInfo[] {
+        return getWeb3TileBlocks();
+    }
+
+    /**
+     * 获取Web3物体类型方块
+     * @returns Web3物体方块信息数组
+     */
+    getWeb3ObjectBlocks(): Web3BlockInfo[] {
+        return getWeb3ObjectBlocks();
+    }
+
+    /**
+     * 获取所有Web3方块信息
+     * @returns Web3方块信息数组
+     */
+    getAllWeb3Blocks(): Web3BlockInfo[] {
+        return WEB3_BLOCKS;
     }
 
     /**

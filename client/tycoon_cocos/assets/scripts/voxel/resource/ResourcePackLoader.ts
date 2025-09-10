@@ -73,10 +73,17 @@ export class ResourcePackLoader {
         console.log('[ResourcePackLoader] 开始加载资源包:', this.resourcePackPath);
 
         try {
+            // 加载 minecraft 资源
             await this.loadBlockStates();
             await this.loadModels();
+            
+            // 加载 web3 资源包
+            await this.loadWeb3Resources();
+            
+            // 索引所有纹理
             await this.indexTextures();
-            // 全量扫描已禁用。如需补全特定纹理，可按需调用 indexTexturesFromDirectory()
+            // 扫描纹理目录以补全索引（特别是 web3 纹理）
+            await this.indexTexturesFromDirectory();
             
             this.loaded = true;
             console.log('[ResourcePackLoader] 资源包加载完成');
@@ -113,6 +120,59 @@ export class ResourcePackLoader {
             }
         } catch (error) {
             console.warn(`[ResourcePackLoader] 无法加载 blockstate: ${name}`, error);
+        }
+    }
+
+    /**
+     * 加载 Web3 资源包
+     */
+    private async loadWeb3Resources(): Promise<void> {
+        console.log('[ResourcePackLoader] 开始加载 Web3 资源包');
+        
+        // Web3 方块列表
+        const web3Blocks = [
+            'empty_land', 'property', 'hospital', 'chance', 
+            'bonus', 'fee', 'card', 'news',
+            'land_god', 'wealth_god', 'fortune_god', 
+            'dog', 'poverty_god', 'roadblock', 'bomb'
+        ];
+        
+        // 加载 blockstates
+        for (const name of web3Blocks) {
+            await this.tryLoadWeb3BlockState(name);
+        }
+        
+        // 加载 models
+        for (const name of web3Blocks) {
+            await this.tryLoadWeb3Model(name);
+        }
+        
+        console.log('[ResourcePackLoader] Web3 资源包加载完成');
+    }
+    
+    private async tryLoadWeb3BlockState(name: string): Promise<void> {
+        try {
+            const path = `voxel/web3/assets/web3/blockstates/${name}`;
+            const jsonAsset = await this.loadJsonAsset(path);
+            if (jsonAsset) {
+                this.index.blockstates.set(`web3:${name}`, jsonAsset);
+                console.log(`[ResourcePackLoader] 已加载 Web3 blockstate: web3:${name}`);
+            }
+        } catch (error) {
+            console.warn(`[ResourcePackLoader] 无法加载 Web3 blockstate: ${name}`, error);
+        }
+    }
+    
+    private async tryLoadWeb3Model(name: string): Promise<void> {
+        try {
+            const path = `voxel/web3/assets/web3/models/block/${name}`;
+            const jsonAsset = await this.loadJsonAsset(path);
+            if (jsonAsset) {
+                this.index.models.set(`web3:block/${name}`, jsonAsset);
+                console.log(`[ResourcePackLoader] 已加载 Web3 model: web3:block/${name}`);
+            }
+        } catch (error) {
+            console.warn(`[ResourcePackLoader] 无法加载 Web3 model: ${name}`, error);
         }
     }
 
@@ -158,21 +218,34 @@ export class ResourcePackLoader {
             for (const key in model.textures) {
                 if (!Object.prototype.hasOwnProperty.call(model.textures, key)) continue;
                 const value = (model.textures as any)[key];
-                const fullTexId = this.normalizeTextureId(value); // e.g. minecraft:block/grass_block_top
-                const tailName = fullTexId.replace('minecraft:block/', '');
-                const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${tailName}`;
+                const fullTexId = this.normalizeTextureId(value); // e.g. minecraft:block/grass_block_top 或 web3:block/empty_land
+                
+                // 解析命名空间和路径
+                const colonIndex = fullTexId.indexOf(':');
+                const namespace = colonIndex > 0 ? fullTexId.substring(0, colonIndex) : 'minecraft';
+                const pathAfterNamespace = fullTexId.substring(colonIndex + 1);
+                const tailName = pathAfterNamespace.replace('block/', '');
+                
+                // 根据命名空间构建正确的资源路径
+                const resourcePath = namespace === 'web3'
+                    ? `voxel/web3/assets/web3/textures/block/${tailName}`
+                    : `${this.resourcePackPath}/assets/${namespace}/textures/block/${tailName}`;
+                
                 if (!this.index.textures.has(fullTexId)) {
                     this.index.textures.set(fullTexId, resourcePath);
                     // 额外添加常见别名，避免路径不规范导致找不到
                     this.index.textures.set(tailName, resourcePath);
                     this.index.textures.set(`block/${tailName}`, resourcePath);
-                    this.index.textures.set(`minecraft:${tailName}`, resourcePath);
+                    this.index.textures.set(`${namespace}:${tailName}`, resourcePath);
                     count++;
                 }
 
                 // 2) 方便通过 "模型名_键" 访问（例如 grass_block_top）
-                const modelName = modelId.replace('minecraft:block/', '');
-                const aliasId = `minecraft:block/${modelName}_${key}`;
+                const modelNamespaceIndex = modelId.indexOf(':');
+                const modelNamespace = modelNamespaceIndex > 0 ? modelId.substring(0, modelNamespaceIndex) : 'minecraft';
+                const modelPath = modelId.substring(modelNamespaceIndex + 1);
+                const modelName = modelPath.replace('block/', '');
+                const aliasId = `${modelNamespace}:block/${modelName}_${key}`;
                 if (!this.index.textures.has(aliasId)) {
                     this.index.textures.set(aliasId, resourcePath);
                     count++;
@@ -180,13 +253,22 @@ export class ResourcePackLoader {
             }
 
             // 3) 给模型名本身增加聚合别名（选择一个合理默认：side > top > all > 任意一项）
-            const aggregateId = modelId; // e.g. minecraft:block/grass_block
+            const aggregateId = modelId; // e.g. minecraft:block/grass_block 或 web3:block/empty_land
             if (!this.index.textures.has(aggregateId)) {
                 const preferred = this.pickPreferredTexture(model.textures);
                 if (preferred) {
                     const fullTexId = this.normalizeTextureId(preferred);
-                    const tailName = fullTexId.replace('minecraft:block/', '');
-                    const resourcePath = `${this.resourcePackPath}/assets/minecraft/textures/block/${tailName}`;
+                    // 解析命名空间
+                    const colonIndex = fullTexId.indexOf(':');
+                    const namespace = colonIndex > 0 ? fullTexId.substring(0, colonIndex) : 'minecraft';
+                    const pathAfterNamespace = fullTexId.substring(colonIndex + 1);
+                    const tailName = pathAfterNamespace.replace('block/', '');
+                    
+                    // 根据命名空间构建正确的资源路径
+                    const resourcePath = namespace === 'web3'
+                        ? `voxel/web3/assets/web3/textures/block/${tailName}`
+                        : `${this.resourcePackPath}/assets/${namespace}/textures/block/${tailName}`;
+                        
                     this.index.textures.set(aggregateId, resourcePath);
                     count++;
                 }
@@ -198,7 +280,17 @@ export class ResourcePackLoader {
 
     /** 扫描纹理目录，补全所有可用纹理索引（包括 overlay 等未被模型直接引用的项） */
     private async indexTexturesFromDirectory(): Promise<void> {
-        const dir = `${this.resourcePackPath}/assets/minecraft/textures/block`;
+        // 扫描 minecraft 纹理
+        await this.indexTexturesFromNamespace('minecraft');
+        // 扫描 web3 纹理
+        await this.indexTexturesFromNamespace('web3');
+    }
+    
+    private async indexTexturesFromNamespace(namespace: string): Promise<void> {
+        const dir = namespace === 'minecraft' 
+            ? `${this.resourcePackPath}/assets/${namespace}/textures/block`
+            : `voxel/web3/assets/${namespace}/textures/block`;
+            
         const dirInfo: any = (resources as any).getDirWithPath ? (resources as any).getDirWithPath(dir) : null;
         const paths: string[] = Array.isArray(dirInfo) ? dirInfo.map((i: any) => i.path) : (dirInfo?.paths || []);
         let added = 0;
@@ -206,24 +298,24 @@ export class ResourcePackLoader {
         for (let p of paths) {
             // 目录扫描可能返回子资源（/texture 或 /spriteFrame），统一回退到基路径
             p = this.normalizeBaseResourcePath(p);
-            const name = p.split('/').pop()!; // e.g. grass_block_side_overlay
+            const name = p.split('/').pop()!; // e.g. grass_block_side_overlay 或 empty_land
             const resourcePath = `${dir}/${name}`;
-            const fullKey = `minecraft:block/${name}`;
+            const fullKey = `${namespace}:block/${name}`;
             if (!this.index.textures.has(fullKey)) {
                 this.index.textures.set(fullKey, resourcePath);
                 this.index.textures.set(name, resourcePath);
                 this.index.textures.set(`block/${name}`, resourcePath);
-                this.index.textures.set(`minecraft:${name}`, resourcePath);
+                this.index.textures.set(`${namespace}:${name}`, resourcePath);
                 added++;
             }
         }
 
         if (added > 0) {
-            console.log(`[ResourcePackLoader] 纹理目录索引补全: +${added}`);
+            console.log(`[ResourcePackLoader] ${namespace} 纹理目录索引补全: +${added}`);
         }
     }
 
-    /** 将多种写法规范化为 minecraft:block/<name> */
+    /** 将多种写法规范化为 namespace:block/<name> */
     private normalizeTextureId(value: string): string {
         if (!value) return 'minecraft:block/missingno';
         // 去掉可能的前缀 '#'
@@ -231,10 +323,28 @@ export class ResourcePackLoader {
             // 此类引用应由调用方用别名解析，这里简单返回去掉 '#'
             value = value.substring(1);
         }
-        // 常见写法："minecraft:block/xxx" | "block/xxx" | "minecraft:xxx" | "xxx"
-        if (value.startsWith('minecraft:block/')) return value;
+        
+        // 支持 web3 命名空间
+        if (value.startsWith('web3:block/')) return value;
+        if (value.startsWith('web3:')) {
+            return `web3:block/${value.substring('web3:'.length)}`;
+        }
+        
+        // 支持其他自定义命名空间（格式：namespace:xxx）
+        const colonIndex = value.indexOf(':');
+        if (colonIndex > 0 && colonIndex < value.length - 1) {
+            const namespace = value.substring(0, colonIndex);
+            const path = value.substring(colonIndex + 1);
+            // 如果已经包含 block/ 路径，直接返回
+            if (path.startsWith('block/')) {
+                return value;
+            }
+            // 否则添加 block/ 路径
+            return `${namespace}:block/${path}`;
+        }
+        
+        // 默认使用 minecraft 命名空间
         if (value.startsWith('block/')) return `minecraft:block/${value.substring('block/'.length)}`;
-        if (value.startsWith('minecraft:')) return `minecraft:block/${value.substring('minecraft:'.length)}`;
         return `minecraft:block/${value}`;
     }
 
@@ -275,13 +385,27 @@ export class ResourcePackLoader {
     async loadTexture(texturePath: string): Promise<Texture2D | null> {
         // 归一化查询键，并为常见写法提供容错
         const normalized = this.normalizeTextureId(texturePath);
+        
+        // 尝试多种格式查找纹理
         const resourcePath = this.index.textures.get(normalized)
             || this.index.textures.get(texturePath)
+            || this.index.textures.get(texturePath.replace(/^web3:/, 'web3:block/'))
             || this.index.textures.get(texturePath.replace(/^minecraft:/, 'minecraft:block/'))
             || this.index.textures.get(texturePath.replace(/^block\//, 'minecraft:block/'))
-            || this.index.textures.get(texturePath.replace(/^minecraft:block\//, 'minecraft:block/'));
+            || this.index.textures.get(texturePath.replace(/^minecraft:block\//, 'minecraft:block/'))
+            || this.index.textures.get(texturePath.replace(/^web3:block\//, 'web3:block/'));
+            
         if (!resourcePath) {
-            console.warn(`[ResourcePackLoader] 纹理路径未找到: ${texturePath}`);
+            console.warn(`[ResourcePackLoader] 纹理路径未找到: ${texturePath} (normalized: ${normalized})`);
+            // 列出可用的纹理键帮助调试
+            if (texturePath.startsWith('web3:')) {
+                console.log('[ResourcePackLoader] 可用的 web3 纹理:');
+                this.index.textures.forEach((value, key) => {
+                    if (key.startsWith('web3:')) {
+                        console.log(`  - ${key} => ${value}`);
+                    }
+                });
+            }
             return null;
         }
 

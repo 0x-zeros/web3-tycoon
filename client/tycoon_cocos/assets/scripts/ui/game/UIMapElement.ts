@@ -34,9 +34,9 @@ export class UIMapElement extends UIBase {
      */
     private _setupComponents(): void {
 
-        //准备数据
-        this.m_blockIds = VoxelSystem.getInstance().getAllBlockIds();    
-        console.log("MapElement blockIds: ", this.m_blockIds);
+        //准备数据 - 使用Web3方块
+        this.m_blockIds = VoxelSystem.getInstance().getWeb3BlockIds();    
+        console.log("MapElement blockIds (Web3): ", this.m_blockIds);
 
         this.m_tiles = this.getList("tiles");
         this.m_tiles.itemRenderer = this.renderListItem.bind(this);
@@ -59,13 +59,13 @@ export class UIMapElement extends UIBase {
     }
     
     /**
-     * 选中默认地图元素 (minecraft:stone)
+     * 选中默认地图元素 (web3:empty_land)
      */
     private _selectFirstElement(): void {
         if (this.m_blockIds.length > 0) {
             // 延迟一帧执行，确保列表已经渲染完成
             this.scheduleOnce(() => {
-                this._selectElementById('minecraft:stone');
+                this._selectElementById('web3:empty_land');
             }, 0);
         }
     }
@@ -97,10 +97,17 @@ export class UIMapElement extends UIBase {
         }
         
         const blockId = this.m_blockIds[index];
-        const blockDefinition = VoxelSystem.getInstance().getBlockDefinition(blockId);
         
-        if (!blockDefinition) {
-            console.warn(`[UIMapElement] Block definition not found for: ${blockId}`);
+        // 获取Web3方块信息
+        const web3Blocks = VoxelSystem.getInstance().getAllWeb3Blocks();
+        const web3Block = web3Blocks.find(b => b.id === blockId);
+        
+        // 获取方块名称
+        const blockName = web3Block ? web3Block.name : 
+                         VoxelSystem.getInstance().getBlockDefinition(blockId)?.displayName || blockId;
+        
+        if (!web3Block && !VoxelSystem.getInstance().getBlockDefinition(blockId)) {
+            console.warn(`[UIMapElement] Block not found: ${blockId}`);
             return;
         }
         
@@ -118,12 +125,12 @@ export class UIMapElement extends UIBase {
         // 发送选中事件，携带完整数据
         EventBus.emit(EventTypes.UI.MapElementSelected, {
             blockId: blockId,
-            blockName: blockDefinition.displayName,
+            blockName: blockName,
             spriteFrame: spriteFrame,
             index: index
         });
         
-        console.log(`[UIMapElement] Default selected: ${blockDefinition.displayName} (${blockId})`);
+        console.log(`[UIMapElement] Default selected: ${blockName} (${blockId})`);
     }
 
     /**
@@ -174,10 +181,17 @@ export class UIMapElement extends UIBase {
     
         const tile = obj.asCom as GButton;
 
-        //minecraft:stone 
+        //web3:empty_land 等
         const blockId = this.m_blockIds[index];
-        const blockName = VoxelSystem.getInstance().getBlockDefinition(blockId)?.displayName;
-        tile.title = index + " " + blockName;
+        
+        // 获取Web3方块信息
+        const web3Blocks = VoxelSystem.getInstance().getAllWeb3Blocks();
+        const web3Block = web3Blocks.find(b => b.id === blockId);
+        
+        // 显示方块名称
+        const blockName = web3Block ? web3Block.name : 
+                         VoxelSystem.getInstance().getBlockDefinition(blockId)?.displayName || blockId;
+        tile.title = `${index} ${blockName}`;
 
 
         const tileIcon = tile.getChild("tileIcon") as fgui.GLoader;
@@ -227,7 +241,14 @@ export class UIMapElement extends UIBase {
         const tile = evt.sender as GButton;
         const index = this.m_tiles.getChildIndex(tile);
         const blockId = this.m_blockIds[index];
-        const blockDefinition = VoxelSystem.getInstance().getBlockDefinition(blockId);
+        
+        // 获取Web3方块信息
+        const web3Blocks = VoxelSystem.getInstance().getAllWeb3Blocks();
+        const web3Block = web3Blocks.find(b => b.id === blockId);
+        
+        // 获取方块名称
+        const blockName = web3Block ? web3Block.name : 
+                         VoxelSystem.getInstance().getBlockDefinition(blockId)?.displayName || "";
         
         console.log("[UIMapElement] tile clicked: ", tile.title);
         
@@ -238,7 +259,7 @@ export class UIMapElement extends UIBase {
         // 发送选中事件，携带完整数据
         EventBus.emit(EventTypes.UI.MapElementSelected, {
             blockId: blockId,
-            blockName: blockDefinition?.displayName || "",
+            blockName: blockName,
             spriteFrame: spriteFrame,  // 传递spriteFrame以便共享
             index: index
         });

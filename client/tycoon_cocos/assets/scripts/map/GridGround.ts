@@ -54,6 +54,8 @@ export interface GridClickData {
     gridIndex: { x: number, z: number };
     /** 地面组件 */
     groundComponent: Component;
+    /** 鼠标按键 (0=左键, 2=右键) */
+    button: number;
 }
 
 @ccclass('GridGround')
@@ -174,6 +176,7 @@ export class GridGround extends Component {
 
         // 优先使用 EventBus 的输入事件
         EventBus.on(EventTypes.Input3D.MouseDown, this.onEventBusMouseDown, this);
+        EventBus.on(EventTypes.Input3D.MouseUp, this.onEventBusMouseUp, this);
         
         // 如果 EventBus 没有输入事件，回退到直接监听
         // input.on(Input.EventType.MOUSE_DOWN, this.onDirectMouseDown, this);
@@ -187,6 +190,7 @@ export class GridGround extends Component {
     private unregisterClickEvents(): void {
         // 取消 EventBus 事件
         EventBus.off(EventTypes.Input3D.MouseDown, this.onEventBusMouseDown, this);
+        EventBus.off(EventTypes.Input3D.MouseUp, this.onEventBusMouseUp, this);
         
         // 取消直接输入事件
         // input.off(Input.EventType.MOUSE_DOWN, this.onDirectMouseDown, this);
@@ -205,13 +209,34 @@ export class GridGround extends Component {
         const mockEvent = {
             getLocationX: () => data.screenX,
             getLocationY: () => data.screenY,
-            getButton: () => 0 // 左键
+            getButton: () => data.button || 0
         } as EventMouse;
 
         // 进行射线检测
         const intersectionPoint = this.performRaycast(mockEvent, this.cam);
         if (intersectionPoint) {
-            this.handleGroundClick(intersectionPoint);
+            this.handleGroundClick(intersectionPoint, data.button || 0);
+        }
+    }
+    
+    /**
+     * EventBus 鼠标释放事件处理（右键）
+     */
+    private onEventBusMouseUp(data: Input3DEventData): void {
+        if (data.button !== 2) return; // 只处理右键
+        if (!this._isInitialized || !this.cam) return;
+
+        // 创建模拟的 EventMouse 对象用于射线检测
+        const mockEvent = {
+            getLocationX: () => data.screenX,
+            getLocationY: () => data.screenY,
+            getButton: () => data.button || 2
+        } as EventMouse;
+
+        // 进行射线检测
+        const intersectionPoint = this.performRaycast(mockEvent, this.cam);
+        if (intersectionPoint) {
+            this.handleGroundClick(intersectionPoint, data.button || 2);
         }
     }
 
@@ -258,7 +283,7 @@ export class GridGround extends Component {
     /**
      * 处理地面点击
      */
-    private handleGroundClick(worldPos: Vec3): void {
+    private handleGroundClick(worldPos: Vec3, button: number = 0): void {
         // 计算本地坐标（相对于网格中心）
         const localPos = new Vec3(
             worldPos.x,
@@ -289,7 +314,8 @@ export class GridGround extends Component {
             localPosition: localPos.clone(),
             snappedPosition: snappedPos.clone(),
             gridIndex: gridIndex,
-            groundComponent: this
+            groundComponent: this,
+            button: button
         };
 
         // 调试输出

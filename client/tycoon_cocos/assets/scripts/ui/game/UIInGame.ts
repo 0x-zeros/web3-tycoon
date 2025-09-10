@@ -93,7 +93,6 @@ export class UIInGame extends UIBase {
         // 使用主界面的mode控制器
         this.m_modeController = this.getController('mode');
 
-
         //m_mapElementUI
         const mapElementComponent = this.getChild('mapElement').asCom;
         this.m_mapElementUI = mapElementComponent.node.addComponent(UIMapElement);
@@ -102,6 +101,9 @@ export class UIInGame extends UIBase {
         this.m_mapElementUI.setPanel(mapElementComponent);
         // 初始化
         this.m_mapElementUI.init();
+        
+        // 设置UIEditor的UIMapElement引用（在m_mapElementUI创建之后）
+        this.m_editorUI.setMapElementUI(this.m_mapElementUI);
 
         //hide
         this.m_mapElementUI.hide();
@@ -215,8 +217,6 @@ export class UIInGame extends UIBase {
         Blackboard.instance.watch("currentPlayer", this._onCurrentPlayerChange, this);
         Blackboard.instance.watch("gameTime", this._onGameTimeChange, this);
         
-        // 监听Toggle地图元素UI事件
-        EventBus.on(EventTypes.UI.ToggleMapElement, this._onToggleMapElement, this);
     }
 
     /**
@@ -245,8 +245,6 @@ export class UIInGame extends UIBase {
             this._bagBtn.offClick(this._onBagClick, this);
         }
         
-        // 解绑Toggle地图元素UI事件
-        EventBus.off(EventTypes.UI.ToggleMapElement, this._onToggleMapElement, this);
 
         // 调用父类解绑
         super.unbindEvents();
@@ -307,19 +305,6 @@ export class UIInGame extends UIBase {
     }
 
 
-    /**
-     * Toggle地图元素UI事件处理
-     */
-    private _onToggleMapElement(): void {
-        console.log("[UIInGame] Toggle map element UI");
-
-        // 检查UI是否已显示，如果显示则隐藏，如果隐藏则显示
-        if (this.m_mapElementUI.isShowing) {
-            this.m_mapElementUI.hide();
-        } else {
-            this.m_mapElementUI.show();
-        }
-    }
 
     /**
      * 暂停按钮点击

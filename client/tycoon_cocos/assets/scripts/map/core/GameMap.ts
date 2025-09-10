@@ -17,6 +17,10 @@ import { MapManager } from '../MapManager';
 import { MapConfig } from '../MapManager';
 import { input } from 'cc';
 import { Input } from 'cc';
+import { VoxelSystem } from '../../voxel/VoxelSystem';
+import { EventBus } from '../../events/EventBus';
+import { EventTypes } from '../../events/EventTypes';
+import { GridClickData } from '../GridGround';
 
 const { ccclass, property } = _decorator;
 
@@ -170,6 +174,15 @@ export class GameMap extends Component {
     /** 是否为编辑模式 */
     private _isEditMode: boolean = false;
     
+    /** 体素系统 */
+    private _voxelSystem: VoxelSystem | null = null;
+    
+    /** 存储已放置的方块 */
+    private _placedBlocks: Map<string, Node> = new Map();
+    
+    /** 当前选中的方块ID */
+    private _currentSelectedBlockId: string | null = null;
+    
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
@@ -232,9 +245,10 @@ export class GameMap extends Component {
             }
         }
         
-        // 编辑模式下创建网格地面
+        // 编辑模式下创建网格地面和初始化体素系统
         if (isEdit) {
             this.createEditModeGrid();
+            await this.initializeVoxelSystem();
         }
         
         // 初始化组件
@@ -250,6 +264,100 @@ export class GameMap extends Component {
      */
     public get isEditMode(): boolean {
         return this._isEditMode;
+    }
+    
+    /**
+     * 初始化体素系统
+     */
+    private async initializeVoxelSystem(): Promise<void> {
+        try {
+            this._voxelSystem = VoxelSystem.getInstance();
+            if (!this._voxelSystem) {
+                this._voxelSystem = await VoxelSystem.quickInitialize();
+            }
+            
+            // 监听地面点击事件
+            EventBus.on(EventTypes.Game.GroundClicked, this.onGroundClicked, this);
+            
+            // 监听方块选中事件
+            EventBus.on(EventTypes.UI.MapElementSelected, this.onMapElementSelected, this);
+            
+            console.log('[GameMap] Voxel system initialized for edit mode');
+        } catch (error) {
+            console.error('[GameMap] Failed to initialize voxel system:', error);
+        }
+    }
+    
+    /**
+     * 处理方块选中事件
+     */
+    private onMapElementSelected(data: any): void {
+        // 保存当前选中的方块ID
+        this._currentSelectedBlockId = data.blockId || null;
+        console.log(`[GameMap] Selected block: ${this._currentSelectedBlockId}`);
+    }
+    
+    /**
+     * 处理地面点击事件
+     */
+    private async onGroundClicked(data: GridClickData): Promise<void> {
+        if (!this._isEditMode || !this._voxelSystem) return;
+        
+        const position = data.snappedPosition.clone();
+        position.y = 0; // 确保在y=0位置
+        const posKey = `${position.x}_${position.y}_${position.z}`;
+        
+        if (data.button === 0) {
+            // 左键：放置方块
+            if (!this._currentSelectedBlockId) {
+                console.log('[GameMap] No block selected for placement');
+                return;
+            }
+            await this.placeBlock(this._currentSelectedBlockId, position, posKey);
+        } else if (data.button === 2) {
+            // 右键：删除方块
+            this.removeBlock(posKey);
+        }
+    }
+    
+    /**
+     * 放置方块
+     */
+    private async placeBlock(blockId: string, position: Vec3, posKey: string): Promise<void> {
+        // 如果该位置已有方块，先删除
+        if (this._placedBlocks.has(posKey)) {
+            this.removeBlock(posKey);
+        }
+        
+        try {
+            // 创建新方块
+            const blockNode = await this._voxelSystem!.createBlockNode(
+                this.tilesContainer || this.node,
+                blockId,
+                position
+            );
+            
+            if (blockNode) {
+                this._placedBlocks.set(posKey, blockNode);
+                console.log(`[GameMap] Placed block ${blockId} at ${posKey}`);
+            }
+        } catch (error) {
+            console.error(`[GameMap] Failed to place block: ${error}`);
+        }
+    }
+    
+    /**
+     * 删除方块
+     */
+    private removeBlock(posKey: string): void {
+        const block = this._placedBlocks.get(posKey);
+        if (block && block.isValid) {
+            block.destroy();
+            this._placedBlocks.delete(posKey);
+            console.log(`[GameMap] Removed block at ${posKey}`);
+        } else {
+            console.log(`[GameMap] No block found at ${posKey}`);
+        }
     }
     
     /**
@@ -944,6 +1052,23 @@ export class GameMap extends Component {
         this._pathCache.clear();
         this._tileInstances.clear();
         this._tileNodes.clear();
+        
+        // 清理所有放置的方块
+        if (this._isEditMode) {
+            for (const [key, block] of this._placedBlocks) {
+                if (block && block.isValid) {
+                    block.destroy();
+                }
+            }
+            this._placedBlocks.clear();
+            
+            // 取消事件监听
+            EventBus.off(EventTypes.Game.GroundClicked, this.onGroundClicked, this);
+            EventBus.off(EventTypes.UI.MapElementSelected, this.onMapElementSelected, this);
+            
+            // 清空选中状态
+            this._currentSelectedBlockId = null;
+        }
         
         // 移除事件监听
         // if (this.node.isValid) {

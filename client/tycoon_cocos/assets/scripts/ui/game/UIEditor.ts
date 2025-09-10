@@ -2,6 +2,7 @@ import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
+import { UIMapElement } from "./UIMapElement";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -24,6 +25,9 @@ export class UIEditor extends UIBase {
     
     /** tile的图标 */
     private m_tileIcon: fgui.GLoader;
+    
+    /** 地图元素UI引用 */
+    private m_mapElementUI: UIMapElement;
     
     /**
      * 初始化回调
@@ -69,6 +73,11 @@ export class UIEditor extends UIBase {
             this.m_btn_mapElement.onClick(this._onMapElementClick, this);
         }
         
+        // 绑定tile点击事件
+        if (this.m_tile) {
+            this.m_tile.onClick(this._onTileClick, this);
+        }
+        
         // 监听地图元素选中事件
         EventBus.on(EventTypes.UI.MapElementSelected, this._onMapElementSelected, this);
     }
@@ -80,6 +89,11 @@ export class UIEditor extends UIBase {
         // 解绑按钮事件
         if (this.m_btn_mapElement) {
             this.m_btn_mapElement.offClick(this._onMapElementClick, this);
+        }
+        
+        // 解绑tile点击事件
+        if (this.m_tile) {
+            this.m_tile.offClick(this._onTileClick, this);
         }
         
         // 解绑地图元素选中事件
@@ -128,14 +142,49 @@ export class UIEditor extends UIBase {
     }
     
     /**
+     * 设置地图元素UI引用
+     * @param mapElementUI UIMapElement实例
+     */
+    public setMapElementUI(mapElementUI: UIMapElement): void {
+        this.m_mapElementUI = mapElementUI;
+    }
+    
+    /**
      * 地图元素按钮点击事件
      * 触发显示/隐藏地图元素选择界面
      */
     private _onMapElementClick(): void {
         console.log("[UIEditor] Map element button clicked");
+        this._toggleMapElementUI();
+    }
+    
+    /**
+     * Tile点击事件
+     * 触发toggle地图元素UI显示
+     */
+    private _onTileClick(): void {
+        console.log("[UIEditor] Tile clicked");
+        this._toggleMapElementUI();
+    }
+    
+    /**
+     * Toggle地图元素UI显示
+     * 供m_btn_mapElement和m_tile共同使用
+     */
+    private _toggleMapElementUI(): void {
+        if (!this.m_mapElementUI) {
+            console.warn("[UIEditor] MapElement UI not found");
+            return;
+        }
         
-        // 发送事件请求toggle地图元素UI
-        EventBus.emit(EventTypes.UI.ToggleMapElement);
+        // 检查UI是否已显示，如果显示则隐藏，如果隐藏则显示
+        if (this.m_mapElementUI.isShowing) {
+            this.m_mapElementUI.hide();
+            console.log("[UIEditor] MapElement UI hidden");
+        } else {
+            this.m_mapElementUI.show();
+            console.log("[UIEditor] MapElement UI shown");
+        }
     }
     
     /**
@@ -193,4 +242,5 @@ export class UIEditor extends UIBase {
             this.m_tileIcon.texture = null;
         }
     }
+    
 }

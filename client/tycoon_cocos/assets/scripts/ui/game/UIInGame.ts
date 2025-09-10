@@ -278,15 +278,17 @@ export class UIInGame extends UIBase {
 
 
     /**
-     * 地图元素按钮点击
+     * 地图元素按钮点击 - Toggle功能
      */
     private onMapElementClick(): void {
         console.log("[UIInGame] Map element clicked");
 
-        // UIManager.instance.registerMapElementUI("InGame", "MapElement");
-        // UIManager.instance.showUI("MapElement");
-
-        this.m_mapElementUI.show();
+        // 检查UI是否已显示，如果显示则隐藏，如果隐藏则显示
+        if (this.m_mapElementUI.isShowing) {
+            this.m_mapElementUI.hide();
+        } else {
+            this.m_mapElementUI.show();
+        }
     }
 
     /**

@@ -135,6 +135,9 @@ export abstract class MapElement extends Component {
             }
             
             if (this._voxelSystem) {
+                // 先预加载材质，避免粉色闪烁
+                await this._voxelSystem.preloadBlockMaterial(blockId);
+                
                 this._renderNode = await this._voxelSystem.createBlockNode(
                     this.node,
                     blockId,

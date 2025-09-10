@@ -87,6 +87,15 @@ export class GameMap extends Component {
     /** 地图数据（用于保存） */
     private _mapSaveData: MapSaveData | null = null;
     
+    /** 自动保存延迟（毫秒） */
+    private readonly AUTO_SAVE_DELAY = 1000;
+    
+    /** 自动保存定时器 */
+    private _autoSaveTimer: any = null;
+    
+    /** 是否有未保存的修改 */
+    private _hasUnsavedChanges: boolean = false;
+    
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
@@ -325,6 +334,11 @@ export class GameMap extends Component {
         this._tileIndex.set(key, tile);
         
         console.log(`[GameMap] Placed tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        
+        // 编辑模式下触发自动保存
+        if (this._isEditMode) {
+            this.scheduleAutoSave();
+        }
     }
     
     /**
@@ -352,6 +366,11 @@ export class GameMap extends Component {
         this._objectIndex.set(key, object);
         
         console.log(`[GameMap] Placed object ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        
+        // 编辑模式下触发自动保存
+        if (this._isEditMode) {
+            this.scheduleAutoSave();
+        }
     }
     
     /**
@@ -365,6 +384,10 @@ export class GameMap extends Component {
         if (object) {
             this.removeObject(object);
             console.log(`[GameMap] Removed object at (${gridPos.x}, ${gridPos.y})`);
+            // 编辑模式下触发自动保存
+            if (this._isEditMode) {
+                this.scheduleAutoSave();
+            }
             return;
         }
         
@@ -373,6 +396,10 @@ export class GameMap extends Component {
         if (tile) {
             this.removeTile(tile);
             console.log(`[GameMap] Removed tile at (${gridPos.x}, ${gridPos.y})`);
+            // 编辑模式下触发自动保存
+            if (this._isEditMode) {
+                this.scheduleAutoSave();
+            }
             return;
         }
         
@@ -419,6 +446,74 @@ export class GameMap extends Component {
         
         // 销毁节点
         object.destroyObject();
+    }
+    
+    // ========================= 自动保存 =========================
+    
+    /**
+     * 调度自动保存
+     * 使用防抖策略，避免频繁保存
+     */
+    private scheduleAutoSave(): void {
+        // 标记有未保存的修改
+        this._hasUnsavedChanges = true;
+        
+        // 清除之前的定时器
+        if (this._autoSaveTimer) {
+            clearTimeout(this._autoSaveTimer);
+        }
+        
+        // 设置新的定时器
+        this._autoSaveTimer = setTimeout(() => {
+            this.executeAutoSave();
+        }, this.AUTO_SAVE_DELAY);
+    }
+    
+    /**
+     * 执行自动保存
+     */
+    private async executeAutoSave(): Promise<void> {
+        if (!this._hasUnsavedChanges) {
+            return;
+        }
+        
+        console.log('[GameMap] Auto-saving map...');
+        
+        const success = await this.saveMap({
+            compress: false,
+            includeGameRules: true
+        });
+        
+        if (success) {
+            this._hasUnsavedChanges = false;
+            console.log('[GameMap] Auto-save completed');
+            console.log(`[GameMap] Saved to: map_${this.mapId}`);
+        } else {
+            console.error('[GameMap] Auto-save failed');
+        }
+    }
+    
+    /**
+     * 立即保存（不使用防抖）
+     */
+    public async saveImmediate(): Promise<boolean> {
+        // 清除定时器
+        if (this._autoSaveTimer) {
+            clearTimeout(this._autoSaveTimer);
+            this._autoSaveTimer = null;
+        }
+        
+        // 执行保存
+        const success = await this.saveMap({
+            compress: false,
+            includeGameRules: true
+        });
+        
+        if (success) {
+            this._hasUnsavedChanges = false;
+        }
+        
+        return success;
     }
     
     // ========================= 保存/加载 =========================
@@ -474,7 +569,17 @@ export class GameMap extends Component {
             // 更新内部数据
             this._mapSaveData = saveData;
             
-            console.log(`[GameMap] Map saved successfully with ${tilesData.length} tiles and ${objectsData.length} objects`);
+            // 输出保存信息
+            const saveInfo = {
+                mapId: this.mapId,
+                tiles: tilesData.length,
+                objects: objectsData.length,
+                storage: sys.isBrowser ? 'localStorage' : 'file',
+                key: saveKey,
+                size: `${(jsonStr.length / 1024).toFixed(2)} KB`
+            };
+            console.log('[GameMap] Map saved successfully:', saveInfo);
+            
             return true;
             
         } catch (error) {
@@ -656,6 +761,18 @@ export class GameMap extends Component {
      * 清理资源
      */
     private cleanup(): void {
+        // 保存未保存的修改
+        if (this._isEditMode && this._hasUnsavedChanges) {
+            console.log('[GameMap] Saving unsaved changes before cleanup...');
+            this.saveImmediate();
+        }
+        
+        // 清除自动保存定时器
+        if (this._autoSaveTimer) {
+            clearTimeout(this._autoSaveTimer);
+            this._autoSaveTimer = null;
+        }
+        
         // 清空地图
         this.clearMap();
         

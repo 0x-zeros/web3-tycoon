@@ -356,6 +356,19 @@ export class MaterialFactory {
     }
 
     /**
+     * 预加载纹理资源
+     * @param texturePath 纹理路径
+     */
+    async preloadTexture(texturePath: string): Promise<void> {
+        try {
+            await this.textureManager.loadTexture(texturePath);
+            console.log(`[MaterialFactory] Preloaded texture: ${texturePath}`);
+        } catch (error) {
+            console.warn(`[MaterialFactory] Failed to preload texture: ${texturePath}`, error);
+        }
+    }
+
+    /**
      * 创建缺失纹理的后备材质
      * @returns 基础材质对象
      */

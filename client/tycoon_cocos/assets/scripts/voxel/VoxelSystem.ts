@@ -184,6 +184,32 @@ export class VoxelSystem {
     }
 
     /**
+     * 预加载方块材质（避免粉色闪烁）
+     * @param blockId 方块ID
+     */
+    async preloadBlockMaterial(blockId: string): Promise<void> {
+        if (!this.initialized) {
+            console.error('[VoxelSystem] 系统未初始化');
+            return;
+        }
+
+        try {
+            const blockDef = BlockRegistry.getBlock(blockId);
+            const isEmissive = blockDef ? blockDef.lightLevel > 0 : false;
+
+            // 根据方块类型选择主纹理
+            const texturePath = this.getBlockMainTexture(blockId);
+            
+            // 预加载纹理资源（通过MaterialFactory的公共方法）
+            await this.materialFactory.preloadTexture(texturePath);
+            
+            console.log(`[VoxelSystem] Preloaded material for ${blockId}`);
+        } catch (error) {
+            console.error(`[VoxelSystem] 预加载方块材质失败: ${blockId}`, error);
+        }
+    }
+
+    /**
      * 创建方块材质
      * @param blockId 方块ID
      * @returns 材质对象
@@ -379,10 +405,10 @@ export class VoxelSystem {
             const meshData = await this.generateBlockMesh(blockId, position);
             if (!meshData) return null;
 
-            // 创建方块节点
+            // 创建方块节点（先不添加到场景，避免粉色闪烁）
             const blockNode = new Node(`Block_${blockId.replace('minecraft:', '')}`);
             blockNode.position = position;
-            parent.addChild(blockNode);
+            // 暂时不添加到父节点，等材质加载完成后再添加
 
             // Overlay 情况暂不在此处处理，统一走普通纹理组（overlay 分支可后续打开）
             if (meshData.textureGroups.size === 0) {
@@ -412,6 +438,9 @@ export class VoxelSystem {
                 const material = await this.createBlockMaterial(blockId);
                 if (material) mr.material = material;
             }
+
+            // 所有材质加载完成后，再添加到场景中
+            parent.addChild(blockNode);
 
             return blockNode;
         } catch (e) {

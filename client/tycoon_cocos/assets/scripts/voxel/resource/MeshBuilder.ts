@@ -254,7 +254,7 @@ export class MeshBuilder {
         // 通过判断 element 在 x 或 z 轴上是否为一个平面来确定是否为 cross 类型
         const isCrossElement = (element.to[0] - element.from[0] < 0.1) || (element.to[2] - element.from[2] < 0.1);
 
-        // //ccw
+        // //ccw //从左上开始的ccw，和uv没有对上
         // const cubeFaces = [
         //     // north (-Z)
         //     { name: 'north', normal: new Vec3(0, 0, -1), positions: [

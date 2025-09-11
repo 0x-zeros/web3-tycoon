@@ -406,7 +406,7 @@ export class VoxelSystem {
             if (!meshData) return null;
 
             // 创建方块节点（先不添加到场景，避免粉色闪烁）
-            const blockNode = new Node(`Block_${blockId.replace('minecraft:', '')}`);
+            const blockNode = new Node(`Block_${blockId.replace('minecraft:', '')}`);//todo
             blockNode.position = position;
             // 暂时不添加到父节点，等材质加载完成后再添加
 

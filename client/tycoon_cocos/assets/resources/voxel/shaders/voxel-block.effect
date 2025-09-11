@@ -7,6 +7,7 @@ CCEffect %{
       frag: voxel-block-fs
       rasterizerState:
         cullMode: back
+        isFrontFaceCCW: true
       properties: &commonProps
         mainTexture:      { value: white }
         skyTexture:       { value: white }

@@ -71,9 +71,9 @@ export class MeshBuilder {
         }
 
         // 应用方块级别的旋转
-        if (context.blockRotation.y !== 0) {
-            this.applyBlockRotation(meshData, context.blockRotation);
-        }
+        // if (context.blockRotation.y !== 0) {
+        //     this.applyBlockRotation(meshData, context.blockRotation);
+        // }
 
         // 注意：不应用方块位置偏移，顶点坐标保持以原点为中心(-0.5到+0.5)
         // 方块在场景中的位置应该通过Node的position属性来控制
@@ -254,33 +254,81 @@ export class MeshBuilder {
         // 通过判断 element 在 x 或 z 轴上是否为一个平面来确定是否为 cross 类型
         const isCrossElement = (element.to[0] - element.from[0] < 0.1) || (element.to[2] - element.from[2] < 0.1);
 
-        // 经过修正的、正确的立方体面顶点顺序 (CCW)
+        // //ccw
+        // const cubeFaces = [
+        //     // north (-Z)
+        //     { name: 'north', normal: new Vec3(0, 0, -1), positions: [
+        //         new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
+        //     ]},
+        //     // south (+Z)
+        //     { name: 'south', normal: new Vec3(0, 0, 1), positions: [
+        //         new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
+        //     ]},
+        //     // west (-X)
+        //     { name: 'west', normal: new Vec3(-1, 0, 0), positions: [
+        //         new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
+        //     ]},
+        //     // east (+X)
+        //     { name: 'east', normal: new Vec3(1, 0, 0), positions: [
+        //         new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
+        //     ]},
+        //     // down (-Y)
+        //     { name: 'down', normal: new Vec3(0, -1, 0), positions: [
+        //         new Vec3(from.x, from.y, from.z), new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z), new Vec3(from.x, from.y, to.z)
+        //     ]},
+        //     // up (+Y)
+        //     { name: 'up', normal: new Vec3(0, 1, 0), positions: [
+        //         new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
+        //     ]}
+        // ];
+
+        //ccw
+        // 和minecraft的uv匹配的顶点顺序 fix by zeros
+        // •	0 → 左下
+        // •	1 → 右下
+        // •	2 → 右上
+        // •	3 → 左上
         const cubeFaces = [
             // north (-Z)
             { name: 'north', normal: new Vec3(0, 0, -1), positions: [
-                new Vec3(from.x, from.y, from.z), new Vec3(from.x, to.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, from.y, from.z)
+                new Vec3(to.x, from.y, from.z),
+                new Vec3(from.x, from.y, from.z), 
+                new Vec3(from.x, to.y, from.z), 
+                new Vec3(to.x, to.y, from.z),
+                
             ]},
             // south (+Z)
             { name: 'south', normal: new Vec3(0, 0, 1), positions: [
-                new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, from.y, to.z)
+                new Vec3(from.x, from.y, to.z), new Vec3(to.x, from.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(from.x, to.y, to.z), 
             ]},
             // west (-X)
             { name: 'west', normal: new Vec3(-1, 0, 0), positions: [
-                new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, to.y, from.z), new Vec3(from.x, from.y, from.z)
+                new Vec3(from.x, from.y, from.z), new Vec3(from.x, from.y, to.z), new Vec3(from.x, to.y, to.z), new Vec3(from.x, to.y, from.z), 
             ]},
             // east (+X)
             { name: 'east', normal: new Vec3(1, 0, 0), positions: [
-                new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, to.y, to.z), new Vec3(to.x, from.y, to.z)
+                new Vec3(to.x, from.y, to.z), new Vec3(to.x, from.y, from.z), new Vec3(to.x, to.y, from.z), new Vec3(to.x, to.y, to.z), 
             ]},
             // down (-Y)
             { name: 'down', normal: new Vec3(0, -1, 0), positions: [
-                new Vec3(from.x, from.y, from.z), new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z), new Vec3(from.x, from.y, to.z)
+                new Vec3(from.x, from.y, to.z), new Vec3(from.x, from.y, from.z), new Vec3(to.x, from.y, from.z), new Vec3(to.x, from.y, to.z), 
             ]},
             // up (+Y)
             { name: 'up', normal: new Vec3(0, 1, 0), positions: [
-                new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z), new Vec3(to.x, to.y, from.z)
+                new Vec3(to.x, to.y, from.z), new Vec3(from.x, to.y, from.z), new Vec3(from.x, to.y, to.z), new Vec3(to.x, to.y, to.z), 
             ]}
         ];
+
+        //让 Cocos 的 +Z 就代表 MC 的 南（+Z）
+
+        // Minecraft 世界坐标系（也是右手系）
+        // Minecraft 的规则和 OpenGL 类似，但有自己约定：
+        // •	X = 东 (East)
+        // •	Y = 上 (Up)
+        // •	Z = 南 (South)
+        // •	玩家面朝南方时，Z 正在增加。
+
+
 
         // 修正后的 cross 类型面顶点顺序
         const crossFaces = [
@@ -430,11 +478,19 @@ export class MeshBuilder {
             ];
         } else {
             // 基础UV坐标（左下、右下、右上、左上）
+            // uvs = [
+            //     new Vec2(u1 / 16, 1 - v2 / 16), // 左下
+            //     new Vec2(u2 / 16, 1 - v2 / 16), // 右下
+            //     new Vec2(u2 / 16, 1 - v1 / 16), // 右上
+            //     new Vec2(u1 / 16, 1 - v1 / 16)  // 左上
+            // ];
+
+            // 不使用V翻转
             uvs = [
-                new Vec2(u1 / 16, 1 - v2 / 16), // 左下
-                new Vec2(u2 / 16, 1 - v2 / 16), // 右下
-                new Vec2(u2 / 16, 1 - v1 / 16), // 右上
-                new Vec2(u1 / 16, 1 - v1 / 16)  // 左上
+                new Vec2(u1 / 16, v2 / 16), // 左下
+                new Vec2(u2 / 16, v2 / 16), // 右下
+                new Vec2(u2 / 16, v1 / 16), // 右上
+                new Vec2(u1 / 16, v1 / 16)  // 左上
             ];
         }
 

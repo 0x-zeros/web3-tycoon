@@ -67,23 +67,44 @@ export class TemplateProcessor {
      * 根据模板生成元素
      * @param template 模板类型
      * @param resolvedTextures 解析后的纹理映射
+     * @param modelChain 模型继承链（可选，用于获取原始 elements 定义）
      * @returns 元素数组
      */
-    static synthesizeElementsByTemplate(template: string, resolvedTextures: Record<string, TextureInfo>): ElementDef[] {
+    static synthesizeElementsByTemplate(
+        template: string, 
+        resolvedTextures: Record<string, TextureInfo>,
+        modelChain?: Array<{ rel: string; ns: string; json: any }>
+    ): ElementDef[] {
+
+        console.log('synthesizeElementsByTemplate', template, modelChain);
+
+        // Minecraft 规则：elements 不做跨 parent 合并
+        // 如果子模型有 elements，完全覆盖父模型
+        // 如果子模型没有 elements，才继承父模型的 elements
+        // modelChain 是从子到父的顺序，所以从前往后遍历，找到第一个有 elements 的模型
+        if (modelChain && modelChain.length > 0) {
+            for (const model of modelChain) {
+                if (model.json?.elements) {
+                    console.log(`[TemplateProcessor] 使用模型 ${model.rel} 的 elements`);
+                    return this.parseElements(model.json.elements);
+                }
+            }
+        }
+        
         switch (template) {
             case 'cube_all':
-                return this.generateCubeAll(resolvedTextures);
+                return this.generateCubeAll();
             case 'cube_column':
-                return this.generateCubeColumn(resolvedTextures);
+                return this.generateCubeColumn();
             case 'cube_bottom_top':
-                return this.generateCubeBottomTop(resolvedTextures);
+                return this.generateCubeBottomTop();
             case 'cross':
             case 'tinted_cross':
-                return this.generateCross(resolvedTextures);
+                return this.generateCross();
             case 'orientable':
-                return this.generateOrientable(resolvedTextures);
+                return this.generateOrientable();
             case 'cube':
-                return this.generateCube(resolvedTextures);
+                return this.generateCube();
             case 'builtin':
                 return this.generateBuiltin();
             default:
@@ -92,19 +113,64 @@ export class TemplateProcessor {
     }
     
     /**
+     * 解析原始 elements 数据
+     */
+    private static parseElements(elements: any[]): ElementDef[] {
+        return elements.map(element => {
+            const faces: ElementFace[] = [];
+            
+            if (element.faces) {
+                for (const dir in element.faces) {
+                    if (!element.faces.hasOwnProperty(dir)) continue;
+                    const face = element.faces[dir];
+                    const faceData = face as any;
+                    // 从 texture 字段提取 textureKey（去掉 # 前缀）
+                    const textureKey = faceData.texture?.startsWith('#') 
+                        ? faceData.texture.substring(1) 
+                        : faceData.texture;
+                    
+                    faces.push({
+                        dir: dir as any,
+                        uv: faceData.uv || [0, 0, 16, 16],
+                        textureKey,
+                        cullface: faceData.cullface,
+                        rotation: faceData.rotation,
+                        tintindex: faceData.tintindex
+                    });
+                }
+            }
+            
+            const result: ElementDef = {
+                from: element.from || [0, 0, 0],
+                to: element.to || [16, 16, 16],
+                faces
+            };
+            
+            if (element.rotation) {
+                result.rotation = element.rotation;
+            }
+            
+            if (element.shade !== undefined) {
+                result.shade = element.shade;
+            }
+            
+            return result;
+        });
+    }
+    
+    /**
      * 生成 cube_all 模板（所有面使用相同纹理）
      */
-    private static generateCubeAll(textures: Record<string, TextureInfo>): ElementDef[] {
-        const texture = textures['all'] || textures[Object.keys(textures)[0]];
-        const textureRel = texture ? texture.rel : 'minecraft:block/missing';
+    private static generateCubeAll(): ElementDef[] {
+        const textureKey = 'all';  // cube_all 模板使用 'all' 作为 key
         
         const faces: ElementFace[] = [
-            { dir: 'north', uv: [0, 0, 16, 16], textureRel },
-            { dir: 'south', uv: [0, 0, 16, 16], textureRel },
-            { dir: 'east', uv: [0, 0, 16, 16], textureRel },
-            { dir: 'west', uv: [0, 0, 16, 16], textureRel },
-            { dir: 'up', uv: [0, 0, 16, 16], textureRel },
-            { dir: 'down', uv: [0, 0, 16, 16], textureRel }
+            { dir: 'north', uv: [0, 0, 16, 16], textureKey },
+            { dir: 'south', uv: [0, 0, 16, 16], textureKey },
+            { dir: 'east', uv: [0, 0, 16, 16], textureKey },
+            { dir: 'west', uv: [0, 0, 16, 16], textureKey },
+            { dir: 'up', uv: [0, 0, 16, 16], textureKey },
+            { dir: 'down', uv: [0, 0, 16, 16], textureKey }
         ];
         
         return [{
@@ -118,20 +184,15 @@ export class TemplateProcessor {
     /**
      * 生成 cube_column 模板（顶底面和侧面使用不同纹理）
      */
-    private static generateCubeColumn(textures: Record<string, TextureInfo>): ElementDef[] {
-        const sideTexture = textures['side'];
-        const endTexture = textures['end'];
-        
-        const sideRel = sideTexture ? sideTexture.rel : 'minecraft:block/missing';
-        const endRel = endTexture ? endTexture.rel : 'minecraft:block/missing';
-        
+    private static generateCubeColumn(): ElementDef[] {
+        // cube_column 模板使用 'side' 和 'end' 作为 key
         const faces: ElementFace[] = [
-            { dir: 'north', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'south', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'east', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'west', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'up', uv: [0, 0, 16, 16], textureRel: endRel },
-            { dir: 'down', uv: [0, 0, 16, 16], textureRel: endRel }
+            { dir: 'north', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'south', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'east', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'west', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'up', uv: [0, 0, 16, 16], textureKey: 'end' },
+            { dir: 'down', uv: [0, 0, 16, 16], textureKey: 'end' }
         ];
         
         return [{
@@ -145,22 +206,15 @@ export class TemplateProcessor {
     /**
      * 生成 cube_bottom_top 模板
      */
-    private static generateCubeBottomTop(textures: Record<string, TextureInfo>): ElementDef[] {
-        const topTexture = textures['top'];
-        const bottomTexture = textures['bottom'];
-        const sideTexture = textures['side'];
-        
-        const topRel = topTexture ? topTexture.rel : 'minecraft:block/missing';
-        const bottomRel = bottomTexture ? bottomTexture.rel : 'minecraft:block/missing';
-        const sideRel = sideTexture ? sideTexture.rel : 'minecraft:block/missing';
-        
+    private static generateCubeBottomTop(): ElementDef[] {
+        // cube_bottom_top 模板使用 'side', 'top', 'bottom' 作为 key
         const faces: ElementFace[] = [
-            { dir: 'north', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'south', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'east', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'west', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'up', uv: [0, 0, 16, 16], textureRel: topRel },
-            { dir: 'down', uv: [0, 0, 16, 16], textureRel: bottomRel }
+            { dir: 'north', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'south', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'east', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'west', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'up', uv: [0, 0, 16, 16], textureKey: 'top' },
+            { dir: 'down', uv: [0, 0, 16, 16], textureKey: 'bottom' }
         ];
         
         return [{
@@ -174,9 +228,9 @@ export class TemplateProcessor {
     /**
      * 生成 cross 模板（两个交叉的平面）
      */
-    private static generateCross(textures: Record<string, TextureInfo>): ElementDef[] {
-        const crossTexture = textures['cross'] || textures[Object.keys(textures)[0]];
-        const textureRel = crossTexture ? crossTexture.rel : 'minecraft:block/missing';
+    private static generateCross(): ElementDef[] {
+        // cross 模板使用 'cross' 作为 key
+        const textureKey = 'cross';
         
         return [
             // 第一个平面 (从 NW 到 SE)
@@ -185,8 +239,8 @@ export class TemplateProcessor {
                 to: [15.2, 16, 8],
                 shade: false,
                 faces: [
-                    { dir: 'north', uv: [0, 0, 16, 16], textureRel },
-                    { dir: 'south', uv: [0, 0, 16, 16], textureRel }
+                    { dir: 'north', uv: [0, 0, 16, 16], textureKey },
+                    { dir: 'south', uv: [0, 0, 16, 16], textureKey }
                 ]
             },
             // 第二个平面 (从 NE 到 SW)
@@ -195,8 +249,8 @@ export class TemplateProcessor {
                 to: [8, 16, 15.2],
                 shade: false,
                 faces: [
-                    { dir: 'west', uv: [0, 0, 16, 16], textureRel },
-                    { dir: 'east', uv: [0, 0, 16, 16], textureRel }
+                    { dir: 'west', uv: [0, 0, 16, 16], textureKey },
+                    { dir: 'east', uv: [0, 0, 16, 16], textureKey }
                 ]
             }
         ];
@@ -205,24 +259,19 @@ export class TemplateProcessor {
     /**
      * 生成 orientable 模板（可定向的方块，如熔炉）
      */
-    private static generateOrientable(textures: Record<string, TextureInfo>): ElementDef[] {
-        const frontTexture = textures['front'];
-        const sideTexture = textures['side'];
-        const topTexture = textures['top'] || textures['end'];
-        const bottomTexture = textures['bottom'] || textures['end'];
-        
-        const frontRel = frontTexture ? frontTexture.rel : 'minecraft:block/missing';
-        const sideRel = sideTexture ? sideTexture.rel : 'minecraft:block/missing';
-        const topRel = topTexture ? topTexture.rel : 'minecraft:block/missing';
-        const bottomRel = bottomTexture ? bottomTexture.rel : 'minecraft:block/missing';
+    private static generateOrientable(): ElementDef[] {
+        // orientable 模板使用 'front', 'side', 'top'/'end', 'bottom'/'end' 作为 key
+        // 默认使用 'end' 作为顶部和底部的 key
+        const topKey = 'top';
+        const bottomKey = 'bottom';
         
         const faces: ElementFace[] = [
-            { dir: 'north', uv: [0, 0, 16, 16], textureRel: frontRel },
-            { dir: 'south', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'east', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'west', uv: [0, 0, 16, 16], textureRel: sideRel },
-            { dir: 'up', uv: [0, 0, 16, 16], textureRel: topRel },
-            { dir: 'down', uv: [0, 0, 16, 16], textureRel: bottomRel }
+            { dir: 'north', uv: [0, 0, 16, 16], textureKey: 'front' },
+            { dir: 'south', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'east', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'west', uv: [0, 0, 16, 16], textureKey: 'side' },
+            { dir: 'up', uv: [0, 0, 16, 16], textureKey: topKey },
+            { dir: 'down', uv: [0, 0, 16, 16], textureKey: bottomKey }
         ];
         
         return [{
@@ -236,21 +285,15 @@ export class TemplateProcessor {
     /**
      * 生成 cube 模板（每个面可以有不同纹理）
      */
-    private static generateCube(textures: Record<string, TextureInfo>): ElementDef[] {
-        const northTexture = textures['north'];
-        const southTexture = textures['south'];
-        const eastTexture = textures['east'];
-        const westTexture = textures['west'];
-        const upTexture = textures['up'];
-        const downTexture = textures['down'];
-        
+    private static generateCube(): ElementDef[] {
+        // cube 模板每个面使用对应的 key
         const faces: ElementFace[] = [
-            { dir: 'north', uv: [0, 0, 16, 16], textureRel: northTexture ? northTexture.rel : 'minecraft:block/missing' },
-            { dir: 'south', uv: [0, 0, 16, 16], textureRel: southTexture ? southTexture.rel : 'minecraft:block/missing' },
-            { dir: 'east', uv: [0, 0, 16, 16], textureRel: eastTexture ? eastTexture.rel : 'minecraft:block/missing' },
-            { dir: 'west', uv: [0, 0, 16, 16], textureRel: westTexture ? westTexture.rel : 'minecraft:block/missing' },
-            { dir: 'up', uv: [0, 0, 16, 16], textureRel: upTexture ? upTexture.rel : 'minecraft:block/missing' },
-            { dir: 'down', uv: [0, 0, 16, 16], textureRel: downTexture ? downTexture.rel : 'minecraft:block/missing' }
+            { dir: 'north', uv: [0, 0, 16, 16], textureKey: 'north' },
+            { dir: 'south', uv: [0, 0, 16, 16], textureKey: 'south' },
+            { dir: 'east', uv: [0, 0, 16, 16], textureKey: 'east' },
+            { dir: 'west', uv: [0, 0, 16, 16], textureKey: 'west' },
+            { dir: 'up', uv: [0, 0, 16, 16], textureKey: 'up' },
+            { dir: 'down', uv: [0, 0, 16, 16], textureKey: 'down' }
         ];
         
         return [{
@@ -274,12 +317,12 @@ export class TemplateProcessor {
      */
     private static generateFallback(): ElementDef[] {
         const faces: ElementFace[] = [
-            { dir: 'north', uv: [0, 0, 16, 16], textureRel: 'minecraft:block/missing' },
-            { dir: 'south', uv: [0, 0, 16, 16], textureRel: 'minecraft:block/missing' },
-            { dir: 'east', uv: [0, 0, 16, 16], textureRel: 'minecraft:block/missing' },
-            { dir: 'west', uv: [0, 0, 16, 16], textureRel: 'minecraft:block/missing' },
-            { dir: 'up', uv: [0, 0, 16, 16], textureRel: 'minecraft:block/missing' },
-            { dir: 'down', uv: [0, 0, 16, 16], textureRel: 'minecraft:block/missing' }
+            { dir: 'north', uv: [0, 0, 16, 16], textureKey: 'missing' },
+            { dir: 'south', uv: [0, 0, 16, 16], textureKey: 'missing' },
+            { dir: 'east', uv: [0, 0, 16, 16], textureKey: 'missing' },
+            { dir: 'west', uv: [0, 0, 16, 16], textureKey: 'missing' },
+            { dir: 'up', uv: [0, 0, 16, 16], textureKey: 'missing' },
+            { dir: 'down', uv: [0, 0, 16, 16], textureKey: 'missing' }
         ];
         
         return [{

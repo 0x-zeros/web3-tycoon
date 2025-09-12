@@ -5,20 +5,14 @@
 import { 
     ParsedBlockData, 
     NamespacedId, 
-    TextureInfo, 
-    ElementDef,
-    ElementFace,
-    ModelElement,
-    ModelFace,
+    TextureInfo,
     CombinedJson,
     ParseOptions
 } from './types';
 import { 
     parseNamespacedId, 
-    parseModelOrTexRef, 
-    normalizeTexturePath,
+    parseModelOrTexRef,
     pickDefaultVariant,
-    mergeTextures,
     buildResourcePath
 } from './utils';
 import { ResourceLoader } from './ResourceLoader';
@@ -79,18 +73,16 @@ export class BlockParser {
         
         // 6. 生成元素
         const template = TemplateProcessor.detectTemplate(modelChain);
-        let elements: ElementDef[] = [];
-        
-        if (modelChain.length > 0 && modelChain[0].json?.elements) {
-            // 使用自定义元素
-            elements = this.normalizeElements(modelChain[0].json.elements, resolvedTextures);
-        } else {
-            // 使用模板生成
-            elements = TemplateProcessor.synthesizeElementsByTemplate(template, resolvedTextures);
-        }
+        // 传递 modelChain 以便处理原始 elements
+        const elements = TemplateProcessor.synthesizeElementsByTemplate(template, resolvedTextures, modelChain);
         
         // 7. 收集纹理列表
-        const textures = Object.values(resolvedTextures);
+        const textures: TextureInfo[] = [];
+        for (const key in resolvedTextures) {
+            if (resolvedTextures.hasOwnProperty(key)) {
+                textures.push(resolvedTextures[key]);
+            }
+        }
         
         // 8. 构建调试信息
         const combinedJson: CombinedJson = {
@@ -198,7 +190,10 @@ export class BlockParser {
                 json: modelData.json
             });
             
-            // 合并纹理（子级覆盖父级）
+            // Minecraft 规则：textures 逐级合并，子级覆盖父级
+            // 使用 Object.assign 实现覆盖合并
+            // 注意：modelChain 是从子到父的顺序（通过 push 添加）
+            // 所以后面的纹理定义会覆盖前面的，实现了子级优先
             if (modelData.json.textures) {
                 Object.assign(texturesDict, modelData.json.textures);
             }
@@ -222,9 +217,12 @@ export class BlockParser {
         const maxIterations = 10;
         
         // 第一遍：解析直接引用
-        for (const [key, value] of Object.entries(texturesDict)) {
+        for (const key in texturesDict) {
+            if (!texturesDict.hasOwnProperty(key)) continue;
+            const value = texturesDict[key];
             if (!value.startsWith('#')) {
                 const textureInfo = await this.resolveTextureRef(value, currentNs);
+                textureInfo.key = key;  // 设置正确的 key
                 resolved[key] = textureInfo;
             }
         }
@@ -233,7 +231,9 @@ export class BlockParser {
         for (let i = 0; i < maxIterations; i++) {
             let hasUnresolved = false;
             
-            for (const [key, value] of Object.entries(texturesDict)) {
+            for (const key in texturesDict) {
+                if (!texturesDict.hasOwnProperty(key)) continue;
+                const value = texturesDict[key];
                 if (value.startsWith('#')) {
                     const refKey = value.substring(1);
                     if (resolved[refKey]) {
@@ -263,8 +263,8 @@ export class BlockParser {
         const domain = info.domain || 'block';
         const name = info.name;
         
-        // 构建相对路径
-        const rel = buildResourcePath(ns, 'textures', domain, name);
+        // 构建相对路径 - 使用与 blockstatePath 一致的格式
+        const rel = `assets/${ns}/textures/${domain}/${name}.png`;
         
         // 检查资源是否存在
         const exists = await this.loader.checkResourceExists(rel);
@@ -281,95 +281,6 @@ export class BlockParser {
         };
     }
     
-    /**
-     * 标准化元素数据
-     */
-    private normalizeElements(
-        elements: ModelElement[], 
-        resolvedTextures: Record<string, TextureInfo>
-    ): ElementDef[] {
-        return elements.map(element => this.normalizeElement(element, resolvedTextures));
-    }
-    
-    /**
-     * 标准化单个元素
-     */
-    private normalizeElement(
-        element: ModelElement, 
-        resolvedTextures: Record<string, TextureInfo>
-    ): ElementDef {
-        const faces: ElementFace[] = [];
-        
-        if (element.faces) {
-            for (const [dir, face] of Object.entries(element.faces)) {
-                faces.push(this.normalizeFace(dir, face, resolvedTextures));
-            }
-        }
-        
-        const result: ElementDef = {
-            from: element.from,
-            to: element.to,
-            faces
-        };
-        
-        if (element.rotation) {
-            result.rotation = element.rotation;
-        }
-        
-        if (element.shade !== undefined) {
-            result.shade = element.shade;
-        }
-        
-        return result;
-    }
-    
-    /**
-     * 标准化面数据
-     */
-    private normalizeFace(
-        dir: string, 
-        face: ModelFace, 
-        resolvedTextures: Record<string, TextureInfo>
-    ): ElementFace {
-        let textureKey: string | undefined;
-        let textureRel: string | undefined;
-        
-        // 解析纹理引用
-        if (face.texture.startsWith('#')) {
-            const key = face.texture.substring(1);
-            const textureInfo = resolvedTextures[key];
-            if (textureInfo) {
-                textureKey = key;
-                textureRel = textureInfo.rel;
-            } else {
-                textureRel = 'minecraft:block/missing';
-            }
-        } else {
-            // 直接纹理路径
-            textureRel = normalizeTexturePath(face.texture);
-        }
-        
-        const result: ElementFace = {
-            dir: dir as any,
-            uv: face.uv || [0, 0, 16, 16],
-            textureKey,
-            textureRel
-        };
-        
-        if (face.rotation !== undefined) {
-            result.rotation = face.rotation as any;
-        }
-        
-        if (face.cullface) {
-            result.cullface = face.cullface;
-        }
-        
-        if (face.tintindex !== undefined) {
-            result.tintindex = face.tintindex;
-        }
-        
-        return result;
-    }
     
     /**
      * 清除缓存

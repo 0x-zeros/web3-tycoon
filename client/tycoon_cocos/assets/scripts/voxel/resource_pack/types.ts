@@ -23,7 +23,6 @@ export type ElementFace = {
     uv?: [number, number, number, number];
     rotation?: 0 | 90 | 180 | 270;
     textureKey?: string;
-    textureRel?: string;
     cullface?: string;
     tintindex?: number;
 };

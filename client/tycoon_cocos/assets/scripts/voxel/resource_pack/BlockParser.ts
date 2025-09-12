@@ -46,7 +46,9 @@ export class BlockParser {
         console.log(`[BlockParser] 开始解析方块: ${blockId}`);
         
         // 1. 解析命名空间ID
+        // console.log('parseBlock, blockId:', blockId);
         const id = parseNamespacedId(blockId, this.options.defaultNamespace);
+        // console.log('parseBlock, id:', id);
         const shortId = id.path;
         
         // 2. 加载 blockstate
@@ -120,7 +122,9 @@ export class BlockParser {
      * 加载 blockstate
      */
     private async loadBlockState(id: NamespacedId): Promise<{ json: any; rel: string } | null> {
+        // console.log('loadBlockState, id:', id);
         const rel = buildResourcePath(id.ns, 'blockstates', null, id.path);
+        // console.log('loadBlockState, rel:', rel);
         const result = await this.loader.loadJsonFromRoots(rel);
         
         if (result) {

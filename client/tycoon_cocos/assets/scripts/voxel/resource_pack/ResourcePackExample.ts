@@ -36,6 +36,9 @@ export class ResourcePackExample extends Component {
         // 解析带命名空间的方块
         const grassData = await parseBlock('minecraft:grass_block');
         console.log('Grass Block 方块数据:', grassData);
+
+        const wealthGodData = await parseBlock('web3:wealth_god');
+        console.log('Wealth God Block 方块数据:', wealthGodData);
         
         // // 解析 Web3 方块
         // const propertyData = await parseBlock('web3:property');

@@ -235,8 +235,22 @@ export class UIMapElement extends UIBase {
     
         try {
             // 使用 TextureManager 加载纹理
+            // 需要将 blockId 转换为纹理路径格式
             const textureManager = VoxelSystem.getInstance().getTextureManager();
-            textureManager.loadTexture(blockId).then(textureInfo => {
+            
+            // 获取方块数据以获取正确的纹理路径
+            VoxelSystem.getInstance().getBlockData(blockId).then(blockData => {
+                if (!blockData || blockData.textures.length === 0) {
+                    console.warn(`[UIMapElement] 无法获取方块纹理: ${blockId}`);
+                    return;
+                }
+                
+                // 使用第一个纹理（通常是主纹理）
+                const mainTexture = blockData.textures[0];
+                const texturePath = mainTexture.rel; // 使用纹理的相对路径
+                
+                return textureManager.loadTexture(texturePath);
+            }).then(textureInfo => {
                 if (textureInfo && textureInfo.texture) {
                     const spriteFrame = new SpriteFrame();
                     spriteFrame.texture = textureInfo.texture;

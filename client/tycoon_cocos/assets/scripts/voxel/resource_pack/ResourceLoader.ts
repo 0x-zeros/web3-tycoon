@@ -29,6 +29,9 @@ export class ResourceLoader {
         for (let i = 0; i < this.searchRoots.length; i++) {
             const root = this.searchRoots[i];
             const fullPath = `${root}/${relPath}`;
+            // console.log('root:', root);
+            // console.log('relPath:', relPath);
+            // console.log('fullPath:', fullPath);
             
             try {
                 const json = await this.loadJson(fullPath);
@@ -61,6 +64,7 @@ export class ResourceLoader {
         }
         
         return new Promise((resolve, reject) => {
+            // console.log('loadJson, path:', path);
             resources.load(path, JsonAsset, (err, asset) => {
                 if (err) {
                     reject(err);

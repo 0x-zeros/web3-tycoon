@@ -17,6 +17,9 @@ export class UIEditor extends UIBase {
     /** 地图元素按钮 */
     private m_btn_mapElement: fgui.GButton;
     
+    /** 清除所有地块按钮 */
+    private m_btn_clearAll: fgui.GButton;
+    
     /** 当前选中的tile显示 */
     private m_tile: fgui.GComponent;
     
@@ -43,6 +46,9 @@ export class UIEditor extends UIBase {
     private _setupComponents(): void {
         // 获取地图元素按钮
         this.m_btn_mapElement = this.getChild('btn_mapElement') as fgui.GButton;
+        
+        // 获取清除所有地块按钮
+        this.m_btn_clearAll = this.getChild('btn_clearAll') as fgui.GButton;
         
         // 获取tile组件及其子组件
         this.m_tile = this.getChild('tile').asCom;
@@ -73,6 +79,11 @@ export class UIEditor extends UIBase {
             this.m_btn_mapElement.onClick(this._onMapElementClick, this);
         }
         
+        // 绑定清除所有地块按钮点击事件
+        if (this.m_btn_clearAll) {
+            this.m_btn_clearAll.onClick(this._onClearAllClick, this);
+        }
+        
         // 绑定tile点击事件
         if (this.m_tile) {
             this.m_tile.onClick(this._onTileClick, this);
@@ -89,6 +100,11 @@ export class UIEditor extends UIBase {
         // 解绑按钮事件
         if (this.m_btn_mapElement) {
             this.m_btn_mapElement.offClick(this._onMapElementClick, this);
+        }
+        
+        // 解绑清除所有地块按钮事件
+        if (this.m_btn_clearAll) {
+            this.m_btn_clearAll.offClick(this._onClearAllClick, this);
         }
         
         // 解绑tile点击事件
@@ -240,6 +256,31 @@ export class UIEditor extends UIBase {
         }
         if (this.m_tileIcon) {
             this.m_tileIcon.texture = null;
+        }
+    }
+    
+    /**
+     * 清除所有地块按钮点击事件
+     * 清空当前GameMap中所有放置的地块和Object
+     */
+    private _onClearAllClick(): void {
+        console.log("[UIEditor] Clear all button clicked");
+        
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                // 调用GameMap的清除所有地块方法
+                mapInfo.component.clearAllPlacedBlocks();
+                
+                // 清除当前选中的地块
+                this.clearSelectedBlock();
+                
+                // 发送清除完成事件
+                EventBus.emit(EventTypes.Map.AllBlocksCleared);
+                
+                console.log("[UIEditor] All blocks cleared");
+            }
         }
     }
     

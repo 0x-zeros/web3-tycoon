@@ -484,6 +484,37 @@ export class GameMap extends Component {
         object.destroyObject();
     }
     
+    /**
+     * 清除所有已放置的地块和物体
+     * 用于编辑模式下快速清空地图
+     */
+    public clearAllPlacedBlocks(): void {
+        console.log('[GameMap] Clearing all placed blocks...');
+        
+        // 清除所有地块
+        const tilesToRemove = [...this._tiles];
+        for (const tile of tilesToRemove) {
+            this.removeTile(tile);
+        }
+        
+        // 清除所有物体
+        const objectsToRemove = [...this._objects];
+        for (const object of objectsToRemove) {
+            this.removeObject(object);
+        }
+        
+        // 清空索引
+        this._tileIndex.clear();
+        this._objectIndex.clear();
+        
+        // 标记需要保存
+        if (this._isEditMode) {
+            this.scheduleAutoSave();
+        }
+        
+        console.log('[GameMap] All blocks cleared');
+    }
+    
     // ========================= 自动保存 =========================
     
     /**

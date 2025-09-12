@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="512,512">
   <displayList>
-    <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="14,352" size="256,82">
+    <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="14,331" size="256,82">
       <Button title="选择地块"/>
     </component>
     <component id="n1_105vo" name="tile" src="105voq" fileName="components/Tile.xml" xy="14,59"/>
     <text id="n2_105vo" name="n2" xy="2,2" size="263,51" alpha="0.8" fontSize="18" color="#ffffff" align="center" vAlign="middle" text="- F1: 切换到45度Isometric视角&#xA; - F2: 切换到俯视Top-Down视角"/>
+    <component id="n3_9pk1" name="btn_clearAll" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="10,438" size="256,66">
+      <Button title="清除地图(!!!)"/>
+    </component>
   </displayList>
 </component>

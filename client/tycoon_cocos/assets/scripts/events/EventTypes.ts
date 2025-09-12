@@ -39,6 +39,18 @@ export const EventTypes = {
         ToggleMapElement: "ui_toggle_map_element"
     },
 
+    /** 地图相关事件 */
+    Map: {
+        /** 所有地块被清除 */
+        AllBlocksCleared: "map_all_blocks_cleared",
+        /** 地块放置 */
+        BlockPlaced: "map_block_placed",
+        /** 地块移除 */
+        BlockRemoved: "map_block_removed",
+        /** 地图编辑模式切换 */
+        EditModeToggled: "map_edit_mode_toggled"
+    },
+
     /** 游戏逻辑事件 */
     Game: {
         /** 玩家死亡 */

@@ -368,10 +368,15 @@ export class MeshBuilder {
         const v2 = uvRect[3] / 16;
         
         let uvs = [
+            // new Vec2(u1, v2),
+            // new Vec2(u1, v1),
+            // new Vec2(u2, v1),
+            // new Vec2(u2, v2)
+
             new Vec2(u1, v2),
-            new Vec2(u1, v1),
+            new Vec2(u2, v2),
             new Vec2(u2, v1),
-            new Vec2(u2, v2)
+            new Vec2(u1, v1),
         ];
         
         // 应用旋转

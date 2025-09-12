@@ -232,23 +232,29 @@ export class TemplateProcessor {
         // cross 模板使用 'cross' 作为 key
         const textureKey = 'cross';
         
+        // Minecraft 的 cross 模型是两个对角线交叉的平面
+        // 每个平面都需要定义所有4个面来实现双面显示
         return [
-            // 第一个平面 (从 NW 到 SE)
+            // 第一个对角线平面 (从西北到东南)
             {
-                from: [0.8, 0, 8],
-                to: [15.2, 16, 8],
+                from: [0, 0, 0],
+                to: [16, 16, 16],
                 shade: false,
                 faces: [
                     { dir: 'north', uv: [0, 0, 16, 16], textureKey },
-                    { dir: 'south', uv: [0, 0, 16, 16], textureKey }
+                    { dir: 'south', uv: [0, 0, 16, 16], textureKey },
+                    { dir: 'west', uv: [0, 0, 16, 16], textureKey },
+                    { dir: 'east', uv: [0, 0, 16, 16], textureKey }
                 ]
             },
-            // 第二个平面 (从 NE 到 SW)
+            // 第二个对角线平面 (从东北到西南)
             {
-                from: [8, 0, 0.8],
-                to: [8, 16, 15.2],
+                from: [0, 0, 16],
+                to: [16, 16, 0],
                 shade: false,
                 faces: [
+                    { dir: 'north', uv: [0, 0, 16, 16], textureKey },
+                    { dir: 'south', uv: [0, 0, 16, 16], textureKey },
                     { dir: 'west', uv: [0, 0, 16, 16], textureKey },
                     { dir: 'east', uv: [0, 0, 16, 16], textureKey }
                 ]

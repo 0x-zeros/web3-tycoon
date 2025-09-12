@@ -11,6 +11,7 @@ import { UIModeSelect } from "../game/UIModeSelect";
 import { UIInGame } from "../game/UIInGame";
 import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
+import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 
 /**
  * UI构造函数接口 - Component类构造函数
@@ -153,7 +154,7 @@ export class UIManager {
                 //注意 FairyGUI 的 GRoot.create 内部硬编码查找场景根节点下名为 “Canvas” 的节点
                 //所以场景里的UIRoot要命名为Canvas
                 fgui.GRoot.create();
-                
+
                 // 然后获取实例
                 this._groot = fgui.GRoot.inst;
             }
@@ -161,6 +162,10 @@ export class UIManager {
             if (!this._groot) {
                 throw new Error("FairyGUI GRoot创建失败");
             }
+
+            //添加UIFairyGUIAdapter脚本
+            this._groot.node.addComponent(UIFairyGUIAdapter);
+            
             
             // FairyGUI会自动处理设计分辨率
             // 不需要手动调用setContentScaleFactor

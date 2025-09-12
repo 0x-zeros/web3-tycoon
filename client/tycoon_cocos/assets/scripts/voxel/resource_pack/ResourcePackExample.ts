@@ -37,11 +37,11 @@ export class ResourcePackExample extends Component {
         const grassData = await parseBlock('minecraft:grass_block');
         console.log('Grass Block 方块数据:', grassData);
 
-        const wealthGodData = await parseBlock('web3:wealth_god');
-        console.log('Wealth God Block 方块数据:', wealthGodData);
+        const hospital = await parseBlock('web3:hospital');
+        console.log('Hospital Block 方块数据:', hospital);
 
-        const poppyData = await parseBlock('minecraft:poppy');
-        console.log('Poppy Block 方块数据:', poppyData);
+        // const poppyData = await parseBlock('minecraft:poppy');
+        // console.log('Poppy Block 方块数据:', poppyData);
         
         // // 解析 Web3 方块
         // const propertyData = await parseBlock('web3:property');

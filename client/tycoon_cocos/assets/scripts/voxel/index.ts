@@ -5,12 +5,13 @@
 // Main system
 export { VoxelSystem, getVoxelSystem, isVoxelSystemReady } from './VoxelSystem';
 
-// Resource management
-export { ResourcePackLoader, getGlobalResourcePackLoader } from './resource/ResourcePackLoader';
+// Resource Pack Parser (新系统)
+export { BlockParser } from './resource_pack/BlockParser';
+export type { ParsedBlockData, ElementDef, TextureInfo as ParsedTextureInfo } from './resource_pack/types';
+
+// Resource management (渲染层)
 export { TextureManager, getGlobalTextureManager, initializeGlobalTextureManager } from './resource/TextureManager';
 export { MaterialFactory, getGlobalMaterialFactory, initializeGlobalMaterialFactory, MaterialType } from './resource/MaterialFactory';
-export { ModelParser, ModelTemplate } from './resource/ModelParser';
-export { BlockStateParser } from './resource/BlockStateParser';
 export { MeshBuilder } from './resource/MeshBuilder';
 
 // Block system (new)

@@ -1,5 +1,4 @@
 import { Texture2D, ImageAsset, resources } from 'cc';
-import { ResourcePackLoader } from './ResourcePackLoader';
 
 export interface TextureInfo {
     texture: Texture2D;
@@ -10,20 +9,21 @@ export interface TextureInfo {
 }
 
 export class TextureManager {
-    private resourceLoader: ResourcePackLoader;
     private textureCache: Map<string, TextureInfo> = new Map();
     private loadingPromises: Map<string, Promise<TextureInfo | null>> = new Map();
     private missingTexture: Texture2D | null = null;
 
-    constructor(resourceLoader: ResourcePackLoader) {
-        this.resourceLoader = resourceLoader;
+    private rootDir: string;
+
+    constructor() {
     }
 
     /**
      * 初始化纹理管理器
      */
-    async initialize(): Promise<void> {
+    async initialize(rootDir: string): Promise<void> {
         console.log('[TextureManager] 初始化纹理管理器...');
+        this.rootDir = rootDir;
         
         // 创建缺失纹理（紫黑方格）
         await this.createMissingTexture();
@@ -68,7 +68,8 @@ export class TextureManager {
         console.log(`[TextureManager] 开始加载纹理: ${texturePath}`);
 
         try {
-            const texture = await this.resourceLoader.loadTexture(texturePath);
+            // 使用 Cocos Creator 资源系统加载纹理
+            const texture = await this.loadTextureFromCocos(this.rootDir, texturePath);
             if (!texture) {
                 console.warn(`[TextureManager] 纹理加载失败: ${texturePath}`);
                 return this.getMissingTextureInfo();
@@ -323,6 +324,28 @@ export class TextureManager {
             totalMemory
         };
     }
+    
+    /**
+     * 从 Cocos 资源系统加载纹理
+     */
+    private loadTextureFromCocos(rootDir: string, cocosPath: string): Promise<Texture2D | null> {
+        return new Promise((resolve) => {
+
+            ////去掉.png后缀
+            cocosPath = cocosPath.split('.')[0];
+            //加载纹理，需要添加 /texture 后缀
+            let path = rootDir + '/' + cocosPath + '/texture';
+            
+            resources.load(path, Texture2D, (err, texture) => {
+                if (err) {
+                    console.warn(`[TextureManager] Cocos 资源加载失败: ${cocosPath}`, err);
+                    resolve(null);
+                } else {
+                    resolve(texture);
+                }
+            });
+        });
+    }
 
     /**
      * 销毁纹理管理器
@@ -344,11 +367,11 @@ export function getGlobalTextureManager(): TextureManager | null {
     return globalTextureManager;
 }
 
-export function initializeGlobalTextureManager(resourceLoader: ResourcePackLoader): TextureManager {
+export function initializeGlobalTextureManager(): TextureManager {
     if (globalTextureManager) {
         globalTextureManager.destroy();
     }
     
-    globalTextureManager = new TextureManager(resourceLoader);
+    globalTextureManager = new TextureManager();
     return globalTextureManager;
 }

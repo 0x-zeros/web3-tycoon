@@ -76,7 +76,7 @@ export class TemplateProcessor {
         modelChain?: Array<{ rel: string; ns: string; json: any }>
     ): ElementDef[] {
 
-        console.log('synthesizeElementsByTemplate', template, modelChain);
+        // console.log('synthesizeElementsByTemplate', template, modelChain);
 
         // Minecraft 规则：elements 不做跨 parent 合并
         // 如果子模型有 elements，完全覆盖父模型

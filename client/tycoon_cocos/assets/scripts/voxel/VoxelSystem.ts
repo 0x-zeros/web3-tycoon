@@ -1,9 +1,8 @@
 import { Vec3, Node, MeshRenderer } from 'cc';
-import { ResourcePackLoader, getGlobalResourcePackLoader } from './resource/ResourcePackLoader';
+import { BlockParser } from './resource_pack/BlockParser';
+import { ParsedBlockData } from './resource_pack/types';
 import { TextureManager, initializeGlobalTextureManager, getGlobalTextureManager } from './resource/TextureManager';
 import { MaterialFactory, initializeGlobalMaterialFactory, getGlobalMaterialFactory } from './resource/MaterialFactory';
-import { ModelParser } from './resource/ModelParser';
-import { BlockStateParser } from './resource/BlockStateParser';
 import { MeshBuilder, VoxelMeshData } from './resource/MeshBuilder';
 import { BlockRegistry, BlockDefinition } from './core/VoxelBlock';
 import { WEB3_BLOCKS, getWeb3TileBlocks, getWeb3ObjectBlocks, getAllWeb3BlockIds, Web3BlockInfo } from './Web3BlockTypes';
@@ -15,18 +14,25 @@ import { WEB3_BLOCKS, getWeb3TileBlocks, getWeb3ObjectBlocks, getAllWeb3BlockIds
 export class VoxelSystem {
     private static instance: VoxelSystem | null = null;
     
-    private resourceLoader: ResourcePackLoader;
+    private blockParser: BlockParser;
     private textureManager: TextureManager;
     private materialFactory: MaterialFactory;
-    private modelParser: ModelParser;
+    private blockCache: Map<string, ParsedBlockData> = new Map();
     private initialized: boolean = false;
     private overlayEnabled: boolean = false; // overlay 功能开关（默认关闭）
+    private rootDir: string = 'voxel/resource_pack';
 
     private constructor() {
-        this.resourceLoader = getGlobalResourcePackLoader();
-        this.textureManager = initializeGlobalTextureManager(this.resourceLoader);
+        // 使用新的 BlockParser
+        this.blockParser = new BlockParser({
+            rootDir: this.rootDir,
+            searchRoots: [this.rootDir],
+            defaultNamespace: 'minecraft'
+        });
+        
+        // 初始化纹理管理器和材质工厂
+        this.textureManager = initializeGlobalTextureManager();
         this.materialFactory = initializeGlobalMaterialFactory(this.textureManager);
-        this.modelParser = new ModelParser(this.resourceLoader);
     }
 
     /**
@@ -51,16 +57,10 @@ export class VoxelSystem {
         console.log('[VoxelSystem] 开始初始化体素渲染系统...');
 
         try {
-            // 1. 加载资源包
-            await this.resourceLoader.load();
+            // 1. 初始化纹理管理器
+            await this.textureManager.initialize(this.rootDir);
             
-            // 2. 初始化纹理管理器
-            await this.textureManager.initialize();
-            
-            // 3. 预加载常用纹理（关闭，按需加载以加快启动）
-            // await this.textureManager.preloadCommonTextures();
-            
-            // 4. 确保方块注册表已初始化
+            // 2. 确保方块注册表已初始化
             if (!BlockRegistry.exists('minecraft:stone')) {
                 console.warn('[VoxelSystem] 方块注册表未正确初始化');
             }
@@ -96,40 +96,21 @@ export class VoxelSystem {
         }
 
         try {
-            // 1. 获取方块状态
-            const blockState = this.resourceLoader.getBlockState(blockId);
-            if (!blockState) {
-                console.warn(`[VoxelSystem] 方块状态未找到: ${blockId}`);
-                return null;
-            }
+            const blockData = await this.getBlockData(blockId);
 
-            // 2. 解析方块状态，获取模型信息
-            const resolvedState = BlockStateParser.parseBlockState(blockState);
-            if (!resolvedState) {
-                console.warn(`[VoxelSystem] 方块状态解析失败: ${blockId}`);
-                return null;
-            }
-
-            // 3. 解析模型
-            const model = await this.modelParser.parseModel(resolvedState.modelId);
-            if (!model) {
-                console.warn(`[VoxelSystem] 模型解析失败: ${resolvedState.modelId}`);
-                return null;
-            }
-
-            // 4. 构建网格
+            // 4. 构建网格上下文
             const meshBuildContext = {
                 blockPosition: position,
-                blockRotation: rotation || resolvedState.rotation,
+                blockRotation: rotation || { x: 0, y: blockData.rotationY || 0, z: 0 },
                 blockId: blockId // 传递方块ID用于光照计算
             };
 
             if (this.overlayEnabled) {
                 // 通用 Overlay 检测：如果模型任一元素的侧面使用 *_side_overlay 纹理，则采用双子网格方案
-                const overlayInfo = this.detectOverlayInfo(model);
+                const overlayInfo = this.detectOverlayInfo(blockData);
                 if (overlayInfo) {
                     console.log(`[VoxelSystem] 检测到 overlay 方案: ${blockId} overlay=${overlayInfo.overlaySideTexture}`);
-                    const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(meshBuildContext);
+                    const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(blockData, meshBuildContext);
 
                     const meshData: VoxelMeshData = {
                         vertices: [],
@@ -143,7 +124,8 @@ export class VoxelSystem {
                 }
             }
 
-            const meshData = MeshBuilder.buildMesh(model, meshBuildContext);
+            // 5. 使用新的数据结构构建网格
+            const meshData = MeshBuilder.buildMesh(blockData, meshBuildContext);
             console.log(`[VoxelSystem] 普通方块网格生成成功: ${blockId}`);
             return meshData;
 
@@ -157,18 +139,22 @@ export class VoxelSystem {
      * 检测模型是否具有侧面 overlay 纹理（如 *_side_overlay）
      * 返回基础侧面纹理和 overlay 侧面纹理
      */
-    private detectOverlayInfo(model: any): { baseSideTexture: string; overlaySideTexture: string } | null {
+    private detectOverlayInfo(blockData: ParsedBlockData): { baseSideTexture: string; overlaySideTexture: string } | null {
         try {
             // 扫描所有元素的四个侧面纹理
             const sideNames = ['north', 'south', 'east', 'west'];
-            for (const element of model.elements || []) {
-                for (const side of sideNames) {
-                    const face = element.faces?.get ? element.faces.get(side) : element.faces?.[side];
-                    if (!face || !face.texture) continue;
-                    const tex: string = face.texture;
-                    if (tex.includes('_side_overlay')) {
-                        const overlaySideTexture = tex.replace('minecraft:block/', '');
-                        const baseSideTexture = overlaySideTexture.replace('_side_overlay', '_side');
+            for (const element of blockData.elements || []) {
+                for (const face of element.faces) {
+                    if (sideNames.indexOf(face.dir) === -1) continue;
+                    
+                    // 通过 textureKey 查找纹理信息
+                    const textureInfo = blockData.textures.find(t => t.key === face.textureKey);
+                    if (!textureInfo) continue;
+                    
+                    const texName = textureInfo.name;
+                    if (texName.includes('_side_overlay')) {
+                        const overlaySideTexture = texName;
+                        const baseSideTexture = texName.replace('_side_overlay', '_side');
                         return {
                             baseSideTexture,
                             overlaySideTexture
@@ -214,7 +200,7 @@ export class VoxelSystem {
      * @param blockId 方块ID
      * @returns 材质对象
      */
-    async createBlockMaterial(blockId: string): Promise<any | null> {
+    async createBlockMaterial(blockId: string, texturePath?: string): Promise<any | null> {
         if (!this.initialized) {
             console.error('[VoxelSystem] 系统未初始化');
             return null;
@@ -224,8 +210,6 @@ export class VoxelSystem {
             const blockDef = BlockRegistry.getBlock(blockId);
             const isEmissive = blockDef ? blockDef.lightLevel > 0 : false;
 
-            // 根据方块类型选择主纹理
-            const texturePath = this.getBlockMainTexture(blockId);
             return await this.materialFactory.createBlockMaterial(texturePath, isEmissive);
 
         } catch (error) {
@@ -400,10 +384,14 @@ export class VoxelSystem {
                 console.error('[VoxelSystem] 系统未初始化');
                 return null;
             }
+            
+            const blockData = await this.getBlockData(blockId);
 
             // 生成网格数据
             const meshData = await this.generateBlockMesh(blockId, position);
             if (!meshData) return null;
+
+            console.log(`[VoxelSystem] ${blockId} meshData:`, meshData);
 
             // 创建方块节点（先不添加到场景，避免粉色闪烁）
             const blockNode = new Node(`Block_${blockId.replace('minecraft:', '')}`);//todo
@@ -417,7 +405,7 @@ export class VoxelSystem {
                 return null;
             }
 
-            for (const [texturePath, textureGroup] of meshData.textureGroups) {
+            for (const [key, textureGroup] of meshData.textureGroups) {//now, key is texturePath
                 if (!textureGroup || textureGroup.vertices.length === 0) continue;
 
                 const subNode = new Node('SubMesh');
@@ -427,15 +415,15 @@ export class VoxelSystem {
                 const mesh = MeshBuilder.createCocosMesh({
                     vertices: [],
                     indices: [],
-                    textureGroups: new Map([[texturePath, textureGroup]])
-                } as any, texturePath);
+                    textureGroups: new Map([[key, textureGroup]])
+                } as any, key);
                 if (!mesh) continue;
 
                 const mr = subNode.addComponent(MeshRenderer);
                 mr.mesh = mesh;
 
                 // 材质
-                const material = await this.createBlockMaterial(blockId);
+                const material = await this.createBlockMaterial(blockId, textureGroup.texture);
                 if (material) mr.material = material;
             }
 
@@ -464,10 +452,10 @@ export class VoxelSystem {
     }
 
     /**
-     * 获取资源加载器
+     * 获取方块解析器
      */
-    getResourceLoader(): ResourcePackLoader {
-        return this.resourceLoader;
+    getBlockParser(): BlockParser {
+        return this.blockParser;
     }
 
     /**
@@ -476,8 +464,29 @@ export class VoxelSystem {
     clearCaches(): void {
         this.textureManager.clearCache();
         this.materialFactory.clearCache();
-        this.modelParser.clearCache();
+        this.blockParser.clearCache();
+        this.blockCache.clear();
         console.log('[VoxelSystem] 缓存已清理');
+    }
+
+    async getBlockData(blockId: string): Promise<ParsedBlockData | null> {
+    
+        // 1. 检查缓存
+        let blockData = this.blockCache.get(blockId);
+    
+        if (!blockData) {
+            // 2. 使用新的 BlockParser 解析方块
+            blockData = await this.blockParser.parseBlock(blockId);
+            if (!blockData) {
+                console.warn(`[VoxelSystem] 方块解析失败: ${blockId}`);
+                return null;
+            }
+            
+            // 3. 缓存解析结果
+            this.blockCache.set(blockId, blockData);
+        }
+
+        return blockData;
     }
 
     /**
@@ -488,13 +497,14 @@ export class VoxelSystem {
 
         const textureStats = this.textureManager.getCacheStats();
         const materialStats = this.materialFactory.getCacheStats();
-        const modelStats = this.modelParser.getCacheStats();
+        const parserStats = this.blockParser.getCacheStats();
 
         console.log('[VoxelSystem] 系统统计:');
         console.log(`- 方块类型: ${BlockRegistry.getAllBlockIds().length}`);
         console.log(`- 纹理缓存: ${textureStats.total} (${textureStats.loaded} 已加载)`);
         console.log(`- 材质缓存: ${materialStats.materials}`);
-        console.log(`- 模型缓存: ${modelStats.size}`);
+        console.log(`- 方块缓存: ${this.blockCache.size}`);
+        console.log(`- 解析器缓存: JSON=${parserStats.jsonCache}, 纹理检查=${parserStats.textureCheckCache}`);
         console.log(`- 内存占用: ${(textureStats.totalMemory / 1024 / 1024).toFixed(2)} MB`);
     }
 
@@ -510,14 +520,13 @@ export class VoxelSystem {
     } {
         const textureStats = this.initialized ? this.textureManager.getCacheStats() : { total: 0 };
         const materialStats = this.initialized ? this.materialFactory.getCacheStats() : { materials: 0 };
-        const modelStats = this.initialized ? this.modelParser.getCacheStats() : { size: 0 };
 
         return {
             initialized: this.initialized,
             blockCount: BlockRegistry.getAllBlockIds().length,
             textureCount: textureStats.total,
             materialCount: materialStats.materials,
-            modelCount: modelStats.size
+            modelCount: this.blockCache.size
         };
     }
 
@@ -531,9 +540,10 @@ export class VoxelSystem {
         if (this.materialFactory) {
             this.materialFactory.destroy();
         }
-        if (this.modelParser) {
-            this.modelParser.clearCache();
+        if (this.blockParser) {
+            this.blockParser.clearCache();
         }
+        this.blockCache.clear();
 
         VoxelSystem.instance = null;
         this.initialized = false;

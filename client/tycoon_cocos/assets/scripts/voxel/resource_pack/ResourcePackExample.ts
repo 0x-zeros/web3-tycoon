@@ -25,16 +25,17 @@ export class ResourcePackExample extends Component {
         
         // 解析 Minecraft 方块
         //const stoneData = await parseBlock('stone');
-        const stoneData = await parseBlock('minecraft:oak_planks');
-        console.log('Stone 方块数据:', stoneData);
-        console.log('- ID:', stoneData.id);
-        console.log('- 模板类型:', stoneData.modelTemplate);
-        console.log('- 纹理数量:', stoneData.textures.length);
-        console.log('- 元素数量:', stoneData.elements.length);
+
+        // const stoneData = await parseBlock('minecraft:oak_planks');
+        // console.log('Stone 方块数据:', stoneData);
+        // console.log('- ID:', stoneData.id);
+        // console.log('- 模板类型:', stoneData.modelTemplate);
+        // console.log('- 纹理数量:', stoneData.textures.length);
+        // console.log('- 元素数量:', stoneData.elements.length);
         
-        // // 解析带命名空间的方块
-        // const grassData = await parseBlock('minecraft:grass_block');
-        // console.log('Grass Block 方块数据:', grassData);
+        // 解析带命名空间的方块
+        const grassData = await parseBlock('minecraft:grass_block');
+        console.log('Grass Block 方块数据:', grassData);
         
         // // 解析 Web3 方块
         // const propertyData = await parseBlock('web3:property');

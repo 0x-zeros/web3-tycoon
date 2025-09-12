@@ -26,4 +26,5 @@ node_modules/
 old_for_ref/
 
 assets/resources/voxel/default
-assets/resources/voxel/resource_pack
+# assets/resources/voxel/resource_pack
+assets/resources/voxel/resource_pack/assets/minecraft

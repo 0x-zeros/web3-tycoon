@@ -20,15 +20,12 @@
     "_children": [
       {
         "__id__": 2
-      },
-      {
-        "__id__": 12
       }
     ],
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 22
+      "__id__": 12
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -150,7 +147,7 @@
     "node": {
       "__id__": 2
     },
-    "_enabled": true,
+    "_enabled": false,
     "__prefab": {
       "__id__": 6
     },
@@ -178,7 +175,7 @@
     "node": {
       "__id__": 2
     },
-    "_enabled": true,
+    "_enabled": false,
     "__prefab": {
       "__id__": 8
     },
@@ -221,163 +218,6 @@
       "__id__": 0
     },
     "fileId": "5c3LS3CSNJbb+MLPwpbvIG",
-    "instance": null,
-    "targetOverrides": null,
-    "nestedPrefabInstanceRoots": null
-  },
-  {
-    "__type__": "cc.Node",
-    "_name": "VoxelContainer-001",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "_parent": {
-      "__id__": 1
-    },
-    "_children": [],
-    "_active": false,
-    "_components": [
-      {
-        "__id__": 13
-      },
-      {
-        "__id__": 15
-      },
-      {
-        "__id__": 17
-      },
-      {
-        "__id__": 19
-      }
-    ],
-    "_prefab": {
-      "__id__": 21
-    },
-    "_lpos": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "_lrot": {
-      "__type__": "cc.Quat",
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "w": 1
-    },
-    "_lscale": {
-      "__type__": "cc.Vec3",
-      "x": 1,
-      "y": 1,
-      "z": 1
-    },
-    "_mobility": 0,
-    "_layer": 1073741824,
-    "_euler": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "_id": ""
-  },
-  {
-    "__type__": "ee75fHulKNAnq9Cp+vvMVT1",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 12
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 14
-    },
-    "camera": null,
-    "defaultVoxelMode": "walking",
-    "collisionSystem": {
-      "__id__": 15
-    },
-    "maxRaycastDistance": 64,
-    "selectedBlockId": "minecraft:stone",
-    "enableDebugVisualization": true,
-    "enableHitMarkers": true,
-    "debugDisplayTime": 2,
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "10jEgotpVAuLFjU02BxSQb"
-  },
-  {
-    "__type__": "3bcb1Av1itLFLnnHUSjyJq2",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 12
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 16
-    },
-    "playerPadding": 0.25,
-    "playerHeight": 1.8,
-    "playerRadius": 0.3,
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "0dTuAqrelKx5ph+mgk/boz"
-  },
-  {
-    "__type__": "224065T7G5DbLaTrfb3rYlh",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 12
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 18
-    },
-    "demoSize": 5,
-    "glowingDensity": 0.3,
-    "showLightingDebug": true,
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "316Mpcb/lIjpBGGKHteMwn"
-  },
-  {
-    "__type__": "a0897fZAXZPUKpY41W7MyVA",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 12
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 20
-    },
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "43g2Gw33pEY7PEhRIpk6PC"
-  },
-  {
-    "__type__": "cc.PrefabInfo",
-    "root": {
-      "__id__": 1
-    },
-    "asset": {
-      "__id__": 0
-    },
-    "fileId": "a7nTT5jLdErpefJyvpMzXO",
     "instance": null,
     "targetOverrides": null,
     "nestedPrefabInstanceRoots": null

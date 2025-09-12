@@ -191,16 +191,19 @@ export class MeshBuilder {
         context: MeshBuildContext,
         meshData: VoxelMeshData
     ): void {
-        // 转换坐标：Minecraft 使用 0-16，需要转换为 -0.5 到 0.5
+        const [fromX, fromY, fromZ] = element.from;
+        const [toX, toY, toZ] = element.to;
+
+        // 将 0-16 坐标系转换为 -0.5 到 0.5 的方块单位
         const from = new Vec3(
-            (element.from[0] - 8) / 16,
-            (element.from[1] - 8) / 16,
-            (element.from[2] - 8) / 16
+            fromX / 16 - 0.5,
+            fromY / 16 - 0.5,
+            fromZ / 16 - 0.5
         );
         const to = new Vec3(
-            (element.to[0] - 8) / 16,
-            (element.to[1] - 8) / 16,
-            (element.to[2] - 8) / 16
+            toX / 16 - 0.5,
+            toY / 16 - 0.5,
+            toZ / 16 - 0.5
         );
 
         // 应用元素旋转（如果有）
@@ -285,55 +288,56 @@ export class MeshBuilder {
      * 获取面的顶点位置
      */
     private static getFaceVertices(dir: string, from: Vec3, to: Vec3): Vec3[] {
+        
+        //ccw
+        // 和minecraft的uv匹配的顶点顺序 fix by zeros
+        // •	0 → 左下
+        // •	1 → 右下
+        // •	2 → 右上
+        // •	3 → 左上
+
         switch (dir) {
             case 'north': // -Z
                 return [
                     new Vec3(to.x, from.y, from.z),
+                    new Vec3(from.x, from.y, from.z), 
+                    new Vec3(from.x, to.y, from.z), 
                     new Vec3(to.x, to.y, from.z),
-                    new Vec3(from.x, to.y, from.z),
-                    new Vec3(from.x, from.y, from.z)
                 ];
             case 'south': // +Z
                 return [
-                    new Vec3(from.x, from.y, to.z),
-                    new Vec3(from.x, to.y, to.z),
-                    new Vec3(to.x, to.y, to.z),
-                    new Vec3(to.x, from.y, to.z)
+                    new Vec3(from.x, from.y, to.z), 
+                    new Vec3(to.x, from.y, to.z), 
+                    new Vec3(to.x, to.y, to.z), 
+                    new Vec3(from.x, to.y, to.z), 
                 ];
             case 'west': // -X
                 return [
-                    new Vec3(from.x, from.y, from.z),
-                    new Vec3(from.x, to.y, from.z),
-                    new Vec3(from.x, to.y, to.z),
-                    new Vec3(from.x, from.y, to.z)
+                    new Vec3(from.x, from.y, from.z), 
+                    new Vec3(from.x, from.y, to.z), 
+                    new Vec3(from.x, to.y, to.z), 
+                    new Vec3(from.x, to.y, from.z), 
                 ];
             case 'east': // +X
                 return [
-                    new Vec3(to.x, from.y, to.z),
-                    new Vec3(to.x, to.y, to.z),
-                    new Vec3(to.x, to.y, from.z),
-                    new Vec3(to.x, from.y, from.z)
+                    new Vec3(to.x, from.y, to.z), 
+                    new Vec3(to.x, from.y, from.z), 
+                    new Vec3(to.x, to.y, from.z), 
+                    new Vec3(to.x, to.y, to.z), 
                 ];
             case 'up': // +Y
                 return [
-                    new Vec3(from.x, to.y, from.z),
-                    new Vec3(to.x, to.y, from.z),
-                    new Vec3(to.x, to.y, to.z),
-                    new Vec3(from.x, to.y, to.z)
+                    new Vec3(to.x, to.y, from.z), 
+                    new Vec3(from.x, to.y, from.z), 
+                    new Vec3(from.x, to.y, to.z), 
+                    new Vec3(to.x, to.y, to.z), 
                 ];
             case 'down': // -Y
                 return [
                     new Vec3(from.x, from.y, to.z),
-                    new Vec3(to.x, from.y, to.z),
-                    new Vec3(to.x, from.y, from.z),
-                    new Vec3(from.x, from.y, from.z)
-                ];
-            default:
-                return [
                     new Vec3(from.x, from.y, from.z),
                     new Vec3(to.x, from.y, from.z),
-                    new Vec3(to.x, to.y, from.z),
-                    new Vec3(from.x, to.y, from.z)
+                    new Vec3(to.x, from.y, to.z), 
                 ];
         }
     }

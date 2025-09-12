@@ -2,6 +2,8 @@
  * Web3大富翁游戏方块类型定义
  */
 
+import { BlockRegistry, BlockRenderType, BlockDefinition } from './core/VoxelBlock';
+
 // 地块类型枚举（0-99）
 export enum Web3TileType {
     EMPTY_LAND = 0,    // 空地
@@ -196,4 +198,34 @@ export function isWeb3Tile(blockIdOrTypeId: string | number): boolean {
         // typeId 0-99 是地块类型
         return blockIdOrTypeId >= 0 && blockIdOrTypeId <= 99;
     }
+}
+
+/**
+ * 注册所有 Web3 方块到方块注册表
+ * @param registry 方块注册表类（通常是 BlockRegistry）
+ */
+export function registerWeb3Blocks(registry: typeof BlockRegistry): void {
+    console.log('[Web3BlockTypes] 开始注册 Web3 方块...');
+    
+    for (const web3Block of WEB3_BLOCKS) {
+        const blockDef: BlockDefinition = {
+            id: web3Block.id,
+            displayName: web3Block.name,
+            isPlant: web3Block.category === 'object',  // NPC和物体类型类似植物渲染
+            isObstacle: web3Block.category === 'tile', // 地块类型是障碍物
+            isDestructable: web3Block.category === 'object', // 只有物体可以破坏
+            lightLevel: 0,  // Web3方块都不发光
+            hardness: web3Block.category === 'tile' ? 1.0 : 0,  // 地块硬度1.0，物体硬度0
+            renderType: web3Block.category === 'tile' ? BlockRenderType.SOLID : BlockRenderType.CUTOUT,
+            properties: {
+                typeId: web3Block.typeId,
+                category: web3Block.category,
+                description: web3Block.description
+            }
+        };
+        
+        registry.register(blockDef);
+    }
+    
+    console.log(`[Web3BlockTypes] 成功注册 ${WEB3_BLOCKS.length} 个 Web3 方块`);
 }

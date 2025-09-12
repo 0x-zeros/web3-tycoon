@@ -1,3 +1,5 @@
+import { registerWeb3Blocks } from '../Web3BlockTypes';
+
 // 保留兼容性的方块类型枚举（旧系统）
 export enum VoxelBlockType {
     EMPTY = 0,
@@ -64,7 +66,6 @@ export interface BlockDefinition {
     displayName: string;           // 显示名称
     isPlant: boolean;              // 是否为植物
     isObstacle: boolean;           // 是否为障碍物
-    isTransparent: boolean;        // 是否透明
     isDestructable: boolean;       // 是否可破坏
     lightLevel: number;            // 发光等级 (0-15)
     hardness: number;              // 硬度
@@ -73,17 +74,15 @@ export interface BlockDefinition {
 }
 
 export enum BlockRenderType {
-    CUBE = 'cube',                 // 普通立方体
-    CROSS = 'cross',               // 交叉植物
-    TRANSPARENT = 'transparent',    // 透明方块
-    CUTOUT = 'cutout',             // 裁切（如叶子）
+    SOLID = 'solid',               // 不透明实体方块
+    CUTOUT = 'cutout',             // 裁切透明（如叶子、玻璃）
+    TRANSLUCENT = 'translucent',   // 半透明（如水、冰）
     LIQUID = 'liquid'              // 液体
 }
 
 export interface VoxelBlockProperties {
     isPlant: boolean;
     isObstacle: boolean;
-    isTransparent: boolean;
     isDestructable: boolean;
     textureTop: number;
     textureBottom: number;
@@ -119,11 +118,10 @@ export class BlockRegistry {
             displayName: '空气',
             isPlant: false,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: false,
             lightLevel: 0,
             hardness: 0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.TRANSLUCENT
         });
 
         // 石头
@@ -132,11 +130,10 @@ export class BlockRegistry {
             displayName: '石头',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 1.5,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 泥土
@@ -145,11 +142,10 @@ export class BlockRegistry {
             displayName: '泥土',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0.5,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 草方块
@@ -158,11 +154,10 @@ export class BlockRegistry {
             displayName: '草方块',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0.6,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 沙子
@@ -171,11 +166,10 @@ export class BlockRegistry {
             displayName: '沙子',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0.5,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 鹅卵石
@@ -184,11 +178,10 @@ export class BlockRegistry {
             displayName: '鹅卵石',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 2.0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 橡木原木
@@ -197,11 +190,10 @@ export class BlockRegistry {
             displayName: '橡木原木',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 2.0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 橡木木板
@@ -210,11 +202,10 @@ export class BlockRegistry {
             displayName: '橡木木板',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 0,
             hardness: 2.0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 橡木叶子
@@ -223,7 +214,6 @@ export class BlockRegistry {
             displayName: '橡木叶子',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0.2,
@@ -236,11 +226,10 @@ export class BlockRegistry {
             displayName: '玻璃',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0.3,
-            renderType: BlockRenderType.TRANSPARENT
+            renderType: BlockRenderType.TRANSLUCENT
         });
 
         // 蒲公英（植物）
@@ -249,11 +238,10 @@ export class BlockRegistry {
             displayName: '蒲公英',
             isPlant: true,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
 
         // 虞粟（植物）
@@ -262,11 +250,10 @@ export class BlockRegistry {
             displayName: '虞粟',
             isPlant: true,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
 
         // 矮草（植物）
@@ -275,11 +262,10 @@ export class BlockRegistry {
             displayName: '草',
             isPlant: true,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
 
         // 蕨（植物）
@@ -288,11 +274,10 @@ export class BlockRegistry {
             displayName: '蕨',
             isPlant: true,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 0,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
 
         // ========== 发光方块 ==========
@@ -303,11 +288,10 @@ export class BlockRegistry {
             displayName: '萤石',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 15,
             hardness: 0.3,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 火把
@@ -316,11 +300,10 @@ export class BlockRegistry {
             displayName: '火把',
             isPlant: false,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 14,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
 
         // 灯笼
@@ -329,11 +312,10 @@ export class BlockRegistry {
             displayName: '灯笼',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 15,
             hardness: 3.5,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 海晶灯
@@ -342,11 +324,10 @@ export class BlockRegistry {
             displayName: '海晶灯',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 15,
             hardness: 0.3,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 南瓜灯
@@ -355,11 +336,10 @@ export class BlockRegistry {
             displayName: '南瓜灯',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 15,
             hardness: 1.0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 红石灯
@@ -368,11 +348,10 @@ export class BlockRegistry {
             displayName: '红石灯',
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             lightLevel: 15,
             hardness: 0.3,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 营火
@@ -381,11 +360,10 @@ export class BlockRegistry {
             displayName: '营火',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 15,
             hardness: 2.0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 端烛
@@ -394,11 +372,10 @@ export class BlockRegistry {
             displayName: '末地烛',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 14,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
 
         // 信标
@@ -407,11 +384,10 @@ export class BlockRegistry {
             displayName: '信标',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 15,
             hardness: 3.0,
-            renderType: BlockRenderType.CUBE
+            renderType: BlockRenderType.SOLID
         });
 
         // 蜂蜜块（弱发光）
@@ -420,11 +396,10 @@ export class BlockRegistry {
             displayName: '蜂蜜块',
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 3,
             hardness: 0,
-            renderType: BlockRenderType.TRANSPARENT
+            renderType: BlockRenderType.TRANSLUCENT
         });
 
         // 荧光地衣
@@ -433,7 +408,6 @@ export class BlockRegistry {
             displayName: '荧光地衣',
             isPlant: true,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 7,
             hardness: 0.2,
@@ -446,12 +420,14 @@ export class BlockRegistry {
             displayName: '发光浆果',
             isPlant: true,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: true,
             lightLevel: 14,
             hardness: 0,
-            renderType: BlockRenderType.CROSS
+            renderType: BlockRenderType.CUTOUT
         });
+        
+        // 注册所有 Web3 方块
+        registerWeb3Blocks(this);
     }
 
     private static createLegacyMapping(): void {
@@ -537,7 +513,9 @@ export class BlockRegistry {
 
     static isTransparent(blockId: string): boolean {
         const block = this.getBlock(blockId);
-        return block ? block.isTransparent : true;
+        if (!block) return true;
+        // SOLID 类型的方块不透明，其他类型都是透明的
+        return block.renderType !== BlockRenderType.SOLID;
     }
 
     static isDestructable(blockId: string): boolean {
@@ -557,7 +535,7 @@ export class BlockRegistry {
 
     static getRenderType(blockId: string): BlockRenderType {
         const block = this.getBlock(blockId);
-        return block ? block.renderType : BlockRenderType.CUBE;
+        return block ? block.renderType : BlockRenderType.SOLID;
     }
 }
 
@@ -609,7 +587,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.EMPTY, {
             isPlant: false,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: false,
             textureTop: 0,
             textureBottom: 0,
@@ -620,7 +597,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.GRASS, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             textureTop: 0,
             textureBottom: 2,
@@ -631,7 +607,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.SAND, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             textureTop: 18,
             textureBottom: 18,
@@ -642,7 +617,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.STONE, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             textureTop: 32,
             textureBottom: 32,
@@ -653,7 +627,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.WOOD, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             textureTop: 21,
             textureBottom: 21,
@@ -664,7 +637,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.LEAVES, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             textureTop: 22,
             textureBottom: 22,
@@ -675,7 +647,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.GLASS, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: true,
             isDestructable: true,
             textureTop: 49,
             textureBottom: 49,
@@ -686,7 +657,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.CLOUD, {
             isPlant: false,
             isObstacle: false,
-            isTransparent: true,
             isDestructable: false,
             textureTop: 14,
             textureBottom: 14,
@@ -697,7 +667,6 @@ export class VoxelBlockRegistry {
         this.blockProperties.set(VoxelBlockType.LIGHT_STONE, {
             isPlant: false,
             isObstacle: true,
-            isTransparent: false,
             isDestructable: true,
             textureTop: 35,
             textureBottom: 35,
@@ -709,8 +678,7 @@ export class VoxelBlockRegistry {
             this.blockProperties.set(plantType, {
                 isPlant: true,
                 isObstacle: false,
-                isTransparent: true,
-                isDestructable: true,
+                    isDestructable: true,
                 textureTop: plantType,
                 textureBottom: plantType,
                 textureSide: plantType,
@@ -733,8 +701,9 @@ export class VoxelBlockRegistry {
 
     static isTransparent(blockType: VoxelBlockType): boolean {
         this.ensureInitialized();
-        const props = this.blockProperties.get(blockType);
-        return props ? props.isTransparent : true;
+        // 对于旧系统，简单地判断是否为特定类型
+        // 玻璃和叶子是透明的
+        return blockType === VoxelBlockType.GLASS || blockType === VoxelBlockType.LEAVES;
     }
 
     static isDestructable(blockType: VoxelBlockType): boolean {

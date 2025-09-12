@@ -8,6 +8,7 @@ export { VoxelSystem, getVoxelSystem, isVoxelSystemReady } from './VoxelSystem';
 // Resource Pack Parser (新系统)
 export { BlockParser } from './resource_pack/BlockParser';
 export type { ParsedBlockData, ElementDef, TextureInfo as ParsedTextureInfo } from './resource_pack/types';
+export { isCross } from './resource_pack/types';
 
 // Resource management (渲染层)
 export { TextureManager, getGlobalTextureManager, initializeGlobalTextureManager } from './resource/TextureManager';

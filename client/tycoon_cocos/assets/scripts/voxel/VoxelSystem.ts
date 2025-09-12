@@ -1,6 +1,6 @@
 import { Vec3, Node, MeshRenderer } from 'cc';
 import { BlockParser } from './resource_pack/BlockParser';
-import { ParsedBlockData } from './resource_pack/types';
+import { isCross, ParsedBlockData } from './resource_pack/types';
 import { TextureManager, initializeGlobalTextureManager, getGlobalTextureManager } from './resource/TextureManager';
 import { MaterialFactory, initializeGlobalMaterialFactory, getGlobalMaterialFactory } from './resource/MaterialFactory';
 import { MeshBuilder, VoxelMeshData } from './resource/MeshBuilder';
@@ -208,9 +208,8 @@ export class VoxelSystem {
 
         try {
             const blockDef = BlockRegistry.getBlock(blockId);
-            const isEmissive = blockDef ? blockDef.lightLevel > 0 : false;
-
-            return await this.materialFactory.createBlockMaterial(texturePath, isEmissive);
+            const blockData = await this.getBlockData(blockId);
+            return await this.materialFactory.createBlockMaterial(texturePath, blockData, blockDef);
 
         } catch (error) {
             console.error(`[VoxelSystem] 创建方块材质失败: ${blockId}`, error);

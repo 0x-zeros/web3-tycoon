@@ -1,5 +1,7 @@
 import { Material, Texture2D, gfx, EffectAsset, resources } from 'cc';
 import { TextureManager } from './TextureManager';
+import { isCross, ParsedBlockData } from '../resource_pack';
+import { BlockDefinition, BlockRenderType } from '../core/VoxelBlock';
 
 export enum MaterialType {
     OPAQUE = 'opaque',
@@ -410,18 +412,23 @@ export class MaterialFactory {
      * @param emissive 是否发光
      * @returns 材质对象
      */
-    async createBlockMaterial(texturePath: string, emissive: boolean = false): Promise<Material | null> {
+    async createBlockMaterial(texturePath: string, blockData: ParsedBlockData, blockDef: BlockDefinition): Promise<Material | null> {
         const textureInfo = await this.textureManager.loadTexture(texturePath);
         if (!textureInfo) {
             return null;
         }
 
-        // 根据纹理特性自动选择材质类型
+
+        // 选择材质类型
         let materialType: MaterialType;
-        if (this.isPlantTexture(texturePath)) {
+        if (isCross(blockData)) {
             materialType = MaterialType.DOUBLE_SIDED; // 植物使用双面
-        } else if (textureInfo.transparent) {
+
+        } else if (blockDef.renderType === BlockRenderType.TRANSLUCENT
+            || blockDef.renderType === BlockRenderType.CUTOUT
+        ) {
             materialType = MaterialType.TRANSPARENT; // 透明纹理
+            
         } else {
             materialType = MaterialType.OPAQUE; // 不透明（包括发光方块）
         }
@@ -432,7 +439,8 @@ export class MaterialFactory {
             alphaTest: materialType === MaterialType.CUTOUT ? 0.5 : undefined
         };
         
-        if (emissive) {
+        const isEmissive = blockDef ? blockDef.lightLevel > 0 : false;
+        if (isEmissive) {
             console.log(`[MaterialFactory] 创建发光方块材质: ${texturePath} (发光效果由顶点light值实现)`);
         }
 

@@ -4,8 +4,6 @@ export interface TextureInfo {
     texture: Texture2D;
     path: string;
     loaded: boolean;
-    transparent: boolean;
-    size: { width: number; height: number };
 }
 
 export class TextureManager {
@@ -79,15 +77,10 @@ export class TextureManager {
                 texture,
                 path: texturePath,
                 loaded: true,
-                transparent: this.isTransparentTexture(texturePath),
-                size: {
-                    width: texture.width,
-                    height: texture.height
-                }
             };
 
             // 配置纹理采样
-            this.configureTexture(texture, textureInfo.transparent);
+            this.configureTexture(texture);
 
             // 缓存纹理
             this.textureCache.set(texturePath, textureInfo);
@@ -104,9 +97,8 @@ export class TextureManager {
     /**
      * 配置纹理设置
      * @param texture 纹理对象
-     * @param transparent 是否透明
      */
-    private configureTexture(texture: Texture2D, transparent: boolean): void {
+    private configureTexture(texture: Texture2D): void {
         // 设置最近邻采样（保持像素风格）
         texture.setFilters(Texture2D.Filter.NEAREST, Texture2D.Filter.NEAREST);
         
@@ -198,21 +190,6 @@ export class TextureManager {
      */
     getTextureInfo(texturePath: string): TextureInfo | null {
         return this.textureCache.get(texturePath) || null;
-    }
-
-    /**
-     * 判断纹理是否透明
-     * @param texturePath 纹理路径
-     * @returns 是否透明
-     */
-    private isTransparentTexture(texturePath: string): boolean {
-        const transparentTextures = [
-            'glass', 'leaves', 'short_grass', 'fern', 'dandelion', 'poppy',
-            'water', 'ice', 'portal', 'vine', 'flower', 'sapling'
-        ];
-
-        const lowerPath = texturePath.toLowerCase();
-        return transparentTextures.some(keyword => lowerPath.includes(keyword));
     }
 
     /**

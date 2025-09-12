@@ -39,6 +39,9 @@ export class ResourcePackExample extends Component {
 
         const wealthGodData = await parseBlock('web3:wealth_god');
         console.log('Wealth God Block 方块数据:', wealthGodData);
+
+        const poppyData = await parseBlock('minecraft:poppy');
+        console.log('Poppy Block 方块数据:', poppyData);
         
         // // 解析 Web3 方块
         // const propertyData = await parseBlock('web3:property');

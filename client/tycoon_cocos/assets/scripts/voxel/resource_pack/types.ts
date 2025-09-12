@@ -127,3 +127,24 @@ export type ResourceCache = {
     models: Map<string, ModelData>;
     textures: Map<string, string>;
 };
+
+/**
+ * 判断方块数据是否为 cross 模型
+ * Cross 模型的特征：有两个元素，每个元素有两个面
+ * @param blockData 解析后的方块数据
+ * @returns 是否为 cross 模型
+ */
+export function isCross(blockData: ParsedBlockData): boolean {
+    if (!blockData.elements || blockData.elements.length !== 2) {
+        return false;
+    }
+    
+    // 检查每个元素是否都有且仅有两个面
+    for (const element of blockData.elements) {
+        if (!element.faces || element.faces.length !== 2) {
+            return false;
+        }
+    }
+    
+    return true;
+}

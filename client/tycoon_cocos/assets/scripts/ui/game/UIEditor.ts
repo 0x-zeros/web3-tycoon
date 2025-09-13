@@ -125,6 +125,7 @@ export class UIEditor extends UIBase {
     protected onShow(data?: any): void {
         console.log("[UIEditor] Showing editor UI");
         this.updateEditorVisibility();
+        this.m_mapElementUI?.hide()
     }
     
     /**
@@ -139,6 +140,7 @@ export class UIEditor extends UIBase {
      */
     protected onRefresh(data?: any): void {
         this.updateEditorVisibility();
+        this.m_mapElementUI?.hide()
     }
     
     /**
@@ -146,15 +148,8 @@ export class UIEditor extends UIBase {
      * 根据GameMap的编辑模式决定是否显示
      */
     public updateEditorVisibility(): void {
-        const mapManager = MapManager.getInstance();
-        if (mapManager) {
-            const mapInfo = mapManager.getCurrentMapInfo();
-            if (mapInfo && mapInfo.component) {
-                const isEditMode = mapInfo.component.isEditMode;
-                // 根据编辑模式设置自身的显示状态
-                this.node.active = isEditMode;
-            }
-        }
+        const isEditMode = MapManager.getInstance().getCurrentMapEditMode();
+        this.node.active = isEditMode;
     }
     
     /**

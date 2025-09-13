@@ -7,6 +7,7 @@ import { _decorator } from 'cc';
 import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIEditor } from "./UIEditor";
+import { MapManager } from "../../map/MapManager";
 
 const { ccclass } = _decorator;
 
@@ -145,16 +146,12 @@ export class UIInGame extends UIBase {
      * 更新模式控制器
      */
     private updateModeController(): void {
-        // 让UIEditor自己处理可见性
-        if (this.m_editorUI) {
-            this.m_editorUI.updateEditorVisibility();
-            
-            // 获取编辑模式状态并设置mode控制器
-            const isEditMode = this.m_editorUI.node.active;
-            if (this.m_modeController) {
-                // 0:play模式 1:editor模式
-                this.m_modeController.selectedIndex = isEditMode ? 1 : 0;
-            }
+        
+        // 获取编辑模式状态并设置mode控制器
+        if (this.m_modeController) {
+            // 0:play模式 1:editor模式
+            const isEditMode = MapManager.getInstance().getCurrentMapEditMode();
+            this.m_modeController.selectedIndex = isEditMode ? 1 : 0;
         }
     }
     
@@ -294,6 +291,8 @@ export class UIInGame extends UIBase {
     protected onRefresh(data?: any): void {
         this._updatePlayerDisplay();
         this._updateGameStateDisplay();
+
+        this.updateModeController();
     }
 
     // ================== 按钮事件处理 ==================

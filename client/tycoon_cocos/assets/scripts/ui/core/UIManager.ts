@@ -394,7 +394,7 @@ export class UIManager {
                 console.log(`[UIManager] UI ${uiName} already exists and is valid, returning existing instance`);
             }
             // 刷新现有UI的数据
-            // existingUI.refresh(data);
+            existingUI.refresh(data);
             existingUI.show(data);
             return existingUI as T;
         } else if (existingUI) {

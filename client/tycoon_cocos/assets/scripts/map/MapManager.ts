@@ -429,6 +429,16 @@ export class MapManager extends Component {
         return groundNode;
     }
 
+    /**
+     * 获取当前地图的编辑模式
+     */
+    public getCurrentMapEditMode(): boolean {
+        if (!this._currentMapComponent) {
+            return false;
+        }
+        return this._currentMapComponent.isEditMode;
+    }
+
 
     /**
      * 调试日志输出

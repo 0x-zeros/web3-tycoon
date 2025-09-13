@@ -464,10 +464,10 @@ export class UIInGame extends UIBase {
      * 屏幕尺寸变化
      */
     private _onScreenSizeChanged(data: any): void {
-        console.log("[UIInGame] Screen size changed:", data);
+        // console.log("[UIInGame] Screen size changed:", data);
 
         this._panel.setSize(data.width, data.height);
-        console.log("[UIInGame] panel size changed:", data.width, data.height);
+        // console.log("[UIInGame] panel size changed:", data.width, data.height);
     }
 
     // ================== 数据监听处理 ==================

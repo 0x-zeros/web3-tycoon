@@ -747,7 +747,7 @@ export class UIManager {
         try {
             // 1. 初始化UI系统
             const initialized = await UIManager.initUISystem({
-                debug: true,
+                debug: false,
                 enableCache: true,
                 designResolution: { width: 1920, height: 1080 }
             });

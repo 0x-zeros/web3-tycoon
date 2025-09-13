@@ -54,7 +54,7 @@ export class UIFairyGUIAdapter extends Component {
     //emit event 
     const width = fgui?.GRoot?.inst.width || this.designWidth;
     const height = fgui?.GRoot?.inst.height || this.designHeight;
-    console.log(`[UIFairyGUIAdapter] fgui?.GRoot?.inst: width=${width}, height=${height}`);
+    // console.log(`[UIFairyGUIAdapter] fgui?.GRoot?.inst: width=${width}, height=${height}`);
     EventBus.emit(EventTypes.UI.ScreenSizeChanged, { width: width, height: height });
   
     //ai给的方案是错的。。。setContentScaleFactor只有unity里有，cocos里没有

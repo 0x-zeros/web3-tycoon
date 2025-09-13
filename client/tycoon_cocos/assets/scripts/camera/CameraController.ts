@@ -228,7 +228,7 @@ export class CameraController extends BaseCameraController {
         this._runtimeDistanceOffset = 0;
         this._runtimeHeightOffset = 0;
 
-        console.log(`[CameraController] 切换相机模式: ${oldMode} -> ${mode}`);
+        this.debugLog(`切换相机模式: ${oldMode} -> ${mode}`);
 
         // 根据模式设置相机位置和角度
         this._applyModeSettings(mode, immediate);
@@ -247,14 +247,14 @@ export class CameraController extends BaseCameraController {
         this.followTarget = target;
         
         if (target) {
-            console.log(`[CameraController] 设置跟随目标: ${target.name}`);
+            this.debugLog(`设置跟随目标: ${target.name}`);
             
             // 如果当前是跟随模式，立即更新位置
             if (this._currentMode === CameraMode.THIRD_PERSON_FOLLOW) {
                 this._updateFollowPosition();
             }
         } else {
-            console.log('[CameraController] 清除跟随目标');
+            this.debugLog('清除跟随目标');
         }
     }
 
@@ -328,7 +328,7 @@ export class CameraController extends BaseCameraController {
         // 设置为跟随目标
         this.setTarget(targetNode);
         
-        console.log('[CameraController] 创建默认跟随目标');
+        this.debugLog('创建默认跟随目标');
         return targetNode;
     }
 
@@ -804,14 +804,14 @@ export class CameraController extends BaseCameraController {
             this._mouseDragState.isDragging = true;
             this._mouseDragState.dragButton = 1;
             this._mouseDragState.lastMousePos.set(eventData.screenX, eventData.screenY, 0);
-            console.log('[CameraController] 中键按下，开始拖拽移动');
+            this.debugLog('中键按下，开始拖拽移动');
         }
         // 右键拖拽旋转相机
         else if (eventData.button === 2) { // 右键按钮
             this._mouseDragState.isDragging = true;
             this._mouseDragState.dragButton = 2;
             this._mouseDragState.lastMousePos.set(eventData.screenX, eventData.screenY, 0);
-            console.log('[CameraController] 右键按下，开始拖拽旋转');
+            this.debugLog('右键按下，开始拖拽旋转');
         }
     }
 
@@ -831,7 +831,7 @@ export class CameraController extends BaseCameraController {
      */
     protected onMouseUp(eventData: Input3DEventData): void {
         if (this._mouseDragState.isDragging) {
-            console.log(`[CameraController] 鼠标松开，结束拖拽 (按钮: ${this._mouseDragState.dragButton})`);
+            this.debugLog(`鼠标松开，结束拖拽 (按钮: ${this._mouseDragState.dragButton})`);
             this._mouseDragState.isDragging = false;
             this._mouseDragState.dragButton = -1;
         }
@@ -870,12 +870,12 @@ export class CameraController extends BaseCameraController {
         }
         
         const scrollY = scrollDelta.y;
-        console.log(`[CameraController] 鼠标滚轮事件: scrollY=${scrollY}, 当前模式=${this._currentMode}`);
+        this.debugLog(`鼠标滚轮事件: scrollY=${scrollY}, 当前模式=${this._currentMode}`);
         
         // 限制 scrollY 的值，避免缩放过于敏感
         // 将 scrollY 限制在 [-1, 1] 范围内，并应用适当的缩放因子
         const clampedScrollY = Math.max(-1, Math.min(1, scrollY)) * 0.1;
-        console.log(`[CameraController] 限制后的 scrollY: ${clampedScrollY}`);
+        this.debugLog(`限制后的 scrollY: ${clampedScrollY}`);
         
         if (this._currentMode === CameraMode.TOP_DOWN && this.config.topDown.allowZoom) {
             // 俯视模式：调整高度
@@ -884,15 +884,15 @@ export class CameraController extends BaseCameraController {
             const newHeightOffset = this._runtimeHeightOffset - clampedScrollY * config.zoomSpeed;
             const actualHeight = config.height + newHeightOffset;
             
-            console.log(`[CameraController] 俯视模式缩放: 当前高度偏移=${this._runtimeHeightOffset}, 新高度偏移=${newHeightOffset}, 实际高度=${actualHeight}`);
+            this.debugLog(`俯视模式缩放: 当前高度偏移=${this._runtimeHeightOffset}, 新高度偏移=${newHeightOffset}, 实际高度=${actualHeight}`);
             
             // 限制在允许范围内
             if (actualHeight >= config.minHeight && actualHeight <= config.maxHeight) {
                 this._runtimeHeightOffset = newHeightOffset;
                 this._applyModeSettings(this._currentMode, true);
-                console.log(`[CameraController] 俯视模式缩放成功: 新高度=${actualHeight}`);
+                this.debugLog(`俯视模式缩放成功: 新高度=${actualHeight}`);
             } else {
-                console.log(`[CameraController] 俯视模式缩放被限制: 高度=${actualHeight} 超出范围 [${config.minHeight}, ${config.maxHeight}]`);
+                this.debugLog(`俯视模式缩放被限制: 高度=${actualHeight} 超出范围 [${config.minHeight}, ${config.maxHeight}]`);
             }
         } else if (this._currentMode === CameraMode.ISOMETRIC) {
             // 等距模式：调整距离
@@ -902,7 +902,7 @@ export class CameraController extends BaseCameraController {
             const newDistanceOffset = this._runtimeDistanceOffset - clampedScrollY * zoomSpeed;
             const actualDistance = config.distance + newDistanceOffset;
             
-            console.log(`[CameraController] 等距模式缩放: 当前距离偏移=${this._runtimeDistanceOffset}, 新距离偏移=${newDistanceOffset}, 实际距离=${actualDistance}`);
+            this.debugLog(`等距模式缩放: 当前距离偏移=${this._runtimeDistanceOffset}, 新距离偏移=${newDistanceOffset}, 实际距离=${actualDistance}`);
             
             // 限制距离在合理范围内 (5 到 50)
             const minDistance = 5;
@@ -911,12 +911,12 @@ export class CameraController extends BaseCameraController {
             if (actualDistance >= minDistance && actualDistance <= maxDistance) {
                 this._runtimeDistanceOffset = newDistanceOffset;
                 this._applyModeSettings(this._currentMode, true);
-                console.log(`[CameraController] 等距模式缩放成功: 新距离=${actualDistance}`);
+                this.debugLog(`等距模式缩放成功: 新距离=${actualDistance}`);
             } else {
-                console.log(`[CameraController] 等距模式缩放被限制: 距离=${actualDistance} 超出范围 [${minDistance}, ${maxDistance}]`);
+                this.debugLog(`等距模式缩放被限制: 距离=${actualDistance} 超出范围 [${minDistance}, ${maxDistance}]`);
             }
         } else {
-            console.log(`[CameraController] 当前模式不支持缩放: 模式=${this._currentMode}, 俯视模式允许缩放=${this.config.topDown.allowZoom}`);
+            this.debugLog(`当前模式不支持缩放: 模式=${this._currentMode}, 俯视模式允许缩放=${this.config.topDown.allowZoom}`);
         }
     }
 
@@ -952,7 +952,7 @@ export class CameraController extends BaseCameraController {
             deltaPos.y * moveSpeed  // 垂直移动（翻转Y轴）
         );
         
-        console.log(`[CameraController] 鼠标拖拽移动: deltaPos=(${deltaPos.x.toFixed(2)}, ${deltaPos.y.toFixed(2)}), moveVector=(${moveVector.x.toFixed(2)}, ${moveVector.y.toFixed(2)}, ${moveVector.z.toFixed(2)})`);
+        this.debugLog(`鼠标拖拽移动: deltaPos=(${deltaPos.x.toFixed(2)}, ${deltaPos.y.toFixed(2)}), moveVector=(${moveVector.x.toFixed(2)}, ${moveVector.y.toFixed(2)}, ${moveVector.z.toFixed(2)})`);
         
         // 如果有移动输入，将移动向量转换到相机坐标系
         if (moveVector.lengthSqr() > 0) {
@@ -986,7 +986,7 @@ export class CameraController extends BaseCameraController {
             const rotationSpeed = this.config.isometric.rotationSpeed * 0.02; // 从0.1降低到0.02
             this._runtimeYawOffset += deltaPos.x * rotationSpeed;
             this._applyModeSettings(this._currentMode, true);
-            console.log(`[CameraController] 鼠标拖拽旋转: deltaX=${deltaPos.x.toFixed(2)}, 新Yaw偏移=${this._runtimeYawOffset.toFixed(2)}`);
+            this.debugLog(`鼠标拖拽旋转: deltaX=${deltaPos.x.toFixed(2)}, 新Yaw偏移=${this._runtimeYawOffset.toFixed(2)}`);
         }
     }
 }

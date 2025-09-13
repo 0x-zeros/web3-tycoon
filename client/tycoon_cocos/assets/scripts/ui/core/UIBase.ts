@@ -154,6 +154,7 @@ export abstract class UIBase extends Component {
             const width = fgui?.GRoot?.inst.width || GameSettings.designWidth;
             const height = fgui?.GRoot?.inst.height || GameSettings.designHeight;
             this._panel?.setSize(width, height);
+            console.log(`[UIBase] show, adjust size to ${width}x${height}`);
         }
 
         // 激活节点（会触发onEnable生命周期）

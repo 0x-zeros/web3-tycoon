@@ -313,16 +313,4 @@ export class UIMapElement extends UIBase {
             type: type
         });
     }
-    
-
-    //
-    public hide(): void {
-        this.node.active = false;
-        console.log("[UIMapElement] hide");
-    }
-
-    public show(): void {
-        this.node.active = true;
-        console.log("[UIMapElement] show");
-    }
 }

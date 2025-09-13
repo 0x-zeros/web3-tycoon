@@ -3,7 +3,7 @@
   <controller name="mode" pages="0,play,1,editor" selected="0"/>
   <displayList>
     <component id="n0_ue83" name="n0" src="mumq6" fileName="CardList.xml" xy="286,869" scale="0.8,0.8">
-      <relation target="" sidePair="middle-middle,bottom-bottom"/>
+      <relation target="" sidePair="center-center,bottom-bottom"/>
     </component>
     <component id="n1_ue83" name="n1" src="mumq2" fileName="DiceCorner.xml" xy="1649,807">
       <relation target="" sidePair="right-right,bottom-bottom"/>
@@ -25,7 +25,7 @@
       <gearDisplay controller="mode" pages="1"/>
       <relation target="" sidePair="left-left"/>
     </component>
-    <component id="n9_gq9s" name="btn_exitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="1745,4" size="170,50">
+    <component id="n9_gq9s" name="btn_exitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="1745,42" size="170,50">
       <relation target="" sidePair="right-right,top-top"/>
       <Button title="退出游戏"/>
     </component>

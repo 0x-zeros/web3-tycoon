@@ -209,6 +209,7 @@ export class UIInGame extends UIBase {
         EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
         EventBus.on(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.on(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
+        EventBus.on(EventTypes.UI.ScreenSizeChanged, this._onScreenSizeChanged, this);
 
         // 监听玩家数据变化
         Blackboard.instance.watch("playerMoney", this._onPlayerMoneyChange, this);
@@ -252,6 +253,14 @@ export class UIInGame extends UIBase {
         if (this._exitGameBtn) {
             this._exitGameBtn.offClick(this._onExitGameClick, this);
         }
+
+        EventBus.off(EventTypes.Game.TurnStart, this._onTurnStart, this);
+        EventBus.off(EventTypes.Game.TurnEnd, this._onTurnEnd, this);
+        EventBus.off(EventTypes.Game.GamePause, this._onGamePause, this);
+        EventBus.off(EventTypes.Game.GameResume, this._onGameResume, this);
+        EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
+        EventBus.off(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
+        EventBus.off(EventTypes.UI.ScreenSizeChanged, this._onScreenSizeChanged, this);
         
 
         // 调用父类解绑
@@ -449,6 +458,16 @@ export class UIInGame extends UIBase {
         // if (this._rollDiceBtn) {
         //     this._rollDiceBtn.text = "等待回合";
         // }
+    }
+
+    /**
+     * 屏幕尺寸变化
+     */
+    private _onScreenSizeChanged(data: any): void {
+        console.log("[UIInGame] Screen size changed:", data);
+
+        this._panel.setSize(data.width, data.height);
+        console.log("[UIInGame] panel size changed:", data.width, data.height);
     }
 
     // ================== 数据监听处理 ==================

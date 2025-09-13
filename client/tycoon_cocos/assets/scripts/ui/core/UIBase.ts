@@ -2,6 +2,7 @@ import { Component, _decorator } from 'cc';
 import { EventBus } from "../../events/EventBus";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
+import GameSettings from '../../config/GameSettings';
 
 const { ccclass, property } = _decorator;
 
@@ -145,9 +146,16 @@ export abstract class UIBase extends Component {
     /**
      * 显示UI（通过激活节点）
      */
-    public show(data?: any): void {
+    public show(data?: any, isFullScreen: boolean = true): void {
         this._data = data;
-        
+
+        //设置组件全屏，即大小和逻辑屏幕大小一致。
+        if (isFullScreen) {
+            const width = fgui?.GRoot?.inst.width || GameSettings.designWidth;
+            const height = fgui?.GRoot?.inst.height || GameSettings.designHeight;
+            this._panel?.setSize(width, height);
+        }
+
         // 激活节点（会触发onEnable生命周期）
         this.node.active = true;
     }

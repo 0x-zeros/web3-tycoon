@@ -36,7 +36,9 @@ export const EventTypes = {
         /** 地图元素选中 */
         MapElementSelected: "ui_map_element_selected",
         /** 切换地图元素UI显示 */
-        ToggleMapElement: "ui_toggle_map_element"
+        ToggleMapElement: "ui_toggle_map_element",
+        /** 屏幕尺寸变化 */
+        ScreenSizeChanged: "ui_screen_size_changed"
     },
 
     /** 地图相关事件 */

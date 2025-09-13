@@ -4,6 +4,7 @@ import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
+import { UIWallet } from "./UIWallet";
 
 const { ccclass } = _decorator;
 
@@ -28,6 +29,7 @@ export class UIModeSelect extends UIBase {
 
     public m_btn_start:fgui.GButton;
 	public m_btn1:fgui.GButton;
+    private m_walletUI:UIWallet;
 
     /**
      * 初始化回调
@@ -44,6 +46,15 @@ export class UIModeSelect extends UIBase {
 
         this.m_btn_start = this.getButton("btn_start");
         this.m_btn1 = this.getButton("btn1");
+
+        //wallet test
+        const walletComponent = this.getChild("wallet").asCom;
+        this.m_walletUI = walletComponent.node.addComponent(UIWallet);
+        this.m_walletUI.setUIName("Wallet");
+        this.m_walletUI.setPanel(walletComponent);
+        this.m_walletUI.init();
+
+
 
         // 获取按钮组件
         this._singlePlayerBtn = this.getButton("btnSinglePlayer");

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,600">
+  <displayList>
+    <graph id="n3_lamb" name="n3" xy="0,0" size="800,600" type="rect" lineSize="2" lineColor="#ff6699cc" fillColor="#00ffffff"/>
+    <text id="n0_lamb" name="data" xy="30,43" size="746,372" fontSize="28" color="#ffffff" autoSize="none" text="这儿显示钱包测试数据。。。。。。"/>
+    <component id="n1_lamb" name="btn_wallet" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="237,463" size="328,78">
+      <Button title="钱包测试"/>
+    </component>
+  </displayList>
+</component>

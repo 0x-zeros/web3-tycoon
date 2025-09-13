@@ -165,7 +165,7 @@ export class UIManager {
 
             //添加UIFairyGUIAdapter脚本
             this._groot.node.addComponent(UIFairyGUIAdapter);
-            
+
             
             // FairyGUI会自动处理设计分辨率
             // 不需要手动调用setContentScaleFactor
@@ -372,6 +372,8 @@ export class UIManager {
      * 显示UI
      */
     public async showUI<T extends UIBase>(uiName: string, data?: any): Promise<T | null> {
+        console.log(`[UIManager] Show UI: ${uiName}, data: ${data}`);
+
         if (!this._inited) {
             error("[UIManager] Not initialized!");
             return null;
@@ -392,7 +394,8 @@ export class UIManager {
                 console.log(`[UIManager] UI ${uiName} already exists and is valid, returning existing instance`);
             }
             // 刷新现有UI的数据
-            existingUI.refresh(data);
+            // existingUI.refresh(data);
+            existingUI.show(data);
             return existingUI as T;
         } else if (existingUI) {
             if (this._config.debug) {

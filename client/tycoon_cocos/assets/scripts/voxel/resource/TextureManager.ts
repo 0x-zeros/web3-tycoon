@@ -37,7 +37,15 @@ export class TextureManager {
     async loadTexture(texturePath: string): Promise<TextureInfo | null> {
         // 检查缓存
         if (this.textureCache.has(texturePath)) {
-            return this.textureCache.get(texturePath)!;
+            const cachedInfo = this.textureCache.get(texturePath)!;
+            // 检查纹理是否仍然有效
+            if (cachedInfo.texture && cachedInfo.texture.isValid) {
+                return cachedInfo;
+            } else {
+                // 纹理已被销毁，从缓存中移除
+                console.warn(`[TextureManager] 缓存的纹理已失效，重新加载: ${texturePath}`);
+                this.textureCache.delete(texturePath);
+            }
         }
 
         // 检查是否正在加载
@@ -99,6 +107,12 @@ export class TextureManager {
      * @param texture 纹理对象
      */
     private configureTexture(texture: Texture2D): void {
+        // 检查纹理是否有效
+        if (!texture || !texture.isValid) {
+            console.warn('[TextureManager] 尝试配置无效纹理，跳过配置');
+            return;
+        }
+        
         // 设置最近邻采样（保持像素风格）
         texture.setFilters(Texture2D.Filter.NEAREST, Texture2D.Filter.NEAREST);
         
@@ -261,18 +275,20 @@ export class TextureManager {
     }
 
     /**
-     * 清理纹理缓存
+     * 清理纹理缓存（谨慎使用，正常情况下应保持缓存以提高性能）
      * @param keepMissing 是否保留缺失纹理
      */
     clearCache(keepMissing: boolean = true): void {
+        console.warn('[TextureManager] 清理纹理缓存会影响性能，建议保持缓存');
+        
         for (const [path, info] of this.textureCache) {
             if (!keepMissing || path !== 'minecraft:missing') {
-                info.texture.destroy();
+                // 只清理引用，不销毁纹理（让引擎自动管理）
                 this.textureCache.delete(path);
             }
         }
         
-        console.log('[TextureManager] 纹理缓存已清理');
+        console.log('[TextureManager] 纹理缓存引用已清理（纹理对象保留）');
     }
 
     /**

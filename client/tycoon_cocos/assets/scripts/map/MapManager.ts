@@ -392,6 +392,13 @@ export class MapManager extends Component {
     private async onMapChangeRequest(data: { fromMapId: string; toMapId: string, isEdit?: boolean }): Promise<void> {
         this.log(`地图切换请求: ${data.fromMapId} -> ${data.toMapId}`);
         
+        //如果toMapId为null，则卸载当前地图
+        if (data.toMapId === null) {
+            this.unloadCurrentMap();
+            return;
+        }
+
+        //加载目标地图
         const result = await this.loadMap(data.toMapId, data.isEdit || false);
         if (!result.success) {
             console.error('[MapManager] 地图切换失败:', result.error);

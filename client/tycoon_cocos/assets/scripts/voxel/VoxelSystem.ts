@@ -458,14 +458,17 @@ export class VoxelSystem {
     }
 
     /**
-     * 清理系统缓存
+     * 清理系统缓存（不清理纹理缓存，纹理永久保留以提高性能）
      */
     clearCaches(): void {
-        this.textureManager.clearCache();
+        // 不清理纹理缓存，保持永久缓存以提高性能
+        // this.textureManager.clearCache();
+        
+        // 清理材质和解析器缓存
         this.materialFactory.clearCache();
         this.blockParser.clearCache();
         this.blockCache.clear();
-        console.log('[VoxelSystem] 缓存已清理');
+        console.log('[VoxelSystem] 缓存已清理（纹理缓存保留）');
     }
 
     async getBlockData(blockId: string): Promise<ParsedBlockData | null> {
@@ -530,12 +533,14 @@ export class VoxelSystem {
     }
 
     /**
-     * 销毁体素系统
+     * 销毁体素系统（保留纹理缓存以供下次使用）
      */
     destroy(): void {
-        if (this.textureManager) {
-            this.textureManager.destroy();
-        }
+        // 不销毁纹理管理器，保持纹理缓存
+        // if (this.textureManager) {
+        //     this.textureManager.destroy();
+        // }
+        
         if (this.materialFactory) {
             this.materialFactory.destroy();
         }
@@ -547,7 +552,7 @@ export class VoxelSystem {
         VoxelSystem.instance = null;
         this.initialized = false;
         
-        console.log('[VoxelSystem] 体素系统已销毁');
+        console.log('[VoxelSystem] 体素系统已销毁（纹理缓存保留）');
     }
 
     /**

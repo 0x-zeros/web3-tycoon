@@ -50,6 +50,8 @@ export class UIInGame extends UIBase {
     private _settingsBtn: fgui.GButton | null = null;
     /** 背包按钮 */
     private _bagBtn: fgui.GButton | null = null;
+    /** 退出游戏按钮 */
+    private _exitGameBtn: fgui.GButton | null = null;
 
     // ================ 进度条组件 ================
     /** 生命值进度条 */
@@ -128,6 +130,7 @@ export class UIInGame extends UIBase {
         this._pauseBtn = this.getButton("btnPause");
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
+        this._exitGameBtn = this.getButton("btn_exitGame");
 
         // 进度条
         this._hpProgressBar = this.getProgressBar("progressHP");
@@ -198,6 +201,10 @@ export class UIInGame extends UIBase {
             this._bagBtn.onClick(this._onBagClick, this);
         }
 
+        if (this._exitGameBtn) {
+            this._exitGameBtn.onClick(this._onExitGameClick, this);
+        }
+
         // 监听游戏事件
         EventBus.on(EventTypes.Game.TurnStart, this._onTurnStart, this);
         EventBus.on(EventTypes.Game.TurnEnd, this._onTurnEnd, this);
@@ -243,6 +250,10 @@ export class UIInGame extends UIBase {
 
         if (this._bagBtn) {
             this._bagBtn.offClick(this._onBagClick, this);
+        }
+
+        if (this._exitGameBtn) {
+            this._exitGameBtn.offClick(this._onExitGameClick, this);
         }
         
 
@@ -343,6 +354,26 @@ export class UIInGame extends UIBase {
         EventBus.emit(EventTypes.UI.OpenBag, {
             source: "in_game_ui"
         });
+    }
+
+    /**
+     * 退出游戏按钮点击
+     * 使用EventBus系统退出当前GameMap并返回地图选择界面
+     */
+    private _onExitGameClick(): void {
+        console.log("[UIInGame] Exit game button clicked");
+        
+        // 发送请求切换地图事件（不指定目标地图toMapId: null表示卸载当前地图）
+        //fromMapId: string; toMapId: string, isEdit?: boolean }
+        EventBus.emit(EventTypes.Game.RequestMapChange, {
+            toMapId: null
+        });
+        
+        // 发送请求显示地图选择界面事件
+        EventBus.emit(EventTypes.UI.ShowMapSelect);
+        this.hide();
+        
+        console.log("[UIInGame] Sent events to exit to map selection");
     }
     
 

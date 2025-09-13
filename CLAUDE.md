@@ -4,258 +4,267 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board game mechanics with modern DeFi protocols. This is an 8-week hackathon project integrating Sui Network + Move smart contracts + Cocos Creator frontend + DeFi protocols (Bucket, Scallop, Navi).
+Web3 Tycoon is a Sui blockchain-based Monopoly game with voxel-style 3D graphics (Minecraft-inspired). This is an 8-week hackathon project with ~1.5 months remaining, focusing on rapid client development with planned blockchain integration.
 
-The project is currently in Phase 1 (basic architecture) with an active Cocos Creator client prototype.
+**Current Development Reality**: The Cocos Creator 3.8.7 client with voxel rendering is the primary deliverable. Blockchain/Move contracts and multiplayer servers are planned but not yet implemented.
 
 ## Key Technologies
 
-- **Blockchain**: Sui Network with Move language for smart contracts
-- **Frontend**: Cocos Creator 3.8+ with TypeScript 
-- **Backend**: Node.js/TypeScript for multiplayer matchmaking
-- **DeFi Integration**: Bucket Protocol (data storage), Scallop Protocol (lending), Navi Protocol (liquidity mining)
+- **Frontend**: Cocos Creator 3.8.7 with TypeScript + Voxel rendering system
+- **Asset Generation**: OpenAI DALL-E 3 / Google Gemini dual-engine AIGC pipeline
+- **UI Framework**: FairyGUI integration for complex interfaces
+- **Resource System**: Minecraft-style resource pack architecture
+- **Planned**: Sui Network (Move contracts), Node.js backend, DeFi integrations
 
 ## Development Commands
 
-### Cocos Creator Client (Primary Development)
+### Cocos Creator Client
 ```bash
-# Navigate to main Cocos project
 cd client/tycoon_cocos
-npm install                   # Install @tweenjs/tween.js dependency
-# Development through Cocos Creator 3.8+ GUI - no build scripts
+npm install                   # Install dependencies
+
+# Development via Cocos Creator 3.8.7 GUI
+# No CLI build commands - use Creator interface
 ```
 
-### Asset Generation Tool (Active)
+### Asset Generation Tool
 ```bash
-# Navigate to asset generator
 cd tools/asset-generator
 npm install
 
-# Generation commands
+# Core generation
 npm run generate              # Generate all assets (~100+ items)
 npm run generate:tiles        # Map tiles and buildings  
-npm run generate:ui           # UI elements and backgrounds
-npm run generate:icons        # Game icons
-npm run generate:dice         # Web3 dice with BTC/SUI symbols
-npm run generate:cards        # Chance/Community cards
+npm run generate:ui           # UI elements
 npm run generate:characters   # Player characters
+npm run generate:dice         # Web3-themed dice
 
-# Cost-effective options
-npm run generate:gpt          # Use cheaper gpt-image-1 model
+# Cost optimization
+npm run generate:gpt          # Use cheaper gpt-image-1
+npm run generate:free         # Free Gemini model
+npm run generate:fast         # Quick 10-asset test
 npm run generate:sample       # Sample from each category
-npm run generate:fast         # Quick 10-asset generation
-npm run print:prompts         # Export prompts without generating
+npm run print:prompts         # Export prompts only
 
-# Utility commands
-npm run clean                 # Clean output and logs
-npm run setup                 # Initialize directories and .env
-npm test                      # Verify tool readiness
+# Utilities
+npm run clean                 # Clean outputs
+npm test                      # Test tool readiness
 ```
 
-### Development Tools
+### VSCode Extension
 ```bash
-# VSCode extension for markdown image pasting
-cd tools/md-paste-image-extension  
+cd tools/md-paste-image-extension
 npm install
 npm run lint
 npm run test
 ```
 
-### Move Contract Development (Planned)
-```bash
-# Navigate to contracts directory (when implemented)
-cd move/
-# Build Move contracts
-sui move build
-# Test contracts  
-sui move test
-# Deploy to testnet
-sui move publish --gas-budget 20000000
+## Architecture Overview
+
+### Core System Architecture
+
+The project uses a sophisticated component-based architecture with voxel rendering:
+
+```typescript
+// Core Managers (Singleton pattern)
+GameInitializer.ts          // Phased initialization system
+MapManager.ts               // Dynamic map loading with MapConfig
+VoxelSystem.ts              // Voxel rendering and chunk management
+CameraManager.ts            // Multi-mode camera (isometric/top/follow)
+UIManager.ts                // FairyGUI-based UI management
+EventBus.ts                 // Global event system (composite pattern)
+RoleManager.ts              // Character and player management
+CardManager.ts              // Card system management
+SkillManager.ts             // Skill system management
 ```
 
-### Backend Services (Planned)
-```bash
-# Navigate to server directory (when implemented)
-cd server/
-npm install
-npm run dev
+### Voxel System Architecture (Critical Component)
+
+The game features a complete voxel-based map system:
+
+```typescript
+// Voxel components hierarchy
+VoxelSystem.ts              // Main voxel system controller
+├── VoxelRenderer.ts        // Mesh generation and rendering
+├── VoxelChunk.ts           // Chunk-based world management
+├── VoxelShader.ts          // Custom shader for voxel rendering
+├── VoxelInteraction.ts     // Ray-casting and block interaction
+└── Web3BlockTypes.ts       // Web3-themed block definitions
+
+// Resource pack system (Minecraft-style)
+resource_pack/
+├── pack.mcmeta             // Pack metadata
+├── assets/web3/            // Web3-themed resources
+│   ├── textures/block/     // Block textures
+│   └── models/             // Block models
+```
+
+### Map System Architecture
+
+Two-layer map system with voxel integration:
+
+```typescript
+// Layer 0 (y=0): Ground tiles
+MapTile.ts                  // Base tile class
+├── PropertyTile.ts         // Purchasable properties
+├── ChanceTile.ts           // Chance cards
+└── StartTile.ts            // Starting position
+
+// Layer 1 (y=1): Objects
+MapObject.ts                // Base object class
+├── Building.ts             // Buildings on properties
+└── Decoration.ts           // Decorative objects
+
+// Voxel integration
+- Tiles and objects are rendered as voxels
+- Support for multi-block structures
+- Real-time block placement/removal in edit mode
+```
+
+### Event System Architecture
+
+```typescript
+// Global event bus with debugging
+EventBus.getInstance()
+  .on(EventTypes.Map.BlockPlaced, handler)
+  .emit(EventTypes.UI.MapElementSelected, data);
+
+// Event flow: Input → Interaction → Map → UI
+// All events defined in EventTypes.ts with TypeScript support
+```
+
+### UI System Architecture
+
+```typescript
+// FairyGUI integration
+UIManager.ts                // Central UI controller
+├── UIBase.ts               // Base class for all UI panels
+├── game/                   // Game UI components
+│   ├── UIEditor.ts         // Map editor interface
+│   ├── UIMapElement.ts     // Block selection panel
+│   └── UIGameMain.ts       // Main game HUD
+└── FGUIProject/            // FairyGUI project files
 ```
 
 ## Project Structure
 
-The repository follows this structure:
-- `move/` - Move smart contracts for game logic, properties, NFTs, and DeFi integration (empty, planned)
-- `server/` - Node.js backend for multiplayer matchmaking and API services (minimal, planned)
-- `client/tycoon_cocos/` - **Active Cocos Creator 3.8 project** with TypeScript
-- `docs/` - Comprehensive documentation including design, technical specs, and API docs
-- `tools/` - Development tools (includes working VSCode markdown extension)
-  - `asset-generator/` - **Active AIGC asset generation tool** with OpenAI DALL-E 3 integration
-  - `md-paste-image-extension/` - Working VSCode extension for pasting images into markdown
-  - `ref4AI/` - AI reference materials and documentation
-- `assets/` - Game assets and shared resources
+```
+client/tycoon_cocos/        # Active Cocos Creator 3.8.7 project
+├── assets/
+│   ├── scripts/            # TypeScript game logic
+│   │   ├── core/           # Core systems and managers
+│   │   ├── map/            # Map and tile system
+│   │   ├── voxel/          # Voxel rendering system
+│   │   ├── ui/             # UI components
+│   │   └── events/         # Event system
+│   ├── resources/
+│   │   ├── voxel/          # Voxel resources and textures
+│   │   │   └── resource_pack/  # Minecraft-style pack
+│   │   ├── data/           # JSON configs and maps
+│   │   └── ui/             # FairyGUI exports
+│   └── prefabs/            # Reusable game objects
+├── FGUIProject/            # FairyGUI source project
+└── package.json            # Dependencies
 
-## Active Development Focus
+tools/
+├── asset-generator/        # AIGC asset generation
+│   ├── assets_config.js    # 100+ prompt templates
+│   └── generators/         # OpenAI/Gemini handlers
+└── md-paste-image-extension/  # VSCode helper
 
-**Primary Client**: `client/tycoon_cocos/` contains the active Cocos Creator project:
-- Uses Cocos Creator 3.8.7 with TypeScript
-- **Current Status**: 大富翁核心游戏系统已初步完成架构
-- **地图系统**: 完整的瓦片地图实现，支持多种瓦片类型（地产、机会卡、监狱等）
-- **事件系统**: 基于EventBus的跨模块通信架构
-- **相机控制**: 完整的3D相机控制器，支持等距、俯视、跟随等多种视角
-- **UI管理**: 基于FairyGUI的UI界面管理系统
-- **角色管理**: 角色和玩家管理系统框架
-
-## Code Conventions
-
-Based on `.cursorrules` file:
-- **Code Language**: All code must be written in English
-- **Comments**: Primarily Chinese, with English for technical terms and APIs
-- **Strings/Messages**: English for error messages and string literals
-- **File Naming**: English with kebab_case convention
-- **Documentation**: Chinese with English for technical terms (README, API docs)
-- **Git Commits**: Chinese format: `类型(范围): 简洁描述`
-  - Example: `feat(map): 实现地图管理器`, `fix(ui): 修复按钮响应问题`
-- **Conversation**: Always use Chinese when communicating with users
-- **Move Code**: Follow Sui Move best practices (when implemented)
-- **TypeScript**: Follow Cocos Creator 3.x development standards
-
-## Architecture Notes
-
-This is a multi-layered Web3 game with:
-
-1. **Blockchain Layer**: Sui smart contracts handle game state, property ownership, NFTs, and DeFi integrations (planned)
-2. **Server Layer**: Node.js services for real-time multiplayer matching and game room management (planned)
-3. **Client Layer**: Cocos Creator 3.8+ TypeScript client with game engine capabilities
-4. **Integration Layer**: DeFi protocol connections for advanced game features (planned)
-
-## Current Cocos Client Architecture
-
-The active Cocos project (`client/tycoon_cocos/`) contains:
-
-### Core System Architecture
-```typescript
-// 核心管理器组件
-- GameInitializer.ts       // 统一游戏初始化管理器
-- MapManager.ts            // 全局地图管理，支持多地图切换
-- RoleManager.ts           // 角色和玩家管理系统
-- UIManager.ts             // UI界面统一管理
-- CameraController.ts      // 相机控制器（等距、俯视、跟随模式）
-- EventBus.ts              // 全局事件总线（单例模式）
+docs/                       # Comprehensive documentation
+server/                     # Minimal (memo.md only)
+move/                       # Not implemented yet
 ```
 
-### Map System Implementation
-```typescript
-// 地图系统完整实现
-- GameMap.ts               // 地图核心组件
-- MapTile.ts               // 地图瓦片基类
-- PropertyTile.ts          // 地产瓦片（可购买）
-- ChanceTile.ts           // 机会卡瓦片
-- StartTile.ts            // 起点瓦片
-- JailTile.ts             // 监狱瓦片
-- FeeTile.ts              // 收费瓦片
-- CardStationTile.ts      // 卡片车站瓦片
-```
+## Critical Development Notes
 
-### Event-Driven Architecture
-- **EventBus**: 单例全局事件总线，基于Cocos Creator EventTarget
-- **EventTypes**: 完整的事件类型定义和监听器配置
-- **跨模块通信**: 支持组合模式的事件处理机制
+### Hackathon Time Constraints
+- **剩余时间**: ~1.5个月，时间极其紧张
+- **优先级**: 客户端功能 > UI完善 > 区块链集成 > DeFi功能
+- **开发策略**: 只实现核心功能，避免过度工程化
 
-### Dependencies
-- `@tweenjs/tween.js`: 动画补间
-- `fairygui-cc`: UI框架（FairyGUI集成）
-- `lodash-es`: 工具函数库
+### Voxel System Specifics
+- Uses custom shader for voxel rendering
+- Chunk-based world management for performance
+- Supports runtime block placement/removal
+- Web3-themed blocks (empty_land, building variants)
+- Resource pack system for texture management
 
-## Development Phases
+### Code Conventions (from .cursorrules)
+- **Code**: English only for all code
+- **Comments**: Chinese with English technical terms
+- **Git Commits**: Chinese format `类型(范围): 简洁描述`
+- **Communication**: Always use Chinese when talking to users
+- **File Naming**: English with kebab_case
+- **TypeScript**: Target ES2015, strict mode off
 
-8-week hackathon development cycle (1.5 months remaining):
-- **Weeks 1-2**: Basic architecture and Move contract framework ← *Current Phase*
-- **Weeks 3-4**: Multiplayer system and core game mechanics  
-- **Weeks 5-6**: DeFi protocol integrations
-- **Weeks 7-8**: Cocos Creator client refinement and final optimizations
+### FairyGUI Integration
+- Design in FGUIProject using FairyGUI editor
+- Export to `assets/resources/ui/`
+- Load via UIManager with package management
+- All UI components extend UIBase class
 
-**Time-Critical Development Notes:**
-- 该项目目前是一个黑客松的参赛项目，时间非常紧张，还剩1个半月
-- 只实现最核心的功能，优先级：游戏逻辑 > 用户界面 > 区块链集成 > DeFi功能
-- Git commit message 尽量写的简洁一点
-- 每次做修改后，不需要直接帮我commit，我自己还需要修改
+### Map Editor Mode
+- Toggle edit mode via GameMap.isEditMode
+- Real-time block placement with voxel preview
+- Auto-save with debouncing (1s delay)
+- UIEditor provides block selection interface
 
-## DeFi Integration Strategy
+## Important Files
 
-The game integrates multiple Sui ecosystem protocols:
-- **Bucket Protocol**: Decentralized game data storage and cross-device synchronization
-- **Scallop Protocol**: Property NFT collateral lending system with dynamic interest rates  
-- **Navi Protocol**: Token staking for liquidity mining and governance voting
+### Core Entry Points
+- `assets/scripts/core/GameInitializer.ts` - Game startup sequence
+- `assets/scripts/map/MapManager.ts` - Map system controller
+- `assets/scripts/voxel/VoxelSystem.ts` - Voxel rendering core
+- `assets/scripts/ui/core/UIManager.ts` - UI system controller
 
-## Testing and Deployment
+### Configuration
+- `assets/resources/data/maps/test_map.json` - Test map configuration
+- `assets/resources/voxel/resource_pack/pack.mcmeta` - Resource pack meta
+- `package.json` - Project dependencies
+- `tsconfig.json` - TypeScript configuration
 
-When implementing features:
-- Write comprehensive Move contract tests for all game logic
-- Test multiplayer scenarios with WebSocket connections
-- Validate DeFi integrations on Sui testnet before mainnet
-- Ensure gas fee optimization through batched operations
+### Asset Generation
+- `tools/asset-generator/assets_config.js` - AIGC prompts
+- `tools/asset-generator/.env` - API keys configuration
 
-## Documentation
+## Development Workflow
 
-Key documentation files to reference:
-- `docs/project-overview.md` - Complete project vision and goals
-- `docs/development-plan.md` - Detailed 8-week implementation timeline  
-- `docs/tech/architecture.md` - Full technical architecture design
-- `docs/project-structure.md` - Detailed directory organization
-- `client/cocos_sui_integration.md` - Cocos Creator + Sui integration strategies
+1. **Primary Development**: Open `client/tycoon_cocos` in Cocos Creator 3.8.7
+2. **Voxel Editing**: Use map editor mode with UIEditor interface
+3. **UI Design**: Edit in FGUIProject, export to resources/ui/
+4. **Asset Generation**: Use asset-generator for new textures/sprites
+5. **Testing**: Use Creator preview, check console for debug logs
 
-## Development Guidelines
+## Current Implementation Status
 
-### Current Development Context
-- **Active Focus**: Cocos Creator client development and game mechanics
-- **Blockchain Integration**: Planned for later phases, Move contracts not yet implemented  
-- **Asset Management**: Extensive existing assets in `client/tycoon_cocos/assets/`
-- **Game Logic**: Core game systems already partially implemented
+### ✅ Implemented
+- Complete voxel rendering system with custom shaders
+- Map editor with real-time block placement
+- FairyGUI-based UI system
+- Event-driven architecture
+- Resource pack system
+- AIGC asset pipeline
 
-### Important Notes
-- Prioritize core game functionality over advanced features
-- Gas fee optimization will be critical for user experience (when blockchain is integrated)
-- The game should work both as single-player demo and multiplayer experience
-- All blockchain interactions must be thoroughly tested on Sui devnet/testnet (future phase)
-- Security is paramount for smart contract development handling player assets (future phase)
+### 🚧 In Progress  
+- Game logic (property ownership, turns)
+- Player movement and animations
+- Card system implementation
 
-### Cocos Creator Specific Guidelines
-- Use Cocos Creator 3.8+ API patterns (not legacy 2.x APIs)
-- Follow TypeScript strict typing conventions
-- Utilize existing asset pipeline and configuration system
-- Maintain game object pooling and performance optimization patterns
+### 📋 Planned
+- Sui blockchain integration
+- Move smart contracts
+- Multiplayer backend
+- DeFi protocol integrations
 
-### Key Development Files
-- **Game Entry**: `assets/scripts/core/GameInitializer.ts` - 游戏启动和初始化
-- **Map System**: `assets/scripts/map/MapManager.ts` - 地图管理和瓦片系统
-- **Event System**: `assets/scripts/events/EventBus.ts` - 全局事件通信
-- **Camera Control**: `assets/scripts/camera/CameraController.ts` - 3D相机控制
-- **UI Framework**: `assets/scripts/ui/core/UIManager.ts` - 界面管理
+## Notes for Claude Code
 
-### Project Configuration
-- **Package Config**: `package.json` includes fairygui-cc, lodash-es, @tweenjs/tween.js
-- **TypeScript Config**: `tsconfig.json` configured for Cocos Creator 3.8+
-- **Cocos Creator Version**: 3.8.7 (specified in package.json)
-
-## Keeping This File Updated
-
-This CLAUDE.md file should be kept in sync with project changes. See `CLAUDE-UPDATE-CHECKLIST.md` for detailed update guidelines.
-
-**Quick Update Methods:**
-1. **Manual Updates**: Review and update after major project changes
-2. **Claude Code /init**: Use `/init` command when project structure changes significantly
-3. **Checklist**: Use the update checklist to track what needs updating
-
-**Update Frequency:**
-- After each development phase (Weeks 2, 4, 6, 8)
-- When major architecture changes occur  
-- When new commands or workflows are added
-
-## Important Communication Protocol
-
-**For Claude Code instances:**
-- **ALWAYS** use Chinese (中文) when communicating with users
-- Code should be in English, but explanations and discussions in Chinese
-- This follows the project's `.cursorrules` configuration
-- 请使用中文和我对话
-- 保持 ES2015 目标，不改 tsconfig
+- **请使用中文和用户对话** - Always communicate in Chinese
+- **Focus on client development** - Blockchain is future phase
+- **Voxel system is core** - Not just UI, but fundamental to gameplay
+- **Time is critical** - 黑客松项目，避免过度设计
+- **Don't auto-commit** - User will review and commit manually
+- **Keep commits concise** - Simple Chinese descriptions
+- fix bug的时候尽量kiss原则
+- 重构的时候不需要向后兼容，以保持设计架构最优为优先

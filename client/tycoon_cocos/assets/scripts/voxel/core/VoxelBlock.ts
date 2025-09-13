@@ -1,4 +1,4 @@
-import { registerWeb3Blocks } from '../Web3BlockTypes';
+import { Web3TileType, Web3ObjectType } from '../Web3BlockTypes';
 
 // 保留兼容性的方块类型枚举（旧系统）
 export enum VoxelBlockType {
@@ -103,6 +103,9 @@ export class BlockRegistry {
         
         // 注册基础方块
         this.registerMinecraftBlocks();
+
+        // 注册 Web3 方块
+        this.registerWeb3Blocks();
         
         // 建立旧系统兼容映射
         this.createLegacyMapping();
@@ -425,10 +428,277 @@ export class BlockRegistry {
             hardness: 0,
             renderType: BlockRenderType.CUTOUT
         });
-        
-        // 注册所有 Web3 方块
-        registerWeb3Blocks(this);
+    
     }
+
+/**
+ * 注册所有 Web3 方块到方块注册表
+ */
+ private static registerWeb3Blocks(): void {
+    console.log('[Web3BlockTypes] 开始注册 Web3 方块...');
+    
+    // ========== 地块类型 (Tiles) ==========
+    
+    // 空地
+    this.register({
+        id: 'web3:empty_land',
+        displayName: '空地',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.EMPTY_LAND,
+            category: 'tile',
+            description: '空地块，无法购买'
+        }
+    });
+    
+    // 地产
+    this.register({
+        id: 'web3:property',
+        displayName: '地产',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.PROPERTY,
+            category: 'tile',
+            description: '可购买并升级的地产'
+        }
+    });
+    
+    // 医院
+    this.register({
+        id: 'web3:hospital',
+        displayName: '医院',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.HOSPITAL,
+            category: 'tile',
+            description: '停留N回合'
+        }
+    });
+    
+    // 机会
+    this.register({
+        id: 'web3:chance',
+        displayName: '机会',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.CHANCE,
+            category: 'tile',
+            description: '触发随机事件'
+        }
+    });
+    
+    // 奖励
+    this.register({
+        id: 'web3:bonus',
+        displayName: '奖励',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.BONUS,
+            category: 'tile',
+            description: '获得金钱奖励'
+        }
+    });
+    
+    // 费用
+    this.register({
+        id: 'web3:fee',
+        displayName: '费用',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.FEE,
+            category: 'tile',
+            description: '支付费用'
+        }
+    });
+    
+    // 卡片
+    this.register({
+        id: 'web3:card',
+        displayName: '卡片',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.CARD,
+            category: 'tile',
+            description: '获得随机卡片'
+        }
+    });
+    
+    // 新闻
+    this.register({
+        id: 'web3:news',
+        displayName: '新闻',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3TileType.NEWS,
+            category: 'tile',
+            description: '触发全局新闻事件'
+        }
+    });
+    
+    // ========== NPC和路面物体 (Objects) ==========
+    
+    // 土地神
+    this.register({
+        id: 'web3:land_god',
+        displayName: '土地神',
+        isPlant: true,  // 物体类型类似植物渲染
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.LAND_GOD,
+            category: 'object',
+            description: '增益型NPC'
+        }
+    });
+    
+    // 财神
+    this.register({
+        id: 'web3:wealth_god',
+        displayName: '财神',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.WEALTH_GOD,
+            category: 'object',
+            description: '增益型NPC'
+        }
+    });
+    
+    // 福神
+    this.register({
+        id: 'web3:fortune_god',
+        displayName: '福神',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.FORTUNE_GOD,
+            category: 'object',
+            description: '增益型NPC'
+        }
+    });
+    
+    // 狗狗
+    this.register({
+        id: 'web3:dog',
+        displayName: '狗狗',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.DOG,
+            category: 'object',
+            description: '干扰型NPC'
+        }
+    });
+    
+    // 穷神
+    this.register({
+        id: 'web3:poverty_god',
+        displayName: '穷神',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.POVERTY_GOD,
+            category: 'object',
+            description: '干扰型NPC'
+        }
+    });
+    
+    // 路障
+    this.register({
+        id: 'web3:roadblock',
+        displayName: '路障',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.ROADBLOCK,
+            category: 'object',
+            description: '阻挡移动的路面物体'
+        }
+    });
+    
+    // 炸弹
+    this.register({
+        id: 'web3:bomb',
+        displayName: '炸弹',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3ObjectType.BOMB,
+            category: 'object',
+            description: '爆炸伤害的路面物体'
+        }
+    });
+    
+    console.log('[Web3BlockTypes] 成功注册 15 个 Web3 方块');
+}
+
 
     private static createLegacyMapping(): void {
         // 建立旧枚举到新ID的映射

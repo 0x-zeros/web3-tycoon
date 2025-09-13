@@ -57,6 +57,9 @@ export class CameraController extends BaseCameraController {
     @property({ displayName: "跟随目标", type: Node, tooltip: "第三人称模式的跟随目标" })
     public followTarget: Node | null = null;
 
+    @property({ displayName: "启用右键拖拽旋转", tooltip: "是否允许右键拖拽旋转相机（默认关闭）" })
+    public enableRightDragRotate: boolean = false;
+
     // 内部使用的config对象
     public get config(): CameraConfig {
         if (!this._config) {
@@ -806,8 +809,8 @@ export class CameraController extends BaseCameraController {
             this._mouseDragState.lastMousePos.set(eventData.screenX, eventData.screenY, 0);
             this.debugLog('中键按下，开始拖拽移动');
         }
-        // 右键拖拽旋转相机
-        else if (eventData.button === 2) { // 右键按钮
+        // 右键拖拽旋转相机（受开关控制）
+        else if (eventData.button === 2 && this.enableRightDragRotate) { // 右键按钮
             this._mouseDragState.isDragging = true;
             this._mouseDragState.dragButton = 2;
             this._mouseDragState.lastMousePos.set(eventData.screenX, eventData.screenY, 0);
@@ -819,6 +822,7 @@ export class CameraController extends BaseCameraController {
      * 重写基类鼠标拖拽处理
      */
     protected onMouseDrag(deltaPos: Vec3): void {
+        if (!this.enableRightDragRotate) return;
         // 右键拖拽旋转（仅在等距模式下）
         if (this._currentMode === CameraMode.ISOMETRIC && this.config.isometric.allowRotation) {
             this._runtimeYawOffset += deltaPos.x * this.config.isometric.rotationSpeed * 0.1;
@@ -851,8 +855,10 @@ export class CameraController extends BaseCameraController {
             // 中键拖拽移动相机（类似WASD功能）
             this._handleMouseDragMovement(deltaPos);
         } else if (this._mouseDragState.dragButton === 2) {
-            // 右键拖拽旋转相机
-            this._handleMouseDragRotation(deltaPos);
+            // 右键拖拽旋转相机（受开关控制）
+            if (this.enableRightDragRotate) {
+                this._handleMouseDragRotation(deltaPos);
+            }
         }
 
         // 更新上次鼠标位置
@@ -980,6 +986,7 @@ export class CameraController extends BaseCameraController {
      * 处理鼠标拖拽旋转（右键拖拽）
      */
     private _handleMouseDragRotation(deltaPos: Vec3): void {
+        if (!this.enableRightDragRotate) return;
         // 右键拖拽旋转（仅在等距模式下）
         if (this._currentMode === CameraMode.ISOMETRIC && this.config.isometric.allowRotation) {
             // 降低旋转速度，让旋转更平滑

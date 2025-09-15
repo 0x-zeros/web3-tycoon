@@ -84,6 +84,34 @@ UPGRADE_CAP=$(
             | .objectId'
 )
 
+# 简析 coin type 和 0x2::coin::TreasuryCap的object id
+echo "================================================================================================"
+echo "Coin Analysis:"
+echo "------------------------------------------------"
+
+# 提取所有创建的 coin 相关对象
+COIN_OBJECTS=$(echo $PUBLISH | jq '.objectChanges[] | select(.type == "created") | select(.objectType | contains("0x2::coin::TreasuryCap"))')
+
+# 简析 coin type
+# 0x2::coin::TreasuryCap<0x123...> 只保留<>中的内容
+COIN_TYPE=$(echo $COIN_OBJECTS | jq -r '.objectType' | head -1 | sed 's/.*<\(.*\)>.*/\1/')
+if [ ! -z "$COIN_TYPE" ]; then
+    echo "Coin Type: $COIN_TYPE"
+else
+    echo "Coin Type: Not found"
+fi
+
+# 简析 TreasuryCap object id
+TREASURY_CAP=$(echo $COIN_OBJECTS | jq -r '.objectId' | head -1)
+if [ ! -z "$TREASURY_CAP" ]; then
+    echo "TreasuryCap Object ID: $TREASURY_CAP"
+else
+    echo "TreasuryCap Object ID: Not found"
+fi
+
+echo "================================================================================================"
+
+
 # 构建前端配置文件的绝对路径
 # $ENV 为local, 替换为localnet
 if [ "$ENV" = "local" ]; then
@@ -101,6 +129,8 @@ cat > $CONFIG <<EOF
 const env = {
     packageId: '$PACKAGE_ID',
     upgradeCap: '$UPGRADE_CAP',
+    coinType: '$COIN_TYPE',
+    treasuryCap: '$TREASURY_CAP',
 };
 
 export default env;
@@ -115,6 +145,14 @@ EOF
 # EOF
 
 # 输出部署完成信息和生成的配置文件路径
+echo "================================================================================================"
+echo "Deployment Summary:"
+echo "------------------------------------------------"
+echo "Package ID: $PACKAGE_ID"
+echo "Upgrade Cap: $UPGRADE_CAP"
+echo "Coin Type: $COIN_TYPE"
+echo "Treasury Cap: $TREASURY_CAP"
+echo "================================================================================================"
 echo "Contract Deployment finished!"
 echo "Details written to $CONFIG."
 # echo "Details written to $CONFIG and $ENV."

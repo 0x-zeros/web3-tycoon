@@ -190,7 +190,7 @@ generated/
 auto-generated/
 
 # Package lock files (choose one based on your package manager)
-package-lock.json
+# package-lock.json  # 注释掉，保留 package-lock.json 用于依赖锁定
 # yarn.lock
 # pnpm-lock.yaml
 

@@ -1,6 +1,4 @@
 #! /usr/bin/env bash
-# Copyright (c) Mysten Labs, Inc.
-# SPDX-License-Identifier: Apache-2.0
 
 # # 使用示例
 # # 发布到测试网
@@ -48,6 +46,13 @@ $SUI client switch --env $ENV
 # ../move指定要发布的Move包目录，--json以JSON格式输出，$@传递所有剩余参数
 PUBLISH=$($SUI client publish ../my_coin --json $@)
 
+# 使用jq美化输出JSON结果
+echo "================================================================================================"
+echo "Publish Result:"
+echo "------------------------------------------------"
+echo $PUBLISH | jq '.'
+echo "================================================================================================"
+
 # 从发布结果中提取交易状态
 # 使用jq命令解析JSON，-r参数输出原始字符串（不带引号）
 STATUS=$(
@@ -79,27 +84,37 @@ UPGRADE_CAP=$(
             | .objectId'
 )
 
-# # 构建前端配置文件的绝对路径
-# CONFIG="$(readlink -f ../ui/src)/env.$ENV.ts"
-# # 生成前端TypeScript配置文件，使用here document语法
-# cat > $CONFIG <<EOF
-# // Copyright (c) Mysten Labs, Inc.
-# // SPDX-License-Identifier: Apache-2.0
+# 构建前端配置文件的绝对路径
+# $ENV 为local, 替换为localnet
+if [ "$ENV" = "local" ]; then
+    CONFIG_ENV="localnet"
+else
+    CONFIG_ENV="$ENV"
+fi
+CONFIG="$(readlink -f ../cli/src/config/)/env.$CONFIG_ENV.ts"
+# 生成前端TypeScript配置文件，使用here document语法
+# cat > $CONFIG：将内容写入到 $CONFIG 文件
+# <<EOF：开始 here document，告诉 shell 从下一行开始读取内容
+# 多行内容：直到遇到 EOF 为止的所有内容都会被读取
+# EOF：结束标记，必须单独占一行
+cat > $CONFIG <<EOF
+const env = {
+    packageId: '$PACKAGE_ID',
+    upgradeCap: '$UPGRADE_CAP',
+};
 
-# export default {
-# 	packageId: '$PACKAGE_ID',
-# 	upgradeCap: '$UPGRADE_CAP',
-# };
-# EOF
-
-# 构建CLI环境文件的绝对路径
-ENV="$(readlink -f ../cli)/$ENV.env"
-# 生成CLI环境变量配置文件，使用here document语法（-EOF忽略前导制表符）
-cat > $ENV <<-EOF
-PKG=$PACKAGE_ID
-CAP=$UPGRADE_CAP
+export default env;
 EOF
+
+# # 构建CLI环境文件的绝对路径
+# ENV="$(readlink -f ../cli)/$ENV.env"
+# # 生成CLI环境变量配置文件，使用here document语法（-EOF忽略前导制表符）
+# cat > $ENV <<-EOF
+# PKG=$PACKAGE_ID
+# CAP=$UPGRADE_CAP
+# EOF
 
 # 输出部署完成信息和生成的配置文件路径
 echo "Contract Deployment finished!"
-echo "Details written to $CONFIG and $ENV."
+echo "Details written to $CONFIG."
+# echo "Details written to $CONFIG and $ENV."

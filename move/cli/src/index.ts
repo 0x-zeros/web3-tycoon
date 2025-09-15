@@ -2,34 +2,28 @@ import { Transaction } from '@mysten/sui/transactions';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { get_keypair_from_keystore, get_newly_created_object, get_transaction_events } from './util';
+import { createNetworkConfig, getExplorerUrl, NetworkType } from './config/config';
+
+//从命令行参数获取该值，默认localnet
+const env = process.argv[2]// || 'localnet';
+
+const networkConfig = createNetworkConfig(env as NetworkType);
+const suiRpcUrl = networkConfig.url;
+const PACKAGE_ID = networkConfig.variables.packageId;
+
+const COIN_TYPE = networkConfig.variables.coinType;
+const TREASURY_CAP = networkConfig.variables.treasuryCap;
 
 
-// //testnet
-// const env = 'testnet';
-// const PACKAGE_ID = '';
-
-// devnet
-const env = 'devnet';
-const PACKAGE_ID = '0x463fb3ad0917466434159d53b9b9703bdf3aa8ebf6e84d2c06c5583e89f8baf7';
-
-//ObjectType: ctfb::MintCTFB<ctfb::CTFB>
-const MintCTFB_object_id = '0x06a2991503ca902d82bb19ab005a081c73b1d55aac8fc5713628f40b879dbbb3'; //Shared
-
-//ObjectType: ctfa::MintCTFA<ctfa::CTFA>
-const MintCTFA_object_id = '0x705c50ff67a510b65a57cacbcc400cd7d25c1052bb96fdface60ca096fcb63d9'; //Shared
-
-//ObjectType: pool::CreatePoolCap<lp::LP>
-const CreatePoolCap_object_id = '0xf5a4bd3d697eb7615afd3adcf700504d3565a456a2002572c3c96149b3ee2024'; //Shared
-
-const suiRpcUrl = getFullnodeUrl(env);
-
-//create_challenge
-const challenge_object_id = '0x3a0500c03ccbda79ffb402bd0a666f7639085d3e4b050ae23b3bee8b28754759';
-
-//claim_airdrop //10000000
-const ctfb_coin_id = '0xedb12d76f6fb82e15db367c02f7ee348150982777a5116f393d20ee91043250f';
 
 async function main(){
+
+    console.log('env:', env);
+    console.log('suiRpcUrl:', suiRpcUrl);
+    console.log('PACKAGE_ID:', PACKAGE_ID);
+    console.log('COIN_TYPE:', COIN_TYPE);
+    console.log('TREASURY_CAP:', TREASURY_CAP);
+    console.log('--------------------------------');
 
     const keypair = get_keypair_from_keystore();
 
@@ -42,56 +36,39 @@ async function main(){
     console.log('Account Balance:', balance);
 
     //call move function create_challenge
-    //await create_challenge(client, keypair, address);
+    let newobjectId = await create_challenge(client, keypair);
+    // console.log('newobjectId:', newobjectId);
 
-    //获取ctfb coin
-    // await claim_airdrop(client, keypair, address);
-    
+    //call move function complete_challenge
+    let moves = 'sdssddssaasssddddddwww';
+    await complete_challenge(client, keypair, newobjectId!, moves);
 
-    
-    // //call move function complete_challenge
-    // let moves = 'sdssddssaasssddddddwww';
-    // await complete_challenge(client, keypair, newobjectId!, moves);
-
-    // //call move function claim_flag
-    // await claim_flag(client, keypair, newobjectId!, github_id);
+    //call move function claim_flag
+    await claim_flag(client, keypair, newobjectId!, github_id);
 }
 
 
-async function claim_airdrop(client: SuiClient, keypair: Ed25519Keypair, to_address: string){
+async function create_challenge(client: SuiClient, keypair: Ed25519Keypair){
     const tx = new Transaction();
-    const ctfb_coin = tx.moveCall({
-                target: `${PACKAGE_ID}::challenge::claim_airdrop`,
-                arguments: [tx.object(challenge_object_id)]
+    tx.moveCall({
+                target: `${PACKAGE_ID}::maze::create_challenge`,
+                arguments: []
             });
-
-    tx.transferObjects([ctfb_coin], to_address);
-    const result = await client.signAndExecuteTransaction({signer: keypair,transaction: tx,});
-    console.log('claim_airdrop tx:', result);
-}
-
-
-
-async function create_challenge(client: SuiClient, keypair: Ed25519Keypair, to_address: string){
-    const tx = new Transaction();
-    const challenge_obj = tx.moveCall({
-                target: `${PACKAGE_ID}::challenge::create_challenge`,
-                arguments: [tx.object(MintCTFA_object_id), tx.object(MintCTFB_object_id), tx.object(CreatePoolCap_object_id)]
-            });
-
-    tx.transferObjects([challenge_obj], to_address);
     const result = await client.signAndExecuteTransaction({signer: keypair,transaction: tx,});
     console.log('create_challenge tx:', result);
 
-    // //wait
-    // //https://sdk.mystenlabs.com/typescript/sui-client
-    // const transaction = await client.waitForTransaction({
-    //     digest: result.digest,
-    //     options: {
-    //         showEffects: true,
-    //         showObjectChanges: true
-    //     },
-    // });
+    //wait
+    //https://sdk.mystenlabs.com/typescript/sui-client
+    const transaction = await client.waitForTransaction({
+        digest: result.digest,
+        options: {
+            showEffects: true,
+            showObjectChanges: true
+        },
+    });
+
+    let newobjectId = await get_newly_created_object(suiRpcUrl, result.digest);
+    return newobjectId;
 }
 
 async function complete_challenge(client: SuiClient, keypair: Ed25519Keypair, challenge_object_Id: string, moves: string){

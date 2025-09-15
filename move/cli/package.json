@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "ts-node src/index.ts",
 
-    "mint_coin": "ts-node src/mint_coin.ts",
+    "mint_coin": "ts-node src/mint_coin.ts localnet",
 
     "dev": "ts-node src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"

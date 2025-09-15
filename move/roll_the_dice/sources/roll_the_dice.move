@@ -63,7 +63,7 @@ fun init(ctx: &mut TxContext) {
 
 /// const SUI_RANDOM_ID: address = @0x8;
 /// 0x8
-entry fun play(game: &mut Game<ZEROS_FAUCET>, rand: &Random, in_coin: Coin<ZEROS_FAUCET>, ctx: &mut TxContext) {
+public entry fun play(game: &mut Game<ZEROS_FAUCET>, rand: &Random, in_coin: Coin<ZEROS_FAUCET>, ctx: &mut TxContext) {
 
     let amt_in = in_coin.value();
     let amt_game = game.amt.value();

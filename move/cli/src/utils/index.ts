@@ -3,4 +3,4 @@ export {
     get_object_fields,
     get_transaction_events,
     get_newly_created_object
-} from './sui_utils'; 
+} from '../utils/sui_utils'; 

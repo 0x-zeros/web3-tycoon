@@ -1,7 +1,7 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { get_keypair_from_keystore, get_newly_created_object, get_transaction_events } from './util';
+import { get_keypair_from_keystore, get_newly_created_object, get_transaction_events } from './utils';
 import { createNetworkConfig, getExplorerUrl, NetworkType } from './config/config';
 
 //从命令行参数获取该值，默认localnet

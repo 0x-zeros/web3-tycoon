@@ -60,21 +60,22 @@ fun init(ctx: &mut TxContext) {
         round: 0,
     };
 
+    event::emit(GameCreatedEvent {
+        sender: ctx.sender(),
+        game_id: object::id(&game),
+    });
+
+
     share_object(game);
 }
 
 
 /// const SUI_RANDOM_ID: address = @0x8;
 /// 0x8
-fun play(game: &mut Game, rand: &Random, ctx: &mut TxContext) {
+public fun play(game: &mut Game, rand: &Random, ctx: &mut TxContext): u8 {
 
     // let num_game = game.num;
     game.round = game.round + 1;
-
-    event::emit(GameCreatedEvent {
-        sender: ctx.sender(),
-        game_id: object::id(game),
-    });
 
     let mut gen = random::new_generator(rand, ctx);
     // 生成随机数
@@ -92,6 +93,8 @@ fun play(game: &mut Game, rand: &Random, ctx: &mut TxContext) {
     });
 
     transfer(dice_obj, ctx.sender());
+
+    dice
 }
 
 

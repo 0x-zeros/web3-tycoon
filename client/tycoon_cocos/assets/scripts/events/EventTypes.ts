@@ -267,6 +267,87 @@ export const EventTypes = {
         CameraModeChanged: "system_camera_mode_changed"
     },
 
+    /** Sui 链上事件 */
+    SuiChain: {
+        // 游戏核心事件
+        /** 游戏创建 */
+        GameCreated: "sui_chain_game_created",
+        /** 游戏开始 */
+        GameStarted: "sui_chain_game_started",
+        /** 游戏结束 */
+        GameEnded: "sui_chain_game_ended",
+
+        // 玩家动作事件
+        /** 玩家加入 */
+        PlayerJoined: "sui_chain_player_joined",
+        /** 骰子投掷 */
+        DiceRolled: "sui_chain_dice_rolled",
+        /** 玩家移动 */
+        PlayerMoved: "sui_chain_player_moved",
+        /** 玩家破产 */
+        PlayerBankrupt: "sui_chain_player_bankrupt",
+
+        // 地产交易事件
+        /** 地产购买 */
+        PropertyPurchased: "sui_chain_property_purchased",
+        /** 地产升级 */
+        PropertyUpgraded: "sui_chain_property_upgraded",
+        /** 地产抵押 */
+        PropertyMortgaged: "sui_chain_property_mortgaged",
+        /** 地产赎回 */
+        PropertyRedeemed: "sui_chain_property_redeemed",
+        /** 支付租金 */
+        RentPaid: "sui_chain_rent_paid",
+
+        // 卡片事件
+        /** 抽取机会卡 */
+        ChanceCardDrawn: "sui_chain_chance_card_drawn",
+        /** 卡片效果应用 */
+        CardEffectApplied: "sui_chain_card_effect_applied",
+
+        // 金钱交易事件
+        /** 金钱转账 */
+        MoneyTransfer: "sui_chain_money_transfer",
+        /** 支付税金 */
+        TaxPaid: "sui_chain_tax_paid",
+        /** 收取薪水 */
+        SalaryCollected: "sui_chain_salary_collected",
+
+        // DeFi 相关事件
+        /** 地产质押 */
+        PropertyStaked: "sui_chain_property_staked",
+        /** 领取质押奖励 */
+        StakingRewardClaimed: "sui_chain_staking_reward_claimed",
+        /** 贷款 */
+        LoanTaken: "sui_chain_loan_taken",
+        /** 还款 */
+        LoanRepaid: "sui_chain_loan_repaid",
+
+        // NFT 相关事件
+        /** 地产NFT铸造 */
+        PropertyNFTMinted: "sui_chain_property_nft_minted",
+        /** 地产NFT转移 */
+        PropertyNFTTransferred: "sui_chain_property_nft_transferred",
+
+        // 特殊位置事件
+        /** 进入监狱 */
+        JailEntered: "sui_chain_jail_entered",
+        /** 离开监狱 */
+        JailExited: "sui_chain_jail_exited",
+        /** 免费停车场收集 */
+        FreeParkingCollected: "sui_chain_free_parking_collected",
+
+        // 索引器系统事件
+        /** 事件已索引 */
+        EventIndexed: "sui_chain_event_indexed",
+        /** 索引器错误 */
+        IndexerError: "sui_chain_indexer_error",
+        /** 索引器启动 */
+        IndexerStarted: "sui_chain_indexer_started",
+        /** 索引器停止 */
+        IndexerStopped: "sui_chain_indexer_stopped"
+    },
+
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */
     Input3D: {
         /** 鼠标按下 */

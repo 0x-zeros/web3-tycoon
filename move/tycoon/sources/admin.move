@@ -188,6 +188,13 @@ entry fun transfer_admin_cap(
     transfer::transfer(admin_cap, recipient);
 }
 
+// ===== Test Helper Functions 测试辅助函数 =====
+
+#[test_only]
+public fun init_for_testing(ctx: &mut TxContext) {
+    init(ctx);
+}
+
 // ===== Query Functions 查询函数 =====
 
 // 验证是否有管理员权限

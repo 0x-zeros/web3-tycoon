@@ -8,8 +8,8 @@ module tycoon::cards_basic_tests {
     use tycoon::test_utils::{Self as utils};
     use tycoon::game::{Self, Game};
     use tycoon::map::{MapRegistry};
+    use tycoon::admin::{AdminCap};
     use tycoon::types;
-    use tycoon::cards;
 
     // 测试遥控骰卡
     #[test]
@@ -93,8 +93,8 @@ module tycoon::cards_basic_tests {
 
         // 创建游戏
         scenario::next_tx(scenario, utils::admin_addr());
-        registry = scenario::take_shared<MapRegistry>(scenario);
-        let game_id = game::create_game(
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let _game_id = game::create_game_with_config(
             b"Test Game",
             template_id,
             option::none(),
@@ -163,8 +163,8 @@ module tycoon::cards_basic_tests {
         scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        registry = scenario::take_shared<MapRegistry>(scenario);
-        let game_id = game::create_game(
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let _game_id = game::create_game_with_config(
             b"Test Game",
             template_id,
             option::none(),

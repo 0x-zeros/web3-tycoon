@@ -1,6 +1,5 @@
 module tycoon::map;
 
-use std::option::{Self, Option};
 use sui::table::{Self, Table};
 use tycoon::types;
 
@@ -624,4 +623,75 @@ public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
     set_template_digest(&mut template, b"test_map_8_v1");
 
     template
+}
+
+// ===== Test Helper Functions 测试辅助函数 =====
+
+#[test_only]
+public fun create_template(
+    name: vector<u8>,
+    description: vector<u8>,
+    width: u16,
+    height: u16,
+    ctx: &mut TxContext
+): MapTemplate {
+    let mut template = new_map_template(1, 1, width, height, ctx);
+    set_template_name(&mut template, name);
+    set_template_description(&mut template, description);
+    template
+}
+
+#[test_only]
+public fun add_tile(
+    template: &mut MapTemplate,
+    x: u16,
+    y: u16,
+    kind: u8,
+    name: vector<u8>,
+    price: u64,
+    toll: u64
+) {
+    let tile_id = ((y as u64) * (template.width as u64) + (x as u64));
+    add_tile_to_template(
+        template,
+        tile_id,
+        new_tile_static(x, y, kind, types::size_1x1(), price, toll, 0)
+    );
+}
+
+#[test_only]
+public fun add_connection(
+    template: &mut MapTemplate,
+    from: u64,
+    to: u64
+) {
+    set_cw_next(template, from, to);
+    if (from > 0) {
+        set_ccw_next(template, to, from);
+    };
+}
+
+#[test_only]
+public fun finalize_template(template: &mut MapTemplate) {
+    // 设置模板摘要
+    set_template_digest(template, b"test_template");
+}
+
+#[test_only]
+public fun register_template<T>(
+    _admin_cap: &T,
+    registry: &mut MapRegistry,
+    template: MapTemplate
+) {
+    publish_template(registry, template);
+}
+
+#[test_only]
+public fun set_template_name(template: &mut MapTemplate, name: vector<u8>) {
+    template.name = name;
+}
+
+#[test_only]
+public fun set_template_description(template: &mut MapTemplate, description: vector<u8>) {
+    template.description = description;
 }

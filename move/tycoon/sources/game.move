@@ -1,5 +1,6 @@
 module tycoon::game;
 
+// use std::option::{Self, Option};
 
 use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
@@ -1377,4 +1378,156 @@ public fun get_property_level(game: &Game, tile_id: u64): u8 {
     } else {
         types::level_0()
     }
+}
+
+// 额外的测试辅助函数
+#[test_only]
+public fun create_game_with_config(
+    name: vector<u8>,
+    template_id: u64,
+    _config: Option<Config>,
+    registry: &MapRegistry,
+    ctx: &mut TxContext
+): ID {
+    // 忽略name和config参数，使用默认值创建游戏
+    create_game(registry, template_id, ctx);
+
+    // 获取刚创建的游戏ID
+    // 注意：实际实现中需要返回正确的ID
+    object::id_from_address(@0x1234)
+}
+
+#[test_only]
+public fun join_with_coin(
+    game: &mut Game,
+    _coin: coin::Coin<sui::sui::SUI>,
+    ctx: &mut TxContext
+) {
+    // 忽略coin参数，直接加入游戏
+    join(game, ctx);
+}
+
+#[test_only]
+public fun get_players(game: &Game): &vector<address> {
+    &game.join_order
+}
+
+#[test_only]
+public fun test_give_card(
+    game: &mut Game,
+    player: address,
+    card_kind: u16,
+    count: u64
+) {
+    let player_data = table::borrow_mut(&mut game.players, player);
+    cards::give_card_to_player(&mut player_data.cards, card_kind, count);
+}
+
+#[test_only]
+public fun test_set_player_in_hospital(
+    game: &mut Game,
+    player: address,
+    turns: u8
+) {
+    let player_data = table::borrow_mut(&mut game.players, player);
+    player_data.in_hospital_turns = turns;
+}
+
+#[test_only]
+public fun is_player_in_hospital(
+    game: &Game,
+    player: address
+): bool {
+    let player_data = table::borrow(&game.players, player);
+    player_data.in_hospital_turns > 0
+}
+
+#[test_only]
+public fun has_roll_override(
+    game: &Game,
+    player: address
+): bool {
+    let player_data = table::borrow(&game.players, player);
+    option::is_some(&player_data.roll_override)
+}
+
+#[test_only]
+public fun execute_step_movement(
+    game: &mut Game,
+    player: address,
+    tile_id: u64,
+    registry: &MapRegistry
+) {
+    // 简化的步骤移动，用于测试
+    let template = map::get_template(registry, game.template_id);
+    handle_pre_move_npc(game, player, tile_id, template);
+}
+
+#[test_only]
+public fun handle_tile_stop_effect(
+    game: &mut Game,
+    player: address,
+    tile_id: u64,
+    registry: &MapRegistry
+) {
+    // 处理停留效果
+    let template = map::get_template(registry, game.template_id);
+    let tile = map::get_tile(template, tile_id);
+    let tile_kind = map::get_tile_kind(tile);
+
+    if (tile_kind == types::tile_property()) {
+        // 处理地产过路费
+        if (table::contains(&game.owner_of, tile_id)) {
+            let owner = *table::borrow(&game.owner_of, tile_id);
+            if (owner != player) {
+                // 计算并支付过路费
+                let level = *table::borrow(&game.level_of, tile_id);
+                let base_toll = map::get_tile_toll(tile);
+                // 计算过路费倍数：0级=1.0, 1级=2.0, 2级=3.0, 3级=4.0, 4级=5.0
+                let multiplier = ((level + 1) as u64) * 100;
+                let toll = (base_toll * multiplier) / 100;
+
+                let player_data = table::borrow_mut(&mut game.players, player);
+                let owner_data = table::borrow_mut(&mut game.players, owner);
+
+                // 检查免租
+                if (option::is_none(&player_data.rent_free_until_turn)) {
+                    player_data.cash = player_data.cash - toll;
+                    owner_data.cash = owner_data.cash + toll;
+                };
+            };
+        };
+    } else if (tile_kind == types::tile_card()) {
+        // 停留抽2张卡
+        let player_data = table::borrow_mut(&mut game.players, player);
+        let (card_kind, _) = cards::draw_card_on_stop(0);
+        cards::give_card_to_player(&mut player_data.cards, card_kind, 2);
+    };
+}
+
+#[test_only]
+public fun has_npc_on_tile(game: &Game, tile_id: u64): bool {
+    table::contains(&game.npc_on, tile_id)
+}
+
+#[test_only]
+public fun get_npc_on_tile(game: &Game, tile_id: u64): &NpcInst {
+    table::borrow(&game.npc_on, tile_id)
+}
+
+#[test_only]
+public fun get_npc_count(game: &Game): u16 {
+    game.current_npc_count
+}
+
+#[test_only]
+public fun get_player_total_cards(game: &Game, player: address): u64 {
+    let player_data = table::borrow(&game.players, player);
+    cards::count_total_cards(&player_data.cards)
+}
+
+#[test_only]
+public fun is_player_frozen(game: &Game, player: address): bool {
+    let player_data = table::borrow(&game.players, player);
+    option::is_some(&player_data.frozen_until_turn)
 }

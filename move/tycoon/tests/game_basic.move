@@ -27,9 +27,7 @@ module tycoon::game_basic_tests {
         // 创建注册表
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-            admin::create_map_registry(&admin_cap, scenario::ctx(scenario));
-            scenario::return_to_sender(scenario, admin_cap);
+            admin::create_map_registry(scenario::ctx(scenario));
         };
 
         // 创建并注册地图
@@ -58,7 +56,7 @@ module tycoon::game_basic_tests {
         let scenario = &mut scenario_val;
 
         // 创建测试游戏
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         // 获取游戏对象
         scenario::next_tx(scenario, utils::admin_addr());
@@ -89,7 +87,7 @@ module tycoon::game_basic_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -118,7 +116,7 @@ module tycoon::game_basic_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -173,7 +171,7 @@ module tycoon::game_basic_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -205,7 +203,7 @@ module tycoon::game_basic_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -221,7 +219,7 @@ module tycoon::game_basic_tests {
         scenario::next_tx(scenario, utils::bob());
         game = scenario::take_shared<Game>(scenario);
         let coin = utils::mint_sui(10000, scenario::ctx(scenario));
-        game::join(&mut game, coin, scenario::ctx(scenario));
+        game::join_with_coin(&mut game, coin, scenario::ctx(scenario));
 
         scenario::return_shared(game);
         scenario::end(scenario_val);
@@ -234,7 +232,7 @@ module tycoon::game_basic_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         // 不加入额外玩家，直接尝试开始游戏（只有创建者）
         scenario::next_tx(scenario, utils::admin_addr());

@@ -17,7 +17,7 @@ module tycoon::movement_npc_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -81,7 +81,7 @@ module tycoon::movement_npc_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -145,7 +145,7 @@ module tycoon::movement_npc_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -222,7 +222,7 @@ module tycoon::movement_npc_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -268,7 +268,7 @@ module tycoon::movement_npc_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -319,7 +319,7 @@ module tycoon::movement_npc_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);

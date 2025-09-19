@@ -38,7 +38,7 @@ module tycoon::test_utils {
             let template_id = create_simple_map(&admin_cap, &mut registry, scenario::ctx(scenario));
 
             // 创建游戏
-            let game_id = game::create_game(
+            let game_id = game::create_game_with_config(
                 b"Test Game",
                 template_id,
                 option::none(),  // 使用默认配置
@@ -142,7 +142,7 @@ module tycoon::test_utils {
         scenario::next_tx(scenario, player);
         {
             let coin = coin::mint_for_testing<SUI>(20000, scenario::ctx(scenario));
-            game::join(game, coin, scenario::ctx(scenario));
+            game::join_with_coin(game, coin, scenario::ctx(scenario));
         };
     }
 

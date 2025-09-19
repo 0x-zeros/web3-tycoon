@@ -290,4 +290,195 @@ module tycoon::economy_tests {
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
+
+    // 测试支付过路费给拥有者
+    #[test]
+    fun test_pay_toll_to_owner() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 两个玩家加入
+        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+        utils::start_game(&mut game, scenario);
+
+        // Admin购买并升级地产
+        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        scenario::next_tx(scenario, utils::admin_addr());
+        game::test_set_player_position(&mut game, utils::admin_addr(), 1);
+        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+
+        // 升级到等级2
+        game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+
+        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+
+        // Alice的回合 - 经过Admin的地产
+        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        scenario::next_tx(scenario, utils::alice());
+
+        // 记录双方初始现金
+        let alice_initial = game::get_player_cash(&game, utils::alice());
+        let admin_initial = game::get_player_cash(&game, utils::admin_addr());
+
+        // Alice移动到Admin的地产
+        game::test_set_player_position(&mut game, utils::alice(), 1);
+
+        // 处理停留效果（支付过路费）
+        game::handle_tile_stop_effect(
+            &mut game,
+            utils::alice(),
+            1,
+            &registry
+        );
+
+        // 计算预期过路费（基础租金150 * 等级乘数）
+        // 等级2的乘数是3.0，所以过路费 = 150 * 3 = 450
+        let expected_toll = 450;
+
+        // 验证Alice支付了过路费
+        assert!(game::get_player_cash(&game, utils::alice()) == alice_initial - expected_toll, 1);
+
+        // 验证Admin收到了过路费
+        assert!(game::get_player_cash(&game, utils::admin_addr()) == admin_initial + expected_toll, 2);
+
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
+        clock::destroy_for_testing(clock);
+        scenario::end(scenario_val);
+    }
+
+    // 测试免租卡跳过过路费
+    #[test]
+    fun test_rent_free_skip_toll() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        utils::start_game(&mut game, scenario);
+
+        // Admin购买地产
+        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        scenario::next_tx(scenario, utils::admin_addr());
+        game::test_set_player_position(&mut game, utils::admin_addr(), 1);
+        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+
+        // Alice使用免租卡
+        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        scenario::next_tx(scenario, utils::alice());
+
+        // 给Alice免租卡
+        game::test_give_card(&mut game, utils::alice(), types::card_rent_free(), 1);
+
+        // 使用免租卡
+        game::use_card(
+            &mut game,
+            &cap,
+            types::card_rent_free(),
+            option::none(),
+            option::none(),
+            &registry,
+            scenario::ctx(scenario)
+        );
+
+        // 记录Alice初始现金
+        let alice_initial = game::get_player_cash(&game, utils::alice());
+
+        // Alice移动到Admin的地产
+        game::test_set_player_position(&mut game, utils::alice(), 1);
+
+        // 处理停留效果（应该免租）
+        game::handle_tile_stop_effect(
+            &mut game,
+            utils::alice(),
+            1,
+            &registry
+        );
+
+        // 验证Alice没有支付过路费
+        assert!(game::get_player_cash(&game, utils::alice()) == alice_initial, 1);
+
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
+        clock::destroy_for_testing(clock);
+        scenario::end(scenario_val);
+    }
+
+    // 测试连续破产导致游戏结束
+    #[test]
+    fun test_chain_bankruptcy_game_end() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 四个玩家加入
+        utils::join_players(&mut game, vector[
+            utils::alice(),
+            utils::bob(),
+            utils::carol()
+        ], scenario);
+        utils::start_game(&mut game, scenario);
+
+        // Admin购买所有地产并升级到最高级
+        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        scenario::next_tx(scenario, utils::admin_addr());
+
+        // 购买多个地产
+        game::test_set_player_position(&mut game, utils::admin_addr(), 1);
+        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+
+        // 升级到最高级
+        let mut i = 0;
+        while (i < 4) {
+            game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+            i = i + 1;
+        };
+
+        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+
+        // 设置其他玩家现金很少
+        game::test_set_player_cash(&mut game, utils::alice(), 100);
+        game::test_set_player_cash(&mut game, utils::bob(), 100);
+        game::test_set_player_cash(&mut game, utils::carol(), 100);
+
+        // 逐个触发破产
+        game::test_trigger_bankruptcy(&mut game, utils::alice(), 5000, option::some(utils::admin_addr()));
+        game::test_trigger_bankruptcy(&mut game, utils::bob(), 5000, option::some(utils::admin_addr()));
+
+        // 此时游戏还没结束（还有2个非破产玩家）
+        assert!(game::get_status(&game) == types::status_active(), 1);
+
+        // 最后一个破产导致游戏结束
+        game::test_trigger_bankruptcy(&mut game, utils::carol(), 5000, option::some(utils::admin_addr()));
+
+        // 验证游戏结束，Admin是赢家
+        assert!(game::get_status(&game) == types::status_ended(), 2);
+        assert!(game::get_winner(&game) == option::some(utils::admin_addr()), 3);
+
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
+        clock::destroy_for_testing(clock);
+        scenario::end(scenario_val);
+    }
 }

@@ -1,0 +1,247 @@
+// 基础游戏功能测试
+#[test_only]
+module tycoon::game_basic_tests {
+    use std::option;
+    use sui::test_scenario::{Self as scenario};
+    use sui::clock;
+    use sui::object;
+
+    use tycoon::test_utils::{Self as utils};
+    use tycoon::game::{Self, Game};
+    use tycoon::map::{Self, MapRegistry};
+    use tycoon::admin::{Self, AdminCap};
+    use tycoon::types;
+
+    // 测试地图创建
+    #[test]
+    fun test_map_creation() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        // 初始化管理模块
+        scenario::next_tx(scenario, utils::admin_addr());
+        {
+            admin::init_for_testing(scenario::ctx(scenario));
+        };
+
+        // 创建注册表
+        scenario::next_tx(scenario, utils::admin_addr());
+        {
+            let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
+            admin::create_map_registry(&admin_cap, scenario::ctx(scenario));
+            scenario::return_to_sender(scenario, admin_cap);
+        };
+
+        // 创建并注册地图
+        scenario::next_tx(scenario, utils::admin_addr());
+        {
+            let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
+            let mut registry = scenario::take_shared<MapRegistry>(scenario);
+
+            // 创建简单地图
+            let template_id = utils::create_simple_map(&admin_cap, &mut registry, scenario::ctx(scenario));
+
+            // 验证地图已注册
+            assert!(map::has_template(&registry, template_id), 1);
+
+            scenario::return_to_sender(scenario, admin_cap);
+            scenario::return_shared(registry);
+        };
+
+        scenario::end(scenario_val);
+    }
+
+    // 测试游戏创建和加入
+    #[test]
+    fun test_game_creation_and_join() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        // 创建测试游戏
+        let game_id = utils::create_test_game(scenario);
+
+        // 获取游戏对象
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+
+        // 验证初始状态
+        assert!(game::get_status(&game) == types::status_ready(), 1);
+        assert!(game::get_turn(&game) == 0, 2);
+
+        // 玩家加入游戏
+        scenario::return_shared(game);
+        utils::join_game(&mut game, utils::alice(), scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        game = scenario::take_shared<Game>(scenario);
+
+        // 验证玩家数量（创建者 + Alice = 2）
+        let players = game::get_players(&game);
+        assert!(players.length() == 2, 3);
+
+        scenario::return_shared(game);
+        scenario::end(scenario_val);
+    }
+
+    // 测试多玩家加入
+    #[test]
+    fun test_multiple_players_join() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+
+        // 多个玩家加入
+        let players = vector[utils::alice(), utils::bob(), utils::carol()];
+        scenario::return_shared(game);
+        utils::join_players(&mut game, players, scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        game = scenario::take_shared<Game>(scenario);
+
+        // 验证所有玩家都已加入（创建者 + 3个玩家 = 4）
+        let all_players = game::get_players(&game);
+        assert!(all_players.length() == 4, 1);
+
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
+        scenario::end(scenario_val);
+    }
+
+    // 测试游戏开始和回合切换
+    #[test]
+    fun test_game_start_and_turns() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 玩家加入
+        scenario::return_shared(game);
+        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+
+        // 开始游戏
+        utils::start_game(&mut game, scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        game = scenario::take_shared<Game>(scenario);
+
+        // 验证游戏已开始
+        assert!(game::get_status(&game) == types::status_active(), 1);
+        assert!(game::get_turn(&game) == 1, 2);
+
+        // 验证当前玩家（应该是第一个玩家）
+        let current_player = game::current_turn_player(&game);
+        assert!(current_player == utils::admin_addr(), 3);
+
+        // 执行一个回合
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        game = scenario::take_shared<Game>(scenario);
+        let registry = scenario::take_shared<MapRegistry>(scenario);
+
+        utils::play_turn(&mut game, option::none(), &registry, &clock, scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        game = scenario::take_shared<Game>(scenario);
+
+        // 验证回合已切换
+        assert!(game::get_turn(&game) == 2, 4);
+        let next_player = game::current_turn_player(&game);
+        assert!(next_player == utils::alice(), 5);
+
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
+        clock::destroy_for_testing(clock);
+        scenario::end(scenario_val);
+    }
+
+    // 测试游戏状态验证
+    #[test]
+    fun test_game_status_validation() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+
+        // 初始状态应该是ready
+        utils::assert_game_status(&game, types::status_ready());
+
+        // 加入玩家
+        scenario::return_shared(game);
+        utils::join_players(&mut game, vector[utils::alice()], scenario);
+
+        // 开始游戏
+        utils::start_game(&mut game, scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        game = scenario::take_shared<Game>(scenario);
+
+        // 状态应该是active
+        utils::assert_game_status(&game, types::status_active());
+
+        scenario::return_shared(game);
+        scenario::end(scenario_val);
+    }
+
+    // 测试无法在游戏开始后加入
+    #[test]
+    #[expected_failure(abort_code = 1004)] // err_already_started
+    fun test_cannot_join_after_start() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+
+        // Alice加入
+        scenario::return_shared(game);
+        utils::join_game(&mut game, utils::alice(), scenario);
+
+        // 开始游戏
+        utils::start_game(&mut game, scenario);
+
+        // Bob尝试加入（应该失败）
+        scenario::next_tx(scenario, utils::bob());
+        game = scenario::take_shared<Game>(scenario);
+        let coin = utils::mint_sui(10000, scenario::ctx(scenario));
+        game::join(&mut game, coin, scenario::ctx(scenario));
+
+        scenario::return_shared(game);
+        scenario::end(scenario_val);
+    }
+
+    // 测试最少玩家数量要求
+    #[test]
+    #[expected_failure(abort_code = 1003)] // err_not_enough_players
+    fun test_minimum_players_requirement() {
+        let mut scenario_val = scenario::begin(utils::admin_addr());
+        let scenario = &mut scenario_val;
+
+        let game_id = utils::create_test_game(scenario);
+
+        // 不加入额外玩家，直接尝试开始游戏（只有创建者）
+        scenario::next_tx(scenario, utils::admin_addr());
+        let mut game = scenario::take_shared<Game>(scenario);
+        game::start(&mut game, scenario::ctx(scenario));
+
+        scenario::return_shared(game);
+        scenario::end(scenario_val);
+    }
+}

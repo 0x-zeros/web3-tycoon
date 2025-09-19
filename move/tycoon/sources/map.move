@@ -683,8 +683,10 @@ public fun register_template<T>(
     registry: &mut MapRegistry,
     template: MapTemplate,
     ctx: &mut TxContext
-): ID {
-    publish_template(registry, template, ctx)
+): u64 {
+    let tid = template.id;
+    publish_template(registry, template, ctx);
+    tid
 }
 
 // 注意：MapTemplate没有name和description字段，这些是在创建时通过参数传入的

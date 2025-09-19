@@ -93,6 +93,24 @@ fun init_basic_cards(catalog: &mut CardCatalog) {
         target_player(),
         1  // 冻结1回合
     );
+
+    // 狗狗卡
+    add_card(catalog,
+        types::card_dog(),
+        b"Dog",
+        b"Place a dog NPC on a tile",
+        target_tile(),
+        0
+    );
+
+    // 清除卡
+    add_card(catalog,
+        types::card_cleanse(),
+        b"Cleanse",
+        b"Remove an NPC from a tile",
+        target_tile(),
+        0
+    );
 }
 
 // 向目录添加卡牌
@@ -233,10 +251,12 @@ public fun determine_card_draw(seed: u64): u16 {
         types::card_barrier(),
         types::card_bomb(),
         types::card_rent_free(),
-        types::card_freeze()
+        types::card_freeze(),
+        types::card_dog(),
+        types::card_cleanse()
     ];
 
-    let index = ((seed % 100) / 20) as u64;  // 0-4
+    let index = (seed % 7) as u64;  // 0-6
     *card_types.borrow(index)
 }
 
@@ -328,7 +348,9 @@ public fun count_total_cards(player_cards: &Table<u16, u64>): u64 {
         types::card_barrier(),
         types::card_bomb(),
         types::card_rent_free(),
-        types::card_freeze()
+        types::card_freeze(),
+        types::card_dog(),
+        types::card_cleanse()
     ];
 
     while (i < card_types.length()) {

@@ -203,6 +203,14 @@ public struct NpcRemovedEvent has copy, drop {
     reason: u8  // 1=被触发, 2=过期, 3=被替换
 }
 
+// NPC被清除事件（用于清除卡）
+public struct NpcRemoveEvent has copy, drop {
+    game: ID,
+    tile_id: u64,
+    kind: u8,
+    by_player: option::Option<address>
+}
+
 // ===== Economy Events 经济事件 =====
 
 // 现金变动事件
@@ -373,6 +381,20 @@ public(package) fun emit_game_ended_event(
         winner,
         turn,
         reason
+    });
+}
+
+public(package) fun emit_bankrupt_event(
+    game_id: ID,
+    player: address,
+    debt: u64,
+    creditor: option::Option<address>
+) {
+    event::emit(BankruptEvent {
+        game: game_id,
+        player,
+        debt,
+        creditor
     });
 }
 
@@ -563,6 +585,20 @@ public(package) fun emit_npc_spawn_event(
     by_player: option::Option<address>
 ) {
     event::emit(NpcSpawnEvent {
+        game: game_id,
+        tile_id,
+        kind,
+        by_player
+    });
+}
+
+public(package) fun emit_npc_remove_event(
+    game_id: ID,
+    tile_id: u64,
+    kind: u8,
+    by_player: option::Option<address>
+) {
+    event::emit(NpcRemoveEvent {
         game: game_id,
         tile_id,
         kind,

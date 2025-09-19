@@ -79,13 +79,15 @@ public struct Game has key, store {
     owner_of: Table<u64 /* tile_id */, address>,
     level_of: Table<u64, u8>,
     npc_on: Table<u64, NpcInst>,
+    owner_index: Table<address, vector<u64>>,  // 玩家拥有的地产列表
 
     config: Config,
     rng_nonce: u64,
 
     // 额外状态
     current_npc_count: u16,
-    card_catalog: CardCatalog
+    card_catalog: CardCatalog,
+    winner: Option<address>
 }
 
 // ===== Entry Functions 入口函数 =====
@@ -133,10 +135,12 @@ public entry fun create_game(
         owner_of: table::new(ctx),
         level_of: table::new(ctx),
         npc_on: table::new(ctx),
+        owner_index: table::new(ctx),
         config,
         rng_nonce: 0,
         current_npc_count: 0,
-        card_catalog: cards::create_catalog(ctx)
+        card_catalog: cards::create_catalog(ctx),
+        winner: option::none()
     };
 
     // 创建者自动加入
@@ -404,6 +408,139 @@ public entry fun end_turn(
 
     // 推进回合
     advance_turn(game);
+}
+
+// 购买地产
+public entry fun buy_property(
+    game: &mut Game,
+    cap: &TurnCap,
+    registry: &MapRegistry,
+    ctx: &mut TxContext
+) {
+    // 验证回合令牌
+    validate_turn_cap(game, cap);
+
+    let player_addr = cap.player;
+    let player = table::borrow(&game.players, player_addr);
+    let tile_id = player.pos;
+
+    // 获取地块信息
+    let template = map::get_template(registry, game.template_id);
+    let tile = map::get_tile(template, tile_id);
+
+    // 验证地块类型
+    assert!(map::tile_kind(tile) == types::tile_property(), types::err_not_property());
+
+    // 验证地块无主
+    assert!(!table::contains(&game.owner_of, tile_id), types::err_property_owned());
+
+    // 验证价格和现金
+    let price = map::tile_price(tile);
+    assert!(price > 0, types::err_invalid_price());
+    assert!(player.cash >= price, types::err_insufficient_cash());
+
+    // 扣除现金
+    {
+        let player_mut = table::borrow_mut(&mut game.players, player_addr);
+        player_mut.cash = player_mut.cash - price;
+    };
+
+    // 设置所有权和等级
+    table::add(&mut game.owner_of, tile_id, player_addr);
+    table::add(&mut game.level_of, tile_id, 1);
+
+    // 更新owner_index
+    if (!table::contains(&game.owner_index, player_addr)) {
+        table::add(&mut game.owner_index, player_addr, vector::empty());
+    };
+    let owner_tiles = table::borrow_mut(&mut game.owner_index, player_addr);
+    owner_tiles.push_back(tile_id);
+
+    // 发送购买事件
+    events::emit_buy_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        price
+    );
+
+    // 发送现金变化事件
+    events::emit_cash_change_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        price,
+        true,  // 支出
+        1,     // 购买地产
+        tile_id
+    );
+}
+
+// 升级地产
+public entry fun upgrade_property(
+    game: &mut Game,
+    cap: &TurnCap,
+    registry: &MapRegistry,
+    ctx: &mut TxContext
+) {
+    // 验证回合令牌
+    validate_turn_cap(game, cap);
+
+    let player_addr = cap.player;
+    let player = table::borrow(&game.players, player_addr);
+    let tile_id = player.pos;
+
+    // 获取地块信息
+    let template = map::get_template(registry, game.template_id);
+    let tile = map::get_tile(template, tile_id);
+
+    // 验证地块类型
+    assert!(map::tile_kind(tile) == types::tile_property(), types::err_not_property());
+
+    // 验证地块所有权
+    assert!(table::contains(&game.owner_of, tile_id), types::err_property_not_owned());
+    let owner = *table::borrow(&game.owner_of, tile_id);
+    assert!(owner == player_addr, types::err_not_owner());
+
+    // 验证等级
+    let current_level = *table::borrow(&game.level_of, tile_id);
+    assert!(current_level < types::level_4(), types::err_max_level());
+
+    // 计算升级费用
+    let price = map::tile_price(tile);
+    let upgrade_cost = types::calculate_upgrade_cost(price, current_level);
+
+    // 验证现金
+    assert!(player.cash >= upgrade_cost, types::err_insufficient_cash());
+
+    // 扣除现金
+    {
+        let player_mut = table::borrow_mut(&mut game.players, player_addr);
+        player_mut.cash = player_mut.cash - upgrade_cost;
+    };
+
+    // 提升等级
+    let level_mut = table::borrow_mut(&mut game.level_of, tile_id);
+    *level_mut = current_level + 1;
+
+    // 发送升级事件
+    events::emit_upgrade_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        current_level,       // from_lv
+        current_level + 1,   // to_lv
+        upgrade_cost
+    );
+
+    // 发送现金变化事件
+    events::emit_cash_change_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        upgrade_cost,
+        true,  // 支出
+        2,     // 升级地产
+        tile_id
+    );
 }
 
 // ===== Internal Functions 内部函数 =====
@@ -802,15 +939,20 @@ fun handle_property_stop(
                 player.cash = player.cash - toll;
                 toll
             } else {
+                // 现金不足 - 破产
                 let paid = player.cash;
                 player.cash = 0;
-                // TODO: 处理破产
                 paid
             };
 
             // 给房主加钱
             let owner_player = table::borrow_mut(&mut game.players, owner);
             owner_player.cash = owner_player.cash + actual_toll;
+
+            // 如果支付不足，处理破产
+            if (actual_toll < toll) {
+                handle_bankruptcy(game, player_addr, option::some(owner));
+            };
 
             events::emit_toll_event(
                 object::uid_to_inner(&game.id),
@@ -865,6 +1007,78 @@ fun send_to_hospital(game: &mut Game, player_addr: address, registry: &MapRegist
             object::uid_to_inner(&game.id),
             player_addr,
             hospital_tile
+        );
+    }
+}
+
+// 处理破产
+fun handle_bankruptcy(
+    game: &mut Game,
+    player_addr: address,
+    creditor: Option<address>
+) {
+    // 设置破产标志
+    {
+        let player = table::borrow_mut(&mut game.players, player_addr);
+        player.bankrupt = true;
+    };
+
+    // 释放所有地产
+    if (table::contains(&game.owner_index, player_addr)) {
+        let owned_tiles = *table::borrow(&game.owner_index, player_addr);
+        let mut i = 0;
+        while (i < owned_tiles.length()) {
+            let tile_id = *owned_tiles.borrow(i);
+
+            // 移除所有权
+            if (table::contains(&game.owner_of, tile_id)) {
+                table::remove(&mut game.owner_of, tile_id);
+            };
+
+            // 重置等级
+            if (table::contains(&game.level_of, tile_id)) {
+                *table::borrow_mut(&mut game.level_of, tile_id) = 0;
+            };
+
+            i = i + 1;
+        };
+
+        // 清空owner_index
+        let owner_tiles_mut = table::borrow_mut(&mut game.owner_index, player_addr);
+        *owner_tiles_mut = vector::empty();
+    };
+
+    // 发送破产事件
+    events::emit_bankrupt_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        0,  // debt暂时设为0
+        creditor
+    );
+
+    // 检查游戏是否结束（只剩一个非破产玩家）
+    let mut non_bankrupt_count = 0;
+    let mut winner = option::none<address>();
+    let mut i = 0;
+    while (i < game.join_order.length()) {
+        let addr = *game.join_order.borrow(i);
+        let player = table::borrow(&game.players, addr);
+        if (!player.bankrupt) {
+            non_bankrupt_count = non_bankrupt_count + 1;
+            winner = option::some(addr);
+        };
+        i = i + 1;
+    };
+
+    // 如果只剩一个非破产玩家，游戏结束
+    if (non_bankrupt_count == 1) {
+        game.status = types::status_ended();
+        game.winner = winner;  // 设置赢家
+        events::emit_game_ended_event(
+            object::uid_to_inner(&game.id),
+            winner,
+            game.turn,
+            2  // 原因：破产胜利
         );
     }
 }
@@ -936,6 +1150,50 @@ fun apply_card_effect(
                 game.turn
             );
         }
+    } else if (kind == types::card_dog()) {
+        // 放置狗狗NPC
+        if (option::is_some(&tile)) {
+            let tile_id = *option::borrow(&tile);
+
+            // 检查是否可以放置
+            assert!(!table::contains(&game.npc_on, tile_id), types::err_tile_occupied_by_npc());
+            assert!(game.current_npc_count < game.config.npc_cap, types::err_npc_cap_reached());
+
+            // 放置狗狗NPC
+            let npc = NpcInst {
+                kind: types::npc_dog(),
+                expires_at_turn: option::none(),
+                consumable: true  // 碰到狗狗后会消失
+            };
+            table::add(&mut game.npc_on, tile_id, npc);
+            game.current_npc_count = game.current_npc_count + 1;
+
+            events::emit_npc_spawn_event(
+                object::uid_to_inner(&game.id),
+                tile_id,
+                types::npc_dog(),
+                option::some(player_addr)
+            );
+        }
+    } else if (kind == types::card_cleanse()) {
+        // 清除NPC
+        if (option::is_some(&tile)) {
+            let tile_id = *option::borrow(&tile);
+
+            // 检查是否有NPC在该地块
+            if (table::contains(&game.npc_on, tile_id)) {
+                // 移除NPC
+                let npc = table::remove(&mut game.npc_on, tile_id);
+                game.current_npc_count = game.current_npc_count - 1;
+
+                events::emit_npc_remove_event(
+                    object::uid_to_inner(&game.id),
+                    tile_id,
+                    npc.kind,
+                    option::some(player_addr)
+                );
+            }
+        }
     }
 }
 
@@ -960,8 +1218,29 @@ fun clean_turn_state(game: &mut Game, player_addr: address) {
 
 // 推进回合
 fun advance_turn(game: &mut Game) {
-    // 更新活跃玩家索引
-    game.active_idx = ((game.active_idx + 1) % (game.join_order.length() as u8));
+    let player_count = game.join_order.length() as u8;
+    let mut attempts = 0;
+
+    // 寻找下一个非破产玩家
+    loop {
+        // 更新活跃玩家索引
+        game.active_idx = ((game.active_idx + 1) % player_count);
+        attempts = attempts + 1;
+
+        // 获取当前玩家
+        let current_addr = *game.join_order.borrow(game.active_idx as u64);
+        let current_player = table::borrow(&game.players, current_addr);
+
+        // 如果玩家未破产，使用该玩家
+        if (!current_player.bankrupt) {
+            break
+        };
+
+        // 如果已经检查了所有玩家，说明全部破产（不应该发生）
+        if (attempts >= player_count) {
+            break
+        };
+    };
 
     // 如果回到第一个玩家，增加回合数
     if (game.active_idx == 0) {
@@ -1016,5 +1295,85 @@ public fun get_tile_level(game: &Game, tile_id: u64): u8 {
         *table::borrow(&game.level_of, tile_id)
     } else {
         0
+    }
+}
+
+public fun is_player_bankrupt(game: &Game, player: address): bool {
+    if (table::contains(&game.players, player)) {
+        table::borrow(&game.players, player).bankrupt
+    } else {
+        false
+    }
+}
+
+public fun get_player_card_count(game: &Game, player: address, kind: u16): u64 {
+    if (table::contains(&game.players, player)) {
+        let player_data = table::borrow(&game.players, player);
+        cards::get_player_card_count(&player_data.cards, kind)
+    } else {
+        0
+    }
+}
+
+// ===== Test Helper Functions 测试辅助函数 =====
+
+#[test_only]
+public fun test_set_player_position(game: &mut Game, player: address, position: u64) {
+    let player_data = table::borrow_mut(&mut game.players, player);
+    player_data.pos = position;
+}
+
+#[test_only]
+public fun test_set_player_cash(game: &mut Game, player: address, cash: u64) {
+    let player_data = table::borrow_mut(&mut game.players, player);
+    player_data.cash = cash;
+}
+
+#[test_only]
+public fun test_trigger_bankruptcy(
+    game: &mut Game,
+    player: address,
+    debt: u64,
+    creditor: option::Option<address>
+) {
+    handle_bankruptcy(game, player, creditor);
+}
+
+#[test_only]
+public fun get_winner(game: &Game): option::Option<address> {
+    game.winner
+}
+
+#[test_only]
+public fun get_status(game: &Game): u8 {
+    game.status
+}
+
+#[test_only]
+public fun get_turn(game: &Game): u64 {
+    game.turn
+}
+
+#[test_only]
+public fun current_turn_player(game: &Game): address {
+    assert!(game.status == types::status_active(), types::err_already_started());
+    *game.join_order.borrow((game.active_idx as u64))
+}
+
+#[test_only]
+public fun get_property_owner(game: &Game, tile_id: u64): option::Option<address> {
+    if (table::contains(&game.owner_of, tile_id)) {
+        option::some(*table::borrow(&game.owner_of, tile_id))
+    } else {
+        option::none()
+    }
+}
+
+#[test_only]
+public fun get_property_level(game: &Game, tile_id: u64): u8 {
+    if (table::contains(&game.level_of, tile_id)) {
+        *table::borrow(&game.level_of, tile_id)
+    } else {
+        types::level_0()
     }
 }

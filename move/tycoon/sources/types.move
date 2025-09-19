@@ -33,8 +33,10 @@ public fun npc_dog(): u8 { 22 }
 public fun card_move_ctrl(): u16 { 1 }
 public fun card_barrier(): u16 { 2 }
 public fun card_bomb(): u16 { 10 }
+public fun card_dog(): u16 { 11 }     // 狗狗卡（放置NPC）
 public fun card_rent_free(): u16 { 20 }
 public fun card_freeze(): u16 { 30 }
+public fun card_cleanse(): u16 { 41 }  // 清除卡（移除NPC）
 
 // ===== Phase 游戏阶段 =====
 public fun phase_roll(): u8 { 1 }
@@ -71,7 +73,14 @@ public fun err_cap_expired(): u64 { 1004 }
 public fun err_tile_occupied_by_npc(): u64 { 2001 }
 public fun err_no_such_tile(): u64 { 2002 }
 public fun err_pos_mismatch(): u64 { 2003 }
-public fun err_unreachable(): u64 { 2004 }
+public fun err_not_property(): u64 { 2004 }
+public fun err_property_owned(): u64 { 2005 }
+public fun err_property_not_owned(): u64 { 2006 }
+public fun err_not_owner(): u64 { 2007 }
+public fun err_invalid_price(): u64 { 2008 }
+public fun err_max_level(): u64 { 2009 }
+public fun err_insufficient_cash(): u64 { 2010 }
+public fun err_unreachable(): u64 { 2011 }
 
 // 地图模板相关错误
 public fun err_template_not_found(): u64 { 3001 }

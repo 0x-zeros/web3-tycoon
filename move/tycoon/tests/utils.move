@@ -81,9 +81,9 @@ module tycoon::test_utils {
 
         // 完成地图并注册
         map::finalize_template(&mut template);
-        map::register_template(admin_cap, registry, template);
+        let template_id = map::register_template(admin_cap, registry, template, ctx);
 
-        object::id_from_address(@0x1234)  // 返回测试ID
+        template_id  // 返回实际的模板ID
     }
 
     // 创建复杂的测试地图（8个地块，包含各种类型）
@@ -126,9 +126,9 @@ module tycoon::test_utils {
         map::add_connection(&mut template, 2, 5);
 
         map::finalize_template(&mut template);
-        map::register_template(admin_cap, registry, template);
+        let template_id = map::register_template(admin_cap, registry, template, ctx);
 
-        object::id_from_address(@0x5678)
+        template_id
     }
 
     // ===== 玩家操作辅助函数 =====

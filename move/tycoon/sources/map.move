@@ -681,9 +681,10 @@ public fun finalize_template(template: &mut MapTemplate) {
 public fun register_template<T>(
     _admin_cap: &T,
     registry: &mut MapRegistry,
-    template: MapTemplate
-) {
-    publish_template(registry, template);
+    template: MapTemplate,
+    ctx: &mut TxContext
+): ID {
+    publish_template(registry, template, ctx)
 }
 
 #[test_only]

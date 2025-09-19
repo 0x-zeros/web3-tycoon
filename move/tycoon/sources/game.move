@@ -361,6 +361,9 @@ public entry fun roll_and_step(
     let to_pos = calculate_move_target(template, from_pos, dice, player.dir_pref, dir_intent, use_adj);
 
     // 发出掷骰事件
+    // 注意：当use_adj_traversal=true时，to_pos会等于from_pos
+    // 因为实际路径会在execute_step_movement中通过BFS动态确定
+    // 此时to字段仅表示起始位置，实际移动路径需要监听后续的MoveEvent
     events::emit_roll_event(
         object::uid_to_inner(&game.id),
         player_addr,
@@ -619,7 +622,9 @@ fun rand_1_6(game: &mut Game, clock: &Clock): u8 {
     ((seed % 6) + 1) as u8
 }
 
-// 计算移动目标（简化版）
+// 计算移动目标
+// 注意：当use_adj=true时，返回from作为占位符，实际路径将通过BFS动态确定
+// 这是因为邻接寻路需要在执行时根据实际可达性来决定路径
 fun calculate_move_target(
     template: &MapTemplate,
     from: u64,
@@ -628,7 +633,8 @@ fun calculate_move_target(
     dir_intent: Option<u8>,
     use_adj: bool
 ): u64 {
-    // 如果使用邻接寻路，简单返回from（目标会在execute_step_movement中动态确定）
+    // 如果使用邻接寻路，返回起始位置
+    // 实际目标位置会在execute_step_movement中通过BFS算法动态计算
     if (use_adj) {
         return from
     };

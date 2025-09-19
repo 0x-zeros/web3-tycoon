@@ -63,12 +63,15 @@ public struct EndTurnEvent has copy, drop {
 // ===== Movement Events 移动事件 =====
 
 // 掷骰事件
+// 注意：当游戏配置use_adj_traversal=true时，to字段会等于from字段
+// 这是因为实际目标位置需要通过BFS算法动态计算
+// 实际的移动路径应监听后续的MoveEvent事件
 public struct RollEvent has copy, drop {
     game: ID,
     player: address,
     dice: u8,
     from: u64,
-    to: u64
+    to: u64  // 预期目标位置（use_adj_traversal时为from占位符）
 }
 
 // 移动事件（每步触发）

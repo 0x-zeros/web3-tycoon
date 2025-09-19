@@ -26,7 +26,7 @@ module tycoon::cards_basic_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin使用遥控骰卡
         scenario::next_tx(scenario, utils::admin_addr());
@@ -109,7 +109,7 @@ module tycoon::cards_basic_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin移动经过卡牌格（位置5是卡牌格）
         scenario::next_tx(scenario, utils::admin_addr());
@@ -178,7 +178,7 @@ module tycoon::cards_basic_tests {
         let clock = utils::create_test_clock(scenario);
 
         scenario::return_shared(game);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // 停留在卡牌格
         scenario::next_tx(scenario, utils::admin_addr());
@@ -223,7 +223,7 @@ module tycoon::cards_basic_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin放置路障
         scenario::next_tx(scenario, utils::admin_addr());
@@ -291,7 +291,7 @@ module tycoon::cards_basic_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin使用冻结卡冻结Alice
         scenario::next_tx(scenario, utils::admin_addr());
@@ -355,7 +355,7 @@ module tycoon::cards_basic_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买地产
         scenario::next_tx(scenario, utils::admin_addr());
@@ -420,7 +420,7 @@ module tycoon::cards_basic_tests {
         let clock = utils::create_test_clock(scenario);
 
         scenario::return_shared(game);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);

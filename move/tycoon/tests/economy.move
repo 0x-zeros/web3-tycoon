@@ -29,7 +29,7 @@ module tycoon::economy_tests {
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
 
         // 开始游戏
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Alice的回合 - 移动到地产1
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
@@ -73,7 +73,7 @@ module tycoon::economy_tests {
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买地产
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
@@ -112,7 +112,7 @@ module tycoon::economy_tests {
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买地产1
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
@@ -148,7 +148,7 @@ module tycoon::economy_tests {
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
         scenario::next_tx(scenario, utils::alice());
@@ -179,7 +179,7 @@ module tycoon::economy_tests {
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买并升级地产1到最高级
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
@@ -237,7 +237,7 @@ module tycoon::economy_tests {
             utils::bob(),
             utils::carol()
         ], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // 使Bob和Carol破产
         game::test_trigger_bankruptcy(&mut game, utils::bob(), 10000, option::none());
@@ -268,7 +268,7 @@ module tycoon::economy_tests {
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
         scenario::next_tx(scenario, utils::alice());
@@ -306,7 +306,7 @@ module tycoon::economy_tests {
 
         // 两个玩家加入
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买并升级地产
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
@@ -369,7 +369,7 @@ module tycoon::economy_tests {
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买地产
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
@@ -438,7 +438,7 @@ module tycoon::economy_tests {
             utils::bob(),
             utils::carol()
         ], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买所有地产并升级到最高级
         let cap = utils::mint_turn_cap(&mut game, &clock, scenario);

@@ -27,7 +27,7 @@ module tycoon::movement_npc_tests {
         // 玩家加入并开始游戏
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin的回合 - 放置路障在位置2
         scenario::next_tx(scenario, utils::admin_addr());
@@ -90,7 +90,7 @@ module tycoon::movement_npc_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin放置炸弹在位置3
         scenario::next_tx(scenario, utils::admin_addr());
@@ -154,7 +154,7 @@ module tycoon::movement_npc_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Admin使用狗狗卡放置NPC
         scenario::next_tx(scenario, utils::admin_addr());
@@ -231,7 +231,7 @@ module tycoon::movement_npc_tests {
 
         scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // 设置Admin在医院
         scenario::next_tx(scenario, utils::admin_addr());
@@ -276,7 +276,7 @@ module tycoon::movement_npc_tests {
         let clock = utils::create_test_clock(scenario);
 
         scenario::return_shared(game);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // 放置第一个NPC（路障）
         scenario::next_tx(scenario, utils::admin_addr());
@@ -327,7 +327,7 @@ module tycoon::movement_npc_tests {
         let clock = utils::create_test_clock(scenario);
 
         scenario::return_shared(game);
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);

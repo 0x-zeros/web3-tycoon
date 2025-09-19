@@ -128,7 +128,7 @@ module tycoon::game_basic_tests {
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
 
         // 开始游戏
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -175,6 +175,7 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
+        let clock = utils::create_test_clock(scenario);
 
         // 初始状态应该是ready
         utils::assert_game_status(&game, types::status_ready());
@@ -184,7 +185,7 @@ module tycoon::game_basic_tests {
         utils::join_players(&mut game, vector[utils::alice()], scenario);
 
         // 开始游戏
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -193,6 +194,7 @@ module tycoon::game_basic_tests {
         utils::assert_game_status(&game, types::status_active());
 
         scenario::return_shared(game);
+        clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
 
@@ -207,13 +209,14 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
+        let clock = utils::create_test_clock(scenario);
 
         // Alice加入
         scenario::return_shared(game);
         utils::join_game(&mut game, utils::alice(), scenario);
 
         // 开始游戏
-        utils::start_game(&mut game, scenario);
+        utils::start_game(&mut game, &clock, scenario);
 
         // Bob尝试加入（应该失败）
         scenario::next_tx(scenario, utils::bob());
@@ -222,6 +225,7 @@ module tycoon::game_basic_tests {
         game::join_with_coin(&mut game, coin, scenario::ctx(scenario));
 
         scenario::return_shared(game);
+        clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
 
@@ -237,9 +241,11 @@ module tycoon::game_basic_tests {
         // 不加入额外玩家，直接尝试开始游戏（只有创建者）
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        game::start(&mut game, scenario::ctx(scenario));
+        let clock = utils::create_test_clock(scenario);
+        game::start(&mut game, &clock, scenario::ctx(scenario));
 
         scenario::return_shared(game);
+        clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
 }

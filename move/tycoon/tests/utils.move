@@ -162,10 +162,21 @@ module tycoon::test_utils {
     // 开始游戏
     public fun start_game(
         game: &mut Game,
+        clock: &Clock,
         scenario: &mut Scenario
     ) {
         scenario::next_tx(scenario, admin_addr());
-        game::start(game, scenario::ctx(scenario));
+        game::start(game, clock, scenario::ctx(scenario));
+    }
+
+    // 开始游戏（自动创建clock）
+    public fun start_game_with_clock(
+        game: &mut Game,
+        scenario: &mut Scenario
+    ): Clock {
+        let clock = create_test_clock(scenario);
+        start_game(game, &clock, scenario);
+        clock
     }
 
     // 创建并获取回合令牌
@@ -176,7 +187,11 @@ module tycoon::test_utils {
     ): TurnCap {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
-        game::mint_turncap(game, clock, scenario::ctx(scenario));
+        // 获取玩家的Seat
+        let seat = scenario::take_from_sender<game::Seat>(scenario);
+        game::mint_turncap(game, &seat, clock, scenario::ctx(scenario));
+        // 归还Seat
+        scenario::return_to_sender(scenario, seat);
         scenario::take_from_sender<TurnCap>(scenario)
     }
 

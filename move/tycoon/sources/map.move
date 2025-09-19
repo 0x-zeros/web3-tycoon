@@ -687,12 +687,5 @@ public fun register_template<T>(
     publish_template(registry, template, ctx)
 }
 
-#[test_only]
-public fun set_template_name(template: &mut MapTemplate, name: vector<u8>) {
-    template.name = name;
-}
-
-#[test_only]
-public fun set_template_description(template: &mut MapTemplate, description: vector<u8>) {
-    template.description = description;
-}
+// 注意：MapTemplate没有name和description字段，这些是在创建时通过参数传入的
+// 如果需要修改，应该在MapRegistry中存储相关信息

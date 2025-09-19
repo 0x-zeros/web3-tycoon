@@ -500,8 +500,22 @@ public entry fun buy_property(
     owner_tiles.push_back(tile_id);
 
     // 发送购买事件
+    events::emit_buy_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        price
+    );
 
     // 发送现金变化事件
+    events::emit_cash_change_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        price,
+        true,  // 支出
+        2,     // 购买地产 (reason: 2=买地)
+        tile_id
+    );
 }
 
 // 升级地产
@@ -552,8 +566,24 @@ public entry fun upgrade_property(
     *level_mut = current_level + 1;
 
     // 发送升级事件
+    events::emit_upgrade_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        current_level,       // from_lv
+        current_level + 1,   // to_lv
+        upgrade_cost
+    );
 
     // 发送现金变化事件
+    events::emit_cash_change_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        upgrade_cost,
+        true,  // 支出
+        3,     // 升级地产 (reason: 3=升级)
+        tile_id
+    );
 }
 
 // ===== Internal Functions 内部函数 =====
@@ -897,6 +927,144 @@ fun execute_step_movement_with_collectors(
 }
 
 // 执行逐步移动（核心逻辑）
+fun execute_step_movement(
+    game: &mut Game,
+    player_addr: address,
+    from: u64,
+    to: u64,
+    dice: u8,
+    direction: u8,  // 移动方向
+    registry: &MapRegistry
+) {
+    let template = map::get_template(registry, game.template_id);
+
+    // 检查冻结
+    {
+        let player = table::borrow(&game.players, player_addr);
+        if (option::is_some(&player.frozen_until_turn) &&
+            *option::borrow(&player.frozen_until_turn) >= game.turn) {
+            // 冻结时不移动，触发原地停留事件
+            handle_tile_stop(game, player_addr, from, registry);
+            return
+        };
+    };
+
+    let mut current_pos = from;
+    let mut steps_left = dice;
+    let use_adj = game.config.use_adj_traversal && map::get_use_adj_traversal(template);
+
+    while (steps_left > 0) {
+        // 计算下一格
+        let next_pos = if (use_adj) {
+            // 使用邻接寻路
+            let next_opt = map::next_step_toward(template, current_pos, to, steps_left);
+            if (option::is_some(&next_opt)) {
+                *option::borrow(&next_opt)
+            } else {
+                // 寻路失败，使用默认方向
+                if (direction == types::dir_ccw()) {
+                    map::get_ccw_next(template, current_pos)
+                } else {
+                    map::get_cw_next(template, current_pos)
+                }
+            }
+        } else {
+            // 使用环路导航
+            if (direction == types::dir_ccw()) {
+                map::get_ccw_next(template, current_pos)
+            } else {
+                map::get_cw_next(template, current_pos)
+            }
+        };
+
+        // 发送单步移动事件（如果配置允许）
+        if (game.config.emit_move_step_events) {
+            events::emit_move_step_event(
+                object::uid_to_inner(&game.id),
+                player_addr,
+                current_pos,
+                next_pos,
+                steps_left - 1,
+                direction
+            );
+        };
+
+        // 检查下一格的NPC/机关
+        if (table::contains(&game.npc_on, next_pos)) {
+            let npc = *table::borrow(&game.npc_on, next_pos);
+
+            if (types::is_hospital_npc(npc.kind)) {
+                // 炸弹或狗狗 - 送医院
+                {
+                    let player = table::borrow_mut(&mut game.players, player_addr);
+                    player.pos = next_pos;
+                };
+                send_to_hospital(game, player_addr, registry);
+
+                // 移除NPC（如果是消耗性的）
+                if (npc.consumable) {
+                    table::remove(&mut game.npc_on, next_pos);
+                    game.current_npc_count = game.current_npc_count - 1;
+                };
+
+                events::emit_bomb_or_dog_hit_event(
+                    object::uid_to_inner(&game.id),
+                    player_addr,
+                    next_pos,
+                    npc.kind
+                );
+                return  // 终止移动
+            } else if (npc.kind == types::npc_barrier()) {
+                // 路障 - 停止移动
+                {
+                    let player = table::borrow_mut(&mut game.players, player_addr);
+                    player.pos = next_pos;
+                };
+
+                // 移除路障（如果配置为消耗）
+                if (game.config.barrier_consumed_on_stop) {
+                    table::remove(&mut game.npc_on, next_pos);
+                    game.current_npc_count = game.current_npc_count - 1;
+                };
+
+                events::emit_barrier_stop_event(
+                    object::uid_to_inner(&game.id),
+                    player_addr,
+                    next_pos
+                );
+
+                // 触发停留事件
+                handle_tile_stop(game, player_addr, next_pos, registry);
+                return  // 终止移动
+            }
+        };
+
+        // 正常移动到下一格
+        let prev_pos = current_pos;
+        current_pos = next_pos;
+        {
+            let player = table::borrow_mut(&mut game.players, player_addr);
+            player.pos = current_pos;
+        };
+        steps_left = steps_left - 1;
+
+        // 发出移动事件
+        events::emit_move_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            prev_pos,
+            current_pos
+        );
+
+        // 如果不是最后一步，检查是否触发经过事件
+        if (steps_left > 0) {
+            handle_tile_pass(game, player_addr, current_pos, registry);
+        }
+    };
+
+    // 最后一步 - 触发停留事件
+    handle_tile_stop(game, player_addr, current_pos, registry);
+}
 
 // 处理经过地块
 fun handle_tile_pass(
@@ -916,10 +1084,24 @@ fun handle_tile_pass(
             let (card_kind, count) = cards::draw_card_on_pass(game.rng_nonce);
             let player = table::borrow_mut(&mut game.players, player_addr);
             cards::give_card_to_player(&mut player.cards, card_kind, count);
+
+            events::emit_card_gain_event(
+                object::uid_to_inner(&game.id),
+                player_addr,
+                card_kind,
+                count
+            );
         } else if (tile_kind == types::tile_lottery() && game.config.trigger_lottery_on_pass) {
             // 彩票逻辑（简化）
             // TODO: 实现彩票系统
         };
+
+        events::emit_pass_tile_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            tile_id,
+            tile_kind
+        );
     }
 }
 
@@ -934,6 +1116,13 @@ fun handle_tile_stop(
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
 
+    events::emit_stop_tile_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        tile_kind
+    );
+
     if (tile_kind == types::tile_property()) {
         handle_property_stop(game, player_addr, tile_id, tile);
     } else if (tile_kind == types::tile_hospital()) {
@@ -945,6 +1134,13 @@ fun handle_tile_stop(
         let (card_kind, count) = cards::draw_card_on_stop(game.rng_nonce);
         let player = table::borrow_mut(&mut game.players, player_addr);
         cards::give_card_to_player(&mut player.cards, card_kind, count);
+
+        events::emit_card_gain_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            card_kind,
+            count
+        );
     } else if (tile_kind == types::tile_chance()) {
         // TODO: 实现机会事件
     } else if (tile_kind == types::tile_bonus()) {
@@ -952,6 +1148,15 @@ fun handle_tile_stop(
         let bonus = map::tile_special(tile);
         let player = table::borrow_mut(&mut game.players, player_addr);
         player.cash = player.cash + bonus;
+
+        events::emit_cash_change_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            bonus,
+            false,  // 收入
+            4,  // 奖励
+            tile_id
+        );
     } else if (tile_kind == types::tile_fee()) {
         // 罚款
         let fee = map::tile_special(tile);
@@ -962,6 +1167,15 @@ fun handle_tile_stop(
             player.cash = 0;
             // TODO: 处理破产
         };
+
+        events::emit_cash_change_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            fee,
+            true,  // 支出
+            5,  // 罚款
+            tile_id
+        );
     }
     // 其他地块类型...
 }
@@ -1191,6 +1405,15 @@ fun handle_property_stop(
             if (actual_toll < toll) {
                 handle_bankruptcy(game, player_addr, option::some(owner));
             };
+
+            events::emit_toll_event(
+                object::uid_to_inner(&game.id),
+                player_addr,
+                owner,
+                tile_id,
+                level,
+                actual_toll
+            );
         }
     }
 }
@@ -1199,12 +1422,26 @@ fun handle_property_stop(
 fun handle_hospital_stop(game: &mut Game, player_addr: address, tile_id: u64) {
     let player = table::borrow_mut(&mut game.players, player_addr);
     player.in_hospital_turns = types::default_hospital_turns();
+
+    events::emit_enter_hospital_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        types::default_hospital_turns()
+    );
 }
 
 // 处理监狱停留
 fun handle_prison_stop(game: &mut Game, player_addr: address, tile_id: u64) {
     let player = table::borrow_mut(&mut game.players, player_addr);
     player.in_prison_turns = types::default_prison_turns();
+
+    events::emit_enter_prison_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        types::default_prison_turns()
+    );
 }
 
 // 找最近的医院
@@ -1237,6 +1474,12 @@ fun send_to_hospital(game: &mut Game, player_addr: address, registry: &MapRegist
         let player = table::borrow_mut(&mut game.players, player_addr);
         player.pos = hospital_tile;
         player.in_hospital_turns = types::default_hospital_turns();
+
+        events::emit_send_to_hospital_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            hospital_tile
+        );
     }
 }
 
@@ -1347,17 +1590,37 @@ fun apply_card_effect(
             };
             table::add(&mut game.npc_on, tile_id, npc);
             game.current_npc_count = game.current_npc_count + 1;
+
+            events::emit_npc_spawn_event(
+                object::uid_to_inner(&game.id),
+                tile_id,
+                npc_kind,
+                option::some(player_addr)
+            );
         }
     } else if (kind == types::card_rent_free()) {
         // 免租
         let player = table::borrow_mut(&mut game.players, player_addr);
         player.rent_free_until_turn = option::some(game.turn);
+
+        events::emit_rent_free_applied_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            game.turn
+        );
     } else if (kind == types::card_freeze()) {
         // 冻结
         if (option::is_some(&target)) {
             let target_addr = *option::borrow(&target);
             let target_player = table::borrow_mut(&mut game.players, target_addr);
             target_player.frozen_until_turn = option::some(game.turn);
+
+            events::emit_player_frozen_event(
+                object::uid_to_inner(&game.id),
+                target_addr,
+                player_addr,
+                game.turn
+            );
         }
     } else if (kind == types::card_dog()) {
         // 放置狗狗NPC
@@ -1376,6 +1639,13 @@ fun apply_card_effect(
             };
             table::add(&mut game.npc_on, tile_id, npc);
             game.current_npc_count = game.current_npc_count + 1;
+
+            events::emit_npc_spawn_event(
+                object::uid_to_inner(&game.id),
+                tile_id,
+                types::npc_dog(),
+                option::some(player_addr)
+            );
         }
     } else if (kind == types::card_cleanse()) {
         // 清除NPC
@@ -1387,6 +1657,13 @@ fun apply_card_effect(
                 // 移除NPC
                 let npc = table::remove(&mut game.npc_on, tile_id);
                 game.current_npc_count = game.current_npc_count - 1;
+
+                events::emit_npc_remove_event(
+                    object::uid_to_inner(&game.id),
+                    tile_id,
+                    npc.kind,
+                    option::some(player_addr)
+                );
             }
         }
     }
@@ -1772,6 +2049,17 @@ public fun has_roll_override(
     option::is_some(&player_data.roll_override)
 }
 
+#[test_only]
+public fun execute_step_movement(
+    game: &mut Game,
+    player: address,
+    tile_id: u64,
+    registry: &MapRegistry
+) {
+    // 简化的步骤移动，用于测试
+    let template = map::get_template(registry, game.template_id);
+    handle_pre_move_npc(game, player, tile_id, template);
+}
 
 #[test_only]
 public fun handle_tile_stop_effect(
@@ -1783,7 +2071,7 @@ public fun handle_tile_stop_effect(
     // 处理停留效果
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
-    let tile_kind = map::tile_kind(tile);
+    let tile_kind = map::get_tile_kind(tile);
 
     if (tile_kind == types::tile_property()) {
         // 处理地产过路费
@@ -1792,7 +2080,7 @@ public fun handle_tile_stop_effect(
             if (owner != player) {
                 // 计算并支付过路费
                 let level = *table::borrow(&game.level_of, tile_id);
-                let base_toll = map::tile_base_toll(tile);
+                let base_toll = map::get_tile_toll(tile);
                 // 计算过路费倍数：0级=1.0, 1级=2.0, 2级=3.0, 3级=4.0, 4级=5.0
                 let multiplier = ((level + 1) as u64) * 100;
                 let toll = (base_toll * multiplier) / 100;

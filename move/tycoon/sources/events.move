@@ -60,171 +60,7 @@ public struct EndTurnEvent has copy, drop {
     turn: u64
 }
 
-// ===== Movement Events 移动事件 =====
-
-// 掷骰事件
-// 注意：当游戏配置use_adj_traversal=true时，to字段会等于from字段
-// 这是因为实际目标位置需要通过BFS算法动态计算
-// 实际的移动路径应监听后续的MoveEvent事件
-public struct RollEvent has copy, drop {
-    game: ID,
-    player: address,
-    dice: u8,
-    from: u64,
-    to: u64  // 预期目标位置（use_adj_traversal时为from占位符）
-}
-
-// 移动事件（每步触发）
-public struct MoveEvent has copy, drop {
-    game: ID,
-    player: address,
-    from: u64,
-    to: u64
-}
-
-// 经过地块事件
-public struct PassTileEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64,
-    tile_kind: u8
-}
-
-// 停留地块事件
-public struct StopTileEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64,
-    tile_kind: u8
-}
-
-// 单步移动事件（可选发送）
-public struct MoveStepEvent has copy, drop {
-    game: ID,
-    player: address,
-    from_tile: u64,
-    to_tile: u64,
-    remaining_steps: u8,
-    direction: u8  // 0=CW, 1=CCW
-}
-
-// ===== Property Events 地产事件 =====
-
-// 购买地产事件
-public struct BuyEvent has copy, drop {
-    game: ID,
-    buyer: address,
-    tile_id: u64,
-    price: u64
-}
-
-// 升级地产事件
-public struct UpgradeEvent has copy, drop {
-    game: ID,
-    owner: address,
-    tile_id: u64,
-    from_lv: u8,
-    to_lv: u8,
-    cost: u64
-}
-
-// 支付过路费事件
-public struct TollEvent has copy, drop {
-    game: ID,
-    payer: address,
-    owner: address,
-    tile_id: u64,
-    level: u8,
-    amount: u64
-}
-
-// ===== Card Events 卡牌事件 =====
-
-// 获得卡牌事件
-public struct CardGainEvent has copy, drop {
-    game: ID,
-    player: address,
-    kind: u16,
-    delta: u64  // 获得数量
-}
-
-// 使用卡牌事件
-public struct CardUseEvent has copy, drop {
-    game: ID,
-    player: address,
-    kind: u16,
-    target: option::Option<address>,
-    tile_id: option::Option<u64>
-}
-
-// 卡牌效果应用事件
-public struct CardEffectEvent has copy, drop {
-    game: ID,
-    player: address,
-    kind: u16,
-    effect_type: u8,  // 1=移动控制, 2=放置机关, 3=buff应用
-    details: u64
-}
-
-// ===== NPC Events NPC/机关事件 =====
-
-// NPC生成事件
-public struct NpcSpawnEvent has copy, drop {
-    game: ID,
-    tile_id: u64,
-    kind: u8,
-    by_player: option::Option<address>
-}
-
-// 炸弹/狗狗命中事件
-public struct BombOrDogHitEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64,
-    kind: u8
-}
-
-// 送医院事件
-public struct SendToHospitalEvent has copy, drop {
-    game: ID,
-    player: address,
-    hospital_tile: u64
-}
-
-// 路障阻挡事件
-public struct BarrierStopEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64
-}
-
-// NPC移除事件
-public struct NpcRemovedEvent has copy, drop {
-    game: ID,
-    tile_id: u64,
-    kind: u8,
-    reason: u8  // 1=被触发, 2=过期, 3=被替换
-}
-
-// NPC被清除事件（用于清除卡）
-public struct NpcRemoveEvent has copy, drop {
-    game: ID,
-    tile_id: u64,
-    kind: u8,
-    by_player: option::Option<address>
-}
-
 // ===== Economy Events 经济事件 =====
-
-// 现金变动事件
-public struct CashChangeEvent has copy, drop {
-    game: ID,
-    player: address,
-    amount: u64,  // 金额
-    is_debit: bool,  // true=支出, false=收入
-    reason: u8,   // 1=过路费, 2=买地, 3=升级, 4=奖励, 5=罚款, 6=卡牌效果
-    details: u64
-}
 
 // 破产事件
 public struct BankruptEvent has copy, drop {
@@ -234,102 +70,125 @@ public struct BankruptEvent has copy, drop {
     creditor: option::Option<address>
 }
 
-// ===== Status Events 状态事件 =====
+// ===== Aggregated Event Constants 聚合事件常量 =====
 
-// 玩家冻结事件
-public struct PlayerFrozenEvent has copy, drop {
+// Buff类型常量
+const BUFF_RENT_FREE: u8 = 1;
+const BUFF_FROZEN: u8 = 2;
+const BUFF_MOVE_CTRL: u8 = 3;
+
+// NPC操作常量
+const NPC_ACTION_SPAWN: u8 = 1;
+const NPC_ACTION_REMOVE: u8 = 2;
+const NPC_ACTION_HIT: u8 = 3;
+
+// NPC步骤结果常量
+const NPC_RESULT_NONE: u8 = 0;
+const NPC_RESULT_SEND_HOSPITAL: u8 = 1;
+const NPC_RESULT_BARRIER_STOP: u8 = 2;
+
+// 停留类型常量
+const STOP_NONE: u8 = 0;
+const STOP_PROPERTY_TOLL: u8 = 1;
+const STOP_PROPERTY_NO_RENT: u8 = 2;
+const STOP_HOSPITAL: u8 = 3;
+const STOP_PRISON: u8 = 4;
+const STOP_BONUS: u8 = 5;
+const STOP_FEE: u8 = 6;
+const STOP_CARD_STOP: u8 = 7;
+
+// ===== Aggregated Event Data Types 聚合事件数据类型 =====
+
+// 现金变动项
+public struct CashDelta has copy, drop, store {
+    player: address,
+    is_debit: bool,
+    amount: u64,
+    reason: u8,  // 1=toll, 2=buy, 3=upgrade, 4=bonus, 5=fee, 6=card
+    details: u64
+}
+
+// 卡牌获取项
+public struct CardDrawItem has copy, drop, store {
+    tile_id: u64,
+    kind: u16,
+    count: u64,
+    is_pass: bool
+}
+
+// NPC变更项
+public struct NpcChangeItem has copy, drop, store {
+    tile_id: u64,
+    kind: u8,
+    action: u8,  // NPC_ACTION_*
+    consumed: bool
+}
+
+// Buff变更项
+public struct BuffChangeItem has copy, drop, store {
+    buff_type: u8,  // BUFF_*
+    target: address,
+    until_turn: option::Option<u64>
+}
+
+// NPC步骤事件
+public struct NpcStepEvent has copy, drop, store {
+    tile_id: u64,
+    kind: u8,
+    result: u8,  // NPC_RESULT_*
+    consumed: bool,
+    result_tile: option::Option<u64>
+}
+
+// 停留效果
+public struct StopEffect has copy, drop, store {
+    tile_id: u64,
+    tile_kind: u8,
+    stop_type: u8,  // STOP_*
+    amount: u64,
+    owner: option::Option<address>,
+    level: option::Option<u8>,
+    turns: option::Option<u8>,
+    card_gains: vector<CardDrawItem>
+}
+
+// 步骤效果
+public struct StepEffect has copy, drop, store {
+    step_index: u8,
+    from_tile: u64,
+    to_tile: u64,
+    remaining_steps: u8,
+    pass_draws: vector<CardDrawItem>,
+    npc_event: option::Option<NpcStepEvent>,
+    stop_effect: option::Option<StopEffect>
+}
+
+// 使用卡牌操作聚合事件
+public struct UseCardActionEvent has copy, drop {
     game: ID,
     player: address,
-    frozen_by: address,
-    until_turn: u64
+    turn: u64,
+    kind: u16,
+    target_addr: option::Option<address>,
+    target_tile: option::Option<u64>,
+    npc_changes: vector<NpcChangeItem>,
+    buff_changes: vector<BuffChangeItem>,
+    cash_changes: vector<CashDelta>
 }
 
-// 玩家解冻事件
-public struct PlayerUnfrozenEvent has copy, drop {
+// 掷骰移动操作聚合事件
+public struct RollAndStepActionEvent has copy, drop {
     game: ID,
     player: address,
-    turn: u64
+    turn: u64,
+    dice: u8,
+    dir: u8,
+    from: u64,
+    steps: vector<StepEffect>,
+    cash_changes: vector<CashDelta>,
+    end_pos: u64
 }
 
-// 免租buff应用事件
-public struct RentFreeAppliedEvent has copy, drop {
-    game: ID,
-    player: address,
-    until_turn: u64
-}
-
-// 免租buff到期事件
-public struct RentFreeExpiredEvent has copy, drop {
-    game: ID,
-    player: address,
-    turn: u64
-}
-
-// 入狱事件
-public struct EnterPrisonEvent has copy, drop {
-    game: ID,
-    player: address,
-    prison_tile: u64,
-    turns: u8
-}
-
-// 出狱事件
-public struct LeavePrisonEvent has copy, drop {
-    game: ID,
-    player: address,
-    turn: u64
-}
-
-// 入院事件
-public struct EnterHospitalEvent has copy, drop {
-    game: ID,
-    player: address,
-    hospital_tile: u64,
-    turns: u8
-}
-
-// 出院事件
-public struct LeaveHospitalEvent has copy, drop {
-    game: ID,
-    player: address,
-    turn: u64
-}
-
-// ===== Special Events 特殊事件 =====
-
-// 新闻事件
-public struct NewsEvent has copy, drop {
-    game: ID,
-    news_type: u8,
-    affected_players: vector<address>,
-    effect: u64
-}
-
-// 机会事件
-public struct ChanceEvent has copy, drop {
-    game: ID,
-    player: address,
-    chance_type: u8,
-    outcome: u64
-}
-
-// 彩票事件
-public struct LotteryEvent has copy, drop {
-    game: ID,
-    player: address,
-    ticket_count: u64,
-    win_amount: u64
-}
-
-// ===== Phase Events 阶段事件 =====
-
-// 阶段变更事件
-public struct PhaseChangeEvent has copy, drop {
-    game: ID,
-    from_phase: u8,
-    to_phase: u8,
-    turn: u64
-}
 
 // ===== Emit Functions 事件发射函数 =====
 
@@ -425,299 +284,205 @@ public(package) fun emit_end_turn_event(
     });
 }
 
-public(package) fun emit_roll_event(
-    game_id: ID,
+// ===== Aggregated Event Constructor Functions 聚合事件构造函数 =====
+
+// 构造现金变动项
+public(package) fun make_cash_delta(
     player: address,
-    dice: u8,
-    from: u64,
-    to: u64
-) {
-    event::emit(RollEvent {
-        game: game_id,
+    is_debit: bool,
+    amount: u64,
+    reason: u8,
+    details: u64
+): CashDelta {
+    CashDelta {
         player,
-        dice,
-        from,
-        to
-    });
+        is_debit,
+        amount,
+        reason,
+        details
+    }
 }
 
-public(package) fun emit_move_event(
-    game_id: ID,
-    player: address,
-    from: u64,
-    to: u64
-) {
-    event::emit(MoveEvent {
-        game: game_id,
-        player,
-        from,
-        to
-    });
-}
-
-public(package) fun emit_pass_tile_event(
-    game_id: ID,
-    player: address,
+// 构造卡牌获取项
+public(package) fun make_card_draw_item(
     tile_id: u64,
-    tile_kind: u8
-) {
-    event::emit(PassTileEvent {
-        game: game_id,
-        player,
+    kind: u16,
+    count: u64,
+    is_pass: bool
+): CardDrawItem {
+    CardDrawItem {
         tile_id,
-        tile_kind
-    });
+        kind,
+        count,
+        is_pass
+    }
 }
 
-public(package) fun emit_stop_tile_event(
-    game_id: ID,
-    player: address,
+// 构造NPC变更项
+public(package) fun make_npc_change(
     tile_id: u64,
-    tile_kind: u8
-) {
-    event::emit(StopTileEvent {
-        game: game_id,
-        player,
+    kind: u8,
+    action: u8,
+    consumed: bool
+): NpcChangeItem {
+    NpcChangeItem {
         tile_id,
-        tile_kind
-    });
+        kind,
+        action,
+        consumed
+    }
 }
 
-public(package) fun emit_move_step_event(
-    game_id: ID,
-    player: address,
+// 构造Buff变更项
+public(package) fun make_buff_change(
+    buff_type: u8,
+    target: address,
+    until_turn: option::Option<u64>
+): BuffChangeItem {
+    BuffChangeItem {
+        buff_type,
+        target,
+        until_turn
+    }
+}
+
+// 构造NPC步骤事件
+public(package) fun make_npc_step_event(
+    tile_id: u64,
+    kind: u8,
+    result: u8,
+    consumed: bool,
+    result_tile: option::Option<u64>
+): NpcStepEvent {
+    NpcStepEvent {
+        tile_id,
+        kind,
+        result,
+        consumed,
+        result_tile
+    }
+}
+
+// 构造停留效果
+public(package) fun make_stop_effect(
+    tile_id: u64,
+    tile_kind: u8,
+    stop_type: u8,
+    amount: u64,
+    owner: option::Option<address>,
+    level: option::Option<u8>,
+    turns: option::Option<u8>,
+    card_gains: vector<CardDrawItem>
+): StopEffect {
+    StopEffect {
+        tile_id,
+        tile_kind,
+        stop_type,
+        amount,
+        owner,
+        level,
+        turns,
+        card_gains
+    }
+}
+
+// 构造步骤效果
+public(package) fun make_step_effect(
+    step_index: u8,
     from_tile: u64,
     to_tile: u64,
     remaining_steps: u8,
-    direction: u8
-) {
-    event::emit(MoveStepEvent {
-        game: game_id,
-        player,
+    pass_draws: vector<CardDrawItem>,
+    npc_event: option::Option<NpcStepEvent>,
+    stop_effect: option::Option<StopEffect>
+): StepEffect {
+    StepEffect {
+        step_index,
         from_tile,
         to_tile,
         remaining_steps,
-        direction
-    });
+        pass_draws,
+        npc_event,
+        stop_effect
+    }
 }
 
-public(package) fun emit_buy_event(
-    game_id: ID,
-    buyer: address,
-    tile_id: u64,
-    price: u64
-) {
-    event::emit(BuyEvent {
-        game: game_id,
-        buyer,
-        tile_id,
-        price
-    });
-}
-
-public(package) fun emit_upgrade_event(
-    game_id: ID,
-    owner: address,
-    tile_id: u64,
-    from_lv: u8,
-    to_lv: u8,
-    cost: u64
-) {
-    event::emit(UpgradeEvent {
-        game: game_id,
-        owner,
-        tile_id,
-        from_lv,
-        to_lv,
-        cost
-    });
-}
-
-public(package) fun emit_toll_event(
-    game_id: ID,
-    payer: address,
-    owner: address,
-    tile_id: u64,
-    level: u8,
-    amount: u64
-) {
-    event::emit(TollEvent {
-        game: game_id,
-        payer,
-        owner,
-        tile_id,
-        level,
-        amount
-    });
-}
-
-public(package) fun emit_card_gain_event(
+// 发射使用卡牌聚合事件
+public(package) fun emit_use_card_action_event(
     game_id: ID,
     player: address,
+    turn: u64,
     kind: u16,
-    delta: u64
+    target_addr: option::Option<address>,
+    target_tile: option::Option<u64>,
+    npc_changes: vector<NpcChangeItem>,
+    buff_changes: vector<BuffChangeItem>,
+    cash_changes: vector<CashDelta>
 ) {
-    event::emit(CardGainEvent {
+    event::emit(UseCardActionEvent {
         game: game_id,
         player,
+        turn,
         kind,
-        delta
+        target_addr,
+        target_tile,
+        npc_changes,
+        buff_changes,
+        cash_changes
     });
 }
 
-public(package) fun emit_card_use_event(
+// 发射掷骰移动聚合事件
+public(package) fun emit_roll_and_step_action_event(
     game_id: ID,
     player: address,
-    kind: u16,
-    target: option::Option<address>,
-    tile_id: option::Option<u64>
+    turn: u64,
+    dice: u8,
+    dir: u8,
+    from: u64,
+    steps: vector<StepEffect>,
+    cash_changes: vector<CashDelta>,
+    end_pos: u64
 ) {
-    event::emit(CardUseEvent {
+    event::emit(RollAndStepActionEvent {
         game: game_id,
         player,
-        kind,
-        target,
-        tile_id
+        turn,
+        dice,
+        dir,
+        from,
+        steps,
+        cash_changes,
+        end_pos
     });
 }
 
-public(package) fun emit_npc_spawn_event(
-    game_id: ID,
-    tile_id: u64,
-    kind: u8,
-    by_player: option::Option<address>
-) {
-    event::emit(NpcSpawnEvent {
-        game: game_id,
-        tile_id,
-        kind,
-        by_player
-    });
-}
+// ===== Aggregated Event Constant Getters 聚合事件常量获取函数 =====
 
-public(package) fun emit_npc_remove_event(
-    game_id: ID,
-    tile_id: u64,
-    kind: u8,
-    by_player: option::Option<address>
-) {
-    event::emit(NpcRemoveEvent {
-        game: game_id,
-        tile_id,
-        kind,
-        by_player
-    });
-}
+// Buff类型常量获取函数
+public fun buff_rent_free(): u8 { BUFF_RENT_FREE }
+public fun buff_frozen(): u8 { BUFF_FROZEN }
+public fun buff_move_ctrl(): u8 { BUFF_MOVE_CTRL }
 
-public(package) fun emit_bomb_or_dog_hit_event(
-    game_id: ID,
-    player: address,
-    tile_id: u64,
-    kind: u8
-) {
-    event::emit(BombOrDogHitEvent {
-        game: game_id,
-        player,
-        tile_id,
-        kind
-    });
-}
+// NPC操作常量获取函数
+public fun npc_action_spawn(): u8 { NPC_ACTION_SPAWN }
+public fun npc_action_remove(): u8 { NPC_ACTION_REMOVE }
+public fun npc_action_hit(): u8 { NPC_ACTION_HIT }
 
-public(package) fun emit_send_to_hospital_event(
-    game_id: ID,
-    player: address,
-    hospital_tile: u64
-) {
-    event::emit(SendToHospitalEvent {
-        game: game_id,
-        player,
-        hospital_tile
-    });
-}
+// NPC结果常量获取函数
+public fun npc_result_none(): u8 { NPC_RESULT_NONE }
+public fun npc_result_send_hospital(): u8 { NPC_RESULT_SEND_HOSPITAL }
+public fun npc_result_barrier_stop(): u8 { NPC_RESULT_BARRIER_STOP }
 
-public(package) fun emit_barrier_stop_event(
-    game_id: ID,
-    player: address,
-    tile_id: u64
-) {
-    event::emit(BarrierStopEvent {
-        game: game_id,
-        player,
-        tile_id
-    });
-}
-
-public(package) fun emit_cash_change_event(
-    game_id: ID,
-    player: address,
-    amount: u64,
-    is_debit: bool,
-    reason: u8,
-    details: u64
-) {
-    event::emit(CashChangeEvent {
-        game: game_id,
-        player,
-        amount,
-        is_debit,
-        reason,
-        details
-    });
-}
-
-public(package) fun emit_enter_hospital_event(
-    game_id: ID,
-    player: address,
-    hospital_tile: u64,
-    turns: u8
-) {
-    event::emit(EnterHospitalEvent {
-        game: game_id,
-        player,
-        hospital_tile,
-        turns
-    });
-}
-
-public(package) fun emit_enter_prison_event(
-    game_id: ID,
-    player: address,
-    prison_tile: u64,
-    turns: u8
-) {
-    event::emit(EnterPrisonEvent {
-        game: game_id,
-        player,
-        prison_tile,
-        turns
-    });
-}
-
-public(package) fun emit_rent_free_applied_event(
-    game_id: ID,
-    player: address,
-    until_turn: u64
-) {
-    event::emit(RentFreeAppliedEvent {
-        game: game_id,
-        player,
-        until_turn
-    });
-}
-
-public(package) fun emit_player_frozen_event(
-    game_id: ID,
-    player: address,
-    frozen_by: address,
-    until_turn: u64
-) {
-    event::emit(PlayerFrozenEvent {
-        game: game_id,
-        player,
-        frozen_by,
-        until_turn
-    });
-}
+// 停留类型常量获取函数
+public fun stop_none(): u8 { STOP_NONE }
+public fun stop_property_toll(): u8 { STOP_PROPERTY_TOLL }
+public fun stop_property_no_rent(): u8 { STOP_PROPERTY_NO_RENT }
+public fun stop_hospital(): u8 { STOP_HOSPITAL }
+public fun stop_prison(): u8 { STOP_PRISON }
+public fun stop_bonus(): u8 { STOP_BONUS }
+public fun stop_fee(): u8 { STOP_FEE }
+public fun stop_card_stop(): u8 { STOP_CARD_STOP }
 
 // ===== Constructor Functions 构造函数（保留兼容） =====
 
@@ -739,63 +504,3 @@ public fun new_game_started_event(game: ID, player_count: u8, starting_player: a
     GameStartedEvent { game, player_count, starting_player }
 }
 
-public fun new_roll_event(game: ID, player: address, dice: u8, from: u64, to: u64): RollEvent {
-    RollEvent { game, player, dice, from, to }
-}
-
-public fun new_move_event(game: ID, player: address, from: u64, to: u64): MoveEvent {
-    MoveEvent { game, player, from, to }
-}
-
-public fun new_buy_event(game: ID, buyer: address, tile_id: u64, price: u64): BuyEvent {
-    BuyEvent { game, buyer, tile_id, price }
-}
-
-public fun new_toll_event(
-    game: ID,
-    payer: address,
-    owner: address,
-    tile_id: u64,
-    level: u8,
-    amount: u64
-): TollEvent {
-    TollEvent { game, payer, owner, tile_id, level, amount }
-}
-
-public fun new_card_gain_event(game: ID, player: address, kind: u16, delta: u64): CardGainEvent {
-    CardGainEvent { game, player, kind, delta }
-}
-
-public fun new_card_use_event(
-    game: ID,
-    player: address,
-    kind: u16,
-    target: option::Option<address>,
-    tile_id: option::Option<u64>
-): CardUseEvent {
-    CardUseEvent { game, player, kind, target, tile_id }
-}
-
-public fun new_skip_turn_event(game: ID, player: address, reason: u8): SkipTurnEvent {
-    SkipTurnEvent { game, player, reason }
-}
-
-public fun new_end_turn_event(game: ID, player: address, turn: u64): EndTurnEvent {
-    EndTurnEvent { game, player, turn }
-}
-
-public fun new_npc_spawn_event(game: ID, tile_id: u64, kind: u8, by_player: option::Option<address>): NpcSpawnEvent {
-    NpcSpawnEvent { game, tile_id, kind, by_player }
-}
-
-public fun new_bomb_or_dog_hit_event(game: ID, player: address, tile_id: u64, kind: u8): BombOrDogHitEvent {
-    BombOrDogHitEvent { game, player, tile_id, kind }
-}
-
-public fun new_send_to_hospital_event(game: ID, player: address, hospital_tile: u64): SendToHospitalEvent {
-    SendToHospitalEvent { game, player, hospital_tile }
-}
-
-public fun new_barrier_stop_event(game: ID, player: address, tile_id: u64): BarrierStopEvent {
-    BarrierStopEvent { game, player, tile_id }
-}

@@ -635,9 +635,8 @@ public fun create_template(
     height: u16,
     ctx: &mut TxContext
 ): MapTemplate {
-    let mut template = new_map_template(1, 1, width, height, ctx);
-    set_template_name(&mut template, name);
-    set_template_description(&mut template, description);
+    let template = new_map_template(1, 1, width, height, ctx);
+    // name和description仅用于创建，不存储在模板中
     template
 }
 

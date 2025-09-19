@@ -58,7 +58,7 @@ module tycoon::test_utils {
         admin_cap: &AdminCap,
         registry: &mut MapRegistry,
         ctx: &mut TxContext
-    ): ID {
+    ): u64 {
         let mut template = map::create_template(
             b"Simple Test Map",
             b"4-tile ring map",
@@ -91,7 +91,7 @@ module tycoon::test_utils {
         admin_cap: &AdminCap,
         registry: &mut MapRegistry,
         ctx: &mut TxContext
-    ): ID {
+    ): u64 {
         let mut template = map::create_template(
             b"Complex Test Map",
             b"8-tile map with various types",

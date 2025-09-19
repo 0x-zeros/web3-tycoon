@@ -1,5 +1,6 @@
 module tycoon::map;
 
+use std::option::{Self, Option};
 use sui::table::{Self, Table};
 use tycoon::types;
 
@@ -31,7 +32,8 @@ public struct MapTemplate has store {
     prison_ids: vector<u64>,
     shop_ids: vector<u64>,
     news_ids: vector<u64>,
-    digest: vector<u8>            // 模板摘要哈希
+    digest: vector<u8>,           // 模板摘要哈希
+    use_adj_traversal: bool       // 是否需要邻接寻路（复杂地图用）
 }
 
 // ===== MapRegistry 地图注册表 =====
@@ -129,7 +131,8 @@ public fun new_map_template(
         prison_ids: vector::empty(),
         shop_ids: vector::empty(),
         news_ids: vector::empty(),
-        digest: vector::empty()
+        digest: vector::empty(),
+        use_adj_traversal: false  // 默认不使用邻接寻路
     }
 }
 
@@ -220,6 +223,11 @@ public fun set_template_digest(template: &mut MapTemplate, digest: vector<u8>) {
     template.digest = digest;
 }
 
+// 设置是否使用邻接寻路
+public fun set_use_adj_traversal(template: &mut MapTemplate, use_adj: bool) {
+    template.use_adj_traversal = use_adj;
+}
+
 // ===== Template Query Functions 模板查询函数 =====
 
 // 获取地块信息
@@ -304,6 +312,11 @@ public fun get_template_digest(template: &MapTemplate): vector<u8> {
     template.digest
 }
 
+// 获取是否使用邻接寻路
+public fun get_use_adj_traversal(template: &MapTemplate): bool {
+    template.use_adj_traversal
+}
+
 // ===== TileStatic Accessors 地块访问器 =====
 public fun tile_x(tile: &TileStatic): u16 { tile.x }
 public fun tile_y(tile: &TileStatic): u16 { tile.y }
@@ -312,6 +325,240 @@ public fun tile_size(tile: &TileStatic): u8 { tile.size }
 public fun tile_price(tile: &TileStatic): u64 { tile.price }
 public fun tile_base_toll(tile: &TileStatic): u64 { tile.base_toll }
 public fun tile_special(tile: &TileStatic): u64 { tile.special }
+
+// ===== Adjacency Pathfinding Functions 邻接寻路函数 =====
+
+// 判断是否可以在k步内到达
+public fun can_reach_in_k_steps(
+    template: &MapTemplate,
+    from: u64,
+    to: u64,
+    k: u8
+): bool {
+    if (from == to) return true;
+    if (k == 0) return false;
+
+    // 如果不使用邻接寻路，使用环路计算
+    if (!template.use_adj_traversal) {
+        return can_reach_via_ring(template, from, to, k)
+    };
+
+    // 使用BFS进行邻接寻路
+    // 使用三个并行数组模拟BFSNode
+    let mut visited = vector::empty<u64>();
+    let mut queue_tiles = vector::empty<u64>();
+    let mut queue_depths = vector::empty<u8>();
+
+    // 初始化队列
+    queue_tiles.push_back(from);
+    queue_depths.push_back(0);
+    visited.push_back(from);
+
+    // BFS搜索
+    while (!queue_tiles.is_empty()) {
+        let tile_id = queue_tiles.remove(0);
+        let depth = queue_depths.remove(0);
+
+        if (tile_id == to) {
+            return true
+        };
+
+        if (depth >= k) {
+            continue
+        };
+
+        // 获取邻居
+        if (table::contains(&template.adj, tile_id)) {
+            let neighbors = table::borrow(&template.adj, tile_id);
+            let mut i = 0;
+            while (i < neighbors.length()) {
+                let neighbor = *neighbors.borrow(i);
+                if (!vector::contains(&visited, &neighbor)) {
+                    visited.push_back(neighbor);
+                    queue_tiles.push_back(neighbor);
+                    queue_depths.push_back(depth + 1);
+                };
+                i = i + 1;
+            };
+        };
+    };
+
+    false
+}
+
+// 获取朝目标移动的下一步
+public fun next_step_toward(
+    template: &MapTemplate,
+    from: u64,
+    to: u64,
+    k: u8
+): Option<u64> {
+    if (from == to) return option::none();
+
+    // 如果不使用邻接寻路，使用环路导航
+    if (!template.use_adj_traversal) {
+        return next_step_via_ring(template, from, to)
+    };
+
+    // 使用BFS寻找路径
+    // 使用并行数组代替结构体
+    let mut visited = vector::empty<u64>();
+    let mut queue_tiles = vector::empty<u64>();
+    let mut queue_depths = vector::empty<u8>();
+    let mut queue_parents = vector::empty<Option<u64>>();
+
+    queue_tiles.push_back(from);
+    queue_depths.push_back(0);
+    queue_parents.push_back(option::none());
+    visited.push_back(from);
+
+    while (!queue_tiles.is_empty()) {
+        let tile_id = queue_tiles.remove(0);
+        let depth = queue_depths.remove(0);
+        let parent = queue_parents.remove(0);
+
+        if (tile_id == to) {
+            // 回溯找到第一步
+            if (option::is_some(&parent) && *option::borrow(&parent) == from) {
+                // 直接相邻
+                return option::some(tile_id)
+            };
+            // 需要继续寻找第一步（简化处理）
+            return option::none()
+        };
+
+        if (depth >= k) {
+            continue
+        };
+
+        // 获取邻居
+        if (table::contains(&template.adj, tile_id)) {
+            let neighbors = table::borrow(&template.adj, tile_id);
+            let mut i = 0;
+            while (i < neighbors.length()) {
+                let neighbor = *neighbors.borrow(i);
+                if (!vector::contains(&visited, &neighbor)) {
+                    visited.push_back(neighbor);
+                    queue_tiles.push_back(neighbor);
+                    queue_depths.push_back(depth + 1);
+
+                    // 如果是第一层，记录可以作为第一步
+                    if (depth == 0) {
+                        queue_parents.push_back(option::some(neighbor));
+                    } else {
+                        // 传递第一步信息
+                        queue_parents.push_back(parent);
+                    }
+                };
+                i = i + 1;
+            };
+        };
+    };
+
+    option::none()
+}
+
+// 通过环路判断可达性
+fun can_reach_via_ring(
+    template: &MapTemplate,
+    from: u64,
+    to: u64,
+    k: u8
+): bool {
+    // 检查是否在同一环路
+    if (!table::contains(&template.ring_id, from) ||
+        !table::contains(&template.ring_id, to)) {
+        return false
+    };
+
+    let from_ring = *table::borrow(&template.ring_id, from);
+    let to_ring = *table::borrow(&template.ring_id, to);
+
+    if (from_ring != to_ring) {
+        // 不同环路，需要通过邻接判断
+        return false
+    };
+
+    // 同一环路，计算距离
+    let from_idx = *table::borrow(&template.ring_idx, from);
+    let to_idx = *table::borrow(&template.ring_idx, to);
+
+    // 计算顺时针和逆时针距离
+    let ring_size = get_ring_size(template, from_ring);
+    let cw_dist = if (to_idx >= from_idx) {
+        to_idx - from_idx
+    } else {
+        ring_size - from_idx + to_idx
+    };
+
+    let ccw_dist = if (from_idx >= to_idx) {
+        from_idx - to_idx
+    } else {
+        ring_size - to_idx + from_idx
+    };
+
+    // 返回最短距离是否在k步内
+    (cw_dist as u8) <= k || (ccw_dist as u8) <= k
+}
+
+// 通过环路获取下一步
+fun next_step_via_ring(
+    template: &MapTemplate,
+    from: u64,
+    to: u64
+): Option<u64> {
+    // 检查是否在同一环路
+    if (!table::contains(&template.ring_id, from) ||
+        !table::contains(&template.ring_id, to)) {
+        return option::none()
+    };
+
+    let from_ring = *table::borrow(&template.ring_id, from);
+    let to_ring = *table::borrow(&template.ring_id, to);
+
+    if (from_ring != to_ring) {
+        return option::none()
+    };
+
+    // 同一环路，计算最短方向
+    let from_idx = *table::borrow(&template.ring_idx, from);
+    let to_idx = *table::borrow(&template.ring_idx, to);
+
+    let ring_size = get_ring_size(template, from_ring);
+    let cw_dist = if (to_idx >= from_idx) {
+        to_idx - from_idx
+    } else {
+        ring_size - from_idx + to_idx
+    };
+
+    let ccw_dist = if (from_idx >= to_idx) {
+        from_idx - to_idx
+    } else {
+        ring_size - to_idx + from_idx
+    };
+
+    // 选择较短的方向
+    if (cw_dist <= ccw_dist) {
+        option::some(*table::borrow(&template.cw_next, from))
+    } else {
+        option::some(*table::borrow(&template.ccw_next, from))
+    }
+}
+
+// 获取环路大小（辅助函数）
+fun get_ring_size(template: &MapTemplate, ring_id: u16): u32 {
+    // 简化实现：遍历计算环路中的地块数
+    let mut count = 0u32;
+    let mut i = 0u64;
+    while (i < template.tile_count) {
+        if (table::contains(&template.ring_id, i) &&
+            *table::borrow(&template.ring_id, i) == ring_id) {
+            count = count + 1;
+        };
+        i = i + 1;
+    };
+    count
+}
 
 // ===== Test Helper Functions 测试辅助函数 =====
 

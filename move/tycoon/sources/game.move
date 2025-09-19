@@ -17,7 +17,11 @@ public struct Config has store, copy, drop {
     max_turns: Option<u64>,
     bomb_to_hospital: bool,
     dog_to_hospital: bool,
-    barrier_consumed_on_stop: bool
+    barrier_consumed_on_stop: bool,
+    // 移动相关配置
+    allow_reverse: bool,              // 是否允许逆时针移动
+    emit_move_step_events: bool,      // 是否发送逐步移动事件
+    use_adj_traversal: bool           // 是否使用邻接寻路
 }
 
 // ===== Player 玩家状态 =====
@@ -105,7 +109,10 @@ public entry fun create_game(
         max_turns: option::some(types::default_max_turns()),
         bomb_to_hospital: true,
         dog_to_hospital: true,
-        barrier_consumed_on_stop: true
+        barrier_consumed_on_stop: true,
+        allow_reverse: true,              // 默认允许双向移动
+        emit_move_step_events: true,      // 默认发送移动事件
+        use_adj_traversal: false          // 默认使用环路寻路
     };
 
     // 创建游戏对象
@@ -323,9 +330,29 @@ public entry fun roll_and_step(
     let player = table::borrow_mut(&mut game.players, player_addr);
     let from_pos = player.pos;
 
-    // 计算目标位置（简化版，实际需要逐步移动）
+    // 计算目标位置和方向
     let template = map::get_template(registry, game.template_id);
-    let to_pos = calculate_move_target(template, from_pos, dice, player.dir_pref, dir_intent);
+    let use_adj = game.config.use_adj_traversal && map::get_use_adj_traversal(template);
+
+    // 确定移动方向
+    let direction = if (option::is_some(&dir_intent)) {
+        let intent = *option::borrow(&dir_intent);
+        // 检查是否允许逆时针
+        if (!game.config.allow_reverse && intent == types::dir_ccw()) {
+            types::dir_cw()  // 强制顺时针
+        } else {
+            intent
+        }
+    } else {
+        // 使用玩家偏好方向
+        if (!game.config.allow_reverse && player.dir_pref == types::dir_ccw()) {
+            types::dir_cw()  // 强制顺时针
+        } else {
+            player.dir_pref
+        }
+    };
+
+    let to_pos = calculate_move_target(template, from_pos, dice, player.dir_pref, dir_intent, use_adj);
 
     // 发出掷骰事件
     events::emit_roll_event(
@@ -337,7 +364,7 @@ public entry fun roll_and_step(
     );
 
     // 执行逐步移动
-    execute_step_movement(game, player_addr, from_pos, to_pos, dice, registry);
+    execute_step_movement(game, player_addr, from_pos, to_pos, dice, direction, registry);
 
     // 清理回合状态
     clean_turn_state(game, player_addr);
@@ -459,8 +486,14 @@ fun calculate_move_target(
     from: u64,
     steps: u8,
     dir_pref: u8,
-    dir_intent: Option<u8>
+    dir_intent: Option<u8>,
+    use_adj: bool
 ): u64 {
+    // 如果使用邻接寻路，简单返回from（目标会在execute_step_movement中动态确定）
+    if (use_adj) {
+        return from
+    };
+
     let mut pos = from;
     let mut i = 0;
 
@@ -491,6 +524,7 @@ fun execute_step_movement(
     from: u64,
     to: u64,
     dice: u8,
+    direction: u8,  // 移动方向
     registry: &MapRegistry
 ) {
     let template = map::get_template(registry, game.template_id);
@@ -508,10 +542,43 @@ fun execute_step_movement(
 
     let mut current_pos = from;
     let mut steps_left = dice;
+    let use_adj = game.config.use_adj_traversal && map::get_use_adj_traversal(template);
 
     while (steps_left > 0) {
         // 计算下一格
-        let next_pos = map::get_cw_next(template, current_pos);
+        let next_pos = if (use_adj) {
+            // 使用邻接寻路
+            let next_opt = map::next_step_toward(template, current_pos, to, steps_left);
+            if (option::is_some(&next_opt)) {
+                *option::borrow(&next_opt)
+            } else {
+                // 寻路失败，使用默认方向
+                if (direction == types::dir_ccw()) {
+                    map::get_ccw_next(template, current_pos)
+                } else {
+                    map::get_cw_next(template, current_pos)
+                }
+            }
+        } else {
+            // 使用环路导航
+            if (direction == types::dir_ccw()) {
+                map::get_ccw_next(template, current_pos)
+            } else {
+                map::get_cw_next(template, current_pos)
+            }
+        };
+
+        // 发送单步移动事件（如果配置允许）
+        if (game.config.emit_move_step_events) {
+            events::emit_move_step_event(
+                object::uid_to_inner(&game.id),
+                player_addr,
+                current_pos,
+                next_pos,
+                steps_left - 1,
+                direction
+            );
+        };
 
         // 检查下一格的NPC/机关
         if (table::contains(&game.npc_on, next_pos)) {
@@ -564,6 +631,7 @@ fun execute_step_movement(
         };
 
         // 正常移动到下一格
+        let prev_pos = current_pos;
         current_pos = next_pos;
         {
             let player = table::borrow_mut(&mut game.players, player_addr);
@@ -575,7 +643,7 @@ fun execute_step_movement(
         events::emit_move_event(
             object::uid_to_inner(&game.id),
             player_addr,
-            if (steps_left == dice - 1) { from } else { current_pos - 1 },
+            prev_pos,
             current_pos
         );
 

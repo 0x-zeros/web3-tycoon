@@ -95,6 +95,16 @@ public struct StopTileEvent has copy, drop {
     tile_kind: u8
 }
 
+// 单步移动事件（可选发送）
+public struct MoveStepEvent has copy, drop {
+    game: ID,
+    player: address,
+    from_tile: u64,
+    to_tile: u64,
+    remaining_steps: u8,
+    direction: u8  // 0=CW, 1=CCW
+}
+
 // ===== Property Events 地产事件 =====
 
 // 购买地产事件
@@ -445,6 +455,24 @@ public(package) fun emit_stop_tile_event(
         player,
         tile_id,
         tile_kind
+    });
+}
+
+public(package) fun emit_move_step_event(
+    game_id: ID,
+    player: address,
+    from_tile: u64,
+    to_tile: u64,
+    remaining_steps: u8,
+    direction: u8
+) {
+    event::emit(MoveStepEvent {
+        game: game_id,
+        player,
+        from_tile,
+        to_tile,
+        remaining_steps,
+        direction
     });
 }
 

@@ -1,6 +1,8 @@
 module tycoon::events;
 
 use std::option;
+use sui::event;
+use sui::object::ID;
 
 // ===== Game Events 游戏事件 =====
 
@@ -30,7 +32,7 @@ public struct GameStartedEvent has copy, drop {
 // 游戏结束事件
 public struct GameEndedEvent has copy, drop {
     game: ID,
-    winner: Option<address>,
+    winner: option::Option<address>,
     turn: u64,
     reason: u8  // 0=正常结束, 1=达到最大回合数, 2=只剩一个玩家
 }
@@ -138,8 +140,8 @@ public struct CardUseEvent has copy, drop {
     game: ID,
     player: address,
     kind: u16,
-    target: Option<address>,
-    tile_id: Option<u64>
+    target: option::Option<address>,
+    tile_id: option::Option<u64>
 }
 
 // 卡牌效果应用事件
@@ -158,7 +160,7 @@ public struct NpcSpawnEvent has copy, drop {
     game: ID,
     tile_id: u64,
     kind: u8,
-    by_player: Option<address>
+    by_player: option::Option<address>
 }
 
 // 炸弹/狗狗命中事件
@@ -208,7 +210,7 @@ public struct BankruptEvent has copy, drop {
     game: ID,
     player: address,
     debt: u64,
-    creditor: Option<address>
+    creditor: option::Option<address>
 }
 
 // ===== Status Events 状态事件 =====
@@ -308,7 +310,349 @@ public struct PhaseChangeEvent has copy, drop {
     turn: u64
 }
 
-// ===== Constructor Functions 构造函数 =====
+// ===== Emit Functions 事件发射函数 =====
+
+public(package) fun emit_game_created_event(
+    game_id: ID,
+    creator: address,
+    template_id: u64,
+    max_players: u8,
+    created_at_ms: u64
+) {
+    event::emit(GameCreatedEvent {
+        game: game_id,
+        creator,
+        template_id,
+        max_players,
+        created_at_ms
+    });
+}
+
+public(package) fun emit_player_joined_event(
+    game_id: ID,
+    player: address,
+    player_index: u8
+) {
+    event::emit(PlayerJoinedEvent {
+        game: game_id,
+        player,
+        player_index
+    });
+}
+
+public(package) fun emit_game_started_event(
+    game_id: ID,
+    player_count: u8,
+    starting_player: address
+) {
+    event::emit(GameStartedEvent {
+        game: game_id,
+        player_count,
+        starting_player
+    });
+}
+
+public(package) fun emit_game_ended_event(
+    game_id: ID,
+    winner: option::Option<address>,
+    turn: u64,
+    reason: u8
+) {
+    event::emit(GameEndedEvent {
+        game: game_id,
+        winner,
+        turn,
+        reason
+    });
+}
+
+public(package) fun emit_skip_turn_event(
+    game_id: ID,
+    player: address,
+    reason: u8
+) {
+    event::emit(SkipTurnEvent {
+        game: game_id,
+        player,
+        reason
+    });
+}
+
+public(package) fun emit_end_turn_event(
+    game_id: ID,
+    player: address,
+    turn: u64
+) {
+    event::emit(EndTurnEvent {
+        game: game_id,
+        player,
+        turn
+    });
+}
+
+public(package) fun emit_roll_event(
+    game_id: ID,
+    player: address,
+    dice: u8,
+    from: u64,
+    to: u64
+) {
+    event::emit(RollEvent {
+        game: game_id,
+        player,
+        dice,
+        from,
+        to
+    });
+}
+
+public(package) fun emit_move_event(
+    game_id: ID,
+    player: address,
+    from: u64,
+    to: u64
+) {
+    event::emit(MoveEvent {
+        game: game_id,
+        player,
+        from,
+        to
+    });
+}
+
+public(package) fun emit_pass_tile_event(
+    game_id: ID,
+    player: address,
+    tile_id: u64,
+    tile_kind: u8
+) {
+    event::emit(PassTileEvent {
+        game: game_id,
+        player,
+        tile_id,
+        tile_kind
+    });
+}
+
+public(package) fun emit_stop_tile_event(
+    game_id: ID,
+    player: address,
+    tile_id: u64,
+    tile_kind: u8
+) {
+    event::emit(StopTileEvent {
+        game: game_id,
+        player,
+        tile_id,
+        tile_kind
+    });
+}
+
+public(package) fun emit_buy_event(
+    game_id: ID,
+    buyer: address,
+    tile_id: u64,
+    price: u64
+) {
+    event::emit(BuyEvent {
+        game: game_id,
+        buyer,
+        tile_id,
+        price
+    });
+}
+
+public(package) fun emit_upgrade_event(
+    game_id: ID,
+    owner: address,
+    tile_id: u64,
+    from_lv: u8,
+    to_lv: u8,
+    cost: u64
+) {
+    event::emit(UpgradeEvent {
+        game: game_id,
+        owner,
+        tile_id,
+        from_lv,
+        to_lv,
+        cost
+    });
+}
+
+public(package) fun emit_toll_event(
+    game_id: ID,
+    payer: address,
+    owner: address,
+    tile_id: u64,
+    level: u8,
+    amount: u64
+) {
+    event::emit(TollEvent {
+        game: game_id,
+        payer,
+        owner,
+        tile_id,
+        level,
+        amount
+    });
+}
+
+public(package) fun emit_card_gain_event(
+    game_id: ID,
+    player: address,
+    kind: u16,
+    delta: u64
+) {
+    event::emit(CardGainEvent {
+        game: game_id,
+        player,
+        kind,
+        delta
+    });
+}
+
+public(package) fun emit_card_use_event(
+    game_id: ID,
+    player: address,
+    kind: u16,
+    target: option::Option<address>,
+    tile_id: option::Option<u64>
+) {
+    event::emit(CardUseEvent {
+        game: game_id,
+        player,
+        kind,
+        target,
+        tile_id
+    });
+}
+
+public(package) fun emit_npc_spawn_event(
+    game_id: ID,
+    tile_id: u64,
+    kind: u8,
+    by_player: option::Option<address>
+) {
+    event::emit(NpcSpawnEvent {
+        game: game_id,
+        tile_id,
+        kind,
+        by_player
+    });
+}
+
+public(package) fun emit_bomb_or_dog_hit_event(
+    game_id: ID,
+    player: address,
+    tile_id: u64,
+    kind: u8
+) {
+    event::emit(BombOrDogHitEvent {
+        game: game_id,
+        player,
+        tile_id,
+        kind
+    });
+}
+
+public(package) fun emit_send_to_hospital_event(
+    game_id: ID,
+    player: address,
+    hospital_tile: u64
+) {
+    event::emit(SendToHospitalEvent {
+        game: game_id,
+        player,
+        hospital_tile
+    });
+}
+
+public(package) fun emit_barrier_stop_event(
+    game_id: ID,
+    player: address,
+    tile_id: u64
+) {
+    event::emit(BarrierStopEvent {
+        game: game_id,
+        player,
+        tile_id
+    });
+}
+
+public(package) fun emit_cash_change_event(
+    game_id: ID,
+    player: address,
+    amount: u64,
+    is_debit: bool,
+    reason: u8,
+    details: u64
+) {
+    event::emit(CashChangeEvent {
+        game: game_id,
+        player,
+        amount,
+        is_debit,
+        reason,
+        details
+    });
+}
+
+public(package) fun emit_enter_hospital_event(
+    game_id: ID,
+    player: address,
+    hospital_tile: u64,
+    turns: u8
+) {
+    event::emit(EnterHospitalEvent {
+        game: game_id,
+        player,
+        hospital_tile,
+        turns
+    });
+}
+
+public(package) fun emit_enter_prison_event(
+    game_id: ID,
+    player: address,
+    prison_tile: u64,
+    turns: u8
+) {
+    event::emit(EnterPrisonEvent {
+        game: game_id,
+        player,
+        prison_tile,
+        turns
+    });
+}
+
+public(package) fun emit_rent_free_applied_event(
+    game_id: ID,
+    player: address,
+    until_turn: u64
+) {
+    event::emit(RentFreeAppliedEvent {
+        game: game_id,
+        player,
+        until_turn
+    });
+}
+
+public(package) fun emit_player_frozen_event(
+    game_id: ID,
+    player: address,
+    frozen_by: address,
+    until_turn: u64
+) {
+    event::emit(PlayerFrozenEvent {
+        game: game_id,
+        player,
+        frozen_by,
+        until_turn
+    });
+}
+
+// ===== Constructor Functions 构造函数（保留兼容） =====
 
 public fun new_game_created_event(
     game: ID,
@@ -359,8 +703,8 @@ public fun new_card_use_event(
     game: ID,
     player: address,
     kind: u16,
-    target: Option<address>,
-    tile_id: Option<u64>
+    target: option::Option<address>,
+    tile_id: option::Option<u64>
 ): CardUseEvent {
     CardUseEvent { game, player, kind, target, tile_id }
 }
@@ -373,7 +717,7 @@ public fun new_end_turn_event(game: ID, player: address, turn: u64): EndTurnEven
     EndTurnEvent { game, player, turn }
 }
 
-public fun new_npc_spawn_event(game: ID, tile_id: u64, kind: u8, by_player: Option<address>): NpcSpawnEvent {
+public fun new_npc_spawn_event(game: ID, tile_id: u64, kind: u8, by_player: option::Option<address>): NpcSpawnEvent {
     NpcSpawnEvent { game, tile_id, kind, by_player }
 }
 

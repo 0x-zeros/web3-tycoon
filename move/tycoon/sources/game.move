@@ -2,184 +2,11 @@ module tycoon::game;
 
 use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
-use sui::event;
 
 use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
 use tycoon::cards::{Self, CardCatalog};
-
-// ===== Events 事件定义 =====
-// 游戏创建事件
-public struct GameCreatedEvent has copy, drop {
-    game: ID,
-    creator: address,
-    template_id: u64,
-    max_players: u8,
-    created_at_ms: u64
-}
-
-// 玩家加入事件
-public struct PlayerJoinedEvent has copy, drop {
-    game: ID,
-    player: address,
-    player_index: u8
-}
-
-// 游戏开始事件
-public struct GameStartedEvent has copy, drop {
-    game: ID,
-    player_count: u8,
-    starting_player: address
-}
-
-// 跳过回合事件
-public struct SkipTurnEvent has copy, drop {
-    game: ID,
-    player: address,
-    reason: u8
-}
-
-// 回合结束事件
-public struct EndTurnEvent has copy, drop {
-    game: ID,
-    player: address,
-    turn: u64
-}
-
-// 掷骰事件
-public struct RollEvent has copy, drop {
-    game: ID,
-    player: address,
-    dice: u8,
-    from: u64,
-    to: u64
-}
-
-// 移动事件
-public struct MoveEvent has copy, drop {
-    game: ID,
-    player: address,
-    from: u64,
-    to: u64
-}
-
-// 卡牌使用事件
-public struct CardUseEvent has copy, drop {
-    game: ID,
-    player: address,
-    kind: u16,
-    target: option::Option<address>,
-    tile_id: option::Option<u64>
-}
-
-// 获得卡牌事件
-public struct CardGainEvent has copy, drop {
-    game: ID,
-    player: address,
-    kind: u16,
-    delta: u64
-}
-
-// 支付过路费事件
-public struct TollEvent has copy, drop {
-    game: ID,
-    payer: address,
-    owner: address,
-    tile_id: u64,
-    level: u8,
-    amount: u64
-}
-
-// 送医院事件
-public struct SendToHospitalEvent has copy, drop {
-    game: ID,
-    player: address,
-    hospital_tile: u64
-}
-
-// 炸弹/狗狗命中事件
-public struct BombOrDogHitEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64,
-    kind: u8
-}
-
-// 路障阻挡事件
-public struct BarrierStopEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64
-}
-
-// NPC生成事件
-public struct NpcSpawnEvent has copy, drop {
-    game: ID,
-    tile_id: u64,
-    kind: u8,
-    by_player: option::Option<address>
-}
-
-// 现金变动事件
-public struct CashChangeEvent has copy, drop {
-    game: ID,
-    player: address,
-    amount: u64,
-    is_debit: bool,
-    reason: u8,
-    details: u64
-}
-
-// 地块事件
-public struct PassTileEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64,
-    tile_kind: u8
-}
-
-public struct StopTileEvent has copy, drop {
-    game: ID,
-    player: address,
-    tile_id: u64,
-    tile_kind: u8
-}
-
-// 状态事件
-public struct EnterHospitalEvent has copy, drop {
-    game: ID,
-    player: address,
-    hospital_tile: u64,
-    turns: u8
-}
-
-public struct EnterPrisonEvent has copy, drop {
-    game: ID,
-    player: address,
-    prison_tile: u64,
-    turns: u8
-}
-
-public struct RentFreeAppliedEvent has copy, drop {
-    game: ID,
-    player: address,
-    until_turn: u64
-}
-
-public struct PlayerFrozenEvent has copy, drop {
-    game: ID,
-    player: address,
-    frozen_by: address,
-    until_turn: u64
-}
-
-// 游戏结束事件
-public struct GameEndedEvent has copy, drop {
-    game: ID,
-    winner: option::Option<address>,
-    turn: u64,
-    reason: u8
-}
+use tycoon::events;
 
 // ===== Config 游戏配置 =====
 public struct Config has store, copy, drop {
@@ -312,13 +139,13 @@ public entry fun create_game(
     game.join_order.push_back(creator);
 
     // 发出游戏创建事件
-    event::emit(GameCreatedEvent {
-        game: game_id_copy,
+    events::emit_game_created_event(
+        game_id_copy,
         creator,
         template_id,
-        max_players: config.max_players,
-        created_at_ms: 0
-    });
+        config.max_players,
+        0
+    );
 
     // 创建座位凭证
     let seat = Seat {
@@ -350,11 +177,11 @@ public entry fun join(
     game.join_order.push_back(player_addr);
 
     // 发出加入事件
-    event::emit(PlayerJoinedEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
-        player_index: (game.join_order.length() - 1) as u8
-    });
+    events::emit_player_joined_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        (game.join_order.length() - 1) as u8
+    );
 
     // 创建座位凭证
     let seat = Seat {
@@ -389,11 +216,11 @@ public entry fun start(
     let starting_player = *game.join_order.borrow(0);
 
     // 发出开始事件
-    event::emit(GameStartedEvent {
-        game: object::uid_to_inner(&game.id),
-        player_count: game.join_order.length() as u8,
+    events::emit_game_started_event(
+        object::uid_to_inner(&game.id),
+        game.join_order.length() as u8,
         starting_player
-    });
+    );
 }
 
 // 铸造回合令牌
@@ -457,14 +284,13 @@ public entry fun use_card(
     apply_card_effect(game, player_addr, kind, target, tile, registry);
 
     // 发出使用卡牌事件
-    event::emit(CardUseEvent {
-        game:
+    events::emit_card_use_event(
         object::uid_to_inner(&game.id),
-        player: player_addr,
+        player_addr,
         kind,
         target,
-        tile_id: tile
-    });
+        tile
+    );
 }
 
 // 掷骰并移动
@@ -502,13 +328,13 @@ public entry fun roll_and_step(
     let to_pos = calculate_move_target(template, from_pos, dice, player.dir_pref, dir_intent);
 
     // 发出掷骰事件
-    event::emit(RollEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
+    events::emit_roll_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
         dice,
-        from: from_pos,
-        to: to_pos
-    });
+        from_pos,
+        to_pos
+    );
 
     // 执行逐步移动
     execute_step_movement(game, player_addr, from_pos, to_pos, dice, registry);
@@ -539,11 +365,11 @@ public entry fun end_turn(
     clean_turn_state(game, player_addr);
 
     // 发出结束回合事件
-    event::emit(EndTurnEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
-        turn: game.turn
-    });
+    events::emit_end_turn_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        game.turn
+    );
 
     // 消耗令牌
     let TurnCap { id, game_id: _, player: _, turn: _ } = cap;
@@ -602,11 +428,11 @@ fun handle_skip_turn(game: &mut Game, player_addr: address) {
         types::skip_hospital()
     };
 
-    event::emit(SkipTurnEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
+    events::emit_skip_turn_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
         reason
-    });
+    );
 }
 
 // 获取骰子点数
@@ -705,12 +531,12 @@ fun execute_step_movement(
                     game.current_npc_count = game.current_npc_count - 1;
                 };
 
-                event::emit(BombOrDogHitEvent {
-                    game: object::uid_to_inner(&game.id),
-                    player: player_addr,
-                    tile_id: next_pos,
-                    kind: npc.kind
-                });
+                events::emit_bomb_or_dog_hit_event(
+                    object::uid_to_inner(&game.id),
+                    player_addr,
+                    next_pos,
+                    npc.kind
+                );
                 return  // 终止移动
             } else if (npc.kind == types::npc_barrier()) {
                 // 路障 - 停止移动
@@ -725,11 +551,11 @@ fun execute_step_movement(
                     game.current_npc_count = game.current_npc_count - 1;
                 };
 
-                event::emit(BarrierStopEvent {
-                    game: object::uid_to_inner(&game.id),
-                    player: player_addr,
-                    tile_id: next_pos
-                });
+                events::emit_barrier_stop_event(
+                    object::uid_to_inner(&game.id),
+                    player_addr,
+                    next_pos
+                );
 
                 // 触发停留事件
                 handle_tile_stop(game, player_addr, next_pos, registry);
@@ -746,12 +572,12 @@ fun execute_step_movement(
         steps_left = steps_left - 1;
 
         // 发出移动事件
-        event::emit(MoveEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
-            from: if (steps_left == dice - 1) { from } else { current_pos - 1 },
-            to: current_pos
-        });
+        events::emit_move_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            if (steps_left == dice - 1) { from } else { current_pos - 1 },
+            current_pos
+        );
 
         // 如果不是最后一步，检查是否触发经过事件
         if (steps_left > 0) {
@@ -782,23 +608,23 @@ fun handle_tile_pass(
             let player = table::borrow_mut(&mut game.players, player_addr);
             cards::give_card_to_player(&mut player.cards, card_kind, count);
 
-            event::emit(CardGainEvent {
-                game: object::uid_to_inner(&game.id),
-                player: player_addr,
-                kind: card_kind,
-                delta: count
-            });
+            events::emit_card_gain_event(
+                object::uid_to_inner(&game.id),
+                player_addr,
+                card_kind,
+                count
+            );
         } else if (tile_kind == types::tile_lottery() && game.config.trigger_lottery_on_pass) {
             // 彩票逻辑（简化）
             // TODO: 实现彩票系统
         };
 
-        event::emit(PassTileEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
+        events::emit_pass_tile_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
             tile_id,
             tile_kind
-        });
+        );
     }
 }
 
@@ -813,12 +639,12 @@ fun handle_tile_stop(
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
 
-    event::emit(StopTileEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
+    events::emit_stop_tile_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
         tile_id,
         tile_kind
-    });
+    );
 
     if (tile_kind == types::tile_property()) {
         handle_property_stop(game, player_addr, tile_id, tile);
@@ -832,12 +658,12 @@ fun handle_tile_stop(
         let player = table::borrow_mut(&mut game.players, player_addr);
         cards::give_card_to_player(&mut player.cards, card_kind, count);
 
-        event::emit(CardGainEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
-            kind: card_kind,
-            delta: count
-        });
+        events::emit_card_gain_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            card_kind,
+            count
+        );
     } else if (tile_kind == types::tile_chance()) {
         // TODO: 实现机会事件
     } else if (tile_kind == types::tile_bonus()) {
@@ -846,14 +672,14 @@ fun handle_tile_stop(
         let player = table::borrow_mut(&mut game.players, player_addr);
         player.cash = player.cash + bonus;
 
-        event::emit(CashChangeEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
-            amount: bonus,
-            is_debit: false,  // 收入
-            reason: 4,  // 奖励
-            details: tile_id
-        });
+        events::emit_cash_change_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            bonus,
+            false,  // 收入
+            4,  // 奖励
+            tile_id
+        );
     } else if (tile_kind == types::tile_fee()) {
         // 罚款
         let fee = map::tile_special(tile);
@@ -865,14 +691,14 @@ fun handle_tile_stop(
             // TODO: 处理破产
         };
 
-        event::emit(CashChangeEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
-            amount: fee,
-            is_debit: true,  // 支出
-            reason: 5,  // 罚款
-            details: tile_id
-        });
+        events::emit_cash_change_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            fee,
+            true,  // 支出
+            5,  // 罚款
+            tile_id
+        );
     }
     // 其他地块类型...
 }
@@ -918,14 +744,14 @@ fun handle_property_stop(
             let owner_player = table::borrow_mut(&mut game.players, owner);
             owner_player.cash = owner_player.cash + actual_toll;
 
-            event::emit(TollEvent {
-                game: object::uid_to_inner(&game.id),
-                payer: player_addr,
+            events::emit_toll_event(
+                object::uid_to_inner(&game.id),
+                player_addr,
                 owner,
                 tile_id,
                 level,
-                amount: actual_toll
-            });
+                actual_toll
+            );
         }
     }
 }
@@ -935,12 +761,12 @@ fun handle_hospital_stop(game: &mut Game, player_addr: address, tile_id: u64) {
     let player = table::borrow_mut(&mut game.players, player_addr);
     player.in_hospital_turns = types::default_hospital_turns();
 
-    event::emit(EnterHospitalEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
-        hospital_tile: tile_id,
-        turns: types::default_hospital_turns()
-    });
+    events::emit_enter_hospital_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        types::default_hospital_turns()
+    );
 }
 
 // 处理监狱停留
@@ -948,12 +774,12 @@ fun handle_prison_stop(game: &mut Game, player_addr: address, tile_id: u64) {
     let player = table::borrow_mut(&mut game.players, player_addr);
     player.in_prison_turns = types::default_prison_turns();
 
-    event::emit(EnterPrisonEvent {
-        game: object::uid_to_inner(&game.id),
-        player: player_addr,
-        prison_tile: tile_id,
-        turns: types::default_prison_turns()
-    });
+    events::emit_enter_prison_event(
+        object::uid_to_inner(&game.id),
+        player_addr,
+        tile_id,
+        types::default_prison_turns()
+    );
 }
 
 // 送医院
@@ -967,11 +793,11 @@ fun send_to_hospital(game: &mut Game, player_addr: address, registry: &MapRegist
         player.pos = hospital_tile;
         player.in_hospital_turns = types::default_hospital_turns();
 
-        event::emit(SendToHospitalEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
+        events::emit_send_to_hospital_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
             hospital_tile
-        });
+        );
     }
 }
 
@@ -1011,23 +837,23 @@ fun apply_card_effect(
             table::add(&mut game.npc_on, tile_id, npc);
             game.current_npc_count = game.current_npc_count + 1;
 
-            event::emit(NpcSpawnEvent {
-                game: object::uid_to_inner(&game.id),
+            events::emit_npc_spawn_event(
+                object::uid_to_inner(&game.id),
                 tile_id,
-                kind: npc_kind,
-                by_player: option::some(player_addr)
-            });
+                npc_kind,
+                option::some(player_addr)
+            );
         }
     } else if (kind == types::card_rent_free()) {
         // 免租
         let player = table::borrow_mut(&mut game.players, player_addr);
         player.rent_free_until_turn = option::some(game.turn);
 
-        event::emit(RentFreeAppliedEvent {
-            game: object::uid_to_inner(&game.id),
-            player: player_addr,
-            until_turn: game.turn
-        });
+        events::emit_rent_free_applied_event(
+            object::uid_to_inner(&game.id),
+            player_addr,
+            game.turn
+        );
     } else if (kind == types::card_freeze()) {
         // 冻结
         if (option::is_some(&target)) {
@@ -1035,12 +861,12 @@ fun apply_card_effect(
             let target_player = table::borrow_mut(&mut game.players, target_addr);
             target_player.frozen_until_turn = option::some(game.turn);
 
-            event::emit(PlayerFrozenEvent {
-                game: object::uid_to_inner(&game.id),
-                player: target_addr,
-                frozen_by: player_addr,
-                until_turn: game.turn
-            });
+            events::emit_player_frozen_event(
+                object::uid_to_inner(&game.id),
+                target_addr,
+                player_addr,
+                game.turn
+            );
         }
     }
 }
@@ -1078,12 +904,12 @@ fun advance_turn(game: &mut Game) {
             let max_turns = *option::borrow(&game.config.max_turns);
             if (game.turn > max_turns) {
                 game.status = types::status_ended();
-                event::emit(GameEndedEvent {
-                    game: object::uid_to_inner(&game.id),
-                    winner: option::none(),
-                    turn: game.turn,
-                    reason: 1  // 达到最大回合数
-                });
+                events::emit_game_ended_event(
+                    object::uid_to_inner(&game.id),
+                    option::none(),
+                    game.turn,
+                    1  // 达到最大回合数
+                );
             }
         }
     };

@@ -1,5 +1,6 @@
 module tycoon::game;
 
+
 use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
 
@@ -470,7 +471,7 @@ public entry fun buy_property(
         player_addr,
         price,
         true,  // 支出
-        1,     // 购买地产
+        2,     // 购买地产 (reason: 2=买地)
         tile_id
     );
 }
@@ -538,7 +539,7 @@ public entry fun upgrade_property(
         player_addr,
         upgrade_cost,
         true,  // 支出
-        2,     // 升级地产
+        3,     // 升级地产 (reason: 3=升级)
         tile_id
     );
 }

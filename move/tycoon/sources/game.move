@@ -22,7 +22,6 @@ public struct Config has store, copy, drop {
     barrier_consumed_on_stop: bool,
     // 移动相关配置
     allow_reverse: bool,              // 是否允许逆时针移动
-    emit_move_step_events: bool,      // 是否发送逐步移动事件
     use_adj_traversal: bool           // 是否使用邻接寻路
 }
 
@@ -115,7 +114,6 @@ public entry fun create_game(
         dog_to_hospital: true,
         barrier_consumed_on_stop: true,
         allow_reverse: true,              // 默认允许双向移动
-        emit_move_step_events: true,      // 默认发送移动事件
         use_adj_traversal: false          // 默认使用环路寻路
     };
 
@@ -845,7 +843,7 @@ fun execute_step_movement_with_collectors(
             // 处理经过卡牌格
             if (tile_kind == types::tile_card()) {
                 // 经过抽1张卡
-                let (card_kind, _) = cards::draw_card_on_pass(dice as u64);
+                let (card_kind, _) = cards::draw_card_on_pass(game.rng_nonce);
                 let player = table::borrow_mut(&mut game.players, player_addr);
                 cards::give_card_to_player(&mut player.cards, card_kind, 1);
 
@@ -988,7 +986,7 @@ fun handle_tile_stop_with_collector(
     if (tile_kind == types::tile_property()) {
         if (!table::contains(&game.owner_of, tile_id)) {
             // 无主地产 - 可购买
-            stop_type = events::stop_property_toll();
+            stop_type = events::stop_property_unowned();
         } else {
             let owner = *table::borrow(&game.owner_of, tile_id);
             if (owner != player_addr) {
@@ -1061,14 +1059,14 @@ fun handle_tile_stop_with_collector(
         }
     } else if (tile_kind == types::tile_hospital()) {
         let player = table::borrow_mut(&mut game.players, player_addr);
-        player.in_hospital_turns = 3;
+        player.in_hospital_turns = types::default_hospital_turns();
         stop_type = events::stop_hospital();
-        turns_opt = option::some(3);
+        turns_opt = option::some(types::default_hospital_turns());
     } else if (tile_kind == types::tile_prison()) {
         let player = table::borrow_mut(&mut game.players, player_addr);
-        player.in_prison_turns = 3;
+        player.in_prison_turns = types::default_prison_turns();
         stop_type = events::stop_prison();
-        turns_opt = option::some(3);
+        turns_opt = option::some(types::default_prison_turns());
     } else if (tile_kind == types::tile_card()) {
         // 停留时抽卡
         let (card_kind, count) = cards::draw_card_on_stop(game.rng_nonce);

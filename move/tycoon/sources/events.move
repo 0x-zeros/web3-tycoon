@@ -96,6 +96,7 @@ const STOP_PRISON: u8 = 4;
 const STOP_BONUS: u8 = 5;
 const STOP_FEE: u8 = 6;
 const STOP_CARD_STOP: u8 = 7;
+const STOP_PROPERTY_UNOWNED: u8 = 8;  // 无主地产（可购买）
 
 // ===== Aggregated Event Data Types 聚合事件数据类型 =====
 
@@ -483,6 +484,7 @@ public fun stop_prison(): u8 { STOP_PRISON }
 public fun stop_bonus(): u8 { STOP_BONUS }
 public fun stop_fee(): u8 { STOP_FEE }
 public fun stop_card_stop(): u8 { STOP_CARD_STOP }
+public fun stop_property_unowned(): u8 { STOP_PROPERTY_UNOWNED }
 
 // ===== Constructor Functions 构造函数（保留兼容） =====
 

@@ -4,6 +4,7 @@ module tycoon::game;
 
 use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
+use sui::coin;
 
 use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
@@ -25,6 +26,13 @@ public struct Config has store, copy, drop {
     use_adj_traversal: bool           // 是否使用邻接寻路
 }
 
+// ===== BuffEntry buff条目 =====
+public struct BuffEntry has store, copy, drop {
+    kind: u8,        // Buff类型 (rent_free, frozen, move_ctrl等)
+    until_turn: u64, // 包含结束回合
+    value: u64       // 数值载荷 (如move_ctrl的骰子值)
+}
+
 // ===== Player 玩家状态 =====
 public struct Player has store {
     owner: address,
@@ -32,12 +40,10 @@ public struct Player has store {
     cash: u64,
     in_prison_turns: u8,
     in_hospital_turns: u8,
-    frozen_until_turn: Option<u64>,
-    rent_free_until_turn: Option<u64>,
     bankrupt: bool,
     cards: Table<u16 /* CardKind */, u64 /* count */>,
     dir_pref: u8,  // DirMode
-    roll_override: Option<u8>
+    buffs: vector<BuffEntry>  // 统一的buff存储
 }
 
 // ===== NpcInst NPC实例 =====
@@ -562,14 +568,12 @@ fun create_player(owner: address, ctx: &mut TxContext): Player {
         owner,
         pos: 0,
         cash: types::default_starting_cash(),
+        buffs: vector::empty(),  // 初始化buffs
         in_prison_turns: 0,
         in_hospital_turns: 0,
-        frozen_until_turn: option::none(),
-        rent_free_until_turn: option::none(),
         bankrupt: false,
         cards: table::new(ctx),
-        dir_pref: types::dir_auto(),
-        roll_override: option::none()
+        dir_pref: types::dir_auto()
     }
 }
 
@@ -614,11 +618,13 @@ fun handle_skip_turn(game: &mut Game, player_addr: address) {
 fun get_dice_value(game: &mut Game, player_addr: address, clock: &Clock): u8 {
     let player = table::borrow(&game.players, player_addr);
 
-    if (option::is_some(&player.roll_override)) {
-        *option::borrow(&player.roll_override)
-    } else {
-        rand_1_6(game, clock)
-    }
+    // 使用buff系统检查遥控骰子
+    if (is_buff_active(player, types::buff_move_ctrl(), game.turn)) {
+        let value = get_buff_value(player, types::buff_move_ctrl(), game.turn);
+        return (value as u8)
+    };
+
+    rand_1_6(game, clock)
 }
 
 // 简单随机数生成（生产环境应使用VRF或预言机）
@@ -685,8 +691,10 @@ fun execute_step_movement_with_collectors(
     // 检查冻结
     {
         let player = table::borrow(&game.players, player_addr);
-        if (option::is_some(&player.frozen_until_turn) &&
-            *option::borrow(&player.frozen_until_turn) >= game.turn) {
+        // 使用buff系统检查冻结
+        let is_frozen = is_buff_active(player, types::buff_frozen(), game.turn);
+
+        if (is_frozen) {
             // 冻结时不移动，触发原地停留事件
             let stop_effect = handle_tile_stop_with_collector(
                 game,
@@ -998,8 +1006,9 @@ fun handle_tile_stop_with_collector(
                     let player = table::borrow_mut(&mut game.players, player_addr);
 
                     // 检查免租
-                    if (option::is_some(&player.rent_free_until_turn) &&
-                        *option::borrow(&player.rent_free_until_turn) >= game.turn) {
+                    let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.turn);
+
+                    if (has_rent_free) {
                         // 免租
                         (true, 0, false)
                     } else {
@@ -1164,8 +1173,9 @@ fun handle_property_stop(
             let player = table::borrow_mut(&mut game.players, player_addr);
 
             // 检查免租
-            if (option::is_some(&player.rent_free_until_turn) &&
-                *option::borrow(&player.rent_free_until_turn) >= game.turn) {
+            let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.turn);
+
+            if (has_rent_free) {
                 // 免租
                 return
             };
@@ -1322,7 +1332,8 @@ fun apply_card_effect(
     if (kind == types::card_move_ctrl()) {
         // 遥控骰
         let player = table::borrow_mut(&mut game.players, player_addr);
-        player.roll_override = option::some(3);  // 设置为3点
+        // 使用buff系统
+        apply_buff(player, types::buff_move_ctrl(), game.turn + 1, 3);
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
         if (option::is_some(&tile)) {
@@ -1349,13 +1360,15 @@ fun apply_card_effect(
     } else if (kind == types::card_rent_free()) {
         // 免租
         let player = table::borrow_mut(&mut game.players, player_addr);
-        player.rent_free_until_turn = option::some(game.turn);
+        // 使用buff系统
+        apply_buff(player, types::buff_rent_free(), game.turn + 2, 0);
     } else if (kind == types::card_freeze()) {
         // 冻结
         if (option::is_some(&target)) {
             let target_addr = *option::borrow(&target);
             let target_player = table::borrow_mut(&mut game.players, target_addr);
-            target_player.frozen_until_turn = option::some(game.turn);
+            // 使用buff系统
+            apply_buff(target_player, types::buff_frozen(), game.turn + 1, 0);
         }
     } else if (kind == types::card_dog()) {
         // 放置狗狗NPC
@@ -1405,7 +1418,8 @@ fun apply_card_effect_with_collectors(
     if (kind == types::card_move_ctrl()) {
         // 遥控骰
         let player = table::borrow_mut(&mut game.players, player_addr);
-        player.roll_override = option::some(3);  // 设置为3点
+        // 使用buff系统
+        apply_buff(player, types::buff_move_ctrl(), game.turn + 1, 3);
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(
@@ -1447,20 +1461,22 @@ fun apply_card_effect_with_collectors(
     } else if (kind == types::card_rent_free()) {
         // 免租
         let player = table::borrow_mut(&mut game.players, player_addr);
-        player.rent_free_until_turn = option::some(game.turn + 1);
+        // 使用buff系统
+        apply_buff(player, types::buff_rent_free(), game.turn + 2, 0);
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(
             events::buff_rent_free(),
             player_addr,
-            option::some(game.turn + 1)
+            option::some(game.turn + 2)
         ));
     } else if (kind == types::card_freeze()) {
         // 冻结
         if (option::is_some(&target)) {
             let target_addr = *option::borrow(&target);
             let target_player = table::borrow_mut(&mut game.players, target_addr);
-            target_player.frozen_until_turn = option::some(game.turn + 1);
+            // 使用buff系统
+            apply_buff(target_player, types::buff_frozen(), game.turn + 2, 0);
 
             // 记录buff变更
             vector::push_back(buff_changes, events::make_buff_change(
@@ -1518,23 +1534,72 @@ fun apply_card_effect_with_collectors(
     }
 }
 
+// ===== Buff管理API函数 =====
+
+// 应用buff到玩家
+fun apply_buff(player: &mut Player, kind: u8, until_turn: u64, value: u64) {
+    // 先清除同类型的现有buff
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        let buff = player.buffs.borrow(i);
+        if (buff.kind == kind) {
+            player.buffs.swap_remove(i);
+            break
+        };
+        i = i + 1;
+    };
+
+    // 添加新buff
+    let buff = BuffEntry { kind, until_turn, value };
+    player.buffs.push_back(buff);
+}
+
+// 清除过期的buffs
+fun clear_expired_buffs(player: &mut Player, current_turn: u64) {
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        let buff = player.buffs.borrow(i);
+        if (buff.until_turn <= current_turn) {
+            player.buffs.swap_remove(i);
+            // 不增加i，因为swap_remove会将最后一个元素移到当前位置
+        } else {
+            i = i + 1;
+        }
+    }
+}
+
+// 检查是否有某种buff激活
+fun is_buff_active(player: &Player, kind: u8, current_turn: u64): bool {
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        let buff = player.buffs.borrow(i);
+        if (buff.kind == kind && buff.until_turn > current_turn) {
+            return true
+        };
+        i = i + 1;
+    };
+    false
+}
+
+// 获取buff的value值
+fun get_buff_value(player: &Player, kind: u8, current_turn: u64): u64 {
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        let buff = player.buffs.borrow(i);
+        if (buff.kind == kind && buff.until_turn > current_turn) {
+            return buff.value
+        };
+        i = i + 1;
+    };
+    0
+}
+
 // 清理回合状态
 fun clean_turn_state(game: &mut Game, player_addr: address) {
     let player = table::borrow_mut(&mut game.players, player_addr);
 
-    // 清理当回合buff
-    player.roll_override = option::none();
-
     // 清理过期的buff
-    if (option::is_some(&player.rent_free_until_turn) &&
-        *option::borrow(&player.rent_free_until_turn) <= game.turn) {
-        player.rent_free_until_turn = option::none();
-    };
-
-    if (option::is_some(&player.frozen_until_turn) &&
-        *option::borrow(&player.frozen_until_turn) <= game.turn) {
-        player.frozen_until_turn = option::none();
-    };
+    clear_expired_buffs(player, game.turn);
 }
 
 // 推进回合
@@ -1761,14 +1826,6 @@ public fun is_player_in_hospital(
     player_data.in_hospital_turns > 0
 }
 
-#[test_only]
-public fun has_roll_override(
-    game: &Game,
-    player: address
-): bool {
-    let player_data = table::borrow(&game.players, player);
-    option::is_some(&player_data.roll_override)
-}
 
 
 #[test_only]
@@ -1799,7 +1856,9 @@ public fun handle_tile_stop_effect(
                 let owner_data = table::borrow_mut(&mut game.players, owner);
 
                 // 检查免租
-                if (option::is_none(&player_data.rent_free_until_turn)) {
+                let has_rent_free = is_buff_active(player_data, types::buff_rent_free(), game.turn);
+
+                if (!has_rent_free) {
                     player_data.cash = player_data.cash - toll;
                     owner_data.cash = owner_data.cash + toll;
                 };
@@ -1837,5 +1896,23 @@ public fun get_player_total_cards(game: &Game, player: address): u64 {
 #[test_only]
 public fun is_player_frozen(game: &Game, player: address): bool {
     let player_data = table::borrow(&game.players, player);
-    option::is_some(&player_data.frozen_until_turn)
+    is_buff_active(player_data, types::buff_frozen(), game.turn)
+}
+
+#[test_only]
+public fun has_buff(game: &Game, player_addr: address, buff_kind: u8): bool {
+    let player = table::borrow(&game.players, player_addr);
+    is_buff_active(player, buff_kind, game.turn)
+}
+
+#[test_only]
+public fun apply_buff_to_player(
+    game: &mut Game,
+    player_addr: address,
+    buff_kind: u8,
+    turns: u64,
+    value: u64
+) {
+    let player = table::borrow_mut(&mut game.players, player_addr);
+    apply_buff(player, buff_kind, game.turn + turns, value);
 }

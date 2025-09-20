@@ -38,6 +38,11 @@ public fun card_rent_free(): u16 { 20 }
 public fun card_freeze(): u16 { 30 }
 public fun card_cleanse(): u16 { 41 }  // 清除卡（移除NPC）
 
+// ===== BuffKind Buff类型 =====
+public fun buff_move_ctrl(): u8 { 1 }   // 移动控制（遥控骰子）
+public fun buff_frozen(): u8 { 2 }      // 冻结状态
+public fun buff_rent_free(): u8 { 3 }   // 免租金
+
 // ===== Phase 游戏阶段 =====
 public fun phase_roll(): u8 { 1 }
 public fun phase_move(): u8 { 2 }

@@ -321,6 +321,37 @@ module tycoon::test_utils {
         coin::mint_for_testing<SUI>(amount, ctx)
     }
 
+    // 断言玩家有指定的buff
+    public fun assert_player_has_buff(
+        game: &Game,
+        player: address,
+        buff_kind: u8
+    ) {
+        let has_buff = game::has_buff(game, player, buff_kind);
+        assert!(has_buff, 1007);
+    }
+
+    // 断言玩家没有指定的buff
+    public fun assert_player_no_buff(
+        game: &Game,
+        player: address,
+        buff_kind: u8
+    ) {
+        let has_buff = game::has_buff(game, player, buff_kind);
+        assert!(!has_buff, 1008);
+    }
+
+    // 给玩家添加buff（测试用）
+    public fun add_buff_to_player(
+        game: &mut Game,
+        player: address,
+        buff_kind: u8,
+        turns: u64,
+        value: u64
+    ) {
+        game::apply_buff_to_player(game, player, buff_kind, turns, value);
+    }
+
     // ===== 调试辅助函数 =====
 
     // 打印游戏状态（用于调试）

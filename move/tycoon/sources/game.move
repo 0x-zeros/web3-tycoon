@@ -27,10 +27,17 @@ public struct Config has store, copy, drop {
 }
 
 // ===== BuffEntry buff条目 =====
+// Buff激活逻辑使用独占语义（exclusive semantics）：
+// - Buff激活条件：current_turn < first_inactive_turn
+// - Buff过期条件：current_turn >= first_inactive_turn
+// - 示例：
+//   - first_inactive_turn = turn + 1 → 仅当前回合激活
+//   - first_inactive_turn = turn + 2 → 当前回合和下个回合激活
+//   - first_inactive_turn = turn + 3 → 当前回合和接下来两个回合激活
 public struct BuffEntry has store, copy, drop {
-    kind: u8,        // Buff类型 (rent_free, frozen, move_ctrl等)
-    until_turn: u64, // 包含结束回合
-    value: u64       // 数值载荷 (如move_ctrl的骰子值)
+    kind: u8,                // Buff类型 (rent_free, frozen, move_ctrl等)
+    first_inactive_turn: u64, // 首个未激活回合（独占）
+    value: u64               // 数值载荷 (如move_ctrl的骰子值)
 }
 
 // ===== Player 玩家状态 =====
@@ -1368,7 +1375,7 @@ fun apply_card_effect(
             let target_addr = *option::borrow(&target);
             let target_player = table::borrow_mut(&mut game.players, target_addr);
             // 使用buff系统
-            apply_buff(target_player, types::buff_frozen(), game.turn + 1, 0);
+            apply_buff(target_player, types::buff_frozen(), game.turn + 2, 0);
         }
     } else if (kind == types::card_dog()) {
         // 放置狗狗NPC
@@ -1423,9 +1430,9 @@ fun apply_card_effect_with_collectors(
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(
-            events::buff_move_ctrl(),
+            types::buff_move_ctrl(),
             player_addr,
-            option::some(game.turn)
+            option::some(game.turn + 1)
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
@@ -1466,7 +1473,7 @@ fun apply_card_effect_with_collectors(
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(
-            events::buff_rent_free(),
+            types::buff_rent_free(),
             player_addr,
             option::some(game.turn + 2)
         ));
@@ -1480,9 +1487,9 @@ fun apply_card_effect_with_collectors(
 
             // 记录buff变更
             vector::push_back(buff_changes, events::make_buff_change(
-                events::buff_frozen(),
+                types::buff_frozen(),
                 target_addr,
-                option::some(game.turn + 1)
+                option::some(game.turn + 2)
             ));
         }
     } else if (kind == types::card_dog()) {
@@ -1537,31 +1544,33 @@ fun apply_card_effect_with_collectors(
 // ===== Buff管理API函数 =====
 
 // 应用buff到玩家
-fun apply_buff(player: &mut Player, kind: u8, until_turn: u64, value: u64) {
+// first_inactive_turn: 首个未激活回合（独占）
+fun apply_buff(player: &mut Player, kind: u8, first_inactive_turn: u64, value: u64) {
     // 先清除同类型的现有buff
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         if (buff.kind == kind) {
-            player.buffs.swap_remove(i);
+            vector::remove(&mut player.buffs, i);
             break
         };
         i = i + 1;
     };
 
     // 添加新buff
-    let buff = BuffEntry { kind, until_turn, value };
+    let buff = BuffEntry { kind, first_inactive_turn, value };
     player.buffs.push_back(buff);
 }
 
 // 清除过期的buffs
+// 移除所有current_turn >= first_inactive_turn的buff
 fun clear_expired_buffs(player: &mut Player, current_turn: u64) {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
-        if (buff.until_turn <= current_turn) {
-            player.buffs.swap_remove(i);
-            // 不增加i，因为swap_remove会将最后一个元素移到当前位置
+        if (buff.first_inactive_turn <= current_turn) {
+            vector::remove(&mut player.buffs, i);
+            // 不增加i，因为vector::remove会移动后续元素
         } else {
             i = i + 1;
         }
@@ -1569,11 +1578,12 @@ fun clear_expired_buffs(player: &mut Player, current_turn: u64) {
 }
 
 // 检查是否有某种buff激活
+// Buff激活条件: current_turn < first_inactive_turn
 fun is_buff_active(player: &Player, kind: u8, current_turn: u64): bool {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
-        if (buff.kind == kind && buff.until_turn > current_turn) {
+        if (buff.kind == kind && buff.first_inactive_turn > current_turn) {
             return true
         };
         i = i + 1;
@@ -1582,11 +1592,12 @@ fun is_buff_active(player: &Player, kind: u8, current_turn: u64): bool {
 }
 
 // 获取buff的value值
+// 返回激活buff的value，未激活时返回0
 fun get_buff_value(player: &Player, kind: u8, current_turn: u64): u64 {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
-        if (buff.kind == kind && buff.until_turn > current_turn) {
+        if (buff.kind == kind && buff.first_inactive_turn > current_turn) {
             return buff.value
         };
         i = i + 1;
@@ -1915,4 +1926,14 @@ public fun apply_buff_to_player(
 ) {
     let player = table::borrow_mut(&mut game.players, player_addr);
     apply_buff(player, buff_kind, game.turn + turns, value);
+}
+
+#[test_only]
+public fun get_buff_value_for_test(
+    game: &Game,
+    player_addr: address,
+    buff_kind: u8
+): u64 {
+    let player = table::borrow(&game.players, player_addr);
+    get_buff_value(player, buff_kind, game.turn)
 }

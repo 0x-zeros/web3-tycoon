@@ -72,10 +72,6 @@ public struct BankruptEvent has copy, drop {
 
 // ===== Aggregated Event Constants 聚合事件常量 =====
 
-// Buff类型常量
-const BUFF_RENT_FREE: u8 = 1;
-const BUFF_FROZEN: u8 = 2;
-const BUFF_MOVE_CTRL: u8 = 3;
 
 // NPC操作常量
 const NPC_ACTION_SPAWN: u8 = 1;
@@ -127,9 +123,9 @@ public struct NpcChangeItem has copy, drop, store {
 
 // Buff变更项
 public struct BuffChangeItem has copy, drop, store {
-    buff_type: u8,  // BUFF_*
+    buff_type: u8,  // 使用types模块的buff类型常量
     target: address,
-    until_turn: option::Option<u64>
+    first_inactive_turn: option::Option<u64>  // 首个未激活回合（独占）
 }
 
 // NPC步骤事件
@@ -338,12 +334,12 @@ public(package) fun make_npc_change(
 public(package) fun make_buff_change(
     buff_type: u8,
     target: address,
-    until_turn: option::Option<u64>
+    first_inactive_turn: option::Option<u64>
 ): BuffChangeItem {
     BuffChangeItem {
         buff_type,
         target,
-        until_turn
+        first_inactive_turn
     }
 }
 
@@ -460,10 +456,6 @@ public(package) fun emit_roll_and_step_action_event(
 
 // ===== Aggregated Event Constant Getters 聚合事件常量获取函数 =====
 
-// Buff类型常量获取函数
-public fun buff_rent_free(): u8 { BUFF_RENT_FREE }
-public fun buff_frozen(): u8 { BUFF_FROZEN }
-public fun buff_move_ctrl(): u8 { BUFF_MOVE_CTRL }
 
 // NPC操作常量获取函数
 public fun npc_action_spawn(): u8 { NPC_ACTION_SPAWN }

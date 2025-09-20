@@ -43,8 +43,8 @@ ENV=$1; shift
 $SUI client switch --env $ENV
 
 # 发布Move合约并获取JSON格式的结果
-# ../move指定要发布的Move包目录，--json以JSON格式输出，$@传递所有剩余参数
-PUBLISH=$($SUI client publish ../my_coin --json $@)
+# ../tycoon指定要发布的Move包目录，--json以JSON格式输出，$@传递所有剩余参数
+PUBLISH=$($SUI client publish ../tycoon --json $@)
 
 # 使用jq美化输出JSON结果
 echo "================================================================================================"
@@ -84,29 +84,25 @@ UPGRADE_CAP=$(
             | .objectId'
 )
 
-# 简析 coin type 和 0x2::coin::TreasuryCap的object id
+# 提取游戏相关对象
 echo "================================================================================================"
-echo "Coin Analysis:"
+echo "Game Objects Analysis:"
 echo "------------------------------------------------"
 
-# 提取所有创建的 coin 相关对象
-COIN_OBJECTS=$(echo $PUBLISH | jq '.objectChanges[] | select(.type == "created") | select(.objectType | contains("0x2::coin::TreasuryCap"))')
-
-# 简析 coin type
-# 0x2::coin::TreasuryCap<0x123...> 只保留<>中的内容
-COIN_TYPE=$(echo $COIN_OBJECTS | jq -r '.objectType' | head -1 | sed 's/.*<\(.*\)>.*/\1/')
-if [ ! -z "$COIN_TYPE" ]; then
-    echo "Coin Type: $COIN_TYPE"
+# 提取 AdminCap
+ADMIN_CAP=$(echo $PUBLISH | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("admin::AdminCap")) | .objectId' | head -1)
+if [ ! -z "$ADMIN_CAP" ]; then
+    echo "AdminCap Object ID: $ADMIN_CAP"
 else
-    echo "Coin Type: Not found"
+    echo "AdminCap Object ID: Not found"
 fi
 
-# 简析 TreasuryCap object id
-TREASURY_CAP=$(echo $COIN_OBJECTS | jq -r '.objectId' | head -1)
-if [ ! -z "$TREASURY_CAP" ]; then
-    echo "TreasuryCap Object ID: $TREASURY_CAP"
+# 提取 MapRegistry
+MAP_REGISTRY=$(echo $PUBLISH | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("admin::MapRegistry")) | .objectId' | head -1)
+if [ ! -z "$MAP_REGISTRY" ]; then
+    echo "MapRegistry Object ID: $MAP_REGISTRY"
 else
-    echo "TreasuryCap Object ID: Not found"
+    echo "MapRegistry Object ID: Not found"
 fi
 
 echo "================================================================================================"
@@ -119,21 +115,35 @@ if [ "$ENV" = "local" ]; then
 else
     CONFIG_ENV="$ENV"
 fi
-CONFIG="$(readlink -f ../cli/src/config/)/env.$CONFIG_ENV.ts"
-# 生成前端TypeScript配置文件，使用here document语法
-# cat > $CONFIG：将内容写入到 $CONFIG 文件
-# <<EOF：开始 here document，告诉 shell 从下一行开始读取内容
-# 多行内容：直到遇到 EOF 为止的所有内容都会被读取
-# EOF：结束标记，必须单独占一行
-cat > $CONFIG <<EOF
+# CLI配置文件
+CLI_CONFIG="$(readlink -f ../cli/src/config/)/env.$CONFIG_ENV.ts"
+cat > $CLI_CONFIG <<EOF
 const env = {
     packageId: '$PACKAGE_ID',
     upgradeCap: '$UPGRADE_CAP',
-    coinType: '$COIN_TYPE',
-    treasuryCap: '$TREASURY_CAP',
+    adminCap: '$ADMIN_CAP',
+    mapRegistry: '$MAP_REGISTRY',
 };
 
 export default env;
+EOF
+
+# Cocos工程配置文件
+COCOS_CONFIG="$(readlink -f ../../client/tycoon_cocos/assets/scripts/config/)/env.$CONFIG_ENV.ts"
+# 创建目录如果不存在
+mkdir -p "$(dirname "$COCOS_CONFIG")"
+cat > $COCOS_CONFIG <<EOF
+/**
+ * Sui区块链环境配置
+ * 自动生成于: $(date '+%Y-%m-%d %H:%M:%S')
+ */
+export const SuiEnvConfig = {
+    packageId: '$PACKAGE_ID',
+    upgradeCap: '$UPGRADE_CAP',
+    adminCap: '$ADMIN_CAP',
+    mapRegistry: '$MAP_REGISTRY',
+    network: '$CONFIG_ENV',
+};
 EOF
 
 # # 构建CLI环境文件的绝对路径
@@ -150,9 +160,9 @@ echo "Deployment Summary:"
 echo "------------------------------------------------"
 echo "Package ID: $PACKAGE_ID"
 echo "Upgrade Cap: $UPGRADE_CAP"
-echo "Coin Type: $COIN_TYPE"
-echo "Treasury Cap: $TREASURY_CAP"
+echo "Admin Cap: $ADMIN_CAP"
+echo "Map Registry: $MAP_REGISTRY"
 echo "================================================================================================"
-echo "Contract Deployment finished!"
-echo "Details written to $CONFIG."
-# echo "Details written to $CONFIG and $ENV."
+echo "Tycoon Game Contract Deployment finished!"
+echo "CLI config written to: $CLI_CONFIG"
+echo "Cocos config written to: $COCOS_CONFIG"

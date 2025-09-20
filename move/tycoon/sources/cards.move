@@ -4,6 +4,11 @@ use std::option;
 use sui::table::{Self, Table};
 use tycoon::types;
 
+// ===== Errors =====
+const ECardNotOwned: u64 = 5001;
+const EHandLimit: u64 = 5002;
+const EInvalidCardTarget: u64 = 5003;
+
 // ===== Card Definition 卡牌定义 =====
 public struct Card has store, copy, drop {
     kind: u16,
@@ -139,7 +144,7 @@ public fun add_card(
 
 // 获取卡牌信息
 public fun get_card(catalog: &CardCatalog, kind: u16): &Card {
-    assert!(table::contains(&catalog.cards, kind), types::err_card_not_owned());
+    assert!(table::contains(&catalog.cards, kind), ECardNotOwned);
     table::borrow(&catalog.cards, kind)
 }
 

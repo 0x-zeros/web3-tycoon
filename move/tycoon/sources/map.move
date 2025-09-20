@@ -3,6 +3,12 @@ module tycoon::map;
 use sui::table::{Self, Table};
 use tycoon::types;
 
+// ===== Errors =====
+const ETileOccupiedByNpc: u64 = 2001;
+const ENoSuchTile: u64 = 2002;
+const ETemplateNotFound: u64 = 3001;
+const ETemplateAlreadyExists: u64 = 3002;
+
 // ===== TileStatic 静态地块信息 =====
 public struct TileStatic has store, copy, drop {
     x: u16,
@@ -65,7 +71,7 @@ public fun publish_template(
     let template_id = template.id;
 
     // 检查模板是否已存在
-    assert!(!table::contains(&registry.templates, template_id), types::err_template_already_exists());
+    assert!(!table::contains(&registry.templates, template_id), ETemplateAlreadyExists);
 
     // 添加模板到注册表
     table::add(&mut registry.templates, template_id, template);
@@ -74,7 +80,7 @@ public fun publish_template(
 
 // 获取地图模板（只读）
 public fun get_template(registry: &MapRegistry, template_id: u64): &MapTemplate {
-    assert!(table::contains(&registry.templates, template_id), types::err_template_not_found());
+    assert!(table::contains(&registry.templates, template_id), ETemplateNotFound);
     table::borrow(&registry.templates, template_id)
 }
 
@@ -141,7 +147,7 @@ public fun add_tile_to_template(
     tile_id: u64,
     tile: TileStatic
 ) {
-    assert!(!table::contains(&template.tiles_static, tile_id), types::err_tile_occupied_by_npc());
+    assert!(!table::contains(&template.tiles_static, tile_id), ETileOccupiedByNpc);
     table::add(&mut template.tiles_static, tile_id, tile);
     template.tile_count = template.tile_count + 1;
 
@@ -231,19 +237,19 @@ public fun set_use_adj_traversal(template: &mut MapTemplate, use_adj: bool) {
 
 // 获取地块信息
 public fun get_tile(template: &MapTemplate, tile_id: u64): &TileStatic {
-    assert!(table::contains(&template.tiles_static, tile_id), types::err_no_such_tile());
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
     table::borrow(&template.tiles_static, tile_id)
 }
 
 // 获取顺时针下一格
 public fun get_cw_next(template: &MapTemplate, tile_id: u64): u64 {
-    assert!(table::contains(&template.cw_next, tile_id), types::err_no_such_tile());
+    assert!(table::contains(&template.cw_next, tile_id), ENoSuchTile);
     *table::borrow(&template.cw_next, tile_id)
 }
 
 // 获取逆时针下一格
 public fun get_ccw_next(template: &MapTemplate, tile_id: u64): u64 {
-    assert!(table::contains(&template.ccw_next, tile_id), types::err_no_such_tile());
+    assert!(table::contains(&template.ccw_next, tile_id), ENoSuchTile);
     *table::borrow(&template.ccw_next, tile_id)
 }
 

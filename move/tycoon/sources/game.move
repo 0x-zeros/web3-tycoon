@@ -11,6 +11,51 @@ use tycoon::map::{Self, MapTemplate, MapRegistry};
 use tycoon::cards::{Self, CardCatalog};
 use tycoon::events;
 
+// ===== Errors =====
+// 玩家相关错误
+const ENotActivePlayer: u64 = 1001;
+const EWrongPhase: u64 = 1002;
+const ENoTurnCap: u64 = 1003;
+const ECapExpired: u64 = 1004;
+
+// 游戏状态相关错误
+const EJoinFull: u64 = 6001;
+const EAlreadyStarted: u64 = 6002;
+const EGameEnded: u64 = 6003;
+const ENotEnoughPlayers: u64 = 6004;
+const EAlreadyJoined: u64 = 6005;
+
+// 经济相关错误
+const EInsufficientFunds: u64 = 7001;
+const EPropertyAlreadyOwned: u64 = 7002;
+const ENotPropertyOwner: u64 = 7003;
+const EMaxLevelReached: u64 = 7004;
+
+// 地块相关错误（game.move中使用的部分）
+const EPosMismatch: u64 = 2003;
+const ENotProperty: u64 = 2004;
+const EPropertyOwned: u64 = 2005;
+const EPropertyNotOwned: u64 = 2006;
+const ENotOwner: u64 = 2007;
+const EInvalidPrice: u64 = 2008;
+const EMaxLevel: u64 = 2009;
+const EInsufficientCash: u64 = 2010;
+
+// 卡牌相关错误（game.move中使用的部分）
+const ECardNotOwned: u64 = 5001;
+const EInvalidCardTarget: u64 = 5003;
+
+// 移动相关错误
+const EInvalidMove: u64 = 4001;
+
+// NPC相关错误
+const ENpcCapReached: u64 = 8001;
+
+// Map相关错误（game.move中使用的部分）
+const ETemplateNotFound: u64 = 3001;
+const ETileOccupiedByNpc: u64 = 2001;
+const ENoSuchTile: u64 = 2002;
+
 // ===== Config 游戏配置 =====
 public struct Config has store, copy, drop {
     trigger_card_on_pass: bool,
@@ -113,7 +158,7 @@ public entry fun create_game(
     ctx: &mut TxContext
 ) {
     // 验证模板存在
-    assert!(map::has_template(registry, template_id), types::err_template_not_found());
+    assert!(map::has_template(registry, template_id), ETemplateNotFound);
     let template = map::get_template(registry, template_id);
 
     // 创建默认配置
@@ -191,9 +236,9 @@ public entry fun join(
     let player_addr = ctx.sender();
 
     // 验证游戏状态
-    assert!(game.status == types::status_ready(), types::err_already_started());
-    assert!(game.join_order.length() < (game.config.max_players as u64), types::err_join_full());
-    assert!(!table::contains(&game.players, player_addr), types::err_already_joined());
+    assert!(game.status == types::status_ready(), EAlreadyStarted);
+    assert!(game.join_order.length() < (game.config.max_players as u64), EJoinFull);
+    assert!(!table::contains(&game.players, player_addr), EAlreadyJoined);
 
     // 创建玩家
     let player = create_player(player_addr, ctx);
@@ -224,8 +269,8 @@ public entry fun start(
     ctx: &mut TxContext
 ) {
     // 验证状态
-    assert!(game.status == types::status_ready(), types::err_already_started());
-    assert!(game.join_order.length() >= 2, types::err_not_enough_players());
+    assert!(game.status == types::status_ready(), EAlreadyStarted);
+    assert!(game.join_order.length() >= 2, ENotEnoughPlayers);
 
     // 设置游戏状态
     game.status = types::status_active();
@@ -255,15 +300,15 @@ public entry fun mint_turncap(
     ctx: &mut TxContext
 ) {
     // 验证游戏状态
-    assert!(game.status == types::status_active(), types::err_game_ended());
-    assert!(seat.game_id == object::uid_to_inner(&game.id), types::err_pos_mismatch());
+    assert!(game.status == types::status_active(), EGameEnded);
+    assert!(seat.game_id == object::uid_to_inner(&game.id), EPosMismatch);
 
     // 验证是当前活跃玩家
     let active_player = get_active_player(game);
-    assert!(seat.player == active_player, types::err_not_active_player());
+    assert!(seat.player == active_player, ENotActivePlayer);
 
     // 验证阶段
-    assert!(game.phase == types::phase_roll(), types::err_wrong_phase());
+    assert!(game.phase == types::phase_roll(), EWrongPhase);
 
     // 创建回合令牌
     let cap = TurnCap {
@@ -293,16 +338,16 @@ public entry fun use_card(
     let player = table::borrow_mut(&mut game.players, player_addr);
 
     // 验证玩家有这张卡
-    assert!(cards::player_has_card(&player.cards, kind), types::err_card_not_owned());
+    assert!(cards::player_has_card(&player.cards, kind), ECardNotOwned);
 
     // 获取卡牌信息
     let card = cards::get_card(&game.card_catalog, kind);
 
     // 验证目标
-    assert!(cards::validate_card_target(card, target, tile), types::err_invalid_card_target());
+    assert!(cards::validate_card_target(card, target, tile), EInvalidCardTarget);
 
     // 使用卡牌
-    assert!(cards::use_player_card(&mut player.cards, kind), types::err_card_not_owned());
+    assert!(cards::use_player_card(&mut player.cards, kind), ECardNotOwned);
 
     // 创建事件收集器
     let mut npc_changes = vector[];
@@ -483,15 +528,15 @@ public entry fun buy_property(
     let tile = map::get_tile(template, tile_id);
 
     // 验证地块类型
-    assert!(map::tile_kind(tile) == types::tile_property(), types::err_not_property());
+    assert!(map::tile_kind(tile) == types::tile_property(), ENotProperty);
 
     // 验证地块无主
-    assert!(!table::contains(&game.owner_of, tile_id), types::err_property_owned());
+    assert!(!table::contains(&game.owner_of, tile_id), EPropertyOwned);
 
     // 验证价格和现金
     let price = map::tile_price(tile);
-    assert!(price > 0, types::err_invalid_price());
-    assert!(player.cash >= price, types::err_insufficient_cash());
+    assert!(price > 0, EInvalidPrice);
+    assert!(player.cash >= price, EInsufficientCash);
 
     // 扣除现金
     {
@@ -534,23 +579,23 @@ public entry fun upgrade_property(
     let tile = map::get_tile(template, tile_id);
 
     // 验证地块类型
-    assert!(map::tile_kind(tile) == types::tile_property(), types::err_not_property());
+    assert!(map::tile_kind(tile) == types::tile_property(), ENotProperty);
 
     // 验证地块所有权
-    assert!(table::contains(&game.owner_of, tile_id), types::err_property_not_owned());
+    assert!(table::contains(&game.owner_of, tile_id), EPropertyNotOwned);
     let owner = *table::borrow(&game.owner_of, tile_id);
-    assert!(owner == player_addr, types::err_not_owner());
+    assert!(owner == player_addr, ENotOwner);
 
     // 验证等级
     let current_level = *table::borrow(&game.level_of, tile_id);
-    assert!(current_level < types::level_4(), types::err_max_level());
+    assert!(current_level < types::level_4(), EMaxLevel);
 
     // 计算升级费用
     let price = map::tile_price(tile);
-    let upgrade_cost = types::calculate_upgrade_cost(price, current_level);
+    let upgrade_cost = calculate_upgrade_cost(price, current_level);
 
     // 验证现金
-    assert!(player.cash >= upgrade_cost, types::err_insufficient_cash());
+    assert!(player.cash >= upgrade_cost, EInsufficientCash);
 
     // 扣除现金
     {
@@ -591,9 +636,9 @@ fun get_active_player(game: &Game): address {
 
 // 验证回合令牌
 fun validate_turn_cap(game: &Game, cap: &TurnCap) {
-    assert!(cap.game_id == object::uid_to_inner(&game.id), types::err_pos_mismatch());
-    assert!(cap.turn == game.turn, types::err_cap_expired());
-    assert!(cap.player == get_active_player(game), types::err_not_active_player());
+    assert!(cap.game_id == object::uid_to_inner(&game.id), EPosMismatch);
+    assert!(cap.turn == game.turn, ECapExpired);
+    assert!(cap.player == get_active_player(game), ENotActivePlayer);
 }
 
 // 检查是否应该跳过回合
@@ -762,7 +807,7 @@ fun execute_step_movement_with_collectors(
         if (table::contains(&game.npc_on, next_pos)) {
             let npc = *table::borrow(&game.npc_on, next_pos);
 
-            if (types::is_hospital_npc(npc.kind)) {
+            if (is_hospital_npc(npc.kind)) {
                 // 炸弹或狗狗 - 送医院
                 {
                     let player = table::borrow_mut(&mut game.players, player_addr);
@@ -923,7 +968,7 @@ fun handle_tile_pass(
     let tile_kind = map::tile_kind(tile);
 
     // 只有卡片格和彩票格在经过时触发
-    if (types::is_passable_trigger(tile_kind)) {
+    if (is_passable_trigger(tile_kind)) {
         if (tile_kind == types::tile_card() && game.config.trigger_card_on_pass) {
             // 抽卡
             let (card_kind, count) = cards::draw_card_on_pass(game.rng_nonce);
@@ -1006,7 +1051,7 @@ fun handle_tile_stop_with_collector(
             let owner = *table::borrow(&game.owner_of, tile_id);
             if (owner != player_addr) {
                 let level = *table::borrow(&game.level_of, tile_id);
-                let toll = types::calculate_toll(map::tile_base_toll(tile), level);
+                let toll = calculate_toll(map::tile_base_toll(tile), level);
 
                 // 处理租金支付
                 let (is_rent_free, actual_payment, should_bankrupt) = {
@@ -1175,7 +1220,7 @@ fun handle_property_stop(
         if (owner != player_addr) {
             // 需要支付过路费
             let level = *table::borrow(&game.level_of, tile_id);
-            let toll = types::calculate_toll(map::tile_base_toll(tile), level);
+            let toll = calculate_toll(map::tile_base_toll(tile), level);
 
             let player = table::borrow_mut(&mut game.players, player_addr);
 
@@ -1352,8 +1397,8 @@ fun apply_card_effect(
             };
 
             // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), types::err_tile_occupied_by_npc());
-            assert!(game.current_npc_count < game.config.npc_cap, types::err_npc_cap_reached());
+            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
+            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
 
             // 放置NPC
             let npc = NpcInst {
@@ -1383,8 +1428,8 @@ fun apply_card_effect(
             let tile_id = *option::borrow(&tile);
 
             // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), types::err_tile_occupied_by_npc());
-            assert!(game.current_npc_count < game.config.npc_cap, types::err_npc_cap_reached());
+            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
+            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
 
             // 放置狗狗NPC
             let npc = NpcInst {
@@ -1445,8 +1490,8 @@ fun apply_card_effect_with_collectors(
             };
 
             // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), types::err_tile_occupied_by_npc());
-            assert!(game.current_npc_count < game.config.npc_cap, types::err_npc_cap_reached());
+            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
+            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
 
             // 放置NPC
             let npc = NpcInst {
@@ -1498,8 +1543,8 @@ fun apply_card_effect_with_collectors(
             let tile_id = *option::borrow(&tile);
 
             // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), types::err_tile_occupied_by_npc());
-            assert!(game.current_npc_count < game.config.npc_cap, types::err_npc_cap_reached());
+            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
+            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
 
             // 放置狗狗NPC
             let npc = NpcInst {
@@ -1683,7 +1728,7 @@ public fun is_tile_owned(game: &Game, tile_id: u64): bool {
 }
 
 public fun get_tile_owner(game: &Game, tile_id: u64): address {
-    assert!(table::contains(&game.owner_of, tile_id), types::err_no_such_tile());
+    assert!(table::contains(&game.owner_of, tile_id), ENoSuchTile);
     *table::borrow(&game.owner_of, tile_id)
 }
 
@@ -1753,7 +1798,7 @@ public fun get_turn(game: &Game): u64 {
 
 #[test_only]
 public fun current_turn_player(game: &Game): address {
-    assert!(game.status == types::status_active(), types::err_already_started());
+    assert!(game.status == types::status_active(), EAlreadyStarted);
     *game.join_order.borrow((game.active_idx as u64))
 }
 
@@ -1936,4 +1981,58 @@ public fun get_buff_value_for_test(
 ): u64 {
     let player = table::borrow(&game.players, player_addr);
     get_buff_value(player, buff_kind, game.turn)
+}
+
+// ===== Helper Functions (moved from types) =====
+
+// 获取等级倍率数组（用于计算过路费）
+public fun get_level_multipliers(): vector<u64> {
+    vector[1, 2, 4, 8, 16]  // M[0..4]
+}
+
+// 计算升级成本
+public fun calculate_upgrade_cost(price: u64, level: u8): u64 {
+    // cost(level) = price * (0.6 + 0.5 * level)
+    let multiplier = 60 + 50 * (level as u64);  // 以百分比计算
+    (price * multiplier) / 100
+}
+
+// 计算过路费
+public fun calculate_toll(base_toll: u64, level: u8): u64 {
+    let multipliers = get_level_multipliers();
+    let idx = (level as u64);
+    if (idx >= multipliers.length()) {
+        base_toll  // 防御性编程
+    } else {
+        base_toll * *multipliers.borrow(idx)
+    }
+}
+
+// 检查是否是NPC类型
+public fun is_npc(kind: u8): bool {
+    kind == types::npc_barrier() || kind == types::npc_bomb() || kind == types::npc_dog()
+}
+
+// 检查是否是会送医院的NPC
+public fun is_hospital_npc(kind: u8): bool {
+    kind == types::npc_bomb() || kind == types::npc_dog()
+}
+
+// 检查是否是可停留地块
+public fun is_stoppable_tile(kind: u8): bool {
+    kind == types::tile_property() ||
+    kind == types::tile_hospital() ||
+    kind == types::tile_prison() ||
+    kind == types::tile_chance() ||
+    kind == types::tile_bonus() ||
+    kind == types::tile_fee() ||
+    kind == types::tile_card() ||
+    kind == types::tile_news() ||
+    kind == types::tile_lottery() ||
+    kind == types::tile_shop()
+}
+
+// 检查是否是可经过触发的地块
+public fun is_passable_trigger(kind: u8): bool {
+    kind == types::tile_card() || kind == types::tile_lottery()
 }

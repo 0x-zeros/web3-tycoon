@@ -268,3 +268,4 @@ move/                       # Not implemented yet
 - **Keep commits concise** - Simple Chinese descriptions
 - fix bug的时候尽量kiss原则
 - 重构的时候不需要向后兼容，以保持设计架构最优为优先
+- 使用中文和我对话

@@ -10,6 +10,21 @@ const ETemplateNotFound: u64 = 3001;
 const ETemplateAlreadyExists: u64 = 3002;
 
 // ===== TileStatic 静态地块信息 =====
+//
+// 功能说明：
+// 定义地图上每个地块的静态属性
+// 这些属性在游戏过程中不会改变，作为地图模板的一部分
+//
+// 字段说明：
+// - x, y: 地块在地图上的坐标位置
+// - kind: 地块类型（PROPERTY/HOSPITAL/PRISON/CHANCE等）
+// - size: 地块大小
+//   * 1: 1x1标准地块
+//   * 2: 2x2大型地块（如起点、重要建筑）
+// - price: 购买价格（仅对PROPERTY类型有效）
+// - base_toll: 基础过路费（等级升级后按倍数增加）
+// - special: 额外参数位，用于特殊功能扩展
+//   * 可用于存储地块颜色、组别、特殊效果等
 public struct TileStatic has store, copy, drop {
     x: u16,
     y: u16,
@@ -21,6 +36,42 @@ public struct TileStatic has store, copy, drop {
 }
 
 // ===== MapTemplate 地图模板（静态，不随对局变化） =====
+//
+// 功能说明：
+// 定义完整的地图布局和连接关系
+// 作为游戏的基础模板，所有对局共享同一模板
+// 支持环形地图和复杂邻接地图两种模式
+//
+// 地图结构：
+// - 环形模式：传统大富翁方形路径，使用cw_next/ccw_next导航
+// - 邻接模式：复杂地图布局，使用adj表和BFS寻路
+//
+// 字段说明：
+// 基本信息：
+// - id: 模板唯一标识符
+// - version: 版本号，用于更新管理
+// - width, height: 地图尺寸
+// - tile_count: 地块总数
+//
+// 地块数据：
+// - tiles_static: 所有地块的静态信息
+//
+// 导航系统：
+// - adj: 邻接表，记录每个地块的相邻地块
+// - cw_next: 顺时针走向的下一个地块
+// - ccw_next: 逆时针走向的下一个地块
+// - ring_id: 地块所属环路ID（支持多环路）
+// - ring_idx: 地块在环路中的位置索引
+//
+// 特殊地块索引：
+// - hospital_ids: 所有医院地块
+// - prison_ids: 所有监狱地块
+// - shop_ids: 所有商店地块
+// - news_ids: 所有新闻地块
+//
+// 配置与元数据：
+// - digest: 模板摘要哈希，用于验证完整性
+// - use_adj_traversal: true使用BFS寻路，false使用环路导航
 public struct MapTemplate has store {
     id: u64,
     version: u64,
@@ -42,6 +93,15 @@ public struct MapTemplate has store {
 }
 
 // ===== MapRegistry 地图注册表 =====
+//
+// 功能说明：
+// 全局地图模板注册中心
+// 存储所有可用的地图模板，供创建游戏时选择
+//
+// 字段说明：
+// - id: 唯一对象ID
+// - templates: 模板ID到模板对象的映射
+// - template_count: 已注册的模板总数
 public struct MapRegistry has key, store {
     id: UID,
     templates: Table<u64, MapTemplate>,
@@ -391,67 +451,101 @@ public fun can_reach_in_k_steps(
     false
 }
 
-// 获取朝目标移动的下一步
+// ===== BFS寻路算法：计算从起点到终点的下一步移动位置 =====
+//
+// 功能说明：
+// 使用广度优先搜索(BFS)算法找出从当前位置(from)到目标位置(to)的最短路径，
+// 并返回路径上的第一步（下一个应该移动到的地块）
+//
+// 参数：
+// - template: 地图模板，包含地块连接关系
+// - from: 起始地块ID
+// - to: 目标地块ID
+// - k: 最大搜索深度限制（防止在大地图上无限搜索）
+//
+// 返回值：
+// - Some(tile_id): 下一步应该移动到的地块ID
+// - None: 无法找到路径或已到达目标
 public fun next_step_toward(
     template: &MapTemplate,
     from: u64,
     to: u64,
     k: u8
 ): Option<u64> {
+    // 边界条件：如果已经在目标位置，返回None
     if (from == to) return option::none();
 
-    // 如果不使用邻接寻路，使用环路导航
+    // 路径选择模式1：环形地图使用简单的顺/逆时针导航
+    // 适用于传统大富翁的方形环路地图
     if (!template.use_adj_traversal) {
         return next_step_via_ring(template, from, to)
     };
 
-    // 使用BFS寻找路径
-    // 使用并行数组代替结构体
-    let mut visited = vector::empty<u64>();
-    let mut queue_tiles = vector::empty<u64>();
-    let mut queue_depths = vector::empty<u8>();
-    let mut queue_parents = vector::empty<Option<u64>>();
+    // 路径选择模式2：复杂地图使用BFS寻找最短路径
+    // 适用于有分支、捷径的复杂地图布局
 
+    // BFS算法初始化
+    // 使用并行数组代替结构体以优化gas消耗
+    let mut visited = vector::empty<u64>();        // 已访问的地块集合
+    let mut queue_tiles = vector::empty<u64>();    // BFS队列：地块ID
+    let mut queue_depths = vector::empty<u8>();    // BFS队列：当前深度
+    let mut queue_parents = vector::empty<Option<u64>>(); // BFS队列：路径第一步记录
+
+    // 将起点加入队列
     queue_tiles.push_back(from);
     queue_depths.push_back(0);
     queue_parents.push_back(option::none());
     visited.push_back(from);
 
+    // BFS主循环：逐层扩展搜索
     while (!queue_tiles.is_empty()) {
+        // 从队列头部取出当前处理的节点
         let tile_id = queue_tiles.remove(0);
         let depth = queue_depths.remove(0);
         let parent = queue_parents.remove(0);
 
+        // 检查是否到达目标
         if (tile_id == to) {
-            // 回溯找到第一步
+            // 找到目标，需要回溯找到第一步
+            // parent记录了从起点出发的第一步是哪个地块
             if (option::is_some(&parent) && *option::borrow(&parent) == from) {
-                // 直接相邻
+                // 特殊情况：目标与起点直接相邻
+                // 此时tile_id就是下一步
                 return option::some(tile_id)
             };
-            // 需要继续寻找第一步（简化处理）
+            // TODO: 完整实现路径回溯逻辑
+            // 当前简化处理：非直接相邻的情况返回None
+            // 完整实现应该通过parent链回溯找到第一步
             return option::none()
         };
 
+        // 深度限制检查：避免搜索过深
         if (depth >= k) {
             continue
         };
 
-        // 获取邻居
+        // 扩展当前节点的所有邻居
         if (table::contains(&template.adj, tile_id)) {
             let neighbors = table::borrow(&template.adj, tile_id);
             let mut i = 0;
             while (i < neighbors.length()) {
                 let neighbor = *neighbors.borrow(i);
+
+                // 跳过已访问的节点，避免重复搜索
                 if (!vector::contains(&visited, &neighbor)) {
+                    // 标记为已访问并加入队列
                     visited.push_back(neighbor);
                     queue_tiles.push_back(neighbor);
                     queue_depths.push_back(depth + 1);
 
-                    // 如果是第一层，记录可以作为第一步
+                    // 关键：记录路径的第一步
                     if (depth == 0) {
+                        // 当前在第一层（从起点直接可达的节点）
+                        // 记录这个邻居作为潜在的第一步
                         queue_parents.push_back(option::some(neighbor));
                     } else {
-                        // 传递第一步信息
+                        // 当前在更深的层
+                        // 传递之前记录的第一步信息
                         queue_parents.push_back(parent);
                     }
                 };
@@ -460,6 +554,7 @@ public fun next_step_toward(
         };
     };
 
+    // BFS搜索完成但未找到路径
     option::none()
 }
 

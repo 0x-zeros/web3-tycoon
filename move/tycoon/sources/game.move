@@ -72,6 +72,11 @@ public struct Config has store, copy, drop {
 }
 
 // ===== BuffEntry buff条目 =====
+//
+// 功能说明：
+// 统一的Buff存储结构，用于管理玩家的各种临时状态效果
+// 采用独占终止时间设计，便于统一的过期检查和清理
+//
 // Buff激活逻辑使用独占语义（exclusive semantics）：
 // - Buff激活条件：current_turn < first_inactive_turn
 // - Buff过期条件：current_turn >= first_inactive_turn
@@ -79,6 +84,14 @@ public struct Config has store, copy, drop {
 //   - first_inactive_turn = turn + 1 → 仅当前回合激活
 //   - first_inactive_turn = turn + 2 → 当前回合和下个回合激活
 //   - first_inactive_turn = turn + 3 → 当前回合和接下来两个回合激活
+//
+// 字段说明：
+// - kind: Buff类型标识，对应types模块中的BUFF_*常量
+// - first_inactive_turn: 首个未激活的回合号（独占边界）
+// - value: 附加数据，意义取决于Buff类型
+//   * BUFF_MOVE_CTRL: 存储指定的骰子点数
+//   * BUFF_RENT_FREE: 未使用（可扩展为免租比例）
+//   * BUFF_FROZEN: 未使用（可扩展为冻结来源）
 public struct BuffEntry has store, copy, drop {
     kind: u8,                // Buff类型 (rent_free, frozen, move_ctrl等)
     first_inactive_turn: u64, // 首个未激活回合（独占）
@@ -86,6 +99,21 @@ public struct BuffEntry has store, copy, drop {
 }
 
 // ===== Player 玩家状态 =====
+//
+// 功能说明：
+// 存储单个玩家的完整游戏状态，包括位置、资产、卡牌、Buff等
+// 作为Game对象中players表的值存储
+//
+// 字段说明：
+// - owner: 玩家的区块链地址，用于身份验证
+// - pos: 当前所在地块的ID
+// - cash: 现金余额
+// - in_prison_turns: 剩余监狱回合数（0表示不在监狱）
+// - in_hospital_turns: 剩余医院回合数（0表示不在医院）
+// - bankrupt: 破产标志，破产后不参与游戏但保留在players表中
+// - cards: 手牌集合，键为卡牌种类，值为数量
+// - dir_pref: 移动方向偏好（顺时针/逆时针/自动选择）
+// - buffs: 当前激活的所有Buff列表
 public struct Player has store {
     owner: address,
     pos: u64,  // tile_id
@@ -99,6 +127,19 @@ public struct Player has store {
 }
 
 // ===== NpcInst NPC实例 =====
+//
+// 功能说明：
+// 表示地图上的NPC实体，如路障、炸弹、狗等
+// NPC可以影响玩家的移动和地块效果
+//
+// 字段说明：
+// - kind: NPC类型（BARRIER/BOMB/DOG等）
+// - expires_at_turn: 过期回合号
+//   * Some(turn): 在指定回合自动移除
+//   * None: 永久存在，需要手动清除
+// - consumable: 是否可被消耗
+//   * true: 触发后自动移除（如炸弹）
+//   * false: 触发后保留（如路障）
 public struct NpcInst has store, copy, drop {
     kind: u8,  // NpcKind
     expires_at_turn: Option<u64>,
@@ -106,6 +147,16 @@ public struct NpcInst has store, copy, drop {
 }
 
 // ===== Seat 座位（入座凭证） =====
+//
+// 功能说明：
+// 玩家加入游戏后获得的凭证对象
+// 代表玩家在特定游戏中的参与资格
+// 用于退出游戏时验证身份
+//
+// 字段说明：
+// - id: 唯一对象ID
+// - game_id: 所属游戏的ID
+// - player: 持有者地址
 public struct Seat has key {
     id: UID,
     game_id: ID,
@@ -113,6 +164,17 @@ public struct Seat has key {
 }
 
 // ===== TurnCap 回合令牌 =====
+//
+// 功能说明：
+// 回合授权令牌，证明玩家可以执行当前回合的操作
+// 实现对象能力模式（Object Capability Pattern）
+// 每个回合开始时铸造，结束时销毁
+//
+// 字段说明：
+// - id: 唯一对象ID
+// - game_id: 所属游戏的ID
+// - player: 当前回合玩家地址
+// - turn: 回合号，用于验证时效性
 public struct TurnCap has key {
     id: UID,
     game_id: ID,
@@ -121,6 +183,40 @@ public struct TurnCap has key {
 }
 
 // ===== Game 游戏对象 =====
+//
+// 功能说明：
+// 核心游戏状态对象，包含一局游戏的所有动态数据
+// 作为共享对象存储在链上，所有玩家通过它进行交互
+//
+// 状态管理：
+// - status: 游戏生命周期状态
+//   * 0 (READY): 等待玩家加入
+//   * 1 (ACTIVE): 游戏进行中
+//   * 2 (ENDED): 游戏已结束
+//
+// 玩家管理：
+// - players: 地址到玩家状态的映射
+// - join_order: 玩家加入顺序，决定回合顺序
+// - active_idx: 当前活跃玩家在join_order中的索引
+//
+// 回合系统：
+// - turn: 当前回合数，从0开始
+// - phase: 回合内阶段（ROLL/MOVE/SETTLE等）
+//
+// 地产系统：
+// - owner_of: 地块所有权映射
+// - level_of: 地块等级映射（0-4级）
+// - owner_index: 反向索引，快速查找玩家的所有地产
+//
+// NPC系统：
+// - npc_on: 地块上的NPC实例
+// - current_npc_count: 当前NPC总数，用于限制
+//
+// 其他组件：
+// - config: 游戏配置参数
+// - rng_nonce: 随机数种子
+// - card_catalog: 卡牌定义目录
+// - winner: 游戏结束时的获胜者
 public struct Game has key, store {
     id: UID,
     status: u8,  // 0=ready, 1=active, 2=ended
@@ -689,6 +785,22 @@ fun rand_1_6(game: &mut Game, clock: &Clock): u8 {
 // 计算移动目标
 // 注意：当use_adj=true时，返回from作为占位符，实际路径将通过BFS动态确定
 // 这是因为邻接寻路需要在执行时根据实际可达性来决定路径
+// 计算移动的目标位置
+//
+// 该函数根据不同的寻路模式计算玩家移动后的目标位置：
+// 1. 邻接寻路模式（use_adj=true）：
+//    - 返回起始位置，实际路径由execute_step_movement动态计算
+//    - 适用于复杂的非环形地图
+// 2. 环路导航模式（use_adj=false）：
+//    - 直接计算目标位置，按照固定的顺/逆时针方向移动
+//    - 适用于简单的环形地图（如传统大富翁）
+//
+// 参数说明：
+// - from: 起始位置
+// - steps: 移动步数（通常为骰子点数）
+// - dir_pref: 玩家的方向偏好（自动选择方向）
+// - dir_intent: 玩家的明确方向意图（如使用方向控制卡）
+// - use_adj: 是否使用邻接寻路
 fun calculate_move_target(
     template: &MapTemplate,
     from: u64,
@@ -697,28 +809,29 @@ fun calculate_move_target(
     dir_intent: Option<u8>,
     use_adj: bool
 ): u64 {
-    // 如果使用邻接寻路，返回起始位置
+    // 邻接寻路模式：延迟计算，这里只返回起始位置
     // 实际目标位置会在execute_step_movement中通过BFS算法动态计算
     if (use_adj) {
         return from
     };
 
+    // 环路导航模式：直接计算目标位置
     let mut pos = from;
     let mut i = 0;
 
-    // 确定方向
+    // 确定移动方向（优先使用玩家意图，否则使用偏好）
     let dir = if (option::is_some(&dir_intent)) {
         *option::borrow(&dir_intent)
     } else {
         dir_pref
     };
 
-    // 逐步移动
+    // 按照确定的方向逐步移动
     while (i < steps) {
         pos = if (dir == types::dir_ccw() || dir == types::dir_forced_ccw()) {
-            map::get_ccw_next(template, pos)
+            map::get_ccw_next(template, pos)  // 逆时针移动
         } else {
-            map::get_cw_next(template, pos)
+            map::get_cw_next(template, pos)   // 顺时针移动
         };
         i = i + 1;
     };
@@ -726,7 +839,25 @@ fun calculate_move_target(
     pos
 }
 
-// 执行逐步移动（带事件收集器）
+// 执行玩家的逐步移动，处理路径上的所有事件
+//
+// 算法流程：
+// 1. 首先检查玩家是否被冻结（冻结状态下原地停留，不移动）
+// 2. 根据地图配置选择寻路方式：
+//    - use_adj_traversal=true: 使用BFS邻接寻路（支持复杂地图）
+//    - use_adj_traversal=false: 使用环路导航（简单环形地图）
+// 3. 逐格移动，每一步都要：
+//    - 检查目标格子上的NPC（炸弹、狗、路障）
+//    - 处理经过格子的触发事件（抽卡、彩票等）
+//    - 到达最终格子时触发停留事件
+// 4. 所有事件收集到steps和cash_changes中，供上层聚合到最终事件
+//
+// 参数说明：
+// - from/to: 起始和目标位置（to仅在邻接寻路时使用）
+// - dice: 骰子点数，决定移动步数
+// - direction: 移动方向（顺时针/逆时针）
+// - steps: 收集每一步的效果事件
+// - cash_changes: 收集现金变化事件
 fun execute_step_movement_with_collectors(
     game: &mut Game,
     player_addr: address,
@@ -740,14 +871,14 @@ fun execute_step_movement_with_collectors(
 ) {
     let template = map::get_template(registry, game.template_id);
 
-    // 检查冻结
+    // 步骤1: 检查玩家是否处于冻结状态
     {
         let player = table::borrow(&game.players, player_addr);
-        // 使用buff系统检查冻结
+        // 使用buff系统检查冻结状态（冻结buff激活时玩家无法移动）
         let is_frozen = is_buff_active(player, types::buff_frozen(), game.turn);
 
         if (is_frozen) {
-            // 冻结时不移动，触发原地停留事件
+            // 冻结时不移动，但仍需触发原地停留事件（如收租等）
             let stop_effect = handle_tile_stop_with_collector(
                 game,
                 player_addr,
@@ -770,15 +901,17 @@ fun execute_step_movement_with_collectors(
         };
     };
 
+    // 步骤2: 初始化移动状态
     let mut current_pos = from;
     let mut steps_left = dice;
     let use_adj = game.config.use_adj_traversal && map::get_use_adj_traversal(template);
     let mut step_index: u8 = 0;
 
+    // 步骤3: 逐步移动主循环
     while (steps_left > 0) {
-        // 计算下一格
+        // 计算下一格位置（根据寻路模式选择算法）
         let next_pos = if (use_adj) {
-            // 使用邻接寻路
+            // BFS邻接寻路模式：支持任意连通图结构
             let next_opt = map::next_step_toward(template, current_pos, to, steps_left);
             if (option::is_some(&next_opt)) {
                 *option::borrow(&next_opt)
@@ -1301,30 +1434,46 @@ fun send_to_hospital(game: &mut Game, player_addr: address, registry: &MapRegist
 }
 
 // 处理破产
+// 处理玩家破产的完整流程
+//
+// 破产处理步骤：
+// 1. 标记玩家破产状态，防止其继续参与游戏
+// 2. 释放该玩家拥有的所有地产：
+//    - 从owner_of表中移除所有权记录
+//    - 重置地产等级为0（恢复初始状态）
+//    - 清空owner_index中的拥有列表
+// 3. 发送破产事件通知
+// 4. 检查游戏结束条件：
+//    - 如果只剩一个非破产玩家，该玩家获胜
+//    - 游戏状态设置为结束，记录获胜者
+//
+// 参数说明：
+// - player_addr: 破产玩家的地址
+// - creditor: 导致破产的债权人（如收租的地产拥有者）
 fun handle_bankruptcy(
     game: &mut Game,
     player_addr: address,
     creditor: Option<address>
 ) {
-    // 设置破产标志
+    // 步骤1: 设置破产标志，标记玩家已出局
     {
         let player = table::borrow_mut(&mut game.players, player_addr);
         player.bankrupt = true;
     };
 
-    // 释放所有地产
+    // 步骤2: 释放玩家拥有的所有地产
     if (table::contains(&game.owner_index, player_addr)) {
         let owned_tiles = *table::borrow(&game.owner_index, player_addr);
         let mut i = 0;
         while (i < owned_tiles.length()) {
             let tile_id = *owned_tiles.borrow(i);
 
-            // 移除所有权
+            // 从全局所有权表中移除该地产的所有权记录
             if (table::contains(&game.owner_of, tile_id)) {
                 table::remove(&mut game.owner_of, tile_id);
             };
 
-            // 重置等级
+            // 重置地产等级为0（变回无主地产）
             if (table::contains(&game.level_of, tile_id)) {
                 *table::borrow_mut(&mut game.level_of, tile_id) = 0;
             };
@@ -1332,20 +1481,21 @@ fun handle_bankruptcy(
             i = i + 1;
         };
 
-        // 清空owner_index
+        // 清空玩家的地产拥有列表
         let owner_tiles_mut = table::borrow_mut(&mut game.owner_index, player_addr);
         *owner_tiles_mut = vector::empty();
     };
 
-    // 发送破产事件
+    // 步骤3: 发送破产事件，记录破产信息
     events::emit_bankrupt_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        0,  // debt暂时设为0
+        0,  // debt暂时设为0（未来可记录实际欠款金额）
         creditor
     );
 
-    // 检查游戏是否结束（只剩一个非破产玩家）
+    // 步骤4: 检查游戏是否应该结束
+    // 统计仍在游戏中（非破产）的玩家数量
     let mut non_bankrupt_count = 0;
     let mut winner = option::none<address>();
     let mut i = 0;
@@ -1354,20 +1504,20 @@ fun handle_bankruptcy(
         let player = table::borrow(&game.players, addr);
         if (!player.bankrupt) {
             non_bankrupt_count = non_bankrupt_count + 1;
-            winner = option::some(addr);
+            winner = option::some(addr);  // 记录最后一个非破产玩家
         };
         i = i + 1;
     };
 
-    // 如果只剩一个非破产玩家，游戏结束
+    // 如果只剩一个玩家，宣布游戏结束并确定获胜者
     if (non_bankrupt_count == 1) {
         game.status = types::status_ended();
-        game.winner = winner;  // 设置赢家
+        game.winner = winner;  // 设置最后的赢家
         events::emit_game_ended_event(
             object::uid_to_inner(&game.id),
             winner,
             game.turn,
-            2  // 原因：破产胜利
+            2  // 结束原因代码：2表示破产胜利
         );
     }
 }
@@ -1590,64 +1740,92 @@ fun apply_card_effect_with_collectors(
 
 // 应用buff到玩家
 // first_inactive_turn: 首个未激活回合（独占）
+// 为玩家应用一个buff效果
+//
+// Buff系统采用独占语义（exclusive semantics）：
+// - first_inactive_turn表示buff失效的第一个回合
+// - 当current_turn < first_inactive_turn时，buff处于激活状态
+// - 当current_turn >= first_inactive_turn时，buff已过期
+//
+// 例如：
+// - 当前回合=10，first_inactive_turn=11 → buff仅在第10回合激活
+// - 当前回合=10，first_inactive_turn=13 → buff在第10,11,12回合激活
+//
+// 注意：同类型的buff会互相覆盖（同一时间只能有一个同类型buff）
 fun apply_buff(player: &mut Player, kind: u8, first_inactive_turn: u64, value: u64) {
-    // 先清除同类型的现有buff
+    // 步骤1: 清除同类型的现有buff（确保同类型buff唯一）
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         if (buff.kind == kind) {
             vector::remove(&mut player.buffs, i);
-            break
+            break  // 找到并移除后即可退出
         };
         i = i + 1;
     };
 
-    // 添加新buff
+    // 步骤2: 添加新的buff
     let buff = BuffEntry { kind, first_inactive_turn, value };
     player.buffs.push_back(buff);
 }
 
-// 清除过期的buffs
-// 移除所有current_turn >= first_inactive_turn的buff
+// 清除所有已过期的buffs
+//
+// 遍历玩家的所有buff，移除满足以下条件的buff：
+// - current_turn >= first_inactive_turn（buff已经失效）
+//
+// 注意：使用倒序遍历或不递增索引的方式处理vector::remove
 fun clear_expired_buffs(player: &mut Player, current_turn: u64) {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         if (buff.first_inactive_turn <= current_turn) {
+            // buff已过期，移除它
             vector::remove(&mut player.buffs, i);
-            // 不增加i，因为vector::remove会移动后续元素
+            // 重要：不增加i，因为vector::remove会将后续元素前移
+            // 下次循环仍然检查索引i（现在是原来的i+1位置的元素）
         } else {
+            // buff仍有效，检查下一个
             i = i + 1;
         }
     }
 }
 
-// 检查是否有某种buff激活
-// Buff激活条件: current_turn < first_inactive_turn
+// 检查玩家是否有某种类型的buff处于激活状态
+//
+// Buff激活判断：current_turn < first_inactive_turn
+// 返回true表示buff正在生效，false表示没有该buff或buff已过期
 fun is_buff_active(player: &Player, kind: u8, current_turn: u64): bool {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
+        // 找到对应类型且未过期的buff
         if (buff.kind == kind && buff.first_inactive_turn > current_turn) {
             return true
         };
         i = i + 1;
     };
-    false
+    false  // 没有找到激活的buff
 }
 
-// 获取buff的value值
-// 返回激活buff的value，未激活时返回0
+// 获取激活buff的数值载荷
+//
+// 某些buff需要携带额外数据，如：
+// - 移动控制buff：value存储指定的骰子点数
+// - 免租buff：value可存储免租的比例或次数
+//
+// 返回激活buff的value值，如果buff不存在或已过期返回0
 fun get_buff_value(player: &Player, kind: u8, current_turn: u64): u64 {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
+        // 找到对应类型且未过期的buff，返回其value
         if (buff.kind == kind && buff.first_inactive_turn > current_turn) {
             return buff.value
         };
         i = i + 1;
     };
-    0
+    0  // 没有找到激活的buff，返回默认值0
 }
 
 // 清理回合状态
@@ -1658,52 +1836,67 @@ fun clean_turn_state(game: &mut Game, player_addr: address) {
     clear_expired_buffs(player, game.turn);
 }
 
-// 推进回合
+// 推进游戏到下一个玩家的回合
+//
+// 回合切换逻辑：
+// 1. 寻找下一个未破产的玩家
+//    - 使用循环索引遍历玩家列表
+//    - 跳过所有已破产的玩家
+// 2. 更新回合数（仅在回到第一个玩家时）
+//    - 这意味着所有玩家都行动过一次
+// 3. 检查游戏结束条件
+//    - 是否达到最大回合数限制
+// 4. 重置游戏阶段为掷骰子阶段
+//
+// 注意：与should_skip_turn不同，这里只处理破产玩家的跳过
+// 监狱/医院的跳过逻辑在mint_turncap中处理
 fun advance_turn(game: &mut Game) {
     let player_count = game.join_order.length() as u8;
-    let mut attempts = 0;
+    let mut attempts = 0;  // 安全计数器
 
-    // 寻找下一个非破产玩家
+    // 步骤1: 寻找下一个非破产玩家
     loop {
-        // 更新活跃玩家索引
+        // 循环递增玩家索引（使用取模实现循环）
         game.active_idx = ((game.active_idx + 1) % player_count);
         attempts = attempts + 1;
 
-        // 获取当前玩家
+        // 获取当前索引指向的玩家
         let current_addr = *game.join_order.borrow(game.active_idx as u64);
         let current_player = table::borrow(&game.players, current_addr);
 
-        // 如果玩家未破产，使用该玩家
+        // 如果找到未破产的玩家，停止寻找
         if (!current_player.bankrupt) {
             break
         };
 
-        // 如果已经检查了所有玩家，说明全部破产（不应该发生）
+        // 安全检查：如果检查了所有玩家都是破产的
+        // 这种情况理论上不应该发生（游戏应该在只剩一人时结束）
         if (attempts >= player_count) {
             break
         };
     };
 
-    // 如果回到第一个玩家，增加回合数
+    // 步骤2: 如果回到第一个玩家（索引0），说明完成了一轮
     if (game.active_idx == 0) {
-        game.turn = game.turn + 1;
+        game.turn = game.turn + 1;  // 增加回合数
 
-        // 检查是否达到最大回合数
+        // 步骤3: 检查是否达到最大回合数限制
         if (option::is_some(&game.config.max_turns)) {
             let max_turns = *option::borrow(&game.config.max_turns);
             if (game.turn > max_turns) {
+                // 达到回合上限，游戏结束
                 game.status = types::status_ended();
                 events::emit_game_ended_event(
                     object::uid_to_inner(&game.id),
-                    option::none(),
+                    option::none(),  // TODO: 实现按资产确定赢家
                     game.turn,
-                    1  // 达到最大回合数
+                    1  // 结束原因：1表示达到最大回合数
                 );
             }
         }
     };
 
-    // 重置阶段
+    // 步骤4: 重置游戏阶段为掷骰子
     game.phase = types::phase_roll();
 }
 

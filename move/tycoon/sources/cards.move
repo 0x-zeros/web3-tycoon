@@ -1,6 +1,6 @@
 module tycoon::cards;
 
-use std::option;
+// use std::option;
 use sui::table::{Self, Table};
 use tycoon::types;
 
@@ -10,6 +10,8 @@ const EHandLimit: u64 = 5002;
 const EInvalidCardTarget: u64 = 5003;
 
 // ===== Card Definition 卡牌定义 =====
+//todo ,这个错的有点离谱，卡片也有卡片数据info(类似coin的meta data，当然更多一些)，和玩家拥有的卡片，玩家拥有的卡片肯定是key+store, copy 和 drop是不可能的啊
+//或许，这边就是meta数据？
 public struct Card has store, copy, drop {
     kind: u16,
     name: vector<u8>,
@@ -59,7 +61,7 @@ fun init_basic_cards(catalog: &mut CardCatalog) {
         types::card_move_ctrl(),
         b"Move Control",
         b"Control your next dice roll",
-        target_none(),
+        target_none(), //todo player?
         3  // 默认设置为3点
     );
 
@@ -209,7 +211,7 @@ public fun use_player_card(
 }
 
 // ===== Card Effect Functions 卡牌效果函数 =====
-
+//todo 没有用到？
 // 应用遥控骰效果
 public fun apply_move_control(dice_value: u8): u8 {
     // 返回指定的骰子值
@@ -261,7 +263,7 @@ public fun determine_card_draw(seed: u64): u16 {
         types::card_cleanse()
     ];
 
-    let index = (seed % 7) as u64;  // 0-6
+    let index = (seed % 7) as u64;  // 0-6 //todo 7 -> card_types.length()
     *card_types.borrow(index)
 }
 
@@ -316,6 +318,15 @@ public fun card_needs_target(kind: u16, catalog: &CardCatalog): bool {
 }
 
 // ===== Helper Functions 辅助函数 =====
+
+//todo 利用函数导出struct数据
+// #[test_only]
+// public use fun game_board as Game.board;
+
+// #[test_only]
+// public fun game_board(game: &Game): vector<u8> {
+//     game.board
+// }
 
 // 获取卡牌名称
 public fun get_card_name(card: &Card): &vector<u8> {
@@ -377,6 +388,7 @@ public fun is_hand_full(player_cards: &Table<u16, u64>, max_cards: u64): bool {
 // ===== Test Helper Functions 测试辅助函数 =====
 
 // 创建测试用卡牌
+#[test_only]
 public fun create_test_card(
     kind: u16,
     name: vector<u8>,
@@ -394,6 +406,7 @@ public fun create_test_card(
 }
 
 // 创建空的卡牌表
+#[test_only]
 public fun create_empty_card_table(ctx: &mut TxContext): Table<u16, u64> {
     table::new(ctx)
 }

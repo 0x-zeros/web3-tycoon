@@ -94,7 +94,7 @@ public struct Config has store, copy, drop {
 //   * BUFF_FROZEN: 未使用（可扩展为冻结来源）
 public struct BuffEntry has store, copy, drop {
     kind: u8,                // Buff类型 (rent_free, frozen, move_ctrl等)
-    first_inactive_turn: u64, // 首个未激活回合（独占）
+    first_inactive_turn: u64, // 失效turn， 首个未激活回合（独占）//todo, 每个玩家的buff生效的其实是round，记录开始round就行了，失效的用card info来判断？or 记录？
     value: u64               // 数值载荷 (如move_ctrl的骰子值)
 }
 

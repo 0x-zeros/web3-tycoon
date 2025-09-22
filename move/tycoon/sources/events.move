@@ -1,8 +1,8 @@
 module tycoon::events;
 
-use std::option;
+// use std::option;
 use sui::event;
-use sui::object::ID;
+// use sui::object::ID;
 
 // ===== Game Events 游戏事件 =====
 
@@ -32,11 +32,11 @@ public struct GameStartedEvent has copy, drop {
 // 游戏结束事件
 public struct GameEndedEvent has copy, drop {
     game: ID,
-    winner: option::Option<address>,
+    winner: option::Option<address>,//todo 改为所有玩家排名
     turn: u64,
     reason: u8  // 0=正常结束, 1=达到最大回合数, 2=只剩一个玩家
 }
-
+ 
 // ===== Turn Events 回合事件 =====
 
 // 回合开始事件
@@ -47,7 +47,7 @@ public struct TurnStartEvent has copy, drop {
 }
 
 // 跳过回合事件
-public struct SkipTurnEvent has copy, drop {
+public struct SkipTurnEvent has copy, drop {//todo miss turn
     game: ID,
     player: address,
     reason: u8  // 1=监狱, 2=医院
@@ -182,7 +182,7 @@ public struct RollAndStepActionEvent has copy, drop {
     dir: u8,
     from: u64,
     steps: vector<StepEffect>,
-    cash_changes: vector<CashDelta>,
+    cash_changes: vector<CashDelta>,//todo casedelta 也应该放到stepeffect里？
     end_pos: u64
 }
 

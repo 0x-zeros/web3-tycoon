@@ -6,7 +6,7 @@ use tycoon::map::{Self, MapTemplate, MapRegistry};
 use tycoon::types;
 
 // ===== Admin Cap 管理员权限 =====
-public struct AdminCap has key, store {
+public struct AdminCap has key, store { //todo
     id: UID
 }
 
@@ -168,7 +168,7 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 设置顺时针和逆时针路径
     i = 0;
     while (i < 40) {
-        map::set_cw_next(&mut template, i, (i + 1) % 40);
+        map::set_cw_next(&mut template, i, (i + 1) % 40);//cw,ccw 反了？todo
         map::set_ccw_next(&mut template, i, (i + 39) % 40);
         map::set_ring_info(&mut template, i, 0, (i as u32));
         i = i + 1;
@@ -180,13 +180,13 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     template
 }
 
-// 转移管理员权限
-entry fun transfer_admin_cap(
-    admin_cap: AdminCap,
-    recipient: address
-) {
-    transfer::transfer(admin_cap, recipient);
-}
+// // 转移管理员权限
+// entry fun transfer_admin_cap(
+//     admin_cap: AdminCap,
+//     recipient: address
+// ) {
+//     transfer::transfer(admin_cap, recipient);
+// }
 
 // ===== Test Helper Functions 测试辅助函数 =====
 

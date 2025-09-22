@@ -80,7 +80,7 @@ public struct MapTemplate has store {
     tile_count: u64,
     tiles_static: Table<u64 /* tile_id */, TileStatic>,
     adj: Table<u64 /* tile_id */, vector<u64> /* neighbors */>,
-    cw_next: Table<u64, u64>,     // 顺时针下一格
+    cw_next: Table<u64, u64>,     // 顺时针下一格                   //todo cw_next 这样的指针，一个u64就直接放tile里最好呀
     ccw_next: Table<u64, u64>,    // 逆时针下一格
     ring_id: Table<u64, u16>,     // 所属环路ID
     ring_idx: Table<u64, u32>,    // 在环路中的索引

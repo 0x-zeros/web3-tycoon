@@ -235,10 +235,11 @@ public struct Game has key, store {
     active_idx: u8,
     phase: u8,
 
+
     owner_of: Table<u64 /* tile_id */, address>,
     level_of: Table<u64, u8>,
     npc_on: Table<u64, NpcInst>,
-    owner_index: Table<address, vector<u64>>,  // 玩家拥有的地产列表 //todo 放到玩家里面去
+    owner_index: Table<address, vector<u64>>,
 
     config: Config,
     rng_nonce: u64,

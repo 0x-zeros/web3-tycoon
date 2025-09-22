@@ -60,6 +60,13 @@ public struct EndTurnEvent has copy, drop {
     turn: u64
 }
 
+// 轮次结束事件
+public struct RoundEndedEvent has copy, drop {
+    game: ID,
+    round: u64,
+    global_turn: u64
+}
+
 // ===== Economy Events 经济事件 =====
 
 // 破产事件
@@ -278,6 +285,18 @@ public(package) fun emit_end_turn_event(
         game: game_id,
         player,
         turn
+    });
+}
+
+public(package) fun emit_round_ended_event(
+    game_id: ID,
+    round: u64,
+    global_turn: u64
+) {
+    event::emit(RoundEndedEvent {
+        game: game_id,
+        round,
+        global_turn
     });
 }
 

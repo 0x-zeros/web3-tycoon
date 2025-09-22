@@ -78,24 +78,24 @@ public struct Config has store, copy, drop {
 // 采用独占终止时间设计，便于统一的过期检查和清理
 //
 // Buff激活逻辑使用独占语义（exclusive semantics）：
-// - Buff激活条件：current_turn < first_inactive_turn
-// - Buff过期条件：current_turn >= first_inactive_turn
+// - Buff激活条件：current_round < first_inactive_round
+// - Buff过期条件：current_round >= first_inactive_round
 // - 示例：
-//   - first_inactive_turn = turn + 1 → 仅当前回合激活
-//   - first_inactive_turn = turn + 2 → 当前回合和下个回合激活
-//   - first_inactive_turn = turn + 3 → 当前回合和接下来两个回合激活
+//   - first_inactive_round = round + 1 → 仅当前轮激活
+//   - first_inactive_round = round + 2 → 当前轮和下一轮激活
+//   - first_inactive_round = round + 3 → 当前轮和接下来两轮激活
 //
 // 字段说明：
 // - kind: Buff类型标识，对应types模块中的BUFF_*常量
-// - first_inactive_turn: 首个未激活的回合号（独占边界）
+// - first_inactive_round: 首个未激活的轮次（独占边界）
 // - value: 附加数据，意义取决于Buff类型
 //   * BUFF_MOVE_CTRL: 存储指定的骰子点数
 //   * BUFF_RENT_FREE: 未使用（可扩展为免租比例）
 //   * BUFF_FROZEN: 未使用（可扩展为冻结来源）
 public struct BuffEntry has store, copy, drop {
-    kind: u8,                // Buff类型 (rent_free, frozen, move_ctrl等)
-    first_inactive_turn: u64, // 失效turn， 首个未激活回合（独占）//todo, 每个玩家的buff生效的其实是round，记录开始round就行了，失效的用card info来判断？or 记录？
-    value: u64               // 数值载荷 (如move_ctrl的骰子值)
+    kind: u8,                  // Buff类型 (rent_free, frozen, move_ctrl等)
+    first_inactive_round: u64, // 首个未激活轮次（独占）
+    value: u64                 // 数值载荷 (如move_ctrl的骰子值)
 }
 
 // ===== Player 玩家状态 =====
@@ -134,15 +134,15 @@ public struct Player has store {
 //
 // 字段说明：
 // - kind: NPC类型（BARRIER/BOMB/DOG等）
-// - expires_at_turn: 过期回合号
-//   * Some(turn): 在指定回合自动移除
+// - expires_at_global_turn: 过期的全局回合号
+//   * Some(turn): 在指定全局回合自动移除（global_turn = round * player_count + turn）
 //   * None: 永久存在，需要手动清除
 // - consumable: 是否可被消耗
 //   * true: 触发后自动移除（如炸弹）
 //   * false: 触发后保留（如路障）
 public struct NpcInst has store, copy, drop {
     kind: u8,  // NpcKind
-    expires_at_turn: Option<u64>,
+    expires_at_global_turn: Option<u64>,
     consumable: bool
 }
 
@@ -174,11 +174,13 @@ public struct Seat has key {
 // - id: 唯一对象ID
 // - game_id: 所属游戏的ID
 // - player: 当前回合玩家地址
-// - turn: 回合号，用于验证时效性
+// - round: 轮次号
+// - turn: 轮内回合号（0到player_count-1）
 public struct TurnCap has key {
     id: UID,
     game_id: ID,
     player: address,
+    round: u64,
     turn: u64
 }
 
@@ -200,7 +202,8 @@ public struct TurnCap has key {
 // - active_idx: 当前活跃玩家在join_order中的索引
 //
 // 回合系统：
-// - turn: 当前回合数，从0开始
+// - round: 当前轮次，从0开始（所有玩家各行动一次为一轮）
+// - turn: 当前轮内回合，从0开始（0到player_count-1）
 // - phase: 回合内阶段（ROLL/MOVE/SETTLE等）
 //
 // 地产系统：
@@ -227,14 +230,15 @@ public struct Game has key, store {
     players: Table<address, Player>,
     join_order: vector<address>,
 
-    turn: u64,
+    round: u64,        // 轮次计数器（所有玩家各行动一次）
+    turn: u64,         // 轮内回合（0到player_count-1）
     active_idx: u8,
     phase: u8,
 
     owner_of: Table<u64 /* tile_id */, address>,
     level_of: Table<u64, u8>,
     npc_on: Table<u64, NpcInst>,
-    owner_index: Table<address, vector<u64>>,  // 玩家拥有的地产列表
+    owner_index: Table<address, vector<u64>>,  // 玩家拥有的地产列表 //todo 放到玩家里面去
 
     config: Config,
     rng_nonce: u64,
@@ -242,7 +246,7 @@ public struct Game has key, store {
     // 额外状态
     current_npc_count: u16,
     card_catalog: CardCatalog,
-    winner: Option<address>
+    winner: Option<address>//todo 不需要吧？
 }
 
 // ===== Entry Functions 入口函数 =====
@@ -258,7 +262,7 @@ public entry fun create_game(
     let template = map::get_template(registry, template_id);
 
     // 创建默认配置
-    let config = Config {
+    let config = Config {//todo config应该作为参数传进来，有些数值应该是需要客户端传进来
         trigger_card_on_pass: true,
         trigger_lottery_on_pass: true,
         npc_cap: types::default_npc_cap(),
@@ -278,11 +282,12 @@ public entry fun create_game(
     let mut game = Game {
         id: game_id,
         status: types::status_ready(),
-        created_at_ms: 0,  // 将在start时设置
+        created_at_ms: 0,  // 将在start时设置 //todo, 这样的话变量名不太对呀
         template_id,
-        template_digest: map::get_template_digest(template),
+        template_digest: map::get_template_digest(template),//这个字段无意义 todo
         players: table::new(ctx),
         join_order: vector::empty(),
+        round: 0,
         turn: 0,
         active_idx: 0,
         phase: types::phase_roll(),
@@ -371,7 +376,7 @@ public entry fun start(
     // 设置游戏状态
     game.status = types::status_active();
     game.created_at_ms = clock::timestamp_ms(clock);
-    game.turn = 1;
+    // round和turn已在创建时初始化为0
     game.active_idx = 0;
     game.phase = types::phase_roll();
 
@@ -467,7 +472,7 @@ public entry fun use_card(
     events::emit_use_card_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        game.turn,
+        get_global_turn(game),
         kind,
         target,
         tile,
@@ -556,7 +561,7 @@ public entry fun roll_and_step(
     events::emit_roll_and_step_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        game.turn,
+        get_global_turn(game),
         dice,
         direction,
         from_pos,
@@ -569,7 +574,7 @@ public entry fun roll_and_step(
     clean_turn_state(game, player_addr);
 
     // 消耗令牌
-    let TurnCap { id, game_id: _, player: _, turn: _ } = cap;
+    let TurnCap { id, game_id: _, player: _, round: _, turn: _ } = cap;
     object::delete(id);
 
     // 结束回合
@@ -594,11 +599,11 @@ public entry fun end_turn(
     events::emit_end_turn_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        game.turn
+        get_global_turn(game)
     );
 
     // 消耗令牌
-    let TurnCap { id, game_id: _, player: _, turn: _ } = cap;
+    let TurnCap { id, game_id: _, player: _, round: _, turn: _ } = cap;
     object::delete(id);
 
     // 推进回合
@@ -733,6 +738,7 @@ fun get_active_player(game: &Game): address {
 // 验证回合令牌
 fun validate_turn_cap(game: &Game, cap: &TurnCap) {
     assert!(cap.game_id == object::uid_to_inner(&game.id), EPosMismatch);
+    assert!(cap.round == game.round, ECapExpired);
     assert!(cap.turn == game.turn, ECapExpired);
     assert!(cap.player == get_active_player(game), ENotActivePlayer);
 }
@@ -767,8 +773,8 @@ fun get_dice_value(game: &mut Game, player_addr: address, clock: &Clock): u8 {
     let player = table::borrow(&game.players, player_addr);
 
     // 使用buff系统检查遥控骰子
-    if (is_buff_active(player, types::buff_move_ctrl(), game.turn)) {
-        let value = get_buff_value(player, types::buff_move_ctrl(), game.turn);
+    if (is_buff_active(player, types::buff_move_ctrl(), game.round)) {
+        let value = get_buff_value(player, types::buff_move_ctrl(), game.round);
         return (value as u8)
     };
 
@@ -875,7 +881,7 @@ fun execute_step_movement_with_collectors(
     {
         let player = table::borrow(&game.players, player_addr);
         // 使用buff系统检查冻结状态（冻结buff激活时玩家无法移动）
-        let is_frozen = is_buff_active(player, types::buff_frozen(), game.turn);
+        let is_frozen = is_buff_active(player, types::buff_frozen(), game.round);
 
         if (is_frozen) {
             // 冻结时不移动，但仍需触发原地停留事件（如收租等）
@@ -1191,7 +1197,7 @@ fun handle_tile_stop_with_collector(
                     let player = table::borrow_mut(&mut game.players, player_addr);
 
                     // 检查免租
-                    let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.turn);
+                    let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.round);
 
                     if (has_rent_free) {
                         // 免租
@@ -1358,7 +1364,7 @@ fun handle_property_stop(
             let player = table::borrow_mut(&mut game.players, player_addr);
 
             // 检查免租
-            let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.turn);
+            let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.round);
 
             if (has_rent_free) {
                 // 免租
@@ -1535,7 +1541,7 @@ fun apply_card_effect(
         // 遥控骰
         let player = table::borrow_mut(&mut game.players, player_addr);
         // 使用buff系统
-        apply_buff(player, types::buff_move_ctrl(), game.turn + 1, 3);
+        apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
         if (option::is_some(&tile)) {
@@ -1553,7 +1559,7 @@ fun apply_card_effect(
             // 放置NPC
             let npc = NpcInst {
                 kind: npc_kind,
-                expires_at_turn: option::none(),
+                expires_at_global_turn: option::none(),
                 consumable: true
             };
             table::add(&mut game.npc_on, tile_id, npc);
@@ -1563,14 +1569,14 @@ fun apply_card_effect(
         // 免租
         let player = table::borrow_mut(&mut game.players, player_addr);
         // 使用buff系统
-        apply_buff(player, types::buff_rent_free(), game.turn + 2, 0);
+        apply_buff(player, types::buff_rent_free(), game.round + 2, 0);
     } else if (kind == types::card_freeze()) {
         // 冻结
         if (option::is_some(&target)) {
             let target_addr = *option::borrow(&target);
             let target_player = table::borrow_mut(&mut game.players, target_addr);
             // 使用buff系统
-            apply_buff(target_player, types::buff_frozen(), game.turn + 2, 0);
+            apply_buff(target_player, types::buff_frozen(), game.round + 2, 0);
         }
     } else if (kind == types::card_dog()) {
         // 放置狗狗NPC
@@ -1584,7 +1590,7 @@ fun apply_card_effect(
             // 放置狗狗NPC
             let npc = NpcInst {
                 kind: types::npc_dog(),
-                expires_at_turn: option::none(),
+                expires_at_global_turn: option::none(),
                 consumable: true  // 碰到狗狗后会消失
             };
             table::add(&mut game.npc_on, tile_id, npc);
@@ -1621,13 +1627,13 @@ fun apply_card_effect_with_collectors(
         // 遥控骰
         let player = table::borrow_mut(&mut game.players, player_addr);
         // 使用buff系统
-        apply_buff(player, types::buff_move_ctrl(), game.turn + 1, 3);
+        apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_move_ctrl(),
             player_addr,
-            option::some(game.turn + 1)
+            option::some(get_global_turn(game) + 3)
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
@@ -1646,7 +1652,7 @@ fun apply_card_effect_with_collectors(
             // 放置NPC
             let npc = NpcInst {
                 kind: npc_kind,
-                expires_at_turn: option::none(),
+                expires_at_global_turn: option::none(),
                 consumable: true
             };
             table::add(&mut game.npc_on, tile_id, npc);
@@ -1664,13 +1670,13 @@ fun apply_card_effect_with_collectors(
         // 免租
         let player = table::borrow_mut(&mut game.players, player_addr);
         // 使用buff系统
-        apply_buff(player, types::buff_rent_free(), game.turn + 2, 0);
+        apply_buff(player, types::buff_rent_free(), game.round + 2, 0);
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_rent_free(),
             player_addr,
-            option::some(game.turn + 2)
+            option::some(get_global_turn(game) + 6)
         ));
     } else if (kind == types::card_freeze()) {
         // 冻结
@@ -1678,13 +1684,13 @@ fun apply_card_effect_with_collectors(
             let target_addr = *option::borrow(&target);
             let target_player = table::borrow_mut(&mut game.players, target_addr);
             // 使用buff系统
-            apply_buff(target_player, types::buff_frozen(), game.turn + 2, 0);
+            apply_buff(target_player, types::buff_frozen(), game.round + 2, 0);
 
             // 记录buff变更
             vector::push_back(buff_changes, events::make_buff_change(
                 types::buff_frozen(),
                 target_addr,
-                option::some(game.turn + 2)
+                option::some(get_global_turn(game) + 6)
             ));
         }
     } else if (kind == types::card_dog()) {
@@ -1699,7 +1705,7 @@ fun apply_card_effect_with_collectors(
             // 放置狗狗NPC
             let npc = NpcInst {
                 kind: types::npc_dog(),
-                expires_at_turn: option::none(),
+                expires_at_global_turn: option::none(),
                 consumable: true  // 碰到狗狗后会消失
             };
             table::add(&mut game.npc_on, tile_id, npc);
@@ -1765,21 +1771,21 @@ fun apply_buff(player: &mut Player, kind: u8, first_inactive_turn: u64, value: u
     };
 
     // 步骤2: 添加新的buff
-    let buff = BuffEntry { kind, first_inactive_turn, value };
+    let buff = BuffEntry { kind, first_inactive_round, value };
     player.buffs.push_back(buff);
 }
 
 // 清除所有已过期的buffs
 //
 // 遍历玩家的所有buff，移除满足以下条件的buff：
-// - current_turn >= first_inactive_turn（buff已经失效）
+// - current_round >= first_inactive_round（buff已经失效）
 //
 // 注意：使用倒序遍历或不递增索引的方式处理vector::remove
-fun clear_expired_buffs(player: &mut Player, current_turn: u64) {
+fun clear_expired_buffs(player: &mut Player, current_round: u64) {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
-        if (buff.first_inactive_turn <= current_turn) {
+        if (buff.first_inactive_round <= current_round) {
             // buff已过期，移除它
             vector::remove(&mut player.buffs, i);
             // 重要：不增加i，因为vector::remove会将后续元素前移
@@ -1793,14 +1799,14 @@ fun clear_expired_buffs(player: &mut Player, current_turn: u64) {
 
 // 检查玩家是否有某种类型的buff处于激活状态
 //
-// Buff激活判断：current_turn < first_inactive_turn
+// Buff激活判断：current_round < first_inactive_round
 // 返回true表示buff正在生效，false表示没有该buff或buff已过期
-fun is_buff_active(player: &Player, kind: u8, current_turn: u64): bool {
+fun is_buff_active(player: &Player, kind: u8, current_round: u64): bool {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         // 找到对应类型且未过期的buff
-        if (buff.kind == kind && buff.first_inactive_turn > current_turn) {
+        if (buff.kind == kind && buff.first_inactive_round > current_round) {
             return true
         };
         i = i + 1;
@@ -1815,12 +1821,12 @@ fun is_buff_active(player: &Player, kind: u8, current_turn: u64): bool {
 // - 免租buff：value可存储免租的比例或次数
 //
 // 返回激活buff的value值，如果buff不存在或已过期返回0
-fun get_buff_value(player: &Player, kind: u8, current_turn: u64): u64 {
+fun get_buff_value(player: &Player, kind: u8, current_round: u64): u64 {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         // 找到对应类型且未过期的buff，返回其value
-        if (buff.kind == kind && buff.first_inactive_turn > current_turn) {
+        if (buff.kind == kind && buff.first_inactive_round > current_round) {
             return buff.value
         };
         i = i + 1;
@@ -1833,7 +1839,7 @@ fun clean_turn_state(game: &mut Game, player_addr: address) {
     let player = table::borrow_mut(&mut game.players, player_addr);
 
     // 清理过期的buff
-    clear_expired_buffs(player, game.turn);
+    clear_expired_buffs(player, game.round);
 }
 
 // 推进游戏到下一个玩家的回合
@@ -1848,8 +1854,7 @@ fun clean_turn_state(game: &mut Game, player_addr: address) {
 //    - 是否达到最大回合数限制
 // 4. 重置游戏阶段为掷骰子阶段
 //
-// 注意：与should_skip_turn不同，这里只处理破产玩家的跳过
-// 监狱/医院的跳过逻辑在mint_turncap中处理
+// 推进到下一个玩家
 fun advance_turn(game: &mut Game) {
     let player_count = game.join_order.length() as u8;
     let mut attempts = 0;  // 安全计数器
@@ -1876,34 +1881,78 @@ fun advance_turn(game: &mut Game) {
         };
     };
 
-    // 步骤2: 如果回到第一个玩家（索引0），说明完成了一轮
-    if (game.active_idx == 0) {
-        game.turn = game.turn + 1;  // 增加回合数
+    // 步骤2: 更新turn（轮内回合）
+    game.turn = (game.active_idx as u64);
 
-        // 步骤3: 检查是否达到最大回合数限制
+    // 步骤3: 如果回到第一个玩家（索引0），说明完成了一轮
+    if (game.active_idx == 0) {
+        game.round = game.round + 1;  // 增加轮次
+
+        // 轮次结束时的刷新操作
+        refresh_at_round_end(game);
+
+        // 步骤4: 检查是否达到最大轮数限制
         if (option::is_some(&game.config.max_turns)) {
-            let max_turns = *option::borrow(&game.config.max_turns);
-            if (game.turn > max_turns) {
+            let max_rounds = *option::borrow(&game.config.max_turns);  // TODO: 改名为max_rounds
+            let global_turn = get_global_turn(game);
+            if (global_turn > max_rounds * (player_count as u64)) {
                 // 达到回合上限，游戏结束
                 game.status = types::status_ended();
                 events::emit_game_ended_event(
                     object::uid_to_inner(&game.id),
                     option::none(),  // TODO: 实现按资产确定赢家
-                    game.turn,
+                    global_turn,
                     1  // 结束原因：1表示达到最大回合数
                 );
             }
         }
     };
 
-    // 步骤4: 重置游戏阶段为掷骰子
+    // 步骤5: 重置游戏阶段为掷骰子
     game.phase = types::phase_roll();
 }
+
+// 轮次结束时的刷新操作
+fun refresh_at_round_end(game: &mut Game) {
+    // 清理过期的NPC
+    clean_expired_npcs(game);
+
+    // TODO: 刷新地产指数
+    // refresh_property_index(game);
+
+    // TODO: 其他刷新逻辑
+    // refresh_special_tiles(game);
+
+    // 发射轮次结束事件
+    events::emit_round_ended_event(
+        object::uid_to_inner(&game.id),
+        game.round - 1,  // 当前轮次已经递增，所以减1表示刚结束的轮次
+        get_global_turn(game)
+    );
+}
+
+// 清理过期的NPC
+fun clean_expired_npcs(_game: &mut Game) {
+    // 暂时简化实现：由于sui::table没有keys函数，需要更复杂的实现
+    // TODO: 使用LinkedTable或其他方式跟踪所有NPC位置
+    // 暂时保留空实现，在其他地方处理NPC过期
+}
+
+// 获取全局回合号
+public fun get_global_turn(game: &Game): u64 {
+    game.round * (game.join_order.length() as u64) + game.turn
+}
+
+// 获取当前轮次
+public fun get_round(game: &Game): u64 { game.round }
+
+// 获取轮内回合
+public fun get_turn_in_round(game: &Game): u64 { game.turn }
 
 // ===== Public Query Functions 公共查询函数 =====
 
 public fun get_game_status(game: &Game): u8 { game.status }
-public fun get_current_turn(game: &Game): u64 { game.turn }
+public fun get_current_turn(game: &Game): u64 { get_global_turn(game) }
 public fun get_active_player_index(game: &Game): u8 { game.active_idx }
 public fun get_player_count(game: &Game): u64 { game.join_order.length() }
 public fun get_template_id(game: &Game): u64 { game.template_id }
@@ -1986,7 +2035,7 @@ public fun get_status(game: &Game): u8 {
 
 #[test_only]
 public fun get_turn(game: &Game): u64 {
-    game.turn
+    get_global_turn(game)
 }
 
 #[test_only]
@@ -2105,7 +2154,7 @@ public fun handle_tile_stop_effect(
                 let owner_data = table::borrow_mut(&mut game.players, owner);
 
                 // 检查免租
-                let has_rent_free = is_buff_active(player_data, types::buff_rent_free(), game.turn);
+                let has_rent_free = is_buff_active(player_data, types::buff_rent_free(), game.round);
 
                 if (!has_rent_free) {
                     player_data.cash = player_data.cash - toll;
@@ -2145,13 +2194,13 @@ public fun get_player_total_cards(game: &Game, player: address): u64 {
 #[test_only]
 public fun is_player_frozen(game: &Game, player: address): bool {
     let player_data = table::borrow(&game.players, player);
-    is_buff_active(player_data, types::buff_frozen(), game.turn)
+    is_buff_active(player_data, types::buff_frozen(), game.round)
 }
 
 #[test_only]
 public fun has_buff(game: &Game, player_addr: address, buff_kind: u8): bool {
     let player = table::borrow(&game.players, player_addr);
-    is_buff_active(player, buff_kind, game.turn)
+    is_buff_active(player, buff_kind, game.round)
 }
 
 #[test_only]
@@ -2163,7 +2212,7 @@ public fun apply_buff_to_player(
     value: u64
 ) {
     let player = table::borrow_mut(&mut game.players, player_addr);
-    apply_buff(player, buff_kind, game.turn + turns, value);
+    apply_buff(player, buff_kind, game.round + turns, value);
 }
 
 #[test_only]
@@ -2173,7 +2222,7 @@ public fun get_buff_value_for_test(
     buff_kind: u8
 ): u64 {
     let player = table::borrow(&game.players, player_addr);
-    get_buff_value(player, buff_kind, game.turn)
+    get_buff_value(player, buff_kind, game.round)
 }
 
 // ===== Helper Functions (moved from types) =====

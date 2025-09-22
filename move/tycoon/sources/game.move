@@ -62,7 +62,7 @@ public struct Config has store, copy, drop {
     trigger_lottery_on_pass: bool,
     npc_cap: u16,
     max_players: u8,
-    max_turns: Option<u64>,
+    max_rounds: Option<u64>,
     bomb_to_hospital: bool,
     dog_to_hospital: bool,
     barrier_consumed_on_stop: bool,
@@ -267,7 +267,7 @@ public entry fun create_game(
         trigger_lottery_on_pass: true,
         npc_cap: types::default_npc_cap(),
         max_players: types::default_max_players(),
-        max_turns: option::some(types::default_max_turns()),
+        max_rounds: option::some(types::default_max_rounds()),
         bomb_to_hospital: true,
         dog_to_hospital: true,
         barrier_consumed_on_stop: true,
@@ -416,6 +416,7 @@ public entry fun mint_turncap(
         id: object::new(ctx),
         game_id: object::uid_to_inner(&game.id),
         player: active_player,
+        round: game.round,
         turn: game.turn
     };
 
@@ -500,7 +501,7 @@ public entry fun roll_and_step(
     if (should_skip_turn(game, player_addr)) {
         handle_skip_turn(game, player_addr);
         // 消耗令牌
-        let TurnCap { id, game_id: _, player: _, turn: _ } = cap;
+        let TurnCap { id, game_id: _, player: _, round: _, turn: _ } = cap;
         object::delete(id);
         advance_turn(game);
         return
@@ -1758,7 +1759,7 @@ fun apply_card_effect_with_collectors(
 // - 当前回合=10，first_inactive_turn=13 → buff在第10,11,12回合激活
 //
 // 注意：同类型的buff会互相覆盖（同一时间只能有一个同类型buff）
-fun apply_buff(player: &mut Player, kind: u8, first_inactive_turn: u64, value: u64) {
+fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u64, value: u64) {
     // 步骤1: 清除同类型的现有buff（确保同类型buff唯一）
     let mut i = 0;
     while (i < player.buffs.length()) {
@@ -1892,17 +1893,17 @@ fun advance_turn(game: &mut Game) {
         refresh_at_round_end(game);
 
         // 步骤4: 检查是否达到最大轮数限制
-        if (option::is_some(&game.config.max_turns)) {
-            let max_rounds = *option::borrow(&game.config.max_turns);  // TODO: 改名为max_rounds
-            let global_turn = get_global_turn(game);
-            if (global_turn > max_rounds * (player_count as u64)) {
-                // 达到回合上限，游戏结束
+        if (option::is_some(&game.config.max_rounds)) {
+            let max_rounds = *option::borrow(&game.config.max_rounds);
+            // 使用 >= 判断：当 round >= max_rounds 时结束（完成 max_rounds 轮后结束）
+            if (game.round >= max_rounds) {
+                // 达到轮次上限，游戏结束
                 game.status = types::status_ended();
                 events::emit_game_ended_event(
                     object::uid_to_inner(&game.id),
                     option::none(),  // TODO: 实现按资产确定赢家
-                    global_turn,
-                    1  // 结束原因：1表示达到最大回合数
+                    get_global_turn(game),
+                    1  // 结束原因：1表示达到最大轮数
                 );
             }
         }
@@ -2086,7 +2087,7 @@ public fun join_with_coin(
     ctx: &mut TxContext
 ) {
     // 忽略coin参数，直接加入游戏
-    join(game, ctx);
+    join(game, ctx)
 }
 
 #[test_only]
@@ -2150,14 +2151,20 @@ public fun handle_tile_stop_effect(
                 let multiplier = ((level + 1) as u64) * 100;
                 let toll = (base_toll * multiplier) / 100;
 
-                let player_data = table::borrow_mut(&mut game.players, player);
-                let owner_data = table::borrow_mut(&mut game.players, owner);
+                // 先检查免租buff
+                let has_rent_free = {
+                    let player_data = table::borrow(&game.players, player);
+                    is_buff_active(player_data, types::buff_rent_free(), game.round)
+                };
 
-                // 检查免租
-                let has_rent_free = is_buff_active(player_data, types::buff_rent_free(), game.round);
-
+                // 如果不免租，执行转账
                 if (!has_rent_free) {
+                    // 扣除玩家现金
+                    let player_data = table::borrow_mut(&mut game.players, player);
                     player_data.cash = player_data.cash - toll;
+
+                    // 增加地主现金
+                    let owner_data = table::borrow_mut(&mut game.players, owner);
                     owner_data.cash = owner_data.cash + toll;
                 };
             };

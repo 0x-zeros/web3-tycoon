@@ -64,7 +64,7 @@ public struct EndTurnEvent has copy, drop {
 public struct RoundEndedEvent has copy, drop {
     game: ID,
     round: u64,
-    global_turn: u64
+    global_turn: u64 //新一轮的 0 全局索引
 }
 
 // ===== Economy Events 经济事件 =====

@@ -14,7 +14,8 @@ use tycoon::events;
 // ===== Errors =====
 // 玩家相关错误
 const ENotActivePlayer: u64 = 1001;
-const EWrongPhase: u64 = 1002;
+const EAlreadyRolled: u64 = 1002;  // 已经掷过骰
+const ENotRolledYet: u64 = 1005;   // 还未掷骰
 const EWrongGame: u64 = 1003;
 const EGameNotActive: u64 = 1004;
 
@@ -188,7 +189,7 @@ public struct Seat has key {
 // 回合系统：
 // - round: 当前轮次，从0开始（所有玩家各行动一次为一轮）
 // - turn: 当前轮内回合，从0开始（0到player_count-1）
-// - phase: 回合内阶段（ROLL/MOVE/SETTLE等）
+// - has_rolled: 是否已经掷骰（限制卡牌使用时机）
 //
 // 地产系统：
 // - owner_of: 地块所有权映射
@@ -217,7 +218,7 @@ public struct Game has key, store {
     round: u64,        // 轮次计数器（所有玩家各行动一次）
     turn: u64,         // 轮内回合（0到player_count-1）
     active_idx: u8,
-    phase: u8,
+    has_rolled: bool,  // 是否已经掷骰
 
 
     owner_of: Table<u64 /* tile_id */, address>,
@@ -280,7 +281,7 @@ public entry fun create_game(
         round: 0,
         turn: 0,
         active_idx: 0,
-        phase: types::phase_roll(),
+        has_rolled: false,
         owner_of: table::new(ctx),
         level_of: table::new(ctx),
         npc_on: table::new(ctx),
@@ -371,7 +372,7 @@ public entry fun start(
     game.created_at_ms = clock::timestamp_ms(clock);
     // round和turn已在创建时初始化为0
     game.active_idx = 0;
-    game.phase = types::phase_roll();
+    game.has_rolled = false;
 
     // 初始化随机数种子
     game.rng_nonce = game.created_at_ms;
@@ -400,6 +401,9 @@ public entry fun use_card(
 ) {
     // 验证座位和回合
     validate_seat_and_turn(game, seat);
+
+    // 验证还未掷骰（卡牌只能在掷骰前使用）
+    assert!(!game.has_rolled, EAlreadyRolled);
 
     let player_addr = seat.player;
     let player = table::borrow_mut(&mut game.players, player_addr);
@@ -461,6 +465,9 @@ public entry fun roll_and_step(
     if (validate_and_auto_skip(game, seat)) {
         return
     };
+
+    // 标记已掷骰
+    game.has_rolled = true;
 
     let player_addr = seat.player;
 
@@ -560,11 +567,12 @@ public entry fun decide_rent_payment(
     if (use_rent_free) {
         // 使用免租卡
         let player = table::borrow(&game.players, player_addr);
-        assert!(cards::has_card(&player.cards, types::card_rent_free()), ECardNotFound);
+        assert!(cards::player_has_card(&player.cards, types::card_rent_free()), ECardNotFound);
 
         // 消耗免租卡
         let player_mut = table::borrow_mut(&mut game.players, player_addr);
-        cards::use_card_from_hand(&mut player_mut.cards, types::card_rent_free(), 1);
+        let used = cards::use_player_card(&mut player_mut.cards, types::card_rent_free());
+        assert!(used, ECardNotFound);
 
         // TODO: 发出免租事件
     } else {
@@ -1261,12 +1269,19 @@ fun handle_tile_stop_with_collector(
                 let level = *table::borrow(&game.level_of, tile_id);
                 let toll = calculate_toll(map::tile_base_toll(tile), level);
 
-                // 检查是否有免租卡
+                // 检查免租情况
                 let player = table::borrow(&game.players, player_addr);
-                let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.round);
+                let has_rent_free_buff = is_buff_active(player, types::buff_rent_free(), game.round);
+                let has_rent_free_card = cards::player_has_card(&player.cards, types::card_rent_free());
 
-                if (has_rent_free) {
-                    // 有免租卡 - 设置待决策状态
+                if (has_rent_free_buff) {
+                    // 有免租buff - 直接免租，无需决策
+                    stop_type = events::stop_property_no_rent();
+                    owner_opt = option::some(owner);
+                    level_opt = option::some(level);
+                    amount = 0;
+                } else if (has_rent_free_card) {
+                    // 没有buff但有免租卡 - 设置待决策状态
                     stop_type = events::stop_property_toll();
                     game.pending_decision = types::decision_pay_rent();
                     game.decision_tile = tile_id;
@@ -1275,7 +1290,7 @@ fun handle_tile_stop_with_collector(
                     level_opt = option::some(level);
                     amount = toll;
                 } else {
-                    // 没有免租卡 - 直接扣费
+                    // 既没有buff也没有卡 - 直接扣费
                     let (actual_payment, should_bankrupt) = {
                         let player_mut = table::borrow_mut(&mut game.players, player_addr);
                         // 支付过路费
@@ -1322,7 +1337,7 @@ fun handle_tile_stop_with_collector(
                     // 检查破产
                     if (should_bankrupt) {
                         handle_bankruptcy(game, player_addr, option::some(owner));
-                    }
+                    };
 
                     owner_opt = option::some(owner);
                     level_opt = option::some(level);
@@ -1332,15 +1347,15 @@ fun handle_tile_stop_with_collector(
                 let level = *table::borrow(&game.level_of, tile_id);
                 if (level < types::level_4()) {
                     // 可以升级 - 设置待决策状态
-                    stop_type = events::stop_property_mine();
+                    stop_type = events::stop_none();  // 自己的地产，无特殊效果
                     game.pending_decision = types::decision_upgrade_property();
                     game.decision_tile = tile_id;
                     let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level);
                     game.decision_amount = upgrade_cost;
                 } else {
                     // 已达最高级
-                    stop_type = events::stop_property_mine();
-                }
+                    stop_type = events::stop_none();  // 自己的地产，无特殊效果
+                };
                 owner_opt = option::some(owner);
                 level_opt = option::some(level);
             }
@@ -1997,7 +2012,7 @@ fun advance_turn(game: &mut Game) {
     };
 
     // 步骤5: 重置游戏阶段为掷骰子
-    game.phase = types::phase_roll();
+    game.has_rolled = false;
 }
 
 // 轮次结束时的刷新操作

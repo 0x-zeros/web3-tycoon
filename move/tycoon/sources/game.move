@@ -49,6 +49,7 @@ const EInsufficientCash: u64 = 2010;
 const ECardNotOwned: u64 = 5001;
 const EInvalidCardTarget: u64 = 5003;
 const ECardNotFound: u64 = 5004;
+const EInvalidParams: u64 = 5005;  // 参数无效
 
 // 移动相关错误
 const EInvalidMove: u64 = 4001;
@@ -393,8 +394,7 @@ public entry fun use_card(
     game: &mut Game,
     seat: &Seat,
     kind: u16,
-    target: Option<address>,
-    tile: Option<u64>,
+    params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
     map_registry: &MapRegistry,
     card_registry: &cards::CardRegistry,
     ctx: &mut TxContext
@@ -430,23 +430,35 @@ public entry fun use_card(
         game,
         seat.player_index,
         kind,
-        target,
-        tile,
+        &params,
         &mut npc_changes,
         &mut buff_changes,
         &mut cash_changes,
         map_registry
     );
 
-    // 发射聚合事件
+    // 发射聚合事件（暂时保持原有事件结构，后续可优化）
+    // TODO: 更新事件结构以支持新的params格式
+    let target_opt = if (params.length() > 0 && is_player_target_card(kind)) {
+        let target_index = (*params.borrow(0) as u8);
+        option::some(game.players.borrow(target_index as u64).owner)
+    } else {
+        option::none()
+    };
+    let tile_opt = if (params.length() > 0 && is_tile_target_card(kind)) {
+        option::some(*params.borrow(0))
+    } else {
+        option::none()
+    };
+
     events::emit_use_card_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
         (game.round as u16),
         (game.turn as u8),
         kind,
-        target,
-        tile,
+        target_opt,
+        tile_opt,
         npc_changes,
         buff_changes,
         cash_changes
@@ -1709,6 +1721,20 @@ fun remove_npc_internal(
     }
 }
 
+// 判断卡牌是否以玩家为目标
+fun is_player_target_card(kind: u16): bool {
+    kind == types::card_freeze() ||
+    kind == types::card_move_ctrl()
+}
+
+// 判断卡牌是否以地块为目标
+fun is_tile_target_card(kind: u16): bool {
+    kind == types::card_barrier() ||
+    kind == types::card_bomb() ||
+    kind == types::card_dog() ||
+    kind == types::card_cleanse()
+}
+
 // 消耗NPC（用于玩家踩到NPC时）
 // 注意：这个函数不生成NpcChangeItem事件，因为消耗信息已经在NpcStepEvent中体现
 fun consume_npc_if_consumable(
@@ -1729,8 +1755,7 @@ fun apply_card_effect_with_collectors(
     game: &mut Game,
     player_index: u8,
     kind: u16,
-    target: Option<address>,
-    tile: Option<u64>,
+    params: &vector<u64>,  // 统一参数
     npc_changes: &mut vector<events::NpcChangeItem>,
     buff_changes: &mut vector<events::BuffChangeItem>,
     cash_changes: &mut vector<events::CashDelta>,
@@ -1739,87 +1764,118 @@ fun apply_card_effect_with_collectors(
     let player_addr = game.players.borrow(player_index as u64).owner;
 
     if (kind == types::card_move_ctrl()) {
-        // 遥控骰
-        let player = game.players.borrow_mut(player_index as u64);//todo 这个地方应该使用 target， 这样子就可以支持使用在自己或者别人身上了。
-        
-        // 使用buff系统
-        apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);//todo 遥控骰值在使用卡片的时候，会从客户端传过来选择好的1-6的值
+        // 遥控骰：params[0]=目标玩家索引, params[1..]=骰子值（支持多个）
+        assert!(params.length() >= 2, EInvalidParams);
+        let target_index = (*params.borrow(0) as u8);
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        // 计算骰子总和（支持多个骰子）
+        let mut dice_sum = 0u64;
+        let mut i = 1;
+        while (i < params.length()) {
+            let dice = *params.borrow(i);
+            assert!(dice >= 1 && dice <= 6, EInvalidParams);  // 验证骰子值范围
+            dice_sum = dice_sum + dice;
+            i = i + 1;
+        };
+
+        // 应用buff到目标玩家
+        let target_player = game.players.borrow_mut(target_index as u64);
+        apply_buff(target_player, types::buff_move_ctrl(), game.round + 1, dice_sum);
 
         // 记录buff变更
+        let target_addr = game.players.borrow(target_index as u64).owner;
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_move_ctrl(),
-            player_addr,
-            option::some(game.round + 1) 
+            target_addr,
+            option::some(game.round + 1)
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
-        // 放置机关
-        if (option::is_some(&tile)) {
-            let tile_id = *option::borrow(&tile);
-            let npc_kind = if (kind == types::card_barrier()) {
-                types::npc_barrier()
-            } else {
-                types::npc_bomb()
-            };
+        // 放置机关：params[..]=所有要放置的地块ID
+        let npc_kind = if (kind == types::card_barrier()) {
+            types::npc_barrier()
+        } else {
+            types::npc_bomb()
+        };
 
-            // 放置NPC（统一逻辑）
-            place_npc_internal(
-                game,
-                tile_id,
-                npc_kind,
-                /* consumable = */ true,
-                /* expires = */ option::none(),
-                npc_changes
-            );
-        }
+        let mut i = 0;
+        while (i < params.length()) {
+            let tile_id = *params.borrow(i);
+            // 尝试放置NPC（如果地块已被占用会跳过）
+            if (!table::contains(&game.npc_on, tile_id)) {
+                place_npc_internal(
+                    game,
+                    tile_id,
+                    npc_kind,
+                    /* consumable = */ true,
+                    /* expires = */ option::none(),
+                    npc_changes
+                );
+            };
+            i = i + 1;
+        };
     } else if (kind == types::card_rent_free()) {
-        // 免租
-        let player = game.players.borrow_mut(player_index as u64);
-        // 使用buff系统
-        apply_buff(player, types::buff_rent_free(), game.round + 2, 0);
+        // 免租卡：应用给自己（可扩展为params[0]指定目标）
+        let target_index = if (params.length() > 0) {
+            (*params.borrow(0) as u8)
+        } else {
+            player_index  // 默认给自己
+        };
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        let target_player = game.players.borrow_mut(target_index as u64);
+        apply_buff(target_player, types::buff_rent_free(), game.round + 2, 0);
 
         // 记录buff变更
+        let target_addr = game.players.borrow(target_index as u64).owner;
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_rent_free(),
-            player_addr,
+            target_addr,
             option::some(game.round + 2)
         ));
     } else if (kind == types::card_freeze()) {
-        // 冻结
-        if (option::is_some(&target)) {
-            let target_addr = *option::borrow(&target);
-            let target_index = find_player_index(game, target_addr);
-            let target_player = game.players.borrow_mut(target_index as u64);
-            // 使用buff系统
-            apply_buff(target_player, types::buff_frozen(), game.round + 2, 0);
+        // 冻结：params[0]=目标玩家索引
+        assert!(params.length() >= 1, EInvalidParams);
+        let target_index = (*params.borrow(0) as u8);
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+        assert!(target_index != player_index, EInvalidCardTarget);  // 不能冻结自己
 
-            // 记录buff变更
-            vector::push_back(buff_changes, events::make_buff_change(
-                types::buff_frozen(),
-                target_addr,
-                option::some(game.round + 2)
-            ));
-        }
-    } else if (kind == types::card_dog()) {//todo 放置npcInst的应该集中在一起些，再加个func统一处理
-        // 放置狗狗NPC
-        if (option::is_some(&tile)) {
-            let tile_id = *option::borrow(&tile);
+        let target_player = game.players.borrow_mut(target_index as u64);
+        apply_buff(target_player, types::buff_frozen(), game.round + 2, 0);
 
-            // 放置狗狗NPC（统一逻辑）
-            place_npc_internal(
-                game,
-                tile_id,
-                types::npc_dog(),
-                /* consumable = */ true,
-                /* expires = */ option::none(),
-                npc_changes
-            );
-        }
+        // 记录buff变更
+        let target_addr = game.players.borrow(target_index as u64).owner;
+        vector::push_back(buff_changes, events::make_buff_change(
+            types::buff_frozen(),
+            target_addr,
+            option::some(game.round + 2)
+        ));
+    } else if (kind == types::card_dog()) {
+        // 放置狗狗：params[..]=所有要放置的地块ID
+        let mut i = 0;
+        while (i < params.length()) {
+            let tile_id = *params.borrow(i);
+            // 尝试放置狗狗（如果地块已被占用会跳过）
+            if (!table::contains(&game.npc_on, tile_id)) {
+                place_npc_internal(
+                    game,
+                    tile_id,
+                    types::npc_dog(),
+                    /* consumable = */ true,
+                    /* expires = */ option::none(),
+                    npc_changes
+                );
+            };
+            i = i + 1;
+        };
     } else if (kind == types::card_cleanse()) {
-        // 清除NPC
-        if (option::is_some(&tile)) {
-            let tile_id = *option::borrow(&tile);
+        // 清除NPC：params[..]=所有要清除的地块ID
+        let mut i = 0;
+        while (i < params.length()) {
+            let tile_id = *params.borrow(i);
             remove_npc_internal(game, tile_id, npc_changes);
-        }
+            i = i + 1;
+        };
     }
 }
 

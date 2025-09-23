@@ -312,10 +312,9 @@ module tycoon::movement_npc_tests {
         scenario::end(scenario_val);
     }
 
-    // 测试NPC数量上限
+    // 测试NPC数量不受上限限制
     #[test]
-    #[expected_failure(abort_code = 2003)] // err_npc_cap_reached
-    fun test_npc_cap_limit() {
+    fun test_unlimited_npc_placement() {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
@@ -336,9 +335,9 @@ module tycoon::movement_npc_tests {
         // 给足够的卡牌
         game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 10);
 
-        // 放置NPC直到达到上限（假设上限是5）
+        // 尝试放置多个NPC（应全部成功）
         let mut i = 0;
-        while (i < 6) {  // 尝试放置6个，第6个应该失败
+        while (i < 6) {
             game::use_card(
                 &mut game,
                 &seat,

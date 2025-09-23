@@ -354,11 +354,10 @@ public fun apply_move_control(dice_value: u8): u8 {
 
 // 检查是否可以放置NPC
 public fun can_place_npc(
-    npc_on_tile: bool,
-    current_npc_count: u16,
-    npc_cap: u16
+    npc_on_tile: bool
 ): bool {
-    !npc_on_tile && current_npc_count < npc_cap
+    // 仅限制同一地块不可重复放置
+    !npc_on_tile
 }
 
 // 验证卡牌使用目标

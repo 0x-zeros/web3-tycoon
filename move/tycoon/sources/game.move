@@ -53,8 +53,7 @@ const ECardNotFound: u64 = 5004;
 // 移动相关错误
 const EInvalidMove: u64 = 4001;
 
-// NPC相关错误
-const ENpcCapReached: u64 = 8001;
+// NPC相关错误（已无全局数量限制）
 
 // Map相关错误（game.move中使用的部分）
 const ETemplateNotFound: u64 = 3001;
@@ -65,7 +64,6 @@ const ENoSuchTile: u64 = 2002;
 public struct Config has store, copy, drop {
     trigger_card_on_pass: bool,
     trigger_lottery_on_pass: bool,
-    npc_cap: u16,
     max_players: u8,
     max_rounds: Option<u16>,
     bomb_to_hospital: bool,
@@ -200,7 +198,6 @@ public struct Seat has key {
 //
 // NPC系统：
 // - npc_on: 地块上的NPC实例
-// - current_npc_count: 当前NPC总数，用于限制
 //
 // 其他组件：
 // - config: 游戏配置参数
@@ -230,7 +227,6 @@ public struct Game has key, store {
     rng_nonce: u64,
 
     // 额外状态
-    current_npc_count: u16,
     winner: Option<address>,//todo 不需要吧？
 
     // 待决策状态
@@ -255,7 +251,6 @@ public entry fun create_game(
     let config = Config {//todo config应该作为参数传进来，有些数值应该是需要客户端传进来
         trigger_card_on_pass: true,
         trigger_lottery_on_pass: true,
-        npc_cap: types::default_npc_cap(),
         max_players: types::default_max_players(),
         max_rounds: option::some(types::default_max_rounds()),
         bomb_to_hospital: true,
@@ -286,7 +281,6 @@ public entry fun create_game(
         owner_index: table::new(ctx),
         config,
         rng_nonce: 0,
-        current_npc_count: 0,
         winner: option::none(),
         pending_decision: types::decision_none(),
         decision_tile: 0,
@@ -1084,7 +1078,6 @@ fun execute_step_movement_with_collectors(
                 // 移除NPC（如果是消耗性的）
                 if (npc.consumable) {
                     table::remove(&mut game.npc_on, next_pos);
-                    game.current_npc_count = game.current_npc_count - 1;
                 };
 
                 // 创建NPC事件
@@ -1117,7 +1110,6 @@ fun execute_step_movement_with_collectors(
                 // 移除路障
                 if (npc.consumable) {
                     table::remove(&mut game.npc_on, next_pos);
-                    game.current_npc_count = game.current_npc_count - 1;
                 };
 
                 // 创建NPC事件
@@ -1709,8 +1701,7 @@ fun apply_card_effect_with_collectors(
 
     if (kind == types::card_move_ctrl()) {
         // 遥控骰
-        let player = game.players.borrow_mut(player_index as u64);//todo borrow_mut 寻找太多次了呀, 我觉得直接用vector装player好；
-        //todo 而且这个地方应该使用 target， 这样子就可以支持使用在自己或者别人身上了。
+        let player = game.players.borrow_mut(player_index as u64);//todo 这个地方应该使用 target， 这样子就可以支持使用在自己或者别人身上了。
         
         // 使用buff系统
         apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);//todo 遥控骰值在使用卡片的时候，会从客户端传过来选择好的1-6的值
@@ -1719,7 +1710,7 @@ fun apply_card_effect_with_collectors(
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_move_ctrl(),
             player_addr,
-            option::some(game.round + 1)  // buff失效的回合
+            option::some(game.round + 1) 
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
@@ -1733,16 +1724,15 @@ fun apply_card_effect_with_collectors(
 
             // 检查是否可以放置
             assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);//todo game.config.npc_cap 去掉，不限制
+            // 不再限制NPC总数量，移除npc_cap检查
 
-            // 放置NPC
+            // 放置NPC（不再维护全局数量）
             let npc = NpcInst {
                 kind: npc_kind,
                 expires_at_global_turn: option::none(),
                 consumable: true //todo 这是做什么用的？
             };
             table::add(&mut game.npc_on, tile_id, npc);
-            game.current_npc_count = game.current_npc_count + 1;
 
             // 记录NPC变更
             vector::push_back(npc_changes, events::make_npc_change(
@@ -1785,18 +1775,16 @@ fun apply_card_effect_with_collectors(
         if (option::is_some(&tile)) {
             let tile_id = *option::borrow(&tile);
 
-            // 检查是否可以放置
+            // 检查是否可以放置（不再受npc_cap限制）
             assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
 
-            // 放置狗狗NPC
+            // 放置狗狗NPC（不再维护全局数量）
             let npc = NpcInst {
                 kind: types::npc_dog(),
                 expires_at_global_turn: option::none(),
                 consumable: true  // 碰到狗狗后会消失
             };
             table::add(&mut game.npc_on, tile_id, npc);
-            game.current_npc_count = game.current_npc_count + 1;
 
             // 记录NPC变更
             vector::push_back(npc_changes, events::make_npc_change(
@@ -1815,7 +1803,6 @@ fun apply_card_effect_with_collectors(
             if (table::contains(&game.npc_on, tile_id)) {
                 // 移除NPC
                 let npc = table::remove(&mut game.npc_on, tile_id);
-                game.current_npc_count = game.current_npc_count - 1;
 
                 // 记录NPC变更
                 vector::push_back(npc_changes, events::make_npc_change(
@@ -2305,9 +2292,7 @@ public fun get_npc_on_tile(game: &Game, tile_id: u64): &NpcInst {
 }
 
 #[test_only]
-public fun get_npc_count(game: &Game): u16 {
-    game.current_npc_count
-}
+// 已移除全局NPC计数；如需统计请在客户端侧维护或添加专用索引
 
 #[test_only]
 public fun get_player_total_cards(game: &Game, player: address): u64 {

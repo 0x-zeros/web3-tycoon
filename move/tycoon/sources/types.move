@@ -142,14 +142,14 @@ public fun skip_hospital(): u8 { SKIP_HOSPITAL }
 //   - max_rounds：最大轮数限制
 // ===== Default Configs 默认配置 =====
 const DEFAULT_MAX_PLAYERS: u8 = 4;
-const DEFAULT_MAX_ROUNDS: u64 = 100;
+const DEFAULT_MAX_ROUNDS: u16 = 100;
 const DEFAULT_NPC_CAP: u16 = 10;
 const DEFAULT_STARTING_CASH: u64 = 10000;
 const DEFAULT_HOSPITAL_TURNS: u8 = 2;
 const DEFAULT_PRISON_TURNS: u8 = 2;
 
 public fun default_max_players(): u8 { DEFAULT_MAX_PLAYERS }
-public fun default_max_rounds(): u64 { DEFAULT_MAX_ROUNDS }
+public fun default_max_rounds(): u16 { DEFAULT_MAX_ROUNDS }
 public fun default_npc_cap(): u16 { DEFAULT_NPC_CAP }
 public fun default_starting_cash(): u64 { DEFAULT_STARTING_CASH }
 public fun default_hospital_turns(): u8 { DEFAULT_HOSPITAL_TURNS }

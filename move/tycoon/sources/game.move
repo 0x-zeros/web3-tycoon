@@ -66,7 +66,7 @@ public struct Config has store, copy, drop {
     trigger_lottery_on_pass: bool,
     npc_cap: u16,
     max_players: u8,
-    max_rounds: Option<u64>,
+    max_rounds: Option<u16>,
     bomb_to_hospital: bool,
     dog_to_hospital: bool,
     barrier_consumed_on_stop: bool,
@@ -98,7 +98,7 @@ public struct Config has store, copy, drop {
 //   * BUFF_FROZEN: 未使用（可扩展为冻结来源）
 public struct BuffEntry has store, copy, drop {
     kind: u8,                  // Buff类型 (rent_free, frozen, move_ctrl等)
-    first_inactive_round: u64, // 首个未激活轮次（独占）
+    first_inactive_round: u16, // 首个未激活轮次（独占）
     value: u64                 // 数值载荷 (如move_ctrl的骰子值)
 }
 
@@ -214,8 +214,8 @@ public struct Game has key, store {
     players: Table<address, Player>,
     join_order: vector<address>,
 
-    round: u64,        // 轮次计数器（所有玩家各行动一次）
-    turn: u64,         // 轮内回合（0到player_count-1）
+    round: u16,        // 轮次计数器（所有玩家各行动一次）
+    turn: u8,          // 轮内回合（0到player_count-1）
     active_idx: u8,
     has_rolled: bool,  // 是否已经掷骰
 
@@ -440,8 +440,8 @@ public entry fun use_card(
     events::emit_use_card_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        game.round,
-        game.turn,
+        (game.round as u16),
+        (game.turn as u8),
         kind,
         target,
         tile,
@@ -525,8 +525,8 @@ public entry fun roll_and_step(
     events::emit_roll_and_step_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        game.round,
-        game.turn,
+        (game.round as u16),
+        (game.turn as u8),
         dice,
         direction,
         from_pos,
@@ -637,8 +637,8 @@ public entry fun end_turn(
     events::emit_end_turn_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        game.round,
-        game.turn
+        (game.round as u16),
+        (game.turn as u8)
     );
 
     // 推进回合
@@ -1626,8 +1626,8 @@ fun handle_bankruptcy(
         events::emit_game_ended_event(
             object::uid_to_inner(&game.id),
             winner,
-            game.round,
-            game.turn,
+            (game.round as u16),
+            (game.turn as u8),
             2  // 结束原因代码：2表示破产胜利
         );
     }
@@ -1730,7 +1730,7 @@ fun apply_card_effect_with_collectors(
 ) {
     if (kind == types::card_move_ctrl()) {
         // 遥控骰
-        let player = table::borrow_mut(&mut game.players, player_addr);//todo borrow_mut 寻找太多次了呀, 我觉得直接用vector装player好
+        let player = table::borrow_mut(&mut game.players, player_addr);//todo borrow_mut 寻找太多次了呀, 我觉得直接用vector装player好； 而且这个地方应该使用 target， 这样子就可以支持使用在自己或者别人身上了。
         // 使用buff系统
         apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);//todo 遥控骰值在使用卡片的时候，会从客户端传过来选择好的1-6的值
 
@@ -1863,7 +1863,7 @@ fun apply_card_effect_with_collectors(
 // - 当前回合=10，first_inactive_turn=13 → buff在第10,11,12回合激活
 //
 // 注意：同类型的buff会互相覆盖（同一时间只能有一个同类型buff）
-fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u64, value: u64) {
+fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u16, value: u64) {
     // 步骤1: 清除同类型的现有buff（确保同类型buff唯一）
     let mut i = 0;
     while (i < player.buffs.length()) {//todo 感觉每次都寻找，有点费
@@ -1886,7 +1886,7 @@ fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u64, value: 
 // - current_round >= first_inactive_round（buff已经失效）
 //
 // 注意：使用倒序遍历或不递增索引的方式处理vector::remove
-fun clear_expired_buffs(player: &mut Player, current_round: u64) {
+fun clear_expired_buffs(player: &mut Player, current_round: u16) {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
@@ -1906,7 +1906,7 @@ fun clear_expired_buffs(player: &mut Player, current_round: u64) {
 //
 // Buff激活判断：current_round < first_inactive_round
 // 返回true表示buff正在生效，false表示没有该buff或buff已过期
-fun is_buff_active(player: &Player, kind: u8, current_round: u64): bool {
+fun is_buff_active(player: &Player, kind: u8, current_round: u16): bool {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
@@ -1926,7 +1926,7 @@ fun is_buff_active(player: &Player, kind: u8, current_round: u64): bool {
 // - 免租buff：value可存储免租的比例或次数
 //
 // 返回激活buff的value值，如果buff不存在或已过期返回0
-fun get_buff_value(player: &Player, kind: u8, current_round: u64): u64 {
+fun get_buff_value(player: &Player, kind: u8, current_round: u16): u64 {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
@@ -1987,7 +1987,7 @@ fun advance_turn(game: &mut Game) {
     };
 
     // 步骤2: 更新turn（轮内回合）
-    game.turn = (game.active_idx as u64);
+    game.turn = game.active_idx;
 
     // 步骤3: 如果回到第一个玩家（索引0），说明完成了一轮
     if (game.active_idx == 0) {
@@ -2006,8 +2006,8 @@ fun advance_turn(game: &mut Game) {
                 events::emit_game_ended_event(
                     object::uid_to_inner(&game.id),
                     option::none(),  // TODO: 实现按资产确定赢家
-                    game.round,
-                    game.turn,
+                    (game.round as u16),
+                    (game.turn as u8),
                     1  // 结束原因：1表示达到最大轮数
                 );
             }
@@ -2032,8 +2032,8 @@ fun refresh_at_round_end(game: &mut Game) {
     // 发射轮次结束事件
     events::emit_round_ended_event(
         object::uid_to_inner(&game.id),
-        game.round - 1,  // 当前轮次已经递增，所以减1表示刚结束的轮次
-        game.round * (game.join_order.length() as u64)  // 新一轮的第0个全局索引
+        (game.round - 1),  // 当前轮次已经递增，所以减1表示刚结束的轮次
+        (game.round as u64) * (game.join_order.length() as u64)  // 新一轮的第0个全局索引
     );
 }
 
@@ -2047,17 +2047,17 @@ fun clean_expired_npcs(_game: &mut Game) {
 // 获取全局回合号
 
 // 获取当前轮次
-public fun get_round(game: &Game): u64 { game.round }
+public fun get_round(game: &Game): u16 { game.round }
 
 // 获取轮内回合
-public fun get_turn_in_round(game: &Game): u64 { game.turn }
+public fun get_turn_in_round(game: &Game): u8 { game.turn }
 
 // ===== Public Query Functions 公共查询函数 =====
 
 public fun get_game_status(game: &Game): u8 { game.status }
 // 获取当前轮和回合
 // 返回: (轮次, 轮内回合)
-public fun get_current_turn(game: &Game): (u64, u64) {
+public fun get_current_turn(game: &Game): (u16, u8) {
     (game.round, game.turn)
 }
 public fun get_active_player_index(game: &Game): u8 { game.active_idx }
@@ -2141,7 +2141,7 @@ public fun get_status(game: &Game): u8 {
 }
 
 #[test_only]
-public fun get_turn(game: &Game): (u64, u64) {
+public fun get_turn(game: &Game): (u16, u8) {
     (game.round, game.turn)
 }
 
@@ -2321,7 +2321,7 @@ public fun apply_buff_to_player(
     game: &mut Game,
     player_addr: address,
     buff_kind: u8,
-    turns: u64,
+    turns: u16,
     value: u64
 ) {
     let player = table::borrow_mut(&mut game.players, player_addr);

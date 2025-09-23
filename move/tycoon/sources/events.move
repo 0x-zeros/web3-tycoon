@@ -33,8 +33,8 @@ public struct GameStartedEvent has copy, drop {
 public struct GameEndedEvent has copy, drop {
     game: ID,
     winner: option::Option<address>,//todo 改为所有玩家排名
-    round: u64,
-    turn_in_round: u64,
+    round: u16,
+    turn_in_round: u8,
     reason: u8  // 0=正常结束, 1=达到最大回合数, 2=只剩一个玩家
 }
  
@@ -44,8 +44,8 @@ public struct GameEndedEvent has copy, drop {
 public struct TurnStartEvent has copy, drop {
     game: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64
+    round: u16,
+    turn_in_round: u8
 }
 
 // 跳过回合事件
@@ -59,14 +59,14 @@ public struct SkipTurnEvent has copy, drop {//todo miss turn
 public struct EndTurnEvent has copy, drop {
     game: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64
+    round: u16,
+    turn_in_round: u8
 }
 
 // 轮次结束事件
 public struct RoundEndedEvent has copy, drop {
     game: ID,
-    round: u64,
+    round: u16,
     global_turn: u64 //新一轮的 0 全局索引
 }
 
@@ -135,7 +135,7 @@ public struct NpcChangeItem has copy, drop, store {
 public struct BuffChangeItem has copy, drop, store {
     buff_type: u8,  // 使用types模块的buff类型常量
     target: address,
-    first_inactive_turn: option::Option<u64>  // 首个未激活回合（独占）
+    first_inactive_turn: option::Option<u16>  // 首个未激活回合（独占）
 }
 
 // NPC步骤事件
@@ -174,8 +174,8 @@ public struct StepEffect has copy, drop, store {
 public struct UseCardActionEvent has copy, drop {
     game: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64,
+    round: u16,
+    turn_in_round: u8,
     kind: u16,
     target_addr: option::Option<address>,
     target_tile: option::Option<u64>,
@@ -188,8 +188,8 @@ public struct UseCardActionEvent has copy, drop {
 public struct RollAndStepActionEvent has copy, drop {
     game: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64,
+    round: u16,
+    turn_in_round: u8,
     dice: u8,
     dir: u8,
     from: u64,
@@ -244,8 +244,8 @@ public(package) fun emit_game_started_event(
 public(package) fun emit_game_ended_event(
     game_id: ID,
     winner: option::Option<address>,
-    round: u64,
-    turn_in_round: u64,
+    round: u16,
+    turn_in_round: u8,
     reason: u8
 ) {
     event::emit(GameEndedEvent {
@@ -286,8 +286,8 @@ public(package) fun emit_skip_turn_event(
 public(package) fun emit_end_turn_event(
     game_id: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64
+    round: u16,
+    turn_in_round: u8
 ) {
     event::emit(EndTurnEvent {
         game: game_id,
@@ -299,7 +299,7 @@ public(package) fun emit_end_turn_event(
 
 public(package) fun emit_round_ended_event(
     game_id: ID,
-    round: u64,
+    round: u16,
     global_turn: u64
 ) {
     event::emit(RoundEndedEvent {
@@ -362,7 +362,7 @@ public(package) fun make_npc_change(
 public(package) fun make_buff_change(
     buff_type: u8,
     target: address,
-    first_inactive_turn: option::Option<u64>
+    first_inactive_turn: option::Option<u16>
 ): BuffChangeItem {
     BuffChangeItem {
         buff_type,
@@ -436,8 +436,8 @@ public(package) fun make_step_effect(
 public(package) fun emit_use_card_action_event(
     game_id: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64,
+    round: u16,
+    turn_in_round: u8,
     kind: u16,
     target_addr: option::Option<address>,
     target_tile: option::Option<u64>,
@@ -463,8 +463,8 @@ public(package) fun emit_use_card_action_event(
 public(package) fun emit_roll_and_step_action_event(
     game_id: ID,
     player: address,
-    round: u64,
-    turn_in_round: u64,
+    round: u16,
+    turn_in_round: u8,
     dice: u8,
     dir: u8,
     from: u64,

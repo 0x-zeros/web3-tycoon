@@ -821,15 +821,10 @@ fun find_player_index(game: &Game, player_addr: address): u8 {
     abort EPlayerNotFound
 }
 
-// 验证座位索引有效性
-fun validate_seat_index(game: &Game, seat: &Seat) {
-    assert!((seat.player_index as u64) < game.players.length(), EPlayerNotFound);
-}
-
 // 验证座位凭证和当前回合
 fun validate_seat_and_turn(game: &Game, seat: &Seat) {
-    // 验证索引有效性
-    validate_seat_index(game, seat);
+    // validate_seat_index: 验证座位索引有效性
+    assert!((seat.player_index as u64) < game.players.length(), EPlayerNotFound);
 
     // 验证游戏ID匹配
     assert!(seat.game_id == object::uid_to_inner(&game.id), EWrongGame);

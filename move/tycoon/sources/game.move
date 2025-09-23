@@ -430,28 +430,14 @@ public entry fun use_card(
         registry
     );
 
-    // 发射聚合事件（暂时保持原有事件结构，后续可优化）
-    // TODO: 更新事件结构以支持新的params格式
-    let target_opt = if (params.length() > 0 && is_player_target_card(kind)) {
-        let target_index = (*params.borrow(0) as u8);
-        option::some(game.players.borrow(target_index as u64).owner)
-    } else {
-        option::none()
-    };
-    let tile_opt = if (params.length() > 0 && is_tile_target_card(kind)) {
-        option::some(*params.borrow(0))
-    } else {
-        option::none()
-    };
-
+    // 发射聚合事件
     events::emit_use_card_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
         (game.round as u16),
         (game.turn as u8),
         kind,
-        target_opt,
-        tile_opt,
+        params,  // 直接传递params
         npc_changes,
         buff_changes,
         cash_changes
@@ -1712,20 +1698,6 @@ fun remove_npc_internal(
             events::make_npc_change(tile_id, npc.kind, events::npc_action_remove(), npc.consumable)
         );
     }
-}
-
-// 判断卡牌是否以玩家为目标
-fun is_player_target_card(kind: u16): bool {
-    kind == types::card_freeze() ||
-    kind == types::card_move_ctrl()
-}
-
-// 判断卡牌是否以地块为目标
-fun is_tile_target_card(kind: u16): bool {
-    kind == types::card_barrier() ||
-    kind == types::card_bomb() ||
-    kind == types::card_dog() ||
-    kind == types::card_cleanse()
 }
 
 // 消耗NPC（用于玩家踩到NPC时）

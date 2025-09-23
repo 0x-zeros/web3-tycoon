@@ -177,8 +177,7 @@ public struct UseCardActionEvent has copy, drop {
     round: u16,
     turn_in_round: u8,
     kind: u16,
-    target_addr: option::Option<address>,
-    target_tile: option::Option<u64>,
+    params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
     cash_changes: vector<CashDelta>
@@ -439,8 +438,7 @@ public(package) fun emit_use_card_action_event(
     round: u16,
     turn_in_round: u8,
     kind: u16,
-    target_addr: option::Option<address>,
-    target_tile: option::Option<u64>,
+    params: vector<u64>,  // 统一参数
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
     cash_changes: vector<CashDelta>
@@ -451,8 +449,7 @@ public(package) fun emit_use_card_action_event(
         round,
         turn_in_round,
         kind,
-        target_addr,
-        target_tile,
+        params,
         npc_changes,
         buff_changes,
         cash_changes

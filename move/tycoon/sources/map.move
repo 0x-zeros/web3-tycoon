@@ -52,7 +52,7 @@ public struct TileStatic has store, copy, drop {
 // 字段说明：
 // 基本信息：
 // - id: 模板唯一标识符
-// - version: 版本号，用于更新管理
+// - status: 模板状态（0=draft, 1=active, 2=deprecated, 3=blocked, 4=archived）
 // - width, height: 地图尺寸
 // - tile_count: 地块总数
 //
@@ -73,11 +73,17 @@ public struct TileStatic has store, copy, drop {
 // - news_ids: 所有新闻地块
 //
 // 配置与元数据：
-// - digest: 模板摘要哈希，用于验证完整性
 // - use_adj_traversal: true使用BFS寻路，false使用环路导航
+//
+// 模板状态说明（仅供客户端/服务端使用，链上逻辑不做校验/限制）：
+// - 0 = draft（草稿，不对外）
+// - 1 = active（可用，前端可见、可创建对局）
+// - 2 = deprecated（废弃，不可新建，对局仍可读取）
+// - 3 = blocked（封禁，前端隐藏，不可新建；旧局仍可读）
+// - 4 = archived（归档，完全隐藏，仅链上存证）
 public struct MapTemplate has store {
     id: u64,
-    version: u64,
+    status: u8,                    // 模板状态
     width: u16,
     height: u16,
     tile_count: u64,
@@ -91,7 +97,6 @@ public struct MapTemplate has store {
     prison_ids: vector<u64>,
     shop_ids: vector<u64>,
     news_ids: vector<u64>,
-    digest: vector<u8>,           // 模板摘要哈希
     use_adj_traversal: bool       // 是否需要邻接寻路（复杂地图用）
 }
 
@@ -180,14 +185,13 @@ public fun new_tile_static(
 // 创建地图模板
 public fun new_map_template(
     id: u64,
-    version: u64,
     width: u16,
     height: u16,
     ctx: &mut TxContext
 ): MapTemplate {
     MapTemplate {
         id,
-        version,
+        status: 1,  // 默认为 active 状态
         width,
         height,
         tile_count: 0,
@@ -201,7 +205,6 @@ public fun new_map_template(
         prison_ids: vector::empty(),
         shop_ids: vector::empty(),
         news_ids: vector::empty(),
-        digest: vector::empty(),
         use_adj_traversal: false  // 默认不使用邻接寻路
     }
 }
@@ -293,11 +296,6 @@ public fun set_ring_info(
     };
 }
 
-// 设置模板摘要
-public fun set_template_digest(template: &mut MapTemplate, digest: vector<u8>) {
-    template.digest = digest;
-}
-
 // 设置是否使用邻接寻路
 public fun set_use_adj_traversal(template: &mut MapTemplate, use_adj: bool) {
     template.use_adj_traversal = use_adj;
@@ -377,19 +375,21 @@ public fun get_template_id(template: &MapTemplate): u64 {
     template.id
 }
 
-// 获取模板版本
-public fun get_template_version(template: &MapTemplate): u64 {
-    template.version
-}
-
-// 获取模板摘要
-public fun get_template_digest(template: &MapTemplate): vector<u8> {
-    template.digest
-}
-
 // 获取是否使用邻接寻路
 public fun get_use_adj_traversal(template: &MapTemplate): bool {
     template.use_adj_traversal
+}
+
+// 设置模板状态（允许更新，不加权限控制）
+public fun set_template_status(registry: &mut MapRegistry, template_id: u64, status: u8) {
+    let template = table::borrow_mut(&mut registry.templates, template_id);
+    template.status = status;
+}
+
+// 获取模板状态
+public fun get_template_status(registry: &MapRegistry, template_id: u64): u8 {
+    let template = table::borrow(&registry.templates, template_id);
+    template.status
 }
 
 // ===== TileStatic Accessors 地块访问器 =====
@@ -674,7 +674,7 @@ fun get_ring_size(template: &MapTemplate, ring_id: u16): u32 {
 
 // 创建简单的8格测试地图
 public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
-    let mut template = new_map_template(1, 1, 3, 3, ctx);
+    let mut template = new_map_template(1, 3, 3, ctx);
 
     // 创建8个地块，形成环形
     // tile 0: 起点 (0,0) - PROPERTY
@@ -730,9 +730,6 @@ public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
         i = i + 1;
     };
 
-    // 设置摘要
-    set_template_digest(&mut template, b"test_map_8_v1");
-
     template
 }
 
@@ -746,7 +743,7 @@ public fun create_template(
     height: u16,
     ctx: &mut TxContext
 ): MapTemplate {
-    let template = new_map_template(1, 1, width, height, ctx);
+    let template = new_map_template(1, width, height, ctx);
     // name和description仅用于创建，不存储在模板中
     template
 }
@@ -783,8 +780,7 @@ public fun add_connection(
 
 #[test_only]
 public fun finalize_template(template: &mut MapTemplate) {
-    // 设置模板摘要
-    set_template_digest(template, b"test_template");
+    // 模板已准备就绪
 }
 
 #[test_only]

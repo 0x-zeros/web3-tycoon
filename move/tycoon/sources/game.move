@@ -208,7 +208,6 @@ public struct Game has key, store {
     id: UID,
     status: u8,  // 0=ready, 1=active, 2=ended
     template_id: u64,
-    template_digest: vector<u8>,
 
     players: vector<Player>,
 
@@ -268,7 +267,6 @@ public entry fun create_game(
         id: game_id,
         status: types::status_ready(),
         template_id,
-        template_digest: map::get_template_digest(template),//这个字段无意义 todo
         players: vector::empty(),
         round: 0,
         turn: 0,

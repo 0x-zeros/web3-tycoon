@@ -16,7 +16,6 @@ public struct AdminCap has key, store { //todo
 // ===== Admin Events 管理事件 =====
 public struct MapTemplatePublishedEvent has copy, drop {
     template_id: u64,
-    version: u64,
     publisher: address,
     tile_count: u64
 }
@@ -52,14 +51,12 @@ entry fun publish_test_map(
 ) {
     let template = map::create_test_map_8(ctx);
     let template_id = map::get_template_id(&template);
-    let version = map::get_template_version(&template);
     let tile_count = map::get_tile_count(&template);
 
     map::publish_template(registry, template, ctx);
 
     event::emit(MapTemplatePublishedEvent {
         template_id,
-        version,
         publisher: ctx.sender(),
         tile_count
     });
@@ -69,13 +66,12 @@ entry fun publish_test_map(
 entry fun publish_custom_map_template(
     registry: &mut MapRegistry,
     template_id: u64,
-    version: u64,
     width: u16,
     height: u16,
     _admin: &AdminCap,
     ctx: &mut TxContext
 ) {
-    let template = map::new_map_template(template_id, version, width, height, ctx);
+    let template = map::new_map_template(template_id, width, height, ctx);
 
     // 这里应该有更多的地图配置逻辑
     // 由于是示例，我们创建一个简单的模板
@@ -86,7 +82,6 @@ entry fun publish_custom_map_template(
 
     event::emit(MapTemplatePublishedEvent {
         template_id,
-        version,
         publisher: ctx.sender(),
         tile_count
     });
@@ -96,7 +91,7 @@ entry fun publish_custom_map_template(
 
 // 创建并配置一个标准的大富翁地图（40格）
 public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
-    let mut template = map::new_map_template(2, 1, 11, 11, ctx);
+    let mut template = map::new_map_template(2, 11, 11, ctx);
 
     // 添加40个地块（标准大富翁布局）
     // 这里简化处理，实际应该有详细的地块配置
@@ -172,9 +167,6 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
         map::set_ring_info(&mut template, i, 0, (i as u32));
         i = i + 1;
     };
-
-    // 设置模板摘要
-    map::set_template_digest(&mut template, b"standard_monopoly_v1");
 
     template
 }

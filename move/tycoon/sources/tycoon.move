@@ -2,12 +2,30 @@
 module tycoon::tycoon;
 
 use sui::transfer;
-use sui::object::{Self, UID};
+use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
+use sui::event;
 
 use tycoon::admin::{Self, AdminCap};
 use tycoon::map;
 use tycoon::cards;
+
+// ===== Events 事件 =====
+
+/// 地图注册表创建事件
+public struct MapRegistryCreated has copy, drop {
+    registry_id: ID
+}
+
+/// 卡牌注册表创建事件
+public struct CardRegistryCreated has copy, drop {
+    registry_id: ID
+}
+
+/// 掉落配置创建事件
+public struct DropConfigCreated has copy, drop {
+    config_id: ID
+}
 
 // ===== Package Init 包初始化 =====
 
@@ -18,13 +36,16 @@ fun init(ctx: &mut TxContext) {
     admin::create_admin_cap(ctx);
 
     // 2. 创建全局唯一的地图注册表
-    map::create_registry(ctx);
+    let map_registry_id = map::create_registry(ctx);
+    event::emit(MapRegistryCreated { registry_id: map_registry_id });
 
     // 3. 创建全局唯一的卡牌注册表
-    cards::create_card_registry(ctx);
+    let card_registry_id = cards::create_card_registry(ctx);
+    event::emit(CardRegistryCreated { registry_id: card_registry_id });
 
     // 4. 创建全局唯一的掉落配置
-    cards::create_drop_config(ctx);
+    let drop_config_id = cards::create_drop_config(ctx);
+    event::emit(DropConfigCreated { config_id: drop_config_id });
 }
 
 // ===== Test Helper 测试辅助 =====

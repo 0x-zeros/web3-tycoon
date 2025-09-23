@@ -1734,7 +1734,7 @@ fun apply_card_effect_with_collectors(
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_move_ctrl(),
             player_addr,
-            option::some(get_global_turn(game) + 3)
+            option::some(get_global_turn(game) + 3)//todo 应该统一使用round
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
@@ -1748,7 +1748,7 @@ fun apply_card_effect_with_collectors(
 
             // 检查是否可以放置
             assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
+            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);//todo game.config.npc_cap 去掉，不限制
 
             // 放置NPC
             let npc = NpcInst {
@@ -1862,7 +1862,7 @@ fun apply_card_effect_with_collectors(
 fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u64, value: u64) {
     // 步骤1: 清除同类型的现有buff（确保同类型buff唯一）
     let mut i = 0;
-    while (i < player.buffs.length()) {
+    while (i < player.buffs.length()) {//todo 感觉每次都寻找，有点费
         let buff = player.buffs.borrow(i);
         if (buff.kind == kind) {
             vector::remove(&mut player.buffs, i);

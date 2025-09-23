@@ -3,7 +3,7 @@ module tycoon::cards;
 use std::option::{Self, Option};
 use sui::table::{Self, Table};
 use sui::transfer;
-use sui::object::{Self, UID};
+use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
 use tycoon::types;
 use tycoon::admin;
@@ -69,7 +69,7 @@ public fun target_player_or_tile(): u8 { 3 }
 // ===== Registry Creation 注册表创建 =====
 
 // 创建卡牌注册表（在模块初始化时调用）
-public fun create_card_registry(ctx: &mut TxContext) {
+public(package) fun create_card_registry(ctx: &mut TxContext): ID {
     let mut registry = CardRegistry {
         id: object::new(ctx),
         cards: table::new(ctx),
@@ -79,11 +79,13 @@ public fun create_card_registry(ctx: &mut TxContext) {
     // 初始化基础卡牌
     init_basic_cards(&mut registry);
 
+    let registry_id = object::id(&registry);
     transfer::share_object(registry);
+    registry_id
 }
 
 // 创建掉落配置表
-public fun create_drop_config(ctx: &mut TxContext) {
+public(package) fun create_drop_config(ctx: &mut TxContext): ID {
     let mut config = DropConfig {
         id: object::new(ctx),
         tile_drops: table::new(ctx),
@@ -96,7 +98,9 @@ public fun create_drop_config(ctx: &mut TxContext) {
     // 初始化默认掉落规则
     init_default_drop_rules(&mut config);
 
+    let config_id = object::id(&config);
     transfer::share_object(config);
+    config_id
 }
 
 // 初始化基础卡牌

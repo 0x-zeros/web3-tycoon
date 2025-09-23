@@ -1,6 +1,9 @@
 module tycoon::map;
 
 use sui::table::{Self, Table};
+use sui::object::{Self, UID, ID};
+use sui::tx_context::{Self, TxContext};
+use sui::transfer;
 use tycoon::types;
 
 // ===== Errors =====
@@ -111,13 +114,15 @@ public struct MapRegistry has key, store {
 // ===== Entry Functions 入口函数 =====
 
 // 创建地图注册表
-public fun create_registry(ctx: &mut TxContext) {
+public(package) fun create_registry(ctx: &mut TxContext): ID {
     let registry = MapRegistry {
         id: object::new(ctx),
         templates: table::new(ctx),
         template_count: 0
     };
+    let registry_id = object::id(&registry);
     transfer::share_object(registry);
+    registry_id
 }
 
 // ===== Public Functions 公共函数 =====

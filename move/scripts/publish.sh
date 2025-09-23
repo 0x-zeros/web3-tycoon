@@ -102,11 +102,27 @@ else
 fi
 
 # 提取 MapRegistry
-MAP_REGISTRY=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("admin::MapRegistry")) | .objectId' | head -1)
+MAP_REGISTRY=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("map::MapRegistry")) | .objectId' | head -1)
 if [ -n "${MAP_REGISTRY:-}" ]; then
     echo "MapRegistry Object ID: $MAP_REGISTRY"
 else
     echo "MapRegistry Object ID: Not found"
+fi
+
+# 提取 CardRegistry
+CARD_REGISTRY=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("cards::CardRegistry")) | .objectId' | head -1)
+if [ -n "${CARD_REGISTRY:-}" ]; then
+    echo "CardRegistry Object ID: $CARD_REGISTRY"
+else
+    echo "CardRegistry Object ID: Not found"
+fi
+
+# 提取 DropConfig
+DROP_CONFIG=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("cards::DropConfig")) | .objectId' | head -1)
+if [ -n "${DROP_CONFIG:-}" ]; then
+    echo "DropConfig Object ID: $DROP_CONFIG"
+else
+    echo "DropConfig Object ID: Not found"
 fi
 
 echo "================================================================================================"

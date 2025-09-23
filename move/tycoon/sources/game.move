@@ -434,7 +434,7 @@ public entry fun use_card(
     // 应用卡牌效果并收集事件数据
     apply_card_effect_with_collectors(
         game,
-        player_addr,
+        seat.player_index,
         kind,
         target,
         tile,
@@ -516,7 +516,7 @@ public entry fun roll_and_step(
     // 执行逐步移动并收集事件数据
     execute_step_movement_with_collectors(
         game,
-        player_addr,
+        seat.player_index,
         from_pos,
         to_pos,
         dice,
@@ -599,9 +599,7 @@ public entry fun decide_rent_payment(
     };
 
     // 清除待决策状态
-    game.pending_decision = types::decision_none();
-    game.decision_tile = 0;
-    game.decision_amount = 0;
+    clear_decision_state(game);
 }
 
 // 跳过地产决策（不购买或不升级）
@@ -621,9 +619,7 @@ public entry fun skip_property_decision(
     );
 
     // 清除待决策状态
-    game.pending_decision = types::decision_none();
-    game.decision_tile = 0;
-    game.decision_amount = 0;
+    clear_decision_state(game);
 }
 
 // 结束回合（手动）
@@ -710,9 +706,7 @@ public entry fun buy_property(
     owner_tiles.push_back(tile_id);
 
     // 清除待决策状态
-    game.pending_decision = types::decision_none();
-    game.decision_tile = 0;
-    game.decision_amount = 0;
+    clear_decision_state(game);
 
     // 发送购买事件
 
@@ -774,9 +768,7 @@ public entry fun upgrade_property(
     *level_mut = current_level + 1;
 
     // 清除待决策状态
-    game.pending_decision = types::decision_none();
-    game.decision_tile = 0;
-    game.decision_amount = 0;
+    clear_decision_state(game);
 
     // 发送升级事件
 
@@ -815,6 +807,13 @@ fun get_player_mut_by_seat(game: &mut Game, seat: &Seat): &mut Player {
     game.players.borrow_mut(seat.player_index as u64)
 }
 
+// 清理决策状态
+fun clear_decision_state(game: &mut Game) {
+    game.pending_decision = types::decision_none();
+    game.decision_tile = 0;
+    game.decision_amount = 0;
+}
+
 // 通过地址查找玩家索引
 fun find_player_index(game: &Game, player_addr: address): u8 {
     let mut i = 0;
@@ -828,10 +827,22 @@ fun find_player_index(game: &Game, player_addr: address): u8 {
     abort EPlayerNotFound
 }
 
+// 验证座位索引有效性
+fun validate_seat_index(game: &Game, seat: &Seat) {
+    assert!((seat.player_index as u64) < game.players.length(), EPlayerNotFound);
+}
+
 // 验证座位凭证和当前回合
 fun validate_seat_and_turn(game: &Game, seat: &Seat) {
+    // 验证索引有效性
+    validate_seat_index(game, seat);
+
     // 验证游戏ID匹配
     assert!(seat.game_id == object::uid_to_inner(&game.id), EWrongGame);
+
+    // 验证Seat一致性：索引对应的玩家地址必须与seat中的地址一致
+    let seat_owner = game.players.borrow(seat.player_index as u64).owner;
+    assert!(seat_owner == seat.player, ENotActivePlayer);
 
     // 验证是当前活跃玩家
     let active_player = get_active_player_address(game);
@@ -847,7 +858,7 @@ fun validate_and_auto_skip(game: &mut Game, seat: &Seat): bool {
 
     // 如果需要跳过，自动处理
     if (should_skip_turn(game, seat.player_index)) {
-        handle_skip_turn(game, seat.player, seat.player_index);
+        handle_skip_turn(game, seat.player_index);
         advance_turn(game);
         return true  // 表示已跳过
     };
@@ -861,8 +872,9 @@ fun should_skip_turn(game: &Game, player_index: u8): bool {
 }
 
 // 处理跳过回合
-fun handle_skip_turn(game: &mut Game, player_addr: address, player_index: u8) {
+fun handle_skip_turn(game: &mut Game, player_index: u8) {
     let player = game.players.borrow_mut(player_index as u64);
+    let player_addr = player.owner;
 
     let reason = if (player.in_prison_turns > 0) {
         player.in_prison_turns = player.in_prison_turns - 1;
@@ -977,7 +989,7 @@ fun calculate_move_target(
 // - cash_changes: 收集现金变化事件
 fun execute_step_movement_with_collectors(
     game: &mut Game,
-    player_addr: address,
+    player_index: u8,
     from: u64,
     to: u64,
     dice: u8,
@@ -987,7 +999,7 @@ fun execute_step_movement_with_collectors(
     registry: &MapRegistry
 ) {
     let template = map::get_template(registry, game.template_id);
-    let player_index = find_player_index(game, player_addr);
+    let player_addr = game.players.borrow(player_index as u64).owner;
 
     // 步骤1: 检查玩家是否处于冻结状态
     {
@@ -1067,7 +1079,7 @@ fun execute_step_movement_with_collectors(
 
                 // 找医院
                 let hospital_tile = find_nearest_hospital(game, next_pos, registry);
-                send_to_hospital_internal(game, player_addr, hospital_tile, registry);
+                send_to_hospital_internal(game, player_index, hospital_tile, registry);
 
                 // 移除NPC（如果是消耗性的）
                 if (npc.consumable) {
@@ -1210,14 +1222,13 @@ fun execute_step_movement_with_collectors(
 // 处理经过地块
 fun handle_tile_pass(
     game: &mut Game,
-    player_addr: address,
+    player_index: u8,
     tile_id: u64,
     registry: &MapRegistry
 ) {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
-    let player_index = find_player_index(game, player_addr);
 
     // 只有卡片格和彩票格在经过时触发
     if (is_passable_trigger(tile_kind)) {
@@ -1236,21 +1247,21 @@ fun handle_tile_pass(
 // 处理停留地块
 fun handle_tile_stop(
     game: &mut Game,
-    player_addr: address,
+    player_index: u8,
     tile_id: u64,
     registry: &MapRegistry
 ) {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
-    let player_index = find_player_index(game, player_addr);
+    let player_addr = game.players.borrow(player_index as u64).owner;
 
     if (tile_kind == types::tile_property()) {
-        handle_property_stop(game, player_addr, tile_id, tile);
+        handle_property_stop(game, player_index, tile_id, tile);
     } else if (tile_kind == types::tile_hospital()) {
-        handle_hospital_stop(game, player_addr, tile_id);
+        handle_hospital_stop(game, player_index, tile_id);
     } else if (tile_kind == types::tile_prison()) {
-        handle_prison_stop(game, player_addr, tile_id);
+        handle_prison_stop(game, player_index, tile_id);
     } else if (tile_kind == types::tile_card()) {
         // 停留时也抽卡
         let (card_kind, count) = cards::draw_card_on_stop(game.rng_nonce);
@@ -1496,11 +1507,11 @@ fun handle_tile_stop_with_collector(
 // 处理地产停留
 fun handle_property_stop(
     game: &mut Game,
-    player_addr: address,
+    player_index: u8,
     tile_id: u64,
     tile: &map::TileStatic
 ) {
-    let player_index = find_player_index(game, player_addr);
+    let player_addr = game.players.borrow(player_index as u64).owner;
 
     if (!table::contains(&game.owner_of, tile_id)) {
         // 无主地产 - 可以购买
@@ -1547,15 +1558,13 @@ fun handle_property_stop(
 }
 
 // 处理医院停留
-fun handle_hospital_stop(game: &mut Game, player_addr: address, tile_id: u64) {
-    let player_index = find_player_index(game, player_addr);
+fun handle_hospital_stop(game: &mut Game, player_index: u8, tile_id: u64) {
     let player = game.players.borrow_mut(player_index as u64);
     player.in_hospital_turns = types::default_hospital_turns();
 }
 
 // 处理监狱停留
-fun handle_prison_stop(game: &mut Game, player_addr: address, tile_id: u64) {
-    let player_index = find_player_index(game, player_addr);
+fun handle_prison_stop(game: &mut Game, player_index: u8, tile_id: u64) {
     let player = game.players.borrow_mut(player_index as u64);
     player.in_prison_turns = types::default_prison_turns();
 }
@@ -1574,21 +1583,19 @@ fun find_nearest_hospital(game: &Game, current_pos: u64, registry: &MapRegistry)
 }
 
 // 送医院（内部函数）
-fun send_to_hospital_internal(game: &mut Game, player_addr: address, hospital_tile: u64, registry: &MapRegistry) {
-    let player_index = find_player_index(game, player_addr);
+fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: u64, registry: &MapRegistry) {
     let player = game.players.borrow_mut(player_index as u64);
     player.pos = hospital_tile;
     player.in_hospital_turns = types::default_hospital_turns();
 }
 
 // 送医院
-fun send_to_hospital(game: &mut Game, player_addr: address, registry: &MapRegistry) {
+fun send_to_hospital(game: &mut Game, player_index: u8, registry: &MapRegistry) {
     let template = map::get_template(registry, game.template_id);
     let hospital_ids = map::get_hospital_ids(template);
 
     if (!hospital_ids.is_empty()) {
         let hospital_tile = *hospital_ids.borrow(0);
-        let player_index = find_player_index(game, player_addr);
         let player = game.players.borrow_mut(player_index as u64);
         player.pos = hospital_tile;
         player.in_hospital_turns = types::default_hospital_turns();
@@ -1774,16 +1781,16 @@ fun apply_card_effect(
 // 应用卡牌效果（带事件收集器）
 fun apply_card_effect_with_collectors(
     game: &mut Game,
-    player_addr: address,
+    player_index: u8,
     kind: u16,
     target: Option<address>,
     tile: Option<u64>,
     npc_changes: &mut vector<events::NpcChangeItem>,
     buff_changes: &mut vector<events::BuffChangeItem>,
     cash_changes: &mut vector<events::CashDelta>,
-    registry: &MapRegistry
+    _registry: &MapRegistry
 ) {
-    let player_index = find_player_index(game, player_addr);
+    let player_addr = game.players.borrow(player_index as u64).owner;
 
     if (kind == types::card_move_ctrl()) {
         // 遥控骰

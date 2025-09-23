@@ -117,8 +117,8 @@ public struct CashDelta has copy, drop, store {
 // 卡牌获取项
 public struct CardDrawItem has copy, drop, store {
     tile_id: u64,
-    kind: u16,
-    count: u64,
+    kind: u8,
+    count: u8,
     is_pass: bool
 }
 
@@ -175,7 +175,7 @@ public struct UseCardActionEvent has copy, drop {
     player: address,
     round: u16,
     turn_in_round: u8,
-    kind: u16,
+    kind: u8,
     params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
@@ -327,8 +327,8 @@ public(package) fun make_cash_delta(
 // 构造卡牌获取项
 public(package) fun make_card_draw_item(
     tile_id: u64,
-    kind: u16,
-    count: u64,
+    kind: u8,
+    count: u8,
     is_pass: bool
 ): CardDrawItem {
     CardDrawItem {
@@ -434,7 +434,7 @@ public(package) fun emit_use_card_action_event(
     player: address,
     round: u16,
     turn_in_round: u8,
-    kind: u16,
+    kind: u8,
     params: vector<u64>,  // 统一参数
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,

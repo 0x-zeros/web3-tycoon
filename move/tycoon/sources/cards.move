@@ -13,11 +13,30 @@ const ECardNotOwned: u64 = 5001;
 const EHandLimit: u64 = 5002;
 const EInvalidCardTarget: u64 = 5003;
 
+// ===== CardEntry 卡牌条目 =====
+//
+// 功能说明：
+// 表示玩家手牌中的一种卡牌及其数量
+// 使用vector存储替代Table以优化小集合性能
+//
+// 字段说明：
+// - kind: 卡牌类型（使用types模块的CARD_*常量）
+// - count: 持有数量（0表示无此卡，保留条目避免动态添加/删除）
+public struct CardEntry has store, copy, drop {
+    kind: u8,   // 卡牌类型
+    count: u8   // 数量（0-255）
+}
+
+// CardEntry accessor functions
+public fun card_entry_kind(entry: &CardEntry): u8 { entry.kind }
+public fun card_entry_count(entry: &CardEntry): u8 { entry.count }
+public fun new_card_entry(kind: u8, count: u8): CardEntry { CardEntry { kind, count } }
+
 // ===== Card Definition 卡牌元数据 =====
 // 这是卡牌的元数据定义，不是玩家拥有的卡牌实例
-// 玩家拥有的卡牌仅用Table<u16, u64>记录数量
+// 玩家拥有的卡牌用vector<CardEntry>记录
 public struct Card has store, copy, drop {
-    kind: u16,
+    kind: u8,
     name: vector<u8>,
     description: vector<u8>,
     target_type: u8,  // 0=无目标, 1=玩家, 2=地块, 3=玩家或地块
@@ -28,7 +47,7 @@ public struct Card has store, copy, drop {
 // ===== CardRegistry 全局卡牌注册表 =====
 public struct CardRegistry has key {
     id: UID,
-    cards: Table<u16, Card>,         // 卡牌定义
+    cards: Table<u8, Card>,         // 卡牌定义
     card_count: u64                   // 卡牌总数
 }
 
@@ -38,13 +57,13 @@ public struct DropConfig has key {
     tile_drops: Table<u8, DropRule>,    // 不同地块的掉落规则
     pass_drop_rate: u64,                // 经过时掉落概率 (basis points, 10000 = 100%)
     stop_drop_rate: u64,                // 停留时掉落概率
-    default_pool: vector<u16>,          // 默认卡牌池
+    default_pool: vector<u8>,          // 默认卡牌池
     default_weights: vector<u64>        // 默认权重分布
 }
 
 // ===== DropRule 掉落规则 =====
 public struct DropRule has store, drop {
-    card_pool: vector<u16>,    // 可掉落的卡牌ID列表
+    card_pool: vector<u8>,    // 可掉落的卡牌ID列表
     weights: vector<u64>,       // 对应的权重
     quantity: u64               // 掉落数量
 }
@@ -220,7 +239,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
 // 内部函数：注册卡牌到注册表
 fun register_card_internal(
     registry: &mut CardRegistry,
-    kind: u16,
+    kind: u8,
     name: vector<u8>,
     description: vector<u8>,
     target_type: u8,
@@ -250,7 +269,7 @@ fun register_card_internal(
 public fun register_card(
     _cap: &admin::AdminCap,
     registry: &mut CardRegistry,
-    kind: u16,
+    kind: u8,
     name: vector<u8>,
     description: vector<u8>,
     target_type: u8,
@@ -279,13 +298,13 @@ public fun update_drop_config(
 // ===== Query Functions 查询函数 =====
 
 // 获取卡牌信息
-public fun get_card(registry: &CardRegistry, kind: u16): &Card {
+public fun get_card(registry: &CardRegistry, kind: u8): &Card {
     assert!(table::contains(&registry.cards, kind), ECardNotOwned);
     table::borrow(&registry.cards, kind)
 }
 
 // 检查卡牌是否存在
-public fun has_card(registry: &CardRegistry, kind: u16): bool {
+public fun has_card(registry: &CardRegistry, kind: u8): bool {
     table::contains(&registry.cards, kind)
 }
 
@@ -293,55 +312,82 @@ public fun has_card(registry: &CardRegistry, kind: u16): bool {
 
 // 给玩家发卡
 public fun give_card_to_player(
-    player_cards: &mut Table<u16, u64>,
-    kind: u16,
-    count: u64
+    player_cards: &mut vector<CardEntry>,
+    kind: u8,
+    count: u8
 ) {
-    if (table::contains(player_cards, kind)) {
-        let current = *table::borrow(player_cards, kind);
-        *table::borrow_mut(player_cards, kind) = current + count;
-    } else {
-        table::add(player_cards, kind, count);
+    let mut i = 0;
+    let len = player_cards.length();
+
+    // 查找是否已有该类型卡牌
+    while (i < len) {
+        let entry = player_cards.borrow_mut(i);
+        if (entry.kind == kind) {
+            // 更新数量，注意防止溢出
+            let new_count = (entry.count as u64) + (count as u64);
+            entry.count = if (new_count > 255) { 255 } else { (new_count as u8) };
+            return
+        };
+        i = i + 1;
     };
+
+    // 如果没有找到，添加新条目
+    player_cards.push_back(CardEntry { kind, count });
 }
 
 // 检查玩家是否有卡
 public fun player_has_card(
-    player_cards: &Table<u16, u64>,
-    kind: u16
+    player_cards: &vector<CardEntry>,
+    kind: u8
 ): bool {
-    table::contains(player_cards, kind) && *table::borrow(player_cards, kind) > 0
+    let mut i = 0;
+    let len = player_cards.length();
+
+    while (i < len) {
+        let entry = player_cards.borrow(i);
+        if (entry.kind == kind && entry.count > 0) {
+            return true
+        };
+        i = i + 1;
+    };
+    false
 }
 
 // 获取玩家卡牌数量
 public fun get_player_card_count(
-    player_cards: &Table<u16, u64>,
-    kind: u16
-): u64 {
-    if (table::contains(player_cards, kind)) {
-        *table::borrow(player_cards, kind)
-    } else {
-        0
-    }
+    player_cards: &vector<CardEntry>,
+    kind: u8
+): u8 {
+    let mut i = 0;
+    let len = player_cards.length();
+
+    while (i < len) {
+        let entry = player_cards.borrow(i);
+        if (entry.kind == kind) {
+            return entry.count
+        };
+        i = i + 1;
+    };
+    0
 }
 
 // 使用玩家的卡牌
 public fun use_player_card(
-    player_cards: &mut Table<u16, u64>,
-    kind: u16
+    player_cards: &mut vector<CardEntry>,
+    kind: u8
 ): bool {
-    if (!player_has_card(player_cards, kind)) {
-        return false
-    };
+    let mut i = 0;
+    let len = player_cards.length();
 
-    let current = *table::borrow(player_cards, kind);
-    if (current > 1) {
-        *table::borrow_mut(player_cards, kind) = current - 1;
-    } else {
-        table::remove(player_cards, kind);
+    while (i < len) {
+        let entry = player_cards.borrow_mut(i);
+        if (entry.kind == kind && entry.count > 0) {
+            entry.count = entry.count - 1;
+            return true
+        };
+        i = i + 1;
     };
-
-    true
+    false
 }
 
 // ===== Card Effect Functions 卡牌效果函数 =====
@@ -384,7 +430,7 @@ public fun validate_card_target(
 // ===== Card Drawing Functions 抽卡函数 =====
 
 // 计算应该抽取的卡牌种类（简单随机）
-public fun determine_card_draw(seed: u64): u16 {
+public fun determine_card_draw(seed: u64): u8 {
     // 简单的随机卡牌选择
     let card_types = vector[
         types::card_move_ctrl(),
@@ -401,13 +447,13 @@ public fun determine_card_draw(seed: u64): u16 {
 }
 
 // 经过卡牌格时抽卡
-public fun draw_card_on_pass(seed: u64): (u16, u64) {
+public fun draw_card_on_pass(seed: u64): (u8, u8) {
     let card_kind = determine_card_draw(seed);
     (card_kind, 1)  // 经过时抽1张
 }
 
 // 停留卡牌格时抽卡
-public fun draw_card_on_stop(seed: u64): (u16, u64) {
+public fun draw_card_on_stop(seed: u64): (u8, u8) {
     let card_kind = determine_card_draw(seed);
     (card_kind, 2)  // 停留时抽2张
 }
@@ -441,7 +487,7 @@ public fun get_card_duration(card: &Card, current_turn: u64): Option<u64> {
 }
 
 // 检查卡牌是否需要目标
-public fun card_needs_target(kind: u16, registry: &CardRegistry): bool {
+public fun card_needs_target(kind: u8, registry: &CardRegistry): bool {
     if (has_card(registry, kind)) {
         let card = get_card(registry, kind);
         card.target_type != target_none()
@@ -472,7 +518,7 @@ public fun get_card_description(card: &Card): &vector<u8> {
 }
 
 // 获取卡牌种类
-public fun get_card_kind(card: &Card): u16 {
+public fun get_card_kind(card: &Card): u8 {
     card.kind
 }
 
@@ -487,26 +533,14 @@ public fun get_card_target_type(card: &Card): u8 {
 }
 
 // 计算手牌总数
-public fun count_total_cards(player_cards: &Table<u16, u64>): u64 {
+public fun count_total_cards(player_cards: &vector<CardEntry>): u64 {
     let mut total = 0;
     let mut i = 0;
+    let len = player_cards.length();
 
-    // 遍历所有卡牌类型
-    let card_types = vector[
-        types::card_move_ctrl(),
-        types::card_barrier(),
-        types::card_bomb(),
-        types::card_rent_free(),
-        types::card_freeze(),
-        types::card_dog(),
-        types::card_cleanse()
-    ];
-
-    while (i < card_types.length()) {
-        let kind = *card_types.borrow(i);
-        if (table::contains(player_cards, kind)) {
-            total = total + *table::borrow(player_cards, kind);
-        };
+    while (i < len) {
+        let entry = player_cards.borrow(i);
+        total = total + (entry.count as u64);
         i = i + 1;
     };
 
@@ -514,7 +548,7 @@ public fun count_total_cards(player_cards: &Table<u16, u64>): u64 {
 }
 
 // 检查手牌是否达到上限
-public fun is_hand_full(player_cards: &Table<u16, u64>, max_cards: u64): bool {
+public fun is_hand_full(player_cards: &vector<CardEntry>, max_cards: u64): bool {
     count_total_cards(player_cards) >= max_cards
 }
 
@@ -523,7 +557,7 @@ public fun is_hand_full(player_cards: &Table<u16, u64>, max_cards: u64): bool {
 // 创建测试用卡牌
 #[test_only]
 public fun create_test_card(
-    kind: u16,
+    kind: u8,
     name: vector<u8>,
     description: vector<u8>,
     target_type: u8,
@@ -542,8 +576,8 @@ public fun create_test_card(
 
 // 创建空的卡牌表
 #[test_only]
-public fun create_empty_card_table(ctx: &mut TxContext): Table<u16, u64> {
-    table::new(ctx)
+public fun create_empty_card_vector(): vector<CardEntry> {
+    vector::empty()
 }
 
 // [已移除] init_for_testing - CardRegistry 和 DropConfig 现在在 admin::init 中创建

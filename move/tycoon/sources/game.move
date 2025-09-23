@@ -8,7 +8,7 @@ use sui::coin;
 
 use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
-use tycoon::cards::{Self, CardRegistry};
+use tycoon::cards::{Self, CardEntry};
 use tycoon::events;
 
 // ===== Errors =====
@@ -115,7 +115,7 @@ public struct BuffEntry has store, copy, drop {
 // - in_prison_turns: 剩余监狱回合数（0表示不在监狱）
 // - in_hospital_turns: 剩余医院回合数（0表示不在医院）
 // - bankrupt: 破产标志，破产后不参与游戏但保留在players表中
-// - cards: 手牌集合，键为卡牌种类，值为数量
+// - cards: 手牌集合，使用vector存储以优化小集合性能
 // - dir_pref: 移动方向偏好（顺时针/逆时针/自动选择）
 // - buffs: 当前激活的所有Buff列表
 public struct Player has store {
@@ -125,7 +125,7 @@ public struct Player has store {
     in_prison_turns: u8,
     in_hospital_turns: u8,
     bankrupt: bool,
-    cards: Table<u16 /* CardKind */, u64 /* count */>,
+    cards: vector<CardEntry>,  // 改为vector存储
     dir_pref: u8,  // DirMode
     buffs: vector<BuffEntry>  // 统一的buff存储
 }
@@ -387,7 +387,7 @@ public entry fun start(
 public entry fun use_card(
     game: &mut Game,
     seat: &Seat,
-    kind: u16,
+    kind: u8,
     params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
     registry: &MapRegistry,
     card_registry: &cards::CardRegistry,
@@ -757,7 +757,13 @@ public entry fun upgrade_property(
 // ===== Internal Functions 内部函数 =====
 
 // 创建玩家
-fun create_player(owner: address, ctx: &mut TxContext): Player {
+fun create_player(owner: address, _ctx: &mut TxContext): Player {
+    // 创建初始卡牌
+    let mut initial_cards = vector::empty();
+    initial_cards.push_back(cards::new_card_entry(types::card_move_ctrl(), 1));  // 遥控骰子 1 张
+    initial_cards.push_back(cards::new_card_entry(types::card_barrier(), 1));     // 路障卡 1 张
+    initial_cards.push_back(cards::new_card_entry(types::card_cleanse(), 1));     // 清除卡 1 张
+
     Player {
         owner,
         pos: 0,
@@ -766,7 +772,7 @@ fun create_player(owner: address, ctx: &mut TxContext): Player {
         in_prison_turns: 0,
         in_hospital_turns: 0,
         bankrupt: false,
-        cards: table::new(ctx),
+        cards: initial_cards,
         dir_pref: types::dir_auto()
     }
 }
@@ -1713,7 +1719,7 @@ fun consume_npc_if_consumable(
 fun apply_card_effect_with_collectors(
     game: &mut Game,
     player_index: u8,
-    kind: u16,
+    kind: u8,
     params: &vector<u64>,  // 统一参数
     npc_changes: &mut vector<events::NpcChangeItem>,
     buff_changes: &mut vector<events::BuffChangeItem>,
@@ -2077,7 +2083,7 @@ public fun is_player_bankrupt(game: &Game, player: address): bool {
     false
 }
 
-public fun get_player_card_count(game: &Game, player: address, kind: u16): u64 {
+public fun get_player_card_count(game: &Game, player: address, kind: u8): u8 {
     let mut i = 0;
     while (i < game.players.length()) {
         let player_data = game.players.borrow(i);
@@ -2204,8 +2210,8 @@ public fun get_players(game: &Game): &vector<address> {
 public fun test_give_card(
     game: &mut Game,
     player: address,
-    card_kind: u16,
-    count: u64
+    card_kind: u8,
+    count: u8
 ) {
     let player_index = find_player_index(game, player);
     let player_data = game.players.borrow_mut(player_index as u64);

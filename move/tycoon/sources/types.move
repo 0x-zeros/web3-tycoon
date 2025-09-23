@@ -56,21 +56,21 @@ public fun npc_bomb(): u8 { NPC_BOMB }
 public fun npc_dog(): u8 { NPC_DOG }
 
 // ===== CardKind 卡牌类型 =====
-const CARD_MOVE_CTRL: u16 = 1;
-const CARD_BARRIER: u16 = 2;
-const CARD_BOMB: u16 = 10;
-const CARD_DOG: u16 = 11;
-const CARD_RENT_FREE: u16 = 20;
-const CARD_FREEZE: u16 = 30;
-const CARD_CLEANSE: u16 = 41;
+const CARD_MOVE_CTRL: u8 = 1;
+const CARD_BARRIER: u8 = 2;
+const CARD_BOMB: u8 = 10;
+const CARD_DOG: u8 = 11;
+const CARD_RENT_FREE: u8 = 20;
+const CARD_FREEZE: u8 = 30;
+const CARD_CLEANSE: u8 = 41;
 
-public fun card_move_ctrl(): u16 { CARD_MOVE_CTRL }
-public fun card_barrier(): u16 { CARD_BARRIER }
-public fun card_bomb(): u16 { CARD_BOMB }
-public fun card_dog(): u16 { CARD_DOG }
-public fun card_rent_free(): u16 { CARD_RENT_FREE }
-public fun card_freeze(): u16 { CARD_FREEZE }
-public fun card_cleanse(): u16 { CARD_CLEANSE }
+public fun card_move_ctrl(): u8 { CARD_MOVE_CTRL }
+public fun card_barrier(): u8 { CARD_BARRIER }
+public fun card_bomb(): u8 { CARD_BOMB }
+public fun card_dog(): u8 { CARD_DOG }
+public fun card_rent_free(): u8 { CARD_RENT_FREE }
+public fun card_freeze(): u8 { CARD_FREEZE }
+public fun card_cleanse(): u8 { CARD_CLEANSE }
 
 // ===== BuffKind Buff类型 =====
 const BUFF_MOVE_CTRL: u8 = 1;

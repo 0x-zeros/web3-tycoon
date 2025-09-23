@@ -138,15 +138,11 @@ public struct Player has store {
 //
 // 字段说明：
 // - kind: NPC类型（BARRIER/BOMB/DOG等）
-// - expires_at_global_turn: 过期的全局回合号
-//   * Some(turn): 在指定全局回合自动移除（global_turn = round * player_count + turn）
-//   * None: 永久存在，需要手动清除
 // - consumable: 是否可被消耗
 //   * true: 触发后自动移除（如炸弹）
 //   * false: 触发后保留（如路障）
 public struct NpcInst has store, copy, drop {
     kind: u8,  // NpcKind
-    expires_at_global_turn: Option<u64>,
     consumable: bool
 }
 
@@ -1673,12 +1669,11 @@ fun place_npc_internal(
     tile_id: u64,
     kind: u8,
     consumable: bool,
-    expires: Option<u64>,
     npc_changes: &mut vector<events::NpcChangeItem>,
 ) {
     // 仅限制同一地块不可重复放置
     assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-    let npc = NpcInst { kind, expires_at_global_turn: expires, consumable };
+    let npc = NpcInst { kind, consumable };
     table::add(&mut game.npc_on, tile_id, npc);
     vector::push_back(
         npc_changes,
@@ -1812,7 +1807,6 @@ fun apply_card_effect_with_collectors(
                 tile_id,
                 npc_kind,
                 /* consumable = */ true,
-                /* expires = */ option::none(),
                 npc_changes
             );
         };

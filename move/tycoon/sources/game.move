@@ -395,7 +395,7 @@ public entry fun use_card(
     seat: &Seat,
     kind: u16,
     params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
-    map_registry: &MapRegistry,
+    registry: &MapRegistry,
     card_registry: &cards::CardRegistry,
     ctx: &mut TxContext
 ) {
@@ -406,19 +406,12 @@ public entry fun use_card(
     assert!(!game.has_rolled, EAlreadyRolled);
 
     let player_addr = seat.player;
-    let player = game.players.borrow_mut(seat.player_index as u64);
 
-    // 验证玩家有这张卡
-    assert!(cards::player_has_card(&player.cards, kind), ECardNotOwned);
-
-    // 获取卡牌信息
-    let card = cards::get_card(card_registry, kind);
-
-    // 验证目标 //todo 比如均富卡，target是所有的Player
-    assert!(cards::validate_card_target(card, target, tile), EInvalidCardTarget);
-
-    // 使用卡牌
-    assert!(cards::use_player_card(&mut player.cards, kind), ECardNotOwned);
+    // 使用卡牌（内部会检查拥有并扣除）
+    {
+        let player = game.players.borrow_mut(seat.player_index as u64);
+        assert!(cards::use_player_card(&mut player.cards, kind), ECardNotOwned);
+    };  // 借用在这里结束
 
     // 创建事件收集器
     let mut npc_changes = vector[];
@@ -434,7 +427,7 @@ public entry fun use_card(
         &mut npc_changes,
         &mut buff_changes,
         &mut cash_changes,
-        map_registry
+        registry
     );
 
     // 发射聚合事件（暂时保持原有事件结构，后续可优化）
@@ -540,8 +533,8 @@ public entry fun roll_and_step(
     events::emit_roll_and_step_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        (game.round as u16),
-        (game.turn as u8),
+        game.round,
+        game.turn,
         dice,
         direction,
         from_pos,
@@ -1759,7 +1752,7 @@ fun apply_card_effect_with_collectors(
     npc_changes: &mut vector<events::NpcChangeItem>,
     buff_changes: &mut vector<events::BuffChangeItem>,
     cash_changes: &mut vector<events::CashDelta>,
-    _registry: &MapRegistry
+    _registry: &MapRegistry  // 保留下划线前缀，表示暂时未使用但保留接口
 ) {
     let player_addr = game.players.borrow(player_index as u64).owner;
 

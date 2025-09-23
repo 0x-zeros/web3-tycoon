@@ -8,7 +8,7 @@ use sui::coin;
 
 use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
-use tycoon::cards::{Self, CardCatalog};
+use tycoon::cards::{Self, CardRegistry};
 use tycoon::events;
 
 // ===== Errors =====
@@ -203,7 +203,6 @@ public struct Seat has key {
 // 其他组件：
 // - config: 游戏配置参数
 // - rng_nonce: 随机数种子
-// - card_catalog: 卡牌定义目录
 // - winner: 游戏结束时的获胜者
 public struct Game has key, store {
     id: UID,
@@ -231,7 +230,6 @@ public struct Game has key, store {
 
     // 额外状态
     current_npc_count: u16,
-    card_catalog: CardCatalog,
     winner: Option<address>,//todo 不需要吧？
 
     // 待决策状态
@@ -289,7 +287,6 @@ public entry fun create_game(
         config,
         rng_nonce: 0,
         current_npc_count: 0,
-        card_catalog: cards::create_catalog(ctx),
         winner: option::none(),
         pending_decision: types::decision_none(),
         decision_tile: 0,
@@ -396,7 +393,8 @@ public entry fun use_card(
     kind: u16,
     target: Option<address>,
     tile: Option<u64>,
-    registry: &MapRegistry,
+    map_registry: &MapRegistry,
+    card_registry: &cards::CardRegistry,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -412,9 +410,9 @@ public entry fun use_card(
     assert!(cards::player_has_card(&player.cards, kind), ECardNotOwned);
 
     // 获取卡牌信息
-    let card = cards::get_card(&game.card_catalog, kind);
+    let card = cards::get_card(card_registry, kind);
 
-    // 验证目标
+    // 验证目标 //todo 比如均富卡，target是所有的Player
     assert!(cards::validate_card_target(card, target, tile), EInvalidCardTarget);
 
     // 使用卡牌
@@ -435,7 +433,7 @@ public entry fun use_card(
         &mut npc_changes,
         &mut buff_changes,
         &mut cash_changes,
-        registry
+        map_registry
     );
 
     // 发射聚合事件
@@ -1728,7 +1726,7 @@ fun apply_card_effect_with_collectors(
 ) {
     if (kind == types::card_move_ctrl()) {
         // 遥控骰
-        let player = table::borrow_mut(&mut game.players, player_addr);
+        let player = table::borrow_mut(&mut game.players, player_addr);//todo borrow_mut 寻找太多次了呀, 我觉得直接用vector装player好
         // 使用buff系统
         apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);
 

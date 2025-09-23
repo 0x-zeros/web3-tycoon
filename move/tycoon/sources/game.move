@@ -1071,9 +1071,7 @@ fun execute_step_movement_with_collectors(
                 send_to_hospital_internal(game, player_index, hospital_tile, registry);
 
                 // 移除NPC（如果是消耗性的）
-                if (npc.consumable) {
-                    table::remove(&mut game.npc_on, next_pos);
-                };
+                let consumed = consume_npc_if_consumable(game, next_pos, &npc);
 
                 // 创建NPC事件
                 npc_event_opt = option::some(events::make_npc_step_event(
@@ -1103,9 +1101,7 @@ fun execute_step_movement_with_collectors(
                 };
 
                 // 移除路障
-                if (npc.consumable) {
-                    table::remove(&mut game.npc_on, next_pos);
-                };
+                let consumed = consume_npc_if_consumable(game, next_pos, &npc);
 
                 // 创建NPC事件
                 npc_event_opt = option::some(events::make_npc_step_event(
@@ -1680,6 +1676,54 @@ fun handle_bankruptcy(
 }
 
 
+// 共享内部函数：统一NPC放置与移除
+fun place_npc_internal(
+    game: &mut Game,
+    tile_id: u64,
+    kind: u8,
+    consumable: bool,
+    expires: Option<u64>,
+    npc_changes: &mut vector<events::NpcChangeItem>,
+) {
+    // 仅限制同一地块不可重复放置
+    assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
+    let npc = NpcInst { kind, expires_at_global_turn: expires, consumable };
+    table::add(&mut game.npc_on, tile_id, npc);
+    vector::push_back(
+        npc_changes,
+        events::make_npc_change(tile_id, kind, events::npc_action_spawn(), consumable)
+    );
+}
+
+fun remove_npc_internal(
+    game: &mut Game,
+    tile_id: u64,
+    npc_changes: &mut vector<events::NpcChangeItem>,
+) {
+    if (table::contains(&game.npc_on, tile_id)) {
+        let npc = table::remove(&mut game.npc_on, tile_id);
+        vector::push_back(
+            npc_changes,
+            events::make_npc_change(tile_id, npc.kind, events::npc_action_remove(), npc.consumable)
+        );
+    }
+}
+
+// 消耗NPC（用于玩家踩到NPC时）
+// 注意：这个函数不生成NpcChangeItem事件，因为消耗信息已经在NpcStepEvent中体现
+fun consume_npc_if_consumable(
+    game: &mut Game,
+    tile_id: u64,
+    npc: &NpcInst
+): bool {
+    if (npc.consumable) {
+        table::remove(&mut game.npc_on, tile_id);
+        true
+    } else {
+        false
+    }
+}
+
 // 应用卡牌效果（带事件收集器）
 fun apply_card_effect_with_collectors(
     game: &mut Game,
@@ -1717,25 +1761,15 @@ fun apply_card_effect_with_collectors(
                 types::npc_bomb()
             };
 
-            // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-            // 不再限制NPC总数量，移除npc_cap检查
-
-            // 放置NPC（不再维护全局数量）
-            let npc = NpcInst {
-                kind: npc_kind,
-                expires_at_global_turn: option::none(),
-                consumable: true //todo 这是做什么用的？
-            };
-            table::add(&mut game.npc_on, tile_id, npc);
-
-            // 记录NPC变更
-            vector::push_back(npc_changes, events::make_npc_change(
+            // 放置NPC（统一逻辑）
+            place_npc_internal(
+                game,
                 tile_id,
                 npc_kind,
-                events::npc_action_spawn(),
-                true
-            ));
+                /* consumable = */ true,
+                /* expires = */ option::none(),
+                npc_changes
+            );
         }
     } else if (kind == types::card_rent_free()) {
         // 免租
@@ -1770,43 +1804,21 @@ fun apply_card_effect_with_collectors(
         if (option::is_some(&tile)) {
             let tile_id = *option::borrow(&tile);
 
-            // 检查是否可以放置（不再受npc_cap限制）
-            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-
-            // 放置狗狗NPC（不再维护全局数量）
-            let npc = NpcInst {
-                kind: types::npc_dog(),
-                expires_at_global_turn: option::none(),
-                consumable: true  // 碰到狗狗后会消失
-            };
-            table::add(&mut game.npc_on, tile_id, npc);
-
-            // 记录NPC变更
-            vector::push_back(npc_changes, events::make_npc_change(
+            // 放置狗狗NPC（统一逻辑）
+            place_npc_internal(
+                game,
                 tile_id,
                 types::npc_dog(),
-                events::npc_action_spawn(),
-                true
-            ));
+                /* consumable = */ true,
+                /* expires = */ option::none(),
+                npc_changes
+            );
         }
     } else if (kind == types::card_cleanse()) {
         // 清除NPC
         if (option::is_some(&tile)) {
             let tile_id = *option::borrow(&tile);
-
-            // 检查是否有NPC在该地块
-            if (table::contains(&game.npc_on, tile_id)) {
-                // 移除NPC
-                let npc = table::remove(&mut game.npc_on, tile_id);
-
-                // 记录NPC变更
-                vector::push_back(npc_changes, events::make_npc_change(
-                    tile_id,
-                    npc.kind,
-                    events::npc_action_remove(),
-                    npc.consumable
-                ));
-            }
+            remove_npc_internal(game, tile_id, npc_changes);
         }
     }
 }

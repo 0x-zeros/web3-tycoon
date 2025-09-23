@@ -1728,7 +1728,7 @@ fun apply_card_effect_with_collectors(
         // 遥控骰
         let player = table::borrow_mut(&mut game.players, player_addr);//todo borrow_mut 寻找太多次了呀, 我觉得直接用vector装player好
         // 使用buff系统
-        apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);
+        apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);//todo 遥控骰值在使用卡片的时候，会从客户端传过来选择好的1-6的值
 
         // 记录buff变更
         vector::push_back(buff_changes, events::make_buff_change(

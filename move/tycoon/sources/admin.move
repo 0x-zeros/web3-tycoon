@@ -1,6 +1,9 @@
 module tycoon::admin;
 
 use sui::event;
+use sui::transfer;
+use sui::object::{Self, UID};
+use sui::tx_context::{Self, TxContext};
 
 use tycoon::map::{Self, MapTemplate, MapRegistry};
 use tycoon::types;
@@ -23,9 +26,11 @@ public struct RegistryCreatedEvent has copy, drop {
     creator: address
 }
 
-// ===== Init Function 初始化函数 =====
-fun init(ctx: &mut TxContext) {
-    // 创建管理员权限并转移给部署者
+// ===== Admin Cap Creation 管理员权限创建 =====
+
+/// 创建管理员权限并转移给部署者
+/// 由 tycoon 模块的 init 函数调用
+public(package) fun create_admin_cap(ctx: &mut TxContext) {
     let admin_cap = AdminCap {
         id: object::new(ctx)
     };
@@ -34,16 +39,10 @@ fun init(ctx: &mut TxContext) {
 
 // ===== Entry Functions 入口函数 =====
 
-// 创建地图注册表（公开函数，任何人都可以创建）
-entry fun create_map_registry(ctx: &mut TxContext) {
-    map::create_registry(ctx);
-
-    // 发出创建事件
-    event::emit(RegistryCreatedEvent {
-        registry_id: object::id_from_address(ctx.sender()),
-        creator: ctx.sender()
-    });
-}
+// [已废弃] 地图注册表现在在 init 中创建
+// entry fun create_map_registry(ctx: &mut TxContext) {
+//     map::create_registry(ctx);
+// }
 
 // 发布测试地图
 entry fun publish_test_map(
@@ -192,7 +191,8 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
 
 #[test_only]
 public fun init_for_testing(ctx: &mut TxContext) {
-    init(ctx);
+    // 使用顶层模块的初始化函数
+    tycoon::tycoon::init_for_testing(ctx);
 }
 
 // ===== Query Functions 查询函数 =====

@@ -543,19 +543,7 @@ public fun create_empty_card_table(ctx: &mut TxContext): Table<u16, u64> {
     table::new(ctx)
 }
 
-// 测试用初始化函数
-#[test_only]
-public fun init_for_testing(ctx: &mut TxContext) {
-    init(ctx);
-}
+// [已移除] init_for_testing - CardRegistry 和 DropConfig 现在在 admin::init 中创建
 
 // ===== Module Initialization =====
-
-// 模块初始化函数
-fun init(ctx: &mut TxContext) {
-    // 创建卡牌注册表
-    create_card_registry(ctx);
-
-    // 创建掉落配置表
-    create_drop_config(ctx);
-}
+// 注：CardRegistry 和 DropConfig 现在在 admin 模块的 init 中创建，确保全局唯一

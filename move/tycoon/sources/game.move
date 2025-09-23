@@ -207,7 +207,6 @@ public struct Seat has key {
 public struct Game has key, store {
     id: UID,
     status: u8,  // 0=ready, 1=active, 2=ended
-    created_at_ms: u64,
     template_id: u64,
     template_digest: vector<u8>,
 
@@ -268,7 +267,6 @@ public entry fun create_game(
     let mut game = Game {
         id: game_id,
         status: types::status_ready(),
-        created_at_ms: 0,  // 将在start时设置 //todo, 这样的话变量名不太对呀
         template_id,
         template_digest: map::get_template_digest(template),//这个字段无意义 todo
         players: vector::empty(),
@@ -298,8 +296,7 @@ public entry fun create_game(
         game_id_copy,
         creator,
         template_id,
-        config.max_players,
-        0
+        config.max_players
     );
 
     // 创建座位凭证（索引为 0）
@@ -369,13 +366,12 @@ public entry fun start(
 
     // 设置游戏状态
     game.status = types::status_active();
-    game.created_at_ms = clock::timestamp_ms(clock);
     // round和turn已在创建时初始化为0
     game.active_idx = 0;
     game.has_rolled = false;
 
     // 初始化随机数种子
-    game.rng_nonce = game.created_at_ms;
+    game.rng_nonce = clock::timestamp_ms(clock);
 
     let starting_player = game.players.borrow(0).owner;
 

@@ -11,8 +11,7 @@ public struct GameCreatedEvent has copy, drop {
     game: ID,
     creator: address,
     template_id: u64,
-    max_players: u8,
-    created_at_ms: u64
+    max_players: u8
 }
 
 // 玩家加入事件
@@ -204,15 +203,13 @@ public(package) fun emit_game_created_event(
     game_id: ID,
     creator: address,
     template_id: u64,
-    max_players: u8,
-    created_at_ms: u64
+    max_players: u8
 ) {
     event::emit(GameCreatedEvent {
         game: game_id,
         creator,
         template_id,
-        max_players,
-        created_at_ms
+        max_players
     });
 }
 
@@ -513,10 +510,9 @@ public fun new_game_created_event(
     game: ID,
     creator: address,
     template_id: u64,
-    max_players: u8,
-    created_at_ms: u64
+    max_players: u8
 ): GameCreatedEvent {
-    GameCreatedEvent { game, creator, template_id, max_players, created_at_ms }
+    GameCreatedEvent { game, creator, template_id, max_players }
 }
 
 public fun new_player_joined_event(game: ID, player: address, player_index: u8): PlayerJoinedEvent {

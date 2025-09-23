@@ -4,6 +4,7 @@ module tycoon::cards_basic_tests {
     use std::option;
     use sui::test_scenario::{Self as scenario};
     use sui::clock;
+    use sui::random::{Self, Random};
 
     use tycoon::test_utils::{Self as utils};
     use tycoon::game::{Self, Game};
@@ -47,8 +48,7 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             types::card_move_ctrl(),
-            option::none(),
-            option::none(),
+            vector[],  // 无参数
             &map_registry,
             &card_registry,
             scenario::ctx(scenario)
@@ -58,14 +58,16 @@ module tycoon::cards_basic_tests {
         assert!(game::has_buff(&game, utils::admin_addr(), types::buff_move_ctrl()), 1);
 
         // 掷骰移动
+        let r = scenario::take_shared<Random>(scenario);
         game::roll_and_step(
             &mut game,
             &seat,
             option::none(),
             &map_registry,
-            &clock,
+            &r,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(r);
 
         // 验证移动了3步
         utils::assert_player_position(&game, utils::admin_addr(), 3);
@@ -244,8 +246,7 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             types::card_barrier(),
-            option::none(),
-            option::some(2),
+            vector[2],  // 目标地块ID
             &map_registry,
             &card_registry,
             scenario::ctx(scenario)
@@ -268,8 +269,7 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             types::card_cleanse(),
-            option::none(),
-            option::some(2),
+            vector[2],  // 目标地块ID
             &map_registry,
             &card_registry,
             scenario::ctx(scenario)
@@ -318,8 +318,7 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             types::card_freeze(),
-            option::some(utils::alice()),  // 目标玩家
-            option::none(),
+            vector[1],  // Alice的player_index是1
             &map_registry,
             &card_registry,
             scenario::ctx(scenario)
@@ -337,14 +336,16 @@ module tycoon::cards_basic_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         // 尝试移动（应该被跳过）
+        let r = scenario::take_shared<Random>(scenario);
         game::roll_and_step(
             &mut game,
             &seat,
             option::none(),
             &map_registry,
-            &clock,
+            &r,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(r);
 
         // 验证回合已切换回Admin
         assert!(game::current_turn_player(&game) == utils::admin_addr(), 2);
@@ -401,8 +402,7 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             types::card_rent_free(),
-            option::none(),
-            option::none(),
+            vector[],  // 无参数
             &map_registry,
             &card_registry,
             scenario::ctx(scenario)
@@ -472,8 +472,7 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             types::card_barrier(),
-            option::none(),
-            option::some(1),
+            vector[1],  // 目标地块ID
             &map_registry,
             &card_registry,
             scenario::ctx(scenario)

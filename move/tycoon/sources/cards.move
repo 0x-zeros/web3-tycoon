@@ -429,8 +429,8 @@ public fun validate_card_target(
 
 // ===== Card Drawing Functions 抽卡函数 =====
 
-// 计算应该抽取的卡牌种类（简单随机）
-public fun determine_card_draw(seed: u64): u8 {
+// 计算应该抽取的卡牌种类（使用预生成的随机值）
+public fun determine_card_draw(random_value: u8): u8 {
     // 简单的随机卡牌选择
     let card_types = vector[
         types::card_move_ctrl(),
@@ -442,19 +442,19 @@ public fun determine_card_draw(seed: u64): u8 {
         types::card_cleanse()
     ];
 
-    let index = (seed % 7) as u64;  // 0-6 //todo 7 -> card_types.length()
+    let index = ((random_value as u64) % card_types.length());
     *card_types.borrow(index)
 }
 
 // 经过卡牌格时抽卡
-public fun draw_card_on_pass(seed: u64): (u8, u8) {
-    let card_kind = determine_card_draw(seed);
+public fun draw_card_on_pass(random_value: u8): (u8, u8) {
+    let card_kind = determine_card_draw(random_value);
     (card_kind, 1)  // 经过时抽1张
 }
 
 // 停留卡牌格时抽卡
-public fun draw_card_on_stop(seed: u64): (u8, u8) {
-    let card_kind = determine_card_draw(seed);
+public fun draw_card_on_stop(random_value: u8): (u8, u8) {
+    let card_kind = determine_card_draw(random_value);
     (card_kind, 2)  // 停留时抽2张
 }
 

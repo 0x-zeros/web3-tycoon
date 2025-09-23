@@ -9,6 +9,7 @@ module tycoon::economy_tests {
     use tycoon::game::{Self, Game};
     use tycoon::map::{MapRegistry};
     use tycoon::types;
+    use tycoon::cards::{CardRegistry};
 
     // 测试购买地产
     #[test]
@@ -386,15 +387,17 @@ module tycoon::economy_tests {
         game::test_give_card(&mut game, utils::alice(), types::card_rent_free(), 1);
 
         // 使用免租卡
+        let card_registry = scenario::take_shared<CardRegistry>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_rent_free(),
-            option::none(),
-            option::none(),
+            vector[],  // 无参数
             &registry,
+            &card_registry,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(card_registry);
 
         // 记录Alice初始现金
         let alice_initial = game::get_player_cash(&game, utils::alice());

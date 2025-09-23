@@ -4,6 +4,7 @@ module tycoon::test_utils {
     use std::option::{Self, Option};
     use sui::object::{Self, ID};
     use sui::clock::{Self, Clock};
+    use sui::random::{Self, Random};
     use sui::test_scenario::{Self as scenario, Scenario};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
@@ -28,6 +29,9 @@ module tycoon::test_utils {
         {
             // 初始化所有必需的组件
             tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+
+            // 创建测试用的 Random 对象
+            random::create_for_testing(scenario::ctx(scenario));
         };
 
         scenario::next_tx(scenario, admin_addr());
@@ -201,7 +205,9 @@ module tycoon::test_utils {
     ) {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
-        game::roll_and_step(game, seat, dir_intent, registry, clock, scenario::ctx(scenario));
+        let r = scenario::take_shared<Random>(scenario);
+        game::roll_and_step(game, seat, dir_intent, registry, &r, scenario::ctx(scenario));
+        scenario::return_shared(r);
     }
 
     // 结束回合
@@ -229,7 +235,9 @@ module tycoon::test_utils {
 
         // 执行掷骰移动
         scenario::next_tx(scenario, player);
-        game::roll_and_step(game, &seat, dir_intent, registry, clock, scenario::ctx(scenario));
+        let r = scenario::take_shared<Random>(scenario);
+        game::roll_and_step(game, &seat, dir_intent, registry, &r, scenario::ctx(scenario));
+        scenario::return_shared(r);
 
         // 归还Seat
         scenario::return_to_sender(scenario, seat);

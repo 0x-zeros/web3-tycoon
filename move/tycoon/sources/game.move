@@ -5,6 +5,7 @@ module tycoon::game;
 use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
 use sui::coin;
+use sui::random::{Self, Random};
 
 use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
@@ -198,7 +199,6 @@ public struct Seat has key {
 //
 // 其他组件：
 // - config: 游戏配置参数
-// - rng_nonce: 随机数种子
 // - winner: 游戏结束时的获胜者
 public struct Game has key, store {
     id: UID,
@@ -219,7 +219,6 @@ public struct Game has key, store {
     owner_index: Table<u8 /* player_index */, vector<u64>>,
 
     config: Config,
-    rng_nonce: u64,
 
     // 额外状态
     winner: Option<address>,//todo 不需要吧？
@@ -273,7 +272,6 @@ public entry fun create_game(
         npc_on: table::new(ctx),
         owner_index: table::new(ctx),
         config,
-        rng_nonce: 0,
         winner: option::none(),
         pending_decision: types::decision_none(),
         decision_tile: 0,
@@ -364,9 +362,6 @@ public entry fun start(
     game.active_idx = 0;
     game.has_rolled = false;
 
-    // 初始化随机数种子
-    game.rng_nonce = clock::timestamp_ms(clock);
-
     let starting_player = game.players.borrow(0).owner;
 
     // 发出开始事件
@@ -440,6 +435,7 @@ public entry fun roll_and_step(
     seat: &Seat,
     dir_intent: Option<u8>,
     registry: &MapRegistry,
+    r: &Random,
     clock: &Clock,
     ctx: &mut TxContext
 ) {
@@ -455,7 +451,7 @@ public entry fun roll_and_step(
     let player_index = seat.player_index;
 
     // 获取骰子点数
-    let dice = get_dice_value(game, player_index, clock);
+    let dice = get_dice_value(game, player_index, r, ctx);
 
     let player = game.players.borrow_mut(player_index as u64);
     let from_pos = player.pos;
@@ -498,7 +494,9 @@ public entry fun roll_and_step(
         direction,
         &mut steps,
         &mut cash_changes,
-        registry
+        registry,
+        r,
+        ctx
     );
 
     // 获取最终位置
@@ -868,7 +866,7 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
 }
 
 // 获取骰子点数
-fun get_dice_value(game: &mut Game, player_index: u8, clock: &Clock): u8 {
+fun get_dice_value(game: &Game, player_index: u8, r: &Random, ctx: &mut TxContext): u8 {
     let player = game.players.borrow(player_index as u64);
 
     // 使用buff系统检查遥控骰子
@@ -877,14 +875,13 @@ fun get_dice_value(game: &mut Game, player_index: u8, clock: &Clock): u8 {
         return (value as u8)
     };
 
-    rand_1_6(game, clock)
+    rand_1_6(r, ctx)
 }
 
-// 简单随机数生成（生产环境应使用VRF或预言机）
-fun rand_1_6(game: &mut Game, clock: &Clock): u8 {
-    let seed = game.rng_nonce + clock::timestamp_ms(clock);
-    game.rng_nonce = seed;
-    ((seed % 6) + 1) as u8
+// 生成 1-6 的随机数
+fun rand_1_6(r: &Random, ctx: &mut TxContext): u8 {
+    let mut generator = random::new_generator(r, ctx);
+    generator.generate_u8_in_range(1, 6)
 }
 
 // 计算移动目标
@@ -972,7 +969,9 @@ fun execute_step_movement_with_collectors(
     direction: u8,
     steps: &mut vector<events::StepEffect>,
     cash_changes: &mut vector<events::CashDelta>,
-    registry: &MapRegistry
+    registry: &MapRegistry,
+    r: &Random,
+    ctx: &mut TxContext
 ) {
     let template = map::get_template(registry, game.template_id);
     let player_addr = game.players.borrow(player_index as u64).owner;
@@ -990,7 +989,9 @@ fun execute_step_movement_with_collectors(
                 player_index,
                 from,
                 cash_changes,
-                registry
+                registry,
+                r,
+                ctx
             );
 
             // 记录步骤（停留在原地）
@@ -1105,7 +1106,9 @@ fun execute_step_movement_with_collectors(
                     player_index,
                     next_pos,
                     cash_changes,
-                    registry
+                    registry,
+                    r,
+                    ctx
                 ));
 
                 // 记录步骤并结束
@@ -1136,7 +1139,9 @@ fun execute_step_movement_with_collectors(
             // 处理经过卡牌格
             if (tile_kind == types::tile_card()) {
                 // 经过抽1张卡
-                let (card_kind, _) = cards::draw_card_on_pass(game.rng_nonce);
+                let mut generator = random::new_generator(r, ctx);
+                let random_value = generator.generate_u8();
+                let (card_kind, _) = cards::draw_card_on_pass(random_value);
                 let player = game.players.borrow_mut(player_index as u64);
                 cards::give_card_to_player(&mut player.cards, card_kind, 1);
 
@@ -1166,7 +1171,9 @@ fun execute_step_movement_with_collectors(
                 player_index,
                 next_pos,
                 cash_changes,
-                registry
+                registry,
+                r,
+                ctx
             ));
 
             // 记录最后的步骤
@@ -1194,7 +1201,9 @@ fun handle_tile_pass(
     game: &mut Game,
     player_index: u8,
     tile_id: u64,
-    registry: &MapRegistry
+    registry: &MapRegistry,
+    r: &Random,
+    ctx: &mut TxContext
 ) {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
@@ -1204,7 +1213,9 @@ fun handle_tile_pass(
     if (is_passable_trigger(tile_kind)) {
         if (tile_kind == types::tile_card() && game.config.trigger_card_on_pass) {
             // 抽卡
-            let (card_kind, count) = cards::draw_card_on_pass(game.rng_nonce);
+            let mut generator = random::new_generator(r, ctx);
+            let random_value = generator.generate_u8();
+            let (card_kind, count) = cards::draw_card_on_pass(random_value);
             let player = game.players.borrow_mut(player_index as u64);
             cards::give_card_to_player(&mut player.cards, card_kind, count);
         } else if (tile_kind == types::tile_lottery() && game.config.trigger_lottery_on_pass) {
@@ -1219,7 +1230,9 @@ fun handle_tile_stop(
     game: &mut Game,
     player_index: u8,
     tile_id: u64,
-    registry: &MapRegistry
+    registry: &MapRegistry,
+    r: &Random,
+    ctx: &mut TxContext
 ) {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
@@ -1234,7 +1247,9 @@ fun handle_tile_stop(
         handle_prison_stop(game, player_index, tile_id);
     } else if (tile_kind == types::tile_card()) {
         // 停留时也抽卡
-        let (card_kind, count) = cards::draw_card_on_stop(game.rng_nonce);
+        let mut generator = random::new_generator(r, ctx);
+        let random_value = generator.generate_u8();
+        let (card_kind, count) = cards::draw_card_on_stop(random_value);
         let player = game.players.borrow_mut(player_index as u64);
         cards::give_card_to_player(&mut player.cards, card_kind, count);
     } else if (tile_kind == types::tile_chance()) {
@@ -1264,7 +1279,9 @@ fun handle_tile_stop_with_collector(
     player_index: u8,
     tile_id: u64,
     cash_changes: &mut vector<events::CashDelta>,
-    registry: &MapRegistry
+    registry: &MapRegistry,
+    r: &Random,
+    ctx: &mut TxContext
 ): events::StopEffect {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
@@ -1399,7 +1416,9 @@ fun handle_tile_stop_with_collector(
         turns_opt = option::some(types::default_prison_turns());
     } else if (tile_kind == types::tile_card()) {
         // 停留时抽卡
-        let (card_kind, count) = cards::draw_card_on_stop(game.rng_nonce);
+        let mut generator = random::new_generator(r, ctx);
+        let random_value = generator.generate_u8();
+        let (card_kind, count) = cards::draw_card_on_stop(random_value);
         let player = game.players.borrow_mut(player_index as u64);
         cards::give_card_to_player(&mut player.cards, card_kind, count);
 
@@ -2196,8 +2215,15 @@ public fun join_with_coin(
 }
 
 #[test_only]
-public fun get_players(game: &Game): &vector<address> {
-    &game.join_order
+public fun get_players(game: &Game): vector<address> {
+    let mut result = vector[];
+    let mut i = 0;
+    while (i < game.players.length()) {
+        let player = game.players.borrow(i);
+        vector::push_back(&mut result, player.owner);
+        i = i + 1;
+    };
+    result
 }
 
 #[test_only]
@@ -2294,6 +2320,11 @@ public fun has_npc_on_tile(game: &Game, tile_id: u64): bool {
 #[test_only]
 public fun get_npc_on_tile(game: &Game, tile_id: u64): &NpcInst {
     table::borrow(&game.npc_on, tile_id)
+}
+
+#[test_only]
+public fun get_npc_kind(npc: &NpcInst): u8 {
+    npc.kind
 }
 
 #[test_only]

@@ -118,6 +118,17 @@ public fun status_ready(): u8 { STATUS_READY }
 public fun status_active(): u8 { STATUS_ACTIVE }
 public fun status_ended(): u8 { STATUS_ENDED }
 
+// ===== PendingDecision 待决策类型 =====
+const DECISION_NONE: u8 = 0;
+const DECISION_BUY_PROPERTY: u8 = 1;      // 可以购买地产
+const DECISION_UPGRADE_PROPERTY: u8 = 2;   // 可以升级地产
+const DECISION_PAY_RENT: u8 = 3;          // 需要决定如何支付租金（有免租卡时）
+
+public fun decision_none(): u8 { DECISION_NONE }
+public fun decision_buy_property(): u8 { DECISION_BUY_PROPERTY }
+public fun decision_upgrade_property(): u8 { DECISION_UPGRADE_PROPERTY }
+public fun decision_pay_rent(): u8 { DECISION_PAY_RENT }
+
 // ===== SkipReason 跳过回合原因 =====
 const SKIP_PRISON: u8 = 1;
 const SKIP_HOSPITAL: u8 = 2;

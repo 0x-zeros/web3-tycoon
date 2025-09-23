@@ -24,6 +24,8 @@ const EAlreadyStarted: u64 = 6002;
 const EGameEnded: u64 = 6003;
 const ENotEnoughPlayers: u64 = 6004;
 const EAlreadyJoined: u64 = 6005;
+const EInvalidDecision: u64 = 6006;
+const EPendingDecision: u64 = 6007;
 
 // 经济相关错误
 const EInsufficientFunds: u64 = 7001;
@@ -44,6 +46,7 @@ const EInsufficientCash: u64 = 2010;
 // 卡牌相关错误（game.move中使用的部分）
 const ECardNotOwned: u64 = 5001;
 const EInvalidCardTarget: u64 = 5003;
+const ECardNotFound: u64 = 5004;
 
 // 移动相关错误
 const EInvalidMove: u64 = 4001;
@@ -228,7 +231,12 @@ public struct Game has key, store {
     // 额外状态
     current_npc_count: u16,
     card_catalog: CardCatalog,
-    winner: Option<address>//todo 不需要吧？
+    winner: Option<address>,//todo 不需要吧？
+
+    // 待决策状态
+    pending_decision: u8,           // 待决策类型
+    decision_tile: u64,             // 相关的地块ID
+    decision_amount: u64            // 相关金额（如租金）
 }
 
 // ===== Entry Functions 入口函数 =====
@@ -281,7 +289,10 @@ public entry fun create_game(
         rng_nonce: 0,
         current_npc_count: 0,
         card_catalog: cards::create_catalog(ctx),
-        winner: option::none()
+        winner: option::none(),
+        pending_decision: types::decision_none(),
+        decision_tile: 0,
+        decision_amount: 0
     };
 
     // 创建者自动加入
@@ -368,7 +379,7 @@ public entry fun start(
     let starting_player = *game.join_order.borrow(0);
 
     // 发出开始事件
-    events::emit_game_started_event(
+    events::emit_game_started_event(//todo 传回去的参数太少
         object::uid_to_inner(&game.id),
         game.join_order.length() as u8,
         starting_player
@@ -524,6 +535,79 @@ public entry fun roll_and_step(
     advance_turn(game);
 }
 
+// 决定租金支付方式（使用免租卡或支付现金）
+public entry fun decide_rent_payment(
+    game: &mut Game,
+    seat: &Seat,
+    use_rent_free: bool,
+    registry: &MapRegistry,
+    ctx: &mut TxContext
+) {
+    // 验证座位和回合
+    validate_seat_and_turn(game, seat);
+
+    // 验证待决策状态
+    assert!(game.pending_decision == types::decision_pay_rent(), EInvalidDecision);
+
+    let player_addr = seat.player;
+    let tile_id = game.decision_tile;
+    let toll = game.decision_amount;
+
+    // 获取地产所有者
+    assert!(table::contains(&game.owner_of, tile_id), EPropertyNotOwned);
+    let owner = *table::borrow(&game.owner_of, tile_id);
+
+    if (use_rent_free) {
+        // 使用免租卡
+        let player = table::borrow(&game.players, player_addr);
+        assert!(cards::has_card(&player.cards, types::card_rent_free()), ECardNotFound);
+
+        // 消耗免租卡
+        let player_mut = table::borrow_mut(&mut game.players, player_addr);
+        cards::use_card_from_hand(&mut player_mut.cards, types::card_rent_free(), 1);
+
+        // TODO: 发出免租事件
+    } else {
+        // 支付现金
+        let player = table::borrow_mut(&mut game.players, player_addr);
+        assert!(player.cash >= toll, EInsufficientCash);
+        player.cash = player.cash - toll;
+
+        // 给所有者加钱
+        let owner_player = table::borrow_mut(&mut game.players, owner);
+        owner_player.cash = owner_player.cash + toll;
+
+        // TODO: 发出支付租金事件
+    };
+
+    // 清除待决策状态
+    game.pending_decision = types::decision_none();
+    game.decision_tile = 0;
+    game.decision_amount = 0;
+}
+
+// 跳过地产决策（不购买或不升级）
+public entry fun skip_property_decision(
+    game: &mut Game,
+    seat: &Seat,
+    ctx: &mut TxContext
+) {
+    // 验证座位和回合
+    validate_seat_and_turn(game, seat);
+
+    // 验证有待决策
+    assert!(
+        game.pending_decision == types::decision_buy_property() ||
+        game.pending_decision == types::decision_upgrade_property(),
+        EInvalidDecision
+    );
+
+    // 清除待决策状态
+    game.pending_decision = types::decision_none();
+    game.decision_tile = 0;
+    game.decision_amount = 0;
+}
+
 // 结束回合（手动）
 public entry fun end_turn(
     game: &mut Game,
@@ -532,6 +616,9 @@ public entry fun end_turn(
 ) {
     // 验证座位和回合
     validate_seat_and_turn(game, seat);
+
+    // 验证没有待决策
+    assert!(game.pending_decision == types::decision_none(), EPendingDecision);
 
     let player_addr = seat.player;
 
@@ -559,9 +646,15 @@ public entry fun buy_property(
     // 验证座位和回合
     validate_seat_and_turn(game, seat);
 
+    // 验证待决策状态
+    assert!(game.pending_decision == types::decision_buy_property(), EInvalidDecision);
+
     let player_addr = seat.player;
     let player = table::borrow(&game.players, player_addr);
     let tile_id = player.pos;
+
+    // 验证地块位置匹配
+    assert!(tile_id == game.decision_tile, EPosMismatch);
 
     // 获取地块信息
     let template = map::get_template(registry, game.template_id);
@@ -595,6 +688,11 @@ public entry fun buy_property(
     let owner_tiles = table::borrow_mut(&mut game.owner_index, player_addr);
     owner_tiles.push_back(tile_id);
 
+    // 清除待决策状态
+    game.pending_decision = types::decision_none();
+    game.decision_tile = 0;
+    game.decision_amount = 0;
+
     // 发送购买事件
 
     // 发送现金变化事件
@@ -610,9 +708,15 @@ public entry fun upgrade_property(
     // 验证座位和回合
     validate_seat_and_turn(game, seat);
 
+    // 验证待决策状态
+    assert!(game.pending_decision == types::decision_upgrade_property(), EInvalidDecision);
+
     let player_addr = seat.player;
     let player = table::borrow(&game.players, player_addr);
     let tile_id = player.pos;
+
+    // 验证地块位置匹配
+    assert!(tile_id == game.decision_tile, EPosMismatch);
 
     // 获取地块信息
     let template = map::get_template(registry, game.template_id);
@@ -646,6 +750,11 @@ public entry fun upgrade_property(
     // 提升等级
     let level_mut = table::borrow_mut(&mut game.level_of, tile_id);
     *level_mut = current_level + 1;
+
+    // 清除待决策状态
+    game.pending_decision = types::decision_none();
+    game.decision_tile = 0;
+    game.decision_amount = 0;
 
     // 发送升级事件
 
@@ -1141,42 +1250,48 @@ fun handle_tile_stop_with_collector(
 
     if (tile_kind == types::tile_property()) {
         if (!table::contains(&game.owner_of, tile_id)) {
-            // 无主地产 - 可购买
+            // 无主地产 - 设置待决策状态
             stop_type = events::stop_property_unowned();
+            game.pending_decision = types::decision_buy_property();
+            game.decision_tile = tile_id;
+            game.decision_amount = map::tile_price(tile);
         } else {
             let owner = *table::borrow(&game.owner_of, tile_id);
             if (owner != player_addr) {
                 let level = *table::borrow(&game.level_of, tile_id);
                 let toll = calculate_toll(map::tile_base_toll(tile), level);
 
-                // 处理租金支付
-                let (is_rent_free, actual_payment, should_bankrupt) = {
-                    let player = table::borrow_mut(&mut game.players, player_addr);
+                // 检查是否有免租卡
+                let player = table::borrow(&game.players, player_addr);
+                let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.round);
 
-                    // 检查免租
-                    let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.round);
-
-                    if (has_rent_free) {
-                        // 免租
-                        (true, 0, false)
-                    } else {
+                if (has_rent_free) {
+                    // 有免租卡 - 设置待决策状态
+                    stop_type = events::stop_property_toll();
+                    game.pending_decision = types::decision_pay_rent();
+                    game.decision_tile = tile_id;
+                    game.decision_amount = toll;
+                    owner_opt = option::some(owner);
+                    level_opt = option::some(level);
+                    amount = toll;
+                } else {
+                    // 没有免租卡 - 直接扣费
+                    let (actual_payment, should_bankrupt) = {
+                        let player_mut = table::borrow_mut(&mut game.players, player_addr);
                         // 支付过路费
-                        let payment = if (player.cash >= toll) {
-                            player.cash = player.cash - toll;
+                        let payment = if (player_mut.cash >= toll) {
+                            player_mut.cash = player_mut.cash - toll;
                             toll
                         } else {
-                            let payment = player.cash;
-                            player.cash = 0;
+                            let payment = player_mut.cash;
+                            player_mut.cash = 0;
                             payment
                         };
-                        let bankrupt = player.cash == 0 && toll > payment;
-                        (false, payment, bankrupt)
-                    }
-                };
+                        let bankrupt = player_mut.cash == 0 && toll > payment;
+                        (payment, bankrupt)
 
-                if (is_rent_free) {
-                    stop_type = events::stop_property_no_rent();
-                } else {
+                    };
+
                     if (actual_payment > 0) {
                         // 给所有者加钱
                         let owner_player = table::borrow_mut(&mut game.players, owner);
@@ -1208,8 +1323,24 @@ fun handle_tile_stop_with_collector(
                     if (should_bankrupt) {
                         handle_bankruptcy(game, player_addr, option::some(owner));
                     }
-                };
 
+                    owner_opt = option::some(owner);
+                    level_opt = option::some(level);
+                }
+            } else {
+                // 自己的地产 - 检查是否可以升级
+                let level = *table::borrow(&game.level_of, tile_id);
+                if (level < types::level_4()) {
+                    // 可以升级 - 设置待决策状态
+                    stop_type = events::stop_property_mine();
+                    game.pending_decision = types::decision_upgrade_property();
+                    game.decision_tile = tile_id;
+                    let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level);
+                    game.decision_amount = upgrade_cost;
+                } else {
+                    // 已达最高级
+                    stop_type = events::stop_property_mine();
+                }
                 owner_opt = option::some(owner);
                 level_opt = option::some(level);
             }

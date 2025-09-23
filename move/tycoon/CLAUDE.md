@@ -98,9 +98,12 @@ struct BuffEntry {
 ### Key Game Mechanics
 
 #### Turn System
-1. Player mints a TurnCap when it's their turn
-2. TurnCap authorizes actions (roll dice, use cards, buy properties)
-3. Turn ends by consuming the TurnCap
+1. Players use their Seat to take actions during their turn
+2. After `roll_and_step`, game may enter pending decision state:
+   - `DECISION_BUY_PROPERTY`: Can buy unowned property
+   - `DECISION_UPGRADE_PROPERTY`: Can upgrade own property
+   - `DECISION_PAY_RENT`: Must decide to use rent-free card or pay cash
+3. Players must resolve pending decisions before ending turn
 4. Game automatically advances to next non-bankrupt player
 
 #### Property System

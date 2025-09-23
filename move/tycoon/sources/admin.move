@@ -191,8 +191,8 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
 
 #[test_only]
 public fun init_for_testing(ctx: &mut TxContext) {
-    // 使用顶层模块的初始化函数
-    tycoon::tycoon::init_for_testing(ctx);
+    // 直接调用 create_admin_cap
+    create_admin_cap(ctx);
 }
 
 // ===== Query Functions 查询函数 =====

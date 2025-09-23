@@ -19,7 +19,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::admin::init_for_testing(scenario::ctx(scenario));
+        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game_id = utils::create_test_game(scenario);
@@ -86,8 +86,8 @@ module tycoon::cards_basic_tests {
         // 创建包含卡牌格的复杂地图
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            tycoon::admin::init_for_testing(scenario::ctx(scenario));
-            // CardRegistry 在 admin::init_for_testing 中创建
+            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+            // CardRegistry 在 tycoon::tycoon::init_for_testing 中创建
         };
 
         scenario::next_tx(scenario, utils::admin_addr());
@@ -152,8 +152,8 @@ module tycoon::cards_basic_tests {
         // 使用复杂地图设置
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            tycoon::admin::init_for_testing(scenario::ctx(scenario));
-            // CardRegistry 在 admin::init_for_testing 中创建
+            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+            // CardRegistry 在 tycoon::tycoon::init_for_testing 中创建
         };
 
         scenario::next_tx(scenario, utils::admin_addr());
@@ -218,7 +218,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::admin::init_for_testing(scenario::ctx(scenario));
+        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game_id = utils::create_test_game(scenario);
@@ -294,7 +294,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::admin::init_for_testing(scenario::ctx(scenario));
+        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game_id = utils::create_test_game(scenario);
@@ -365,7 +365,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::admin::init_for_testing(scenario::ctx(scenario));
+        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game_id = utils::create_test_game(scenario);
@@ -438,7 +438,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::admin::init_for_testing(scenario::ctx(scenario));
+        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game_id = utils::create_test_game(scenario);

@@ -26,7 +26,8 @@ module tycoon::test_utils {
     public fun create_test_game(scenario: &mut Scenario): ID {
         scenario::next_tx(scenario, admin_addr());
         {
-            admin::init_for_testing(scenario::ctx(scenario));
+            // 初始化所有必需的组件
+            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
         };
 
         scenario::next_tx(scenario, admin_addr());

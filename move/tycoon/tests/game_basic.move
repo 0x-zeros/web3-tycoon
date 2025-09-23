@@ -21,13 +21,7 @@ module tycoon::game_basic_tests {
         // 初始化管理模块
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            admin::init_for_testing(scenario::ctx(scenario));
-        };
-
-        // 创建注册表
-        scenario::next_tx(scenario, utils::admin_addr());
-        {
-            admin::create_map_registry(scenario::ctx(scenario));
+            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
         };
 
         // 创建并注册地图

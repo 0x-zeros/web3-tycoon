@@ -15,8 +15,8 @@ use tycoon::events;
 // 玩家相关错误
 const ENotActivePlayer: u64 = 1001;
 const EWrongPhase: u64 = 1002;
-const ENoTurnCap: u64 = 1003;
-const ECapExpired: u64 = 1004;
+const EWrongGame: u64 = 1003;
+const EGameNotActive: u64 = 1004;
 
 // 游戏状态相关错误
 const EJoinFull: u64 = 6001;
@@ -163,26 +163,7 @@ public struct Seat has key {
     player: address
 }
 
-// ===== TurnCap 回合令牌 =====
-//
-// 功能说明：
-// 回合授权令牌，证明玩家可以执行当前回合的操作
-// 实现对象能力模式（Object Capability Pattern）
-// 每个回合开始时铸造，结束时销毁
-//
-// 字段说明：
-// - id: 唯一对象ID
-// - game_id: 所属游戏的ID
-// - player: 当前回合玩家地址
-// - round: 轮次号
-// - turn: 轮内回合号（0到player_count-1）
-public struct TurnCap has key {
-    id: UID,
-    game_id: ID,
-    player: address,
-    round: u64,
-    turn: u64
-}
+// TurnCap 已被移除，使用 Seat 进行身份验证
 
 // ===== Game 游戏对象 =====
 //
@@ -394,50 +375,22 @@ public entry fun start(
     );
 }
 
-// 铸造回合令牌
-public entry fun mint_turncap(
-    game: &mut Game,
-    seat: &Seat,
-    clock: &Clock,
-    ctx: &mut TxContext
-) {
-    // 验证游戏状态
-    assert!(game.status == types::status_active(), EGameEnded);
-    assert!(seat.game_id == object::uid_to_inner(&game.id), EPosMismatch);
-
-    // 验证是当前活跃玩家
-    let active_player = get_active_player(game);
-    assert!(seat.player == active_player, ENotActivePlayer);
-
-    // 验证阶段
-    assert!(game.phase == types::phase_roll(), EWrongPhase);
-
-    // 创建回合令牌
-    let cap = TurnCap {
-        id: object::new(ctx),
-        game_id: object::uid_to_inner(&game.id),
-        player: active_player,
-        round: game.round,
-        turn: game.turn
-    };
-
-    transfer::transfer(cap, active_player);
-}
+// mint_turncap 已被移除，直接使用 Seat 验证身份
 
 // 使用卡牌
 public entry fun use_card(
     game: &mut Game,
-    cap: &TurnCap,
+    seat: &Seat,
     kind: u16,
     target: Option<address>,
     tile: Option<u64>,
     registry: &MapRegistry,
     ctx: &mut TxContext
 ) {
-    // 验证令牌
-    validate_turn_cap(game, cap);
+    // 验证座位和回合
+    validate_seat_and_turn(game, seat);
 
-    let player_addr = cap.player;
+    let player_addr = seat.player;
     let player = table::borrow_mut(&mut game.players, player_addr);
 
     // 验证玩家有这张卡
@@ -487,26 +440,18 @@ public entry fun use_card(
 // 掷骰并移动
 public entry fun roll_and_step(
     game: &mut Game,
-    cap: TurnCap,
+    seat: &Seat,
     dir_intent: Option<u8>,
     registry: &MapRegistry,
     clock: &Clock,
     ctx: &mut TxContext
 ) {
-    // 验证令牌
-    validate_turn_cap(game, &cap);
-
-    let player_addr = cap.player;
-
-    // 检查是否被跳过
-    if (should_skip_turn(game, player_addr)) {
-        handle_skip_turn(game, player_addr);
-        // 消耗令牌
-        let TurnCap { id, game_id: _, player: _, round: _, turn: _ } = cap;
-        object::delete(id);
-        advance_turn(game);
+    // 验证并自动处理跳过
+    if (validate_and_auto_skip(game, seat)) {
         return
     };
+
+    let player_addr = seat.player;
 
     // 获取骰子点数
     let dice = get_dice_value(game, player_addr, clock);
@@ -575,10 +520,6 @@ public entry fun roll_and_step(
     // 清理回合状态
     clean_turn_state(game, player_addr);
 
-    // 消耗令牌
-    let TurnCap { id, game_id: _, player: _, round: _, turn: _ } = cap;
-    object::delete(id);
-
     // 结束回合
     advance_turn(game);
 }
@@ -586,13 +527,13 @@ public entry fun roll_and_step(
 // 结束回合（手动）
 public entry fun end_turn(
     game: &mut Game,
-    cap: TurnCap,
+    seat: &Seat,
     ctx: &mut TxContext
 ) {
-    // 验证令牌
-    validate_turn_cap(game, &cap);
+    // 验证座位和回合
+    validate_seat_and_turn(game, seat);
 
-    let player_addr = cap.player;
+    let player_addr = seat.player;
 
     // 清理回合状态
     clean_turn_state(game, player_addr);
@@ -604,10 +545,6 @@ public entry fun end_turn(
         get_global_turn(game)
     );
 
-    // 消耗令牌
-    let TurnCap { id, game_id: _, player: _, round: _, turn: _ } = cap;
-    object::delete(id);
-
     // 推进回合
     advance_turn(game);
 }
@@ -615,14 +552,14 @@ public entry fun end_turn(
 // 购买地产
 public entry fun buy_property(
     game: &mut Game,
-    cap: &TurnCap,
+    seat: &Seat,
     registry: &MapRegistry,
     ctx: &mut TxContext
 ) {
-    // 验证回合令牌
-    validate_turn_cap(game, cap);
+    // 验证座位和回合
+    validate_seat_and_turn(game, seat);
 
-    let player_addr = cap.player;
+    let player_addr = seat.player;
     let player = table::borrow(&game.players, player_addr);
     let tile_id = player.pos;
 
@@ -666,14 +603,14 @@ public entry fun buy_property(
 // 升级地产
 public entry fun upgrade_property(
     game: &mut Game,
-    cap: &TurnCap,
+    seat: &Seat,
     registry: &MapRegistry,
     ctx: &mut TxContext
 ) {
-    // 验证回合令牌
-    validate_turn_cap(game, cap);
+    // 验证座位和回合
+    validate_seat_and_turn(game, seat);
 
-    let player_addr = cap.player;
+    let player_addr = seat.player;
     let player = table::borrow(&game.players, player_addr);
     let tile_id = player.pos;
 
@@ -737,12 +674,30 @@ fun get_active_player(game: &Game): address {
     *game.join_order.borrow((game.active_idx as u64))
 }
 
-// 验证回合令牌
-fun validate_turn_cap(game: &Game, cap: &TurnCap) {
-    assert!(cap.game_id == object::uid_to_inner(&game.id), EPosMismatch);
-    assert!(cap.round == game.round, ECapExpired);
-    assert!(cap.turn == game.turn, ECapExpired);
-    assert!(cap.player == get_active_player(game), ENotActivePlayer);
+// 验证座位凭证和当前回合
+fun validate_seat_and_turn(game: &Game, seat: &Seat) {
+    // 验证游戏ID匹配
+    assert!(seat.game_id == object::uid_to_inner(&game.id), EWrongGame);
+
+    // 验证是当前活跃玩家
+    let active_player = get_active_player(game);
+    assert!(seat.player == active_player, ENotActivePlayer);
+
+    // 验证游戏状态
+    assert!(game.status == types::status_active(), EGameNotActive);
+}
+
+// 验证并自动处理跳过
+fun validate_and_auto_skip(game: &mut Game, seat: &Seat): bool {
+    validate_seat_and_turn(game, seat);
+
+    // 如果需要跳过，自动处理
+    if (should_skip_turn(game, seat.player)) {
+        handle_skip_turn(game, seat.player);
+        advance_turn(game);
+        return true  // 表示已跳过
+    };
+    false  // 表示未跳过
 }
 
 // 检查是否应该跳过回合

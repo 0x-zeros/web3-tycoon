@@ -201,6 +201,11 @@ public fun new_map_template(
     }
 }
 
+//注意， 关于 tile_id
+// 现有代码依赖顺序 ID
+// 很多地方假设 tile_id 是连续的
+//   cw_next: Table<u64, u64>   // 下一格是 id+1 或回到 0
+
 // 向模板添加地块
 public fun add_tile_to_template(
     template: &mut MapTemplate,

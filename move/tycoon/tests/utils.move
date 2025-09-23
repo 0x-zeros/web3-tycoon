@@ -9,7 +9,7 @@ module tycoon::test_utils {
     use sui::sui::SUI;
 
     use tycoon::types;
-    use tycoon::game::{Self, Game, TurnCap};
+    use tycoon::game::{Self, Game, Seat};
     use tycoon::admin::{Self, AdminCap};
     use tycoon::map::{Self, MapRegistry, MapTemplate};
 
@@ -179,26 +179,20 @@ module tycoon::test_utils {
         clock
     }
 
-    // 创建并获取回合令牌
-    public fun mint_turn_cap(
-        game: &mut Game,
-        clock: &Clock,
+    // 获取当前玩家的Seat
+    public fun get_current_player_seat(
+        game: &Game,
         scenario: &mut Scenario
-    ): TurnCap {
+    ): Seat {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
-        // 获取玩家的Seat
-        let seat = scenario::take_from_sender<game::Seat>(scenario);
-        game::mint_turncap(game, &seat, clock, scenario::ctx(scenario));
-        // 归还Seat
-        scenario::return_to_sender(scenario, seat);
-        scenario::take_from_sender<TurnCap>(scenario)
+        scenario::take_from_sender<Seat>(scenario)
     }
 
     // 执行掷骰并移动
     public fun roll_and_move(
         game: &mut Game,
-        cap: TurnCap,
+        seat: &Seat,
         dir_intent: Option<u8>,
         registry: &MapRegistry,
         clock: &Clock,
@@ -206,18 +200,18 @@ module tycoon::test_utils {
     ) {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
-        game::roll_and_step(game, cap, dir_intent, registry, clock, scenario::ctx(scenario));
+        game::roll_and_step(game, seat, dir_intent, registry, clock, scenario::ctx(scenario));
     }
 
     // 结束回合
-    public fun end_turn(
+    public fun end_turn_with_seat(
         game: &mut Game,
-        cap: TurnCap,
+        seat: &Seat,
         scenario: &mut Scenario
     ) {
-        let player = cap.player;
+        let player = seat.player;
         scenario::next_tx(scenario, player);
-        game::end_turn(game, cap, scenario::ctx(scenario));
+        game::end_turn(game, seat, scenario::ctx(scenario));
     }
 
     // 完整的回合流程
@@ -228,18 +222,16 @@ module tycoon::test_utils {
         clock: &Clock,
         scenario: &mut Scenario
     ) {
-        let cap = mint_turn_cap(game, clock, scenario);
-        let player = cap.player;
+        // 获取当前玩家的Seat
+        let seat = get_current_player_seat(game, scenario);
+        let player = seat.player;
 
+        // 执行掷骰移动
         scenario::next_tx(scenario, player);
-        game::roll_and_step(game, cap, dir_intent, registry, clock, scenario::ctx(scenario));
+        game::roll_and_step(game, &seat, dir_intent, registry, clock, scenario::ctx(scenario));
 
-        // 获取新的令牌（如果移动后还能操作）
-        if (scenario::has_most_recent_for_sender<TurnCap>(scenario)) {
-            let cap = scenario::take_from_sender<TurnCap>(scenario);
-            scenario::next_tx(scenario, player);
-            game::end_turn(game, cap, scenario::ctx(scenario));
-        };
+        // 归还Seat
+        scenario::return_to_sender(scenario, seat);
     }
 
     // ===== 断言辅助函数 =====

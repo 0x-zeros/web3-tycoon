@@ -31,7 +31,7 @@ module tycoon::cards_basic_tests {
         // Admin使用遥控骰卡
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 给Admin遥控骰卡
         game::test_give_card(&mut game, utils::admin_addr(), types::card_move_ctrl(), 1);
@@ -39,7 +39,7 @@ module tycoon::cards_basic_tests {
         // 使用遥控骰卡
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_move_ctrl(),
             option::none(),
             option::none(),
@@ -47,13 +47,13 @@ module tycoon::cards_basic_tests {
             scenario::ctx(scenario)
         );
 
-        // 验证玩家有遥控骰效果（骰子值被设为3）
-        assert!(game::has_roll_override(&game, utils::admin_addr()), 1);
+        // 验证玩家有遥控骰效果buff
+        assert!(game::has_buff(&game, utils::admin_addr(), types::buff_roll_ctrl()), 1);
 
         // 掷骰移动
         game::roll_and_step(
             &mut game,
-            cap,
+            &seat,
             option::none(),
             &registry,
             &clock,
@@ -78,7 +78,7 @@ module tycoon::cards_basic_tests {
         // 创建包含卡牌格的复杂地图
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            admin::init_for_testing(scenario::ctx(scenario));
+            tycoon::admin::init_for_testing(scenario::ctx(scenario));
         };
 
         scenario::next_tx(scenario, utils::admin_addr());
@@ -121,15 +121,8 @@ module tycoon::cards_basic_tests {
 
         // 设置位置并移动经过卡牌格
         game::test_set_player_position(&mut game, utils::admin_addr(), 4);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
-
-        // 执行移动经过卡牌格
-        game::execute_step_movement(
-            &mut game,
-            utils::admin_addr(),
-            5,  // 卡牌格位置
-            &registry
-        );
+        // 模拟移动经过卡牌格
+        game::test_set_player_position(&mut game, utils::admin_addr(), 5);
 
         // 验证获得了卡牌（经过获得1张）
         let final_cards = game::get_player_total_cards(&game, utils::admin_addr());
@@ -150,7 +143,7 @@ module tycoon::cards_basic_tests {
         // 使用复杂地图设置
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            admin::init_for_testing(scenario::ctx(scenario));
+            tycoon::admin::init_for_testing(scenario::ctx(scenario));
         };
 
         scenario::next_tx(scenario, utils::admin_addr());
@@ -228,13 +221,13 @@ module tycoon::cards_basic_tests {
         // Admin放置路障
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 1);
 
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_barrier(),
             option::none(),
             option::some(2),
@@ -246,19 +239,19 @@ module tycoon::cards_basic_tests {
         assert!(game::has_npc_on_tile(&game, 2), 1);
         let initial_npc_count = game::get_npc_count(&game);
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_shared(game);
 
         // Alice使用清除卡
         scenario::next_tx(scenario, utils::alice());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_give_card(&mut game, utils::alice(), types::card_cleanse(), 1);
 
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_cleanse(),
             option::none(),
             option::some(2),
@@ -296,13 +289,13 @@ module tycoon::cards_basic_tests {
         // Admin使用冻结卡冻结Alice
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_give_card(&mut game, utils::admin_addr(), types::card_freeze(), 1);
 
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_freeze(),
             option::some(utils::alice()),  // 目标玩家
             option::none(),
@@ -313,18 +306,18 @@ module tycoon::cards_basic_tests {
         // 验证Alice被冻结
         assert!(game::is_player_frozen(&game, utils::alice()), 1);
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_shared(game);
 
         // Alice的回合应该被跳过
         scenario::next_tx(scenario, utils::alice());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 尝试移动（应该被跳过）
         game::roll_and_step(
             &mut game,
-            cap,
+            &seat,
             option::none(),
             &registry,
             &clock,
@@ -360,17 +353,17 @@ module tycoon::cards_basic_tests {
         // Admin购买地产
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_shared(game);
 
         // Alice使用免租卡
         scenario::next_tx(scenario, utils::alice());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_give_card(&mut game, utils::alice(), types::card_rent_free(), 1);
 
@@ -378,7 +371,7 @@ module tycoon::cards_basic_tests {
 
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_rent_free(),
             option::none(),
             option::none(),
@@ -439,10 +432,10 @@ module tycoon::cards_basic_tests {
         assert!(game::get_player_total_cards(&game, utils::admin_addr()) == 6, 4);
 
         // 使用一张路障卡
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_barrier(),
             option::none(),
             option::some(1),

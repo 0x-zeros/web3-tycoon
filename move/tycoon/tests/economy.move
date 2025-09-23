@@ -32,7 +32,7 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice的回合 - 移动到地产1
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
 
         // 假设Alice移动到位置1（Property 2，价格1500）
@@ -40,7 +40,7 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
         // 购买地产
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         // 验证地产所有权
         utils::assert_property_owner(&game, 1, option::some(utils::alice()));
@@ -50,7 +50,7 @@ module tycoon::economy_tests {
         utils::assert_player_cash(&game, utils::alice(), 8500);
 
         // 结束回合
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // 清理
         scenario::return_shared(game);
@@ -76,20 +76,20 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买地产
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         // 升级地产到等级1
-        game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
         utils::assert_property_level(&game, 1, types::level_1());
 
         // 验证现金（初始10000 - 购买1500 - 升级900 = 7600）
         // 升级成本 = 1500 * 0.6 = 900
         utils::assert_player_cash(&game, utils::alice(), 7600);
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         scenario::return_shared(game);
         scenario::return_shared(registry);
@@ -115,17 +115,17 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买地产1
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // Bob尝试购买已被Alice拥有的地产1
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::bob());
         game::test_set_player_position(&mut game, utils::bob(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario)); // 应该失败
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario)); // 应该失败
 
         scenario::return_shared(game);
         scenario::return_shared(registry);
@@ -150,14 +150,14 @@ module tycoon::economy_tests {
         utils::join_players(&mut game, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
 
         // 设置Alice现金为100（不足以购买价格1500的地产）
         game::test_set_player_cash(&mut game, utils::alice(), 100);
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario)); // 应该失败
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario)); // 应该失败
 
         scenario::return_shared(game);
         scenario::return_shared(registry);
@@ -182,21 +182,21 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买并升级地产1到最高级
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         // 升级到等级4
         let mut i = 0;
         while (i < 4) {
-            game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+            game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
             i = i + 1;
         };
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // Bob的回合 - 设置Bob现金很少
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::bob());
         game::test_set_player_cash(&mut game, utils::bob(), 100);
 
@@ -270,20 +270,20 @@ module tycoon::economy_tests {
         utils::join_players(&mut game, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         // 升级到等级4
         let mut i = 0;
         while (i < 4) {
-            game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+            game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
             i = i + 1;
         };
 
         // 尝试再次升级（应该失败）
-        game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         scenario::return_shared(game);
         scenario::return_shared(registry);
@@ -309,19 +309,19 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买并升级地产
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::admin_addr());
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         // 升级到等级2
-        game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
-        game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // Alice的回合 - 经过Admin的地产
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
 
         // 记录双方初始现金
@@ -372,14 +372,14 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买地产
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::admin_addr());
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // Alice使用免租卡
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
 
         // 给Alice免租卡
@@ -388,7 +388,7 @@ module tycoon::economy_tests {
         // 使用免租卡
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_rent_free(),
             option::none(),
             option::none(),
@@ -441,21 +441,21 @@ module tycoon::economy_tests {
         utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买所有地产并升级到最高级
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::admin_addr());
 
         // 购买多个地产
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         // 升级到最高级
         let mut i = 0;
         while (i < 4) {
-            game::upgrade_property(&mut game, &cap, &registry, scenario::ctx(scenario));
+            game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
             i = i + 1;
         };
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // 设置其他玩家现金很少
         game::test_set_player_cash(&mut game, utils::alice(), 100);

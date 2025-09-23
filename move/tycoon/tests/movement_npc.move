@@ -6,7 +6,7 @@ module tycoon::movement_npc_tests {
     use sui::clock;
 
     use tycoon::test_utils::{Self as utils};
-    use tycoon::game::{Self, Game, TurnCap};
+    use tycoon::game::{Self, Game, Seat};
     use tycoon::map::{MapRegistry};
     use tycoon::types;
     use tycoon::cards;
@@ -32,12 +32,12 @@ module tycoon::movement_npc_tests {
         // Admin的回合 - 放置路障在位置2
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 使用路障卡放置在位置2
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_barrier(),
             option::none(),  // 无目标玩家
             option::some(2),  // 目标地块
@@ -45,13 +45,13 @@ module tycoon::movement_npc_tests {
             scenario::ctx(scenario)
         );
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_shared(game);
 
         // Alice的回合 - 尝试移动经过路障
         scenario::next_tx(scenario, utils::alice());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 设置Alice的位置为1，下一步会经过位置2的路障
         game::test_set_player_position(&mut game, utils::alice(), 1);
@@ -59,7 +59,7 @@ module tycoon::movement_npc_tests {
         // 掷骰移动（假设骰子点数会让Alice经过位置2）
         game::roll_and_step(
             &mut game,
-            cap,
+            seat,
             option::none(),
             &registry,
             &clock,
@@ -95,11 +95,11 @@ module tycoon::movement_npc_tests {
         // Admin放置炸弹在位置3
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_bomb(),
             option::none(),
             option::some(3),
@@ -107,7 +107,7 @@ module tycoon::movement_npc_tests {
             scenario::ctx(scenario)
         );
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_shared(game);
 
         // Alice移动到炸弹位置
@@ -118,7 +118,7 @@ module tycoon::movement_npc_tests {
         game::test_set_player_position(&mut game, utils::alice(), 3);
 
         // 模拟触发炸弹效果
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 执行步骤移动触发炸弹
         game::execute_step_movement(
@@ -159,7 +159,7 @@ module tycoon::movement_npc_tests {
         // Admin使用狗狗卡放置NPC
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 给Admin发狗狗卡
         game::test_give_card(&mut game, utils::admin_addr(), types::card_dog(), 1);
@@ -167,7 +167,7 @@ module tycoon::movement_npc_tests {
         // 使用狗狗卡放置在位置1
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_dog(),
             option::none(),
             option::some(1),
@@ -180,7 +180,7 @@ module tycoon::movement_npc_tests {
         let npc = game::get_npc_on_tile(&game, 1);
         assert!(npc.kind == types::npc_dog(), 2);
 
-        game::end_turn(&mut game, cap, scenario::ctx(scenario));
+        game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_shared(game);
 
         // Alice移动到狗狗位置
@@ -190,7 +190,7 @@ module tycoon::movement_npc_tests {
         // 设置Alice位置接近狗狗
         game::test_set_player_position(&mut game, utils::alice(), 0);
 
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 移动到狗狗位置
         game::test_set_player_position(&mut game, utils::alice(), 1);
@@ -239,10 +239,10 @@ module tycoon::movement_npc_tests {
         game::test_set_player_in_hospital(&mut game, utils::admin_addr(), 1);
 
         // Admin尝试移动（应该被跳过）
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
         game::roll_and_step(
             &mut game,
-            cap,
+            seat,
             option::none(),
             &registry,
             &clock,
@@ -281,13 +281,13 @@ module tycoon::movement_npc_tests {
         // 放置第一个NPC（路障）
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 2);
 
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_barrier(),
             option::none(),
             option::some(1),
@@ -298,7 +298,7 @@ module tycoon::movement_npc_tests {
         // 尝试在同一位置放置第二个NPC（应该失败）
         game::use_card(
             &mut game,
-            &cap,
+            &seat,
             types::card_barrier(),
             option::none(),
             option::some(1),
@@ -331,7 +331,7 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let cap = utils::mint_turn_cap(&mut game, &clock, scenario);
+        let seat = utils::get_current_player_seat(&game, scenario);
 
         // 给足够的卡牌
         game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 10);
@@ -341,7 +341,7 @@ module tycoon::movement_npc_tests {
         while (i < 6) {  // 尝试放置6个，第6个应该失败
             game::use_card(
                 &mut game,
-                &cap,
+                &seat,
                 types::card_barrier(),
                 option::none(),
                 option::some(i),

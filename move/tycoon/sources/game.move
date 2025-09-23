@@ -1755,30 +1755,6 @@ fun apply_card_effect_with_collectors(
             target_addr,
             option::some(game.round + 1)
         ));
-    } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
-        // 放置机关：params[..]=所有要放置的地块ID
-        let npc_kind = if (kind == types::card_barrier()) {
-            types::npc_barrier()
-        } else {
-            types::npc_bomb()
-        };
-
-        let mut i = 0;
-        while (i < params.length()) {
-            let tile_id = *params.borrow(i);
-            // 尝试放置NPC（如果地块已被占用会跳过）
-            if (!table::contains(&game.npc_on, tile_id)) {
-                place_npc_internal(
-                    game,
-                    tile_id,
-                    npc_kind,
-                    /* consumable = */ true,
-                    /* expires = */ option::none(),
-                    npc_changes
-                );
-            };
-            i = i + 1;
-        };
     } else if (kind == types::card_rent_free()) {
         // 免租卡：应用给自己（可扩展为params[0]指定目标）
         let target_index = if (params.length() > 0) {
@@ -1815,23 +1791,30 @@ fun apply_card_effect_with_collectors(
             target_addr,
             option::some(game.round + 2)
         ));
-    } else if (kind == types::card_dog()) {
-        // 放置狗狗：params[..]=所有要放置的地块ID
-        let mut i = 0;
-        while (i < params.length()) {
-            let tile_id = *params.borrow(i);
-            // 尝试放置狗狗（如果地块已被占用会跳过）
-            if (!table::contains(&game.npc_on, tile_id)) {
-                place_npc_internal(
-                    game,
-                    tile_id,
-                    types::npc_dog(),
-                    /* consumable = */ true,
-                    /* expires = */ option::none(),
-                    npc_changes
-                );
-            };
-            i = i + 1;
+    } else if (kind == types::card_barrier() || kind == types::card_bomb() || kind == types::card_dog()) {
+        // 放置NPC类卡牌：params[0]=地块ID
+        assert!(params.length() >= 1, EInvalidParams);
+        let tile_id = *params.borrow(0);
+
+        // 确定NPC类型
+        let npc_kind = if (kind == types::card_barrier()) {
+            types::npc_barrier()
+        } else if (kind == types::card_bomb()) {
+            types::npc_bomb()
+        } else {
+            types::npc_dog()
+        };
+
+        // 尝试放置NPC（如果地块已被占用会跳过）
+        if (!table::contains(&game.npc_on, tile_id)) {
+            place_npc_internal(
+                game,
+                tile_id,
+                npc_kind,
+                /* consumable = */ true,
+                /* expires = */ option::none(),
+                npc_changes
+            );
         };
     } else if (kind == types::card_cleanse()) {
         // 清除NPC：params[..]=所有要清除的地块ID

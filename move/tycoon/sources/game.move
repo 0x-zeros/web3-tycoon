@@ -1734,7 +1734,7 @@ fun apply_card_effect_with_collectors(
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_move_ctrl(),
             player_addr,
-            option::some(get_global_turn(game) + 3)//todo 应该统一使用round
+            option::some(game.round + 1)  // buff失效的回合
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
         // 放置机关
@@ -1754,7 +1754,7 @@ fun apply_card_effect_with_collectors(
             let npc = NpcInst {
                 kind: npc_kind,
                 expires_at_global_turn: option::none(),
-                consumable: true
+                consumable: true //todo 这是做什么用的？
             };
             table::add(&mut game.npc_on, tile_id, npc);
             game.current_npc_count = game.current_npc_count + 1;
@@ -1777,7 +1777,7 @@ fun apply_card_effect_with_collectors(
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_rent_free(),
             player_addr,
-            option::some(get_global_turn(game) + 6)
+            option::some(game.round + 2)
         ));
     } else if (kind == types::card_freeze()) {
         // 冻结
@@ -1791,7 +1791,7 @@ fun apply_card_effect_with_collectors(
             vector::push_back(buff_changes, events::make_buff_change(
                 types::buff_frozen(),
                 target_addr,
-                option::some(get_global_turn(game) + 6)
+                option::some(game.round + 2)
             ));
         }
     } else if (kind == types::card_dog()) {

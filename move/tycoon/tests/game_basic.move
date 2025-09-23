@@ -59,6 +59,7 @@ module tycoon::game_basic_tests {
         // 验证初始状态
         assert!(game::get_status(&game) == types::status_ready(), 1);
         assert!(game::get_turn(&game) == 0, 2);
+        assert!(game::get_round(&game) == 0, 3);
 
         // 玩家加入游戏
         scenario::return_shared(game);
@@ -129,7 +130,9 @@ module tycoon::game_basic_tests {
 
         // 验证游戏已开始
         assert!(game::get_status(&game) == types::status_active(), 1);
-        assert!(game::get_turn(&game) == 1, 2);
+        let (round, turn) = game::get_round_and_turn(&game);
+        assert!(round == 0, 2);  // 第一轮
+        assert!(turn == 0, 3);   // 第一个玩家的回合
 
         // 验证当前玩家（应该是第一个玩家）
         let current_player = game::current_turn_player(&game);
@@ -149,9 +152,11 @@ module tycoon::game_basic_tests {
         game = scenario::take_shared<Game>(scenario);
 
         // 验证回合已切换
-        assert!(game::get_turn(&game) == 2, 4);
+        let (round2, turn2) = game::get_round_and_turn(&game);
+        assert!(round2 == 0, 4);  // 仍然是第一轮
+        assert!(turn2 == 1, 5);   // 第二个玩家的回合
         let next_player = game::current_turn_player(&game);
-        assert!(next_player == utils::alice(), 5);
+        assert!(next_player == utils::alice(), 6);
 
         scenario::return_shared(game);
         scenario::return_shared(registry);

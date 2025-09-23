@@ -1011,7 +1011,7 @@ fun execute_step_movement_with_collectors(
             // 冻结时不移动，但仍需触发原地停留事件（如收租等）
             let stop_effect = handle_tile_stop_with_collector(
                 game,
-                player_addr,
+                player_index,
                 from,
                 cash_changes,
                 registry
@@ -1132,7 +1132,7 @@ fun execute_step_movement_with_collectors(
                 // 处理停留效果
                 stop_effect_opt = option::some(handle_tile_stop_with_collector(
                     game,
-                    player_addr,
+                    player_index,
                     next_pos,
                     cash_changes,
                     registry
@@ -1193,7 +1193,7 @@ fun execute_step_movement_with_collectors(
             // 最后一步，处理停留效果
             stop_effect_opt = option::some(handle_tile_stop_with_collector(
                 game,
-                player_addr,
+                player_index,
                 next_pos,
                 cash_changes,
                 registry
@@ -1291,7 +1291,7 @@ fun handle_tile_stop(
 // 处理停留地块（带事件收集器）
 fun handle_tile_stop_with_collector(
     game: &mut Game,
-    player_addr: address,
+    player_index: u8,
     tile_id: u64,
     cash_changes: &mut vector<events::CashDelta>,
     registry: &MapRegistry
@@ -1299,7 +1299,7 @@ fun handle_tile_stop_with_collector(
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
-    let player_index = find_player_index(game, player_addr);
+    let player_addr = game.players.borrow(player_index as u64).owner;
 
     let mut stop_type = events::stop_none();
     let mut amount = 0;
@@ -1692,91 +1692,6 @@ fun handle_bankruptcy(
     }
 }
 
-// 应用卡牌效果
-fun apply_card_effect(
-    game: &mut Game,
-    player_addr: address,
-    kind: u16,
-    target: Option<address>,
-    tile: Option<u64>,
-    registry: &MapRegistry
-) {
-    let player_index = find_player_index(game, player_addr);
-
-    if (kind == types::card_move_ctrl()) {
-        // 遥控骰
-        let player = game.players.borrow_mut(player_index as u64);
-        // 使用buff系统
-        apply_buff(player, types::buff_move_ctrl(), game.round + 1, 3);
-    } else if (kind == types::card_barrier() || kind == types::card_bomb()) {
-        // 放置机关
-        if (option::is_some(&tile)) {
-            let tile_id = *option::borrow(&tile);
-            let npc_kind = if (kind == types::card_barrier()) {
-                types::npc_barrier()
-            } else {
-                types::npc_bomb()
-            };
-
-            // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
-
-            // 放置NPC
-            let npc = NpcInst {
-                kind: npc_kind,
-                expires_at_global_turn: option::none(),
-                consumable: true
-            };
-            table::add(&mut game.npc_on, tile_id, npc);
-            game.current_npc_count = game.current_npc_count + 1;
-        }
-    } else if (kind == types::card_rent_free()) {
-        // 免租
-        let player = game.players.borrow_mut(player_index as u64);
-        // 使用buff系统
-        apply_buff(player, types::buff_rent_free(), game.round + 2, 0);
-    } else if (kind == types::card_freeze()) {
-        // 冻结
-        if (option::is_some(&target)) {
-            let target_addr = *option::borrow(&target);
-            let target_index = find_player_index(game, target_addr);
-            let target_player = game.players.borrow_mut(target_index as u64);
-            // 使用buff系统
-            apply_buff(target_player, types::buff_frozen(), game.round + 2, 0);
-        }
-    } else if (kind == types::card_dog()) {
-        // 放置狗狗NPC
-        if (option::is_some(&tile)) {
-            let tile_id = *option::borrow(&tile);
-
-            // 检查是否可以放置
-            assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-            assert!(game.current_npc_count < game.config.npc_cap, ENpcCapReached);
-
-            // 放置狗狗NPC
-            let npc = NpcInst {
-                kind: types::npc_dog(),
-                expires_at_global_turn: option::none(),
-                consumable: true  // 碰到狗狗后会消失
-            };
-            table::add(&mut game.npc_on, tile_id, npc);
-            game.current_npc_count = game.current_npc_count + 1;
-        }
-    } else if (kind == types::card_cleanse()) {
-        // 清除NPC
-        if (option::is_some(&tile)) {
-            let tile_id = *option::borrow(&tile);
-
-            // 检查是否有NPC在该地块
-            if (table::contains(&game.npc_on, tile_id)) {
-                // 移除NPC
-                let npc = table::remove(&mut game.npc_on, tile_id);
-                game.current_npc_count = game.current_npc_count - 1;
-            }
-        }
-    }
-}
 
 // 应用卡牌效果（带事件收集器）
 fun apply_card_effect_with_collectors(
@@ -2219,20 +2134,34 @@ public fun get_status(game: &Game): u8 {
 }
 
 #[test_only]
-public fun get_turn(game: &Game): (u16, u8) {
+public fun get_round_and_turn(game: &Game): (u16, u8) {
     (game.round, game.turn)
+}
+
+// 获取当前回合（仅返回turn）
+#[test_only]
+public fun get_turn(game: &Game): u8 {
+    game.turn
+}
+
+// 获取当前轮次
+#[test_only]
+public fun get_round(game: &Game): u16 {
+    game.round
 }
 
 #[test_only]
 public fun current_turn_player(game: &Game): address {
-    assert!(game.status == types::status_active(), EAlreadyStarted);
-    *game.join_order.borrow((game.active_idx as u64))
+    assert!(game.status == types::status_active(), EGameNotActive);
+    game.players.borrow(game.active_idx as u64).owner
 }
 
 #[test_only]
 public fun get_property_owner(game: &Game, tile_id: u64): option::Option<address> {
     if (table::contains(&game.owner_of, tile_id)) {
-        option::some(*table::borrow(&game.owner_of, tile_id))
+        let owner_index = *table::borrow(&game.owner_of, tile_id);
+        let owner_addr = game.players.borrow(owner_index as u64).owner;
+        option::some(owner_addr)
     } else {
         option::none()
     }

@@ -440,7 +440,8 @@ public entry fun use_card(
     events::emit_use_card_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        get_global_turn(game),
+        game.round,
+        game.turn,
         kind,
         target,
         tile,
@@ -524,7 +525,8 @@ public entry fun roll_and_step(
     events::emit_roll_and_step_action_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        get_global_turn(game),
+        game.round,
+        game.turn,
         dice,
         direction,
         from_pos,
@@ -635,7 +637,8 @@ public entry fun end_turn(
     events::emit_end_turn_event(
         object::uid_to_inner(&game.id),
         player_addr,
-        get_global_turn(game)
+        game.round,
+        game.turn
     );
 
     // 推进回合
@@ -1623,6 +1626,7 @@ fun handle_bankruptcy(
         events::emit_game_ended_event(
             object::uid_to_inner(&game.id),
             winner,
+            game.round,
             game.turn,
             2  // 结束原因代码：2表示破产胜利
         );
@@ -2002,7 +2006,8 @@ fun advance_turn(game: &mut Game) {
                 events::emit_game_ended_event(
                     object::uid_to_inner(&game.id),
                     option::none(),  // TODO: 实现按资产确定赢家
-                    get_global_turn(game),
+                    game.round,
+                    game.turn,
                     1  // 结束原因：1表示达到最大轮数
                 );
             }
@@ -2028,7 +2033,7 @@ fun refresh_at_round_end(game: &mut Game) {
     events::emit_round_ended_event(
         object::uid_to_inner(&game.id),
         game.round - 1,  // 当前轮次已经递增，所以减1表示刚结束的轮次
-        get_global_turn(game)
+        game.round * (game.join_order.length() as u64)  // 新一轮的第0个全局索引
     );
 }
 
@@ -2040,9 +2045,6 @@ fun clean_expired_npcs(_game: &mut Game) {
 }
 
 // 获取全局回合号
-public fun get_global_turn(game: &Game): u64 {
-    game.round * (game.join_order.length() as u64) + game.turn
-}
 
 // 获取当前轮次
 public fun get_round(game: &Game): u64 { game.round }
@@ -2053,7 +2055,11 @@ public fun get_turn_in_round(game: &Game): u64 { game.turn }
 // ===== Public Query Functions 公共查询函数 =====
 
 public fun get_game_status(game: &Game): u8 { game.status }
-public fun get_current_turn(game: &Game): u64 { get_global_turn(game) }
+// 获取当前轮和回合
+// 返回: (轮次, 轮内回合)
+public fun get_current_turn(game: &Game): (u64, u64) {
+    (game.round, game.turn)
+}
 public fun get_active_player_index(game: &Game): u8 { game.active_idx }
 public fun get_player_count(game: &Game): u64 { game.join_order.length() }
 public fun get_template_id(game: &Game): u64 { game.template_id }
@@ -2135,8 +2141,8 @@ public fun get_status(game: &Game): u8 {
 }
 
 #[test_only]
-public fun get_turn(game: &Game): u64 {
-    get_global_turn(game)
+public fun get_turn(game: &Game): (u64, u64) {
+    (game.round, game.turn)
 }
 
 #[test_only]

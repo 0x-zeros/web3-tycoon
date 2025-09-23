@@ -33,7 +33,8 @@ public struct GameStartedEvent has copy, drop {
 public struct GameEndedEvent has copy, drop {
     game: ID,
     winner: option::Option<address>,//todo 改为所有玩家排名
-    turn: u64,
+    round: u64,
+    turn_in_round: u64,
     reason: u8  // 0=正常结束, 1=达到最大回合数, 2=只剩一个玩家
 }
  
@@ -43,7 +44,8 @@ public struct GameEndedEvent has copy, drop {
 public struct TurnStartEvent has copy, drop {
     game: ID,
     player: address,
-    turn: u64
+    round: u64,
+    turn_in_round: u64
 }
 
 // 跳过回合事件
@@ -57,7 +59,8 @@ public struct SkipTurnEvent has copy, drop {//todo miss turn
 public struct EndTurnEvent has copy, drop {
     game: ID,
     player: address,
-    turn: u64
+    round: u64,
+    turn_in_round: u64
 }
 
 // 轮次结束事件
@@ -171,7 +174,8 @@ public struct StepEffect has copy, drop, store {
 public struct UseCardActionEvent has copy, drop {
     game: ID,
     player: address,
-    turn: u64,
+    round: u64,
+    turn_in_round: u64,
     kind: u16,
     target_addr: option::Option<address>,
     target_tile: option::Option<u64>,
@@ -184,7 +188,8 @@ public struct UseCardActionEvent has copy, drop {
 public struct RollAndStepActionEvent has copy, drop {
     game: ID,
     player: address,
-    turn: u64,
+    round: u64,
+    turn_in_round: u64,
     dice: u8,
     dir: u8,
     from: u64,
@@ -239,13 +244,15 @@ public(package) fun emit_game_started_event(
 public(package) fun emit_game_ended_event(
     game_id: ID,
     winner: option::Option<address>,
-    turn: u64,
+    round: u64,
+    turn_in_round: u64,
     reason: u8
 ) {
     event::emit(GameEndedEvent {
         game: game_id,
         winner,
-        turn,
+        round,
+        turn_in_round,
         reason
     });
 }
@@ -279,12 +286,14 @@ public(package) fun emit_skip_turn_event(
 public(package) fun emit_end_turn_event(
     game_id: ID,
     player: address,
-    turn: u64
+    round: u64,
+    turn_in_round: u64
 ) {
     event::emit(EndTurnEvent {
         game: game_id,
         player,
-        turn
+        round,
+        turn_in_round
     });
 }
 
@@ -427,7 +436,8 @@ public(package) fun make_step_effect(
 public(package) fun emit_use_card_action_event(
     game_id: ID,
     player: address,
-    turn: u64,
+    round: u64,
+    turn_in_round: u64,
     kind: u16,
     target_addr: option::Option<address>,
     target_tile: option::Option<u64>,
@@ -438,7 +448,8 @@ public(package) fun emit_use_card_action_event(
     event::emit(UseCardActionEvent {
         game: game_id,
         player,
-        turn,
+        round,
+        turn_in_round,
         kind,
         target_addr,
         target_tile,
@@ -452,7 +463,8 @@ public(package) fun emit_use_card_action_event(
 public(package) fun emit_roll_and_step_action_event(
     game_id: ID,
     player: address,
-    turn: u64,
+    round: u64,
+    turn_in_round: u64,
     dice: u8,
     dir: u8,
     from: u64,
@@ -463,7 +475,8 @@ public(package) fun emit_roll_and_step_action_event(
     event::emit(RollAndStepActionEvent {
         game: game_id,
         player,
-        turn,
+        round,
+        turn_in_round,
         dice,
         dir,
         from,

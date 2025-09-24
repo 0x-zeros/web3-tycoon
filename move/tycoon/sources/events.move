@@ -111,7 +111,7 @@ public struct CashDelta has copy, drop, store {
     is_debit: bool,
     amount: u64,
     reason: u8,  // 1=toll, 2=buy, 3=upgrade, 4=bonus, 5=fee, 6=card
-    details: u64
+    details: u16
 }
 
 // 卡牌获取项
@@ -313,7 +313,7 @@ public(package) fun make_cash_delta(
     is_debit: bool,
     amount: u64,
     reason: u8,
-    details: u64
+    details: u16
 ): CashDelta {
     CashDelta {
         player,

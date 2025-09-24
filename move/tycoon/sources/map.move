@@ -522,8 +522,8 @@ public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
 public fun create_template(
     name: vector<u8>,
     description: vector<u8>,
-    width: u16,
-    height: u16,
+    width: u8,
+    height: u8,
     ctx: &mut TxContext
 ): MapTemplate {
     let template = new_map_template(1, width, height, ctx);
@@ -534,14 +534,14 @@ public fun create_template(
 #[test_only]
 public fun add_tile(
     template: &mut MapTemplate,
-    x: u16,
-    y: u16,
+    x: u8,
+    y: u8,
     kind: u8,
     name: vector<u8>,
     price: u64,
     toll: u64
 ) {
-    let tile_id = ((y as u64) * (template.width as u64) + (x as u64));
+    let tile_id = ((y as u16) * (template.width as u16) + (x as u16));
     add_tile_to_template(
         template,
         tile_id,
@@ -552,8 +552,8 @@ public fun add_tile(
 #[test_only]
 public fun add_connection(
     template: &mut MapTemplate,
-    from: u64,
-    to: u64
+    from: u16,
+    to: u16
 ) {
     set_cw_next(template, from, to);
     if (from > 0) {

@@ -1334,7 +1334,7 @@ fun handle_tile_stop_with_collector(
                             true,  // is_debit
                             actual_payment,
                             1,  // reason: toll
-                            (tile_id as u64)
+                            tile_id
                         ));
 
                         // 记录现金变动 - 收款方
@@ -1343,7 +1343,7 @@ fun handle_tile_stop_with_collector(
                             false,  // is_debit (income)
                             actual_payment,
                             1,  // reason: toll
-                            (tile_id as u64)
+                            tile_id
                         ));
 
                         stop_type = events::stop_property_toll();
@@ -1415,7 +1415,7 @@ fun handle_tile_stop_with_collector(
             false,  // is_debit (income)
             bonus,
             4,  // reason: bonus
-            (tile_id as u64)
+            tile_id
         ));
 
         stop_type = events::stop_bonus();
@@ -1440,7 +1440,7 @@ fun handle_tile_stop_with_collector(
                 true,  // is_debit
                 actual_payment,
                 5,  // reason: fee
-                (tile_id as u64)
+                tile_id
             ));
         };
 
@@ -2106,7 +2106,7 @@ public fun get_player_card_count(game: &Game, player: address, kind: u8): u8 {
 // ===== Test Helper Functions 测试辅助函数 =====
 
 #[test_only]
-public fun test_set_player_position(game: &mut Game, player: address, position: u64) {
+public fun test_set_player_position(game: &mut Game, player: address, position: u16) {
     let player_index = find_player_index(game, player);
     let player_data = game.players.borrow_mut(player_index as u64);
     player_data.pos = position;

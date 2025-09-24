@@ -193,6 +193,16 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         0  // common
     );
+
+    // 转向卡
+    register_card_internal(registry,
+        types::card_turn(),
+        b"Turn Card",
+        b"Reverse your movement direction",
+        target_none(),  // 即时效果，不需要目标
+        0,
+        0  // common rarity
+    );
 }
 
 // 初始化默认掉落规则
@@ -205,7 +215,8 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         types::card_rent_free(),
         types::card_freeze(),
         types::card_dog(),
-        types::card_cleanse()
+        types::card_cleanse(),
+        types::card_turn()
     ];
 
     // 设置默认权重（common=40, rare=30, epic=10）
@@ -216,7 +227,8 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         30,  // rent_free (rare)
         10,  // freeze (epic)
         30,  // dog (rare)
-        40   // cleanse (common)
+        40,  // cleanse (common)
+        40   // turn (common)
     ];
 
     // 设置卡牌格的掉落规则
@@ -230,7 +242,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
     // 设置奖励格的掉落规则（更高概率稀有卡）
     let bonus_tile_rule = DropRule {
         card_pool: config.default_pool,
-        weights: vector[20, 20, 40, 40, 30, 40, 20],  // 提高稀有卡权重
+        weights: vector[20, 20, 40, 40, 30, 40, 20, 20],  // 提高稀有卡权重，包含转向卡
         quantity: 3  // 奖励格抽3张
     };
     table::add(&mut config.tile_drops, types::tile_bonus(), bonus_tile_rule);

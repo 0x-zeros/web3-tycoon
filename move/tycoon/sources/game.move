@@ -902,7 +902,7 @@ fun execute_step_movement_with_choices(
     let template = map::get_template(registry, game.template_id);
 
     // 先读取必要的玩家信息
-    let (from_pos, direction, is_frozen) = {
+    let (from_pos, mut direction, is_frozen) = {
         let player = game.players.borrow(player_index as u64);
         (player.pos, player.dir_pref, is_buff_active(player, types::buff_frozen(), game.round))
     };
@@ -936,19 +936,44 @@ fun execute_step_movement_with_choices(
     let mut choice_idx = 0;
     let mut step_index: u8 = 0;
     let mut i = 0;
+    let mut dir_updated = false;  // 标记是否已更新方向
 
     // 逐步移动主循环
     while (i < dice) {
         // 确定下一个位置
         let next_pos = if (!path_choices.is_empty() &&
-                          map::tile_has_adj(template, current_pos) &&
                           choice_idx < path_choices.length()) {
-            // 有分叉且提供了选择
+            // 提供了路径选择（可用于分叉或纯环方向控制）
             let chosen = *path_choices.borrow(choice_idx);
-            choice_idx = choice_idx + 1;
 
             // 验证选择是否合法
             assert!(is_valid_next_tile(template, current_pos, chosen), EInvalidPathChoice);
+            choice_idx = choice_idx + 1;
+
+            // 首次消费方向选择时，更新 dir_pref
+            if (!dir_updated) {
+                let cw_next = map::get_cw_next(template, current_pos);
+                let ccw_next = map::get_ccw_next(template, current_pos);
+
+                // 如果选择的是 cw 或 ccw 方向，更新玩家方向偏好
+                if (chosen == cw_next || chosen == ccw_next) {
+                    let new_direction = if (chosen == ccw_next) {
+                        types::dir_ccw()
+                    } else {
+                        types::dir_cw()
+                    };
+
+                    // 更新玩家的持久方向偏好
+                    let player = game.players.borrow_mut(player_index as u64);
+                    player.dir_pref = new_direction;
+
+                    // 同步更新本回合的局部方向变量
+                    direction = new_direction;
+
+                    dir_updated = true;
+                }
+            };
+
             chosen
         } else {
             // 无分叉或无选择，按方向偏好自动前进
@@ -1693,13 +1718,6 @@ fun apply_card_effect_with_collectors(
         // 应用buff到目标玩家
         let target_player = game.players.borrow_mut(target_index as u64);
         apply_buff(target_player, types::buff_move_ctrl(), game.round + 1, dice_sum);
-
-        // 使用遥控骰时，同时切换目标玩家的方向
-        target_player.dir_pref = if (target_player.dir_pref == types::dir_cw()) {
-            types::dir_ccw()
-        } else {
-            types::dir_cw()
-        };
 
         // 记录buff变更
         let target_addr = game.players.borrow(target_index as u64).owner;

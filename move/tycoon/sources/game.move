@@ -54,6 +54,9 @@ const EInvalidParams: u64 = 5005;  // 参数无效
 
 // 移动相关错误
 const EInvalidMove: u64 = 4001;
+const ENoPathAllowed: u64 = 4002;  // 无遥控骰子时不允许提供路径
+const EInvalidPathChoice: u64 = 4003;  // 路径选择不是有效的邻居
+const EUnusedPathChoices: u64 = 4004;  // 路径选择未完全使用
 
 // NPC相关错误（已无全局数量限制）
 
@@ -433,7 +436,7 @@ public entry fun use_card(
 public entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
-    dir_intent: Option<u8>,
+    path_choices: vector<u64>,  // 替换 dir_intent，传分叉选择序列
     registry: &MapRegistry,
     r: &Random,
     clock: &Clock,//todo 在获取btc价格或者其他defi相关场景的时候会使用到
@@ -456,45 +459,27 @@ public entry fun roll_and_step(
     // 获取骰子点数
     let dice = get_dice_value(game, player_index, &mut generator);
 
-    let player = game.players.borrow_mut(player_index as u64);
+    let player = game.players.borrow(player_index as u64);
     let from_pos = player.pos;
 
-    // 计算目标位置和方向
-    let template = map::get_template(registry, game.template_id);
-    let use_adj = game.config.use_adj_traversal && map::get_use_adj_traversal(template);
-
-    // 确定移动方向
-    let direction = if (option::is_some(&dir_intent)) {
-        let intent = *option::borrow(&dir_intent);
-        // 检查是否允许逆时针
-        if (!game.config.allow_reverse && intent == types::dir_ccw()) {
-            types::dir_cw()  // 强制顺时针
-        } else {
-            intent
-        }
+    // 验证path_choices：有遥控骰子时才能提供路径选择
+    if (is_buff_active(player, types::buff_move_ctrl(), game.round)) {
+        // 有遥控骰子buff，可以提供路径选择
     } else {
-        // 使用玩家偏好方向
-        if (!game.config.allow_reverse && player.dir_pref == types::dir_ccw()) {
-            types::dir_cw()  // 强制顺时针
-        } else {
-            player.dir_pref
-        }
+        // 无遥控骰子，不应提供路径选择
+        assert!(path_choices.is_empty(), ENoPathAllowed);
     };
-
-    let to_pos = calculate_move_target(template, from_pos, dice, player.dir_pref, dir_intent, use_adj);
 
     // 创建事件收集器
     let mut steps = vector[];
     let mut cash_changes = vector[];
 
     // 执行逐步移动并收集事件数据
-    execute_step_movement_with_collectors(
+    execute_step_movement_with_choices(
         game,
         seat.player_index,
-        from_pos,
-        to_pos,
         dice,
-        direction,
+        path_choices,
         &mut steps,
         &mut cash_changes,
         registry,
@@ -505,14 +490,14 @@ public entry fun roll_and_step(
     let end_player = game.players.borrow(player_index as u64);
     let end_pos = end_player.pos;
 
-    // 发射聚合事件
-    events::emit_roll_and_step_action_event(
+    // 发射聚合事件（包含path_choices）
+    events::emit_roll_and_step_action_event_with_choices(
         object::uid_to_inner(&game.id),
         player_addr,
         game.round,
         game.turn,
         dice,
-        direction,
+        path_choices,  // 记录实际使用的路径选择
         from_pos,
         steps,
         cash_changes,
@@ -957,6 +942,256 @@ fun calculate_move_target(
 // - direction: 移动方向（顺时针/逆时针）
 // - steps: 收集每一步的效果事件
 // - cash_changes: 收集现金变化事件
+// 新的移动执行函数，使用分叉选择序列
+fun execute_step_movement_with_choices(
+    game: &mut Game,
+    player_index: u8,
+    dice: u8,
+    path_choices: vector<u64>,
+    steps: &mut vector<events::StepEffect>,
+    cash_changes: &mut vector<events::CashDelta>,
+    registry: &MapRegistry,
+    generator: &mut RandomGenerator
+) {
+    let template = map::get_template(registry, game.template_id);
+
+    // 先读取必要的玩家信息
+    let (from_pos, player_addr, direction, is_frozen) = {
+        let player = game.players.borrow(player_index as u64);
+        (player.pos, player.owner, player.dir_pref, is_buff_active(player, types::buff_frozen(), game.round))
+    };
+
+    if (is_frozen) {
+        // 冻结时不移动，但仍需触发原地停留事件
+        let stop_effect = handle_tile_stop_with_collector(
+            game,
+            player_index,
+            from_pos,
+            cash_changes,
+            registry,
+            generator
+        );
+
+        // 记录步骤（停留在原地）
+        vector::push_back(steps, events::make_step_effect(
+            0,
+            from_pos,
+            from_pos,
+            0,
+            vector[],
+            option::none(),
+            option::some(stop_effect)
+        ));
+        return
+    };
+
+    // 初始化移动状态
+    let mut current_pos = from_pos;
+    let mut choice_idx = 0;
+    let mut step_index: u8 = 0;
+    let mut i = 0;
+
+    // 逐步移动主循环
+    while (i < dice) {
+        let tile = map::get_tile(template, current_pos);
+
+        // 确定下一个位置
+        let next_pos = if (!path_choices.is_empty() &&
+                          map::tile_has_adj(template, current_pos) &&
+                          choice_idx < path_choices.length()) {
+            // 有分叉且提供了选择
+            let chosen = *path_choices.borrow(choice_idx);
+            choice_idx = choice_idx + 1;
+
+            // 验证选择是否合法
+            assert!(is_valid_next_tile(template, current_pos, chosen), EInvalidPathChoice);
+            chosen
+        } else {
+            // 无分叉或无选择，按方向偏好自动前进
+            if (direction == types::dir_ccw()) {
+                map::get_ccw_next(template, current_pos)
+            } else {
+                map::get_cw_next(template, current_pos)
+            }
+        };
+
+        let mut pass_draws = vector[];
+        let mut npc_event_opt = option::none<events::NpcStepEvent>();
+        let mut stop_effect_opt = option::none<events::StopEffect>();
+
+        // 检查下一格的NPC/机关
+        if (table::contains(&game.npc_on, next_pos)) {
+            let npc = *table::borrow(&game.npc_on, next_pos);
+
+            if (is_hospital_npc(npc.kind)) {
+                // 炸弹或狗狗 - 送医院
+                {
+                    let player = game.players.borrow_mut(player_index as u64);
+                    player.pos = next_pos;
+                };
+
+                // 找医院并送去
+                let hospital_tile = find_nearest_hospital(game, next_pos, registry);
+                send_to_hospital_internal(game, player_index, hospital_tile, registry);
+
+                // 移除NPC
+                let consumed = consume_npc_if_consumable(game, next_pos, &npc);
+
+                // 创建NPC事件
+                npc_event_opt = option::some(events::make_npc_step_event(
+                    next_pos,  // tile_id
+                    npc.kind,  // kind
+                    events::npc_result_send_hospital(),  // result
+                    consumed,  // consumed
+                    option::some(hospital_tile)  // result_tile
+                ));
+
+                // 记录步骤并结束移动
+                vector::push_back(steps, events::make_step_effect(
+                    step_index,
+                    current_pos,
+                    next_pos,
+                    dice - i - 1,
+                    pass_draws,
+                    npc_event_opt,
+                    option::none()
+                ));
+                break  // 送医后结束移动
+            } else if (npc.kind == types::npc_barrier()) {
+                // 路障 - 停止移动
+                {
+                    let player = game.players.borrow_mut(player_index as u64);
+                    player.pos = next_pos;
+                };
+
+                // 创建NPC事件
+                npc_event_opt = option::some(events::make_npc_step_event(
+                    next_pos,  // tile_id
+                    npc.kind,  // kind
+                    events::npc_result_barrier_stop(),  // result
+                    false,  // 路障不消耗
+                    option::none()  // result_tile
+                ));
+
+                // 记录步骤并处理停留
+                stop_effect_opt = option::some(handle_tile_stop_with_collector(
+                    game,
+                    player_index,
+                    next_pos,
+                    cash_changes,
+                    registry,
+                    generator
+                ));
+
+                vector::push_back(steps, events::make_step_effect(
+                    step_index,
+                    current_pos,
+                    next_pos,
+                    dice - i - 1,
+                    pass_draws,
+                    npc_event_opt,
+                    stop_effect_opt
+                ));
+                break  // 遇到路障停止
+            };
+        };
+
+        // 更新位置
+        {
+            let player = game.players.borrow_mut(player_index as u64);
+            player.pos = next_pos;
+        };
+
+        // 如果不是最后一步，处理经过效果
+        if (i < dice - 1) {
+            let next_tile = map::get_tile(template, next_pos);
+            let tile_kind = map::tile_kind(next_tile);
+
+            // 经过卡牌格抽卡
+            if (tile_kind == types::tile_card()) {
+                let random_value = generator.generate_u8();
+                let (card_kind, _) = cards::draw_card_on_pass(random_value);
+                {
+                    let player = game.players.borrow_mut(player_index as u64);
+                    cards::give_card_to_player(&mut player.cards, card_kind, 1);
+                };
+
+                vector::push_back(&mut pass_draws, events::make_card_draw_item(
+                    next_pos,
+                    card_kind,
+                    1,
+                    true
+                ));
+            };
+
+            // 记录步骤
+            vector::push_back(steps, events::make_step_effect(
+                step_index,
+                current_pos,
+                next_pos,
+                dice - i - 1,
+                pass_draws,
+                npc_event_opt,
+                option::none()
+            ));
+        } else {
+            // 最后一步，处理停留效果
+            stop_effect_opt = option::some(handle_tile_stop_with_collector(
+                game,
+                player_index,
+                next_pos,
+                cash_changes,
+                registry,
+                generator
+            ));
+
+            // 记录最后的步骤
+            vector::push_back(steps, events::make_step_effect(
+                step_index,
+                current_pos,
+                next_pos,
+                0,
+                pass_draws,
+                npc_event_opt,
+                stop_effect_opt
+            ));
+        };
+
+        current_pos = next_pos;
+        step_index = step_index + 1;
+        i = i + 1;
+    };
+
+    // 验证是否用完了所有选择
+    assert!(choice_idx == path_choices.length(), EUnusedPathChoices);
+}
+
+// 验证选择的下一格是否合法
+fun is_valid_next_tile(template: &MapTemplate, current: u64, chosen: u64): bool {
+    let tile = map::get_tile(template, current);
+
+    // 检查是否是cw/ccw
+    if (chosen == map::get_cw_next(template, current) ||
+        chosen == map::get_ccw_next(template, current)) {
+        return true
+    };
+
+    // 检查是否在adj列表中
+    if (map::tile_has_adj(template, current)) {
+        let adjs = map::get_adj_tiles(template, current);
+        let mut i = 0;
+        while (i < adjs.length()) {
+            if (*adjs.borrow(i) == chosen) {
+                return true
+            };
+            i = i + 1;
+        };
+    };
+
+    false
+}
+
+// 原函数保留用于兼容（已废弃）
 fun execute_step_movement_with_collectors(
     game: &mut Game,
     player_index: u8,
@@ -1013,17 +1248,12 @@ fun execute_step_movement_with_collectors(
     while (steps_left > 0) {
         // 计算下一格位置（根据寻路模式选择算法）
         let next_pos = if (use_adj) {
-            // BFS邻接寻路模式：支持任意连通图结构
-            let next_opt = map::next_step_toward(template, current_pos, to, steps_left);
-            if (option::is_some(&next_opt)) {
-                *option::borrow(&next_opt)
+            // BFS邻接寻路模式：【已废弃】现在客户端计算路径
+            // 这个分支不应该再被使用，保留只是为了兼容
+            if (direction == types::dir_ccw()) {
+                map::get_ccw_next(template, current_pos)
             } else {
-                // 寻路失败，使用默认方向
-                if (direction == types::dir_ccw()) {
-                    map::get_ccw_next(template, current_pos)
-                } else {
-                    map::get_cw_next(template, current_pos)
-                }
+                map::get_cw_next(template, current_pos)
             }
         } else {
             // 使用环路导航

@@ -198,7 +198,7 @@ module tycoon::test_utils {
     public fun roll_and_move(
         game: &mut Game,
         seat: &Seat,
-        dir_intent: Option<u8>,
+        path_choices: vector<u64>,  // 改为路径选择
         registry: &MapRegistry,
         clock: &Clock,
         scenario: &mut Scenario
@@ -206,7 +206,7 @@ module tycoon::test_utils {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
         let r = scenario::take_shared<Random>(scenario);
-        game::roll_and_step(game, seat, dir_intent, registry, &r, clock, scenario::ctx(scenario));
+        game::roll_and_step(game, seat, path_choices, registry, &r, clock, scenario::ctx(scenario));
         scenario::return_shared(r);
     }
 
@@ -224,7 +224,7 @@ module tycoon::test_utils {
     // 完整的回合流程
     public fun play_turn(
         game: &mut Game,
-        dir_intent: Option<u8>,
+        path_choices: vector<u64>,  // 改为路径选择
         registry: &MapRegistry,
         clock: &Clock,
         scenario: &mut Scenario
@@ -236,7 +236,7 @@ module tycoon::test_utils {
         // 执行掷骰移动
         scenario::next_tx(scenario, player);
         let r = scenario::take_shared<Random>(scenario);
-        game::roll_and_step(game, &seat, dir_intent, registry, &r, clock, scenario::ctx(scenario));
+        game::roll_and_step(game, &seat, path_choices, registry, &r, clock, scenario::ctx(scenario));
         scenario::return_shared(r);
 
         // 归还Seat

@@ -189,7 +189,7 @@ public struct RollAndStepActionEvent has copy, drop {
     round: u16,
     turn_in_round: u8,
     dice: u8,
-    dir: u8,
+    path_choices: vector<u64>,  // 分叉选择序列（新增）
     from: u64,
     steps: vector<StepEffect>,
     cash_changes: vector<CashDelta>,//todo casedelta 也应该放到stepeffect里？
@@ -453,7 +453,34 @@ public(package) fun emit_use_card_action_event(
     });
 }
 
-// 发射掷骰移动聚合事件
+// 发射掷骰移动聚合事件（带路径选择）
+public(package) fun emit_roll_and_step_action_event_with_choices(
+    game_id: ID,
+    player: address,
+    round: u16,
+    turn_in_round: u8,
+    dice: u8,
+    path_choices: vector<u64>,
+    from: u64,
+    steps: vector<StepEffect>,
+    cash_changes: vector<CashDelta>,
+    end_pos: u64
+) {
+    event::emit(RollAndStepActionEvent {
+        game: game_id,
+        player,
+        round,
+        turn_in_round,
+        dice,
+        path_choices,
+        from,
+        steps,
+        cash_changes,
+        end_pos
+    });
+}
+
+// 兼容旧版本（已废弃）
 public(package) fun emit_roll_and_step_action_event(
     game_id: ID,
     player: address,
@@ -466,18 +493,18 @@ public(package) fun emit_roll_and_step_action_event(
     cash_changes: vector<CashDelta>,
     end_pos: u64
 ) {
-    event::emit(RollAndStepActionEvent {
-        game: game_id,
+    emit_roll_and_step_action_event_with_choices(
+        game_id,
         player,
         round,
         turn_in_round,
         dice,
-        dir,
+        vector[],  // 空的路径选择
         from,
         steps,
         cash_changes,
         end_pos
-    });
+    );
 }
 
 // ===== Aggregated Event Constant Getters 聚合事件常量获取函数 =====

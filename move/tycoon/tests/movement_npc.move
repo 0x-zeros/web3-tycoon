@@ -64,7 +64,7 @@ module tycoon::movement_npc_tests {
         game::roll_and_step(
             &mut game,
             &seat,
-            option::none(),
+            vector[],  // 空的路径选择
             &registry,
             &r,
             &clock,
@@ -246,7 +246,7 @@ module tycoon::movement_npc_tests {
         game::roll_and_step(
             &mut game,
             &seat,
-            option::none(),
+            vector[],  // 空的路径选择
             &registry,
             &r,
             &clock,

@@ -18,7 +18,7 @@ module tycoon::economy_tests {
         let scenario = &mut scenario_val;
 
         // 创建游戏
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         // 获取游戏和注册表
         scenario::next_tx(scenario, utils::admin_addr());
@@ -54,6 +54,7 @@ module tycoon::economy_tests {
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
         // 清理
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -66,7 +67,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -92,6 +93,7 @@ module tycoon::economy_tests {
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -105,7 +107,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -121,6 +123,7 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::alice(), 1);
         game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
 
         // Bob尝试购买已被Alice拥有的地产1
         let seat = utils::get_current_player_seat(&game, scenario);
@@ -128,6 +131,7 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::bob(), 1);
         game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario)); // 应该失败
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -141,7 +145,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -160,6 +164,7 @@ module tycoon::economy_tests {
 
         game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario)); // 应该失败
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -172,7 +177,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -195,6 +200,7 @@ module tycoon::economy_tests {
             i = i + 1;
         };
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
 
         // Bob的回合 - 设置Bob现金很少
         let seat = utils::get_current_player_seat(&game, scenario);
@@ -214,6 +220,7 @@ module tycoon::economy_tests {
         // 注意：根据实现，破产后地产应该被释放
         utils::assert_property_owner(&game, 1, option::none());
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -226,7 +233,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -261,7 +268,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -286,6 +293,7 @@ module tycoon::economy_tests {
         // 尝试再次升级（应该失败）
         game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -298,7 +306,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -320,6 +328,7 @@ module tycoon::economy_tests {
         game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
 
         // Alice的回合 - 经过Admin的地产
         let seat = utils::get_current_player_seat(&game, scenario);
@@ -350,6 +359,7 @@ module tycoon::economy_tests {
         // 验证Admin收到了过路费
         assert!(game::get_player_cash(&game, utils::admin_addr()) == admin_initial + expected_toll, 2);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -362,7 +372,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -378,6 +388,7 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
         game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
 
         // Alice使用免租卡
         let seat = utils::get_current_player_seat(&game, scenario);
@@ -416,6 +427,7 @@ module tycoon::economy_tests {
         // 验证Alice没有支付过路费
         assert!(game::get_player_cash(&game, utils::alice()) == alice_initial, 1);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -428,7 +440,7 @@ module tycoon::economy_tests {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
 
-        let game_id = utils::create_test_game(scenario);
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -479,6 +491,7 @@ module tycoon::economy_tests {
         assert!(game::get_status(&game) == types::status_ended(), 2);
         assert!(game::get_winner(&game) == option::some(utils::admin_addr()), 3);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);

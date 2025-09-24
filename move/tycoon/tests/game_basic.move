@@ -144,7 +144,7 @@ module tycoon::game_basic_tests {
         game = scenario::take_shared<Game>(scenario);
         let registry = scenario::take_shared<MapRegistry>(scenario);
 
-        utils::play_turn(&mut game, option::none(), &registry, &clock, scenario);
+        utils::play_turn(&mut game, vector[], &registry, &clock, scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);

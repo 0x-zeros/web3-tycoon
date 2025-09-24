@@ -365,6 +365,17 @@ public fun get_height(template: &MapTemplate): u16 {
     template.height
 }
 
+// 检查地块是否有邻接表（分叉）
+public fun tile_has_adj(template: &MapTemplate, tile_id: u64): bool {
+    table::contains(&template.adj, tile_id) &&
+    !table::borrow(&template.adj, tile_id).is_empty()
+}
+
+// 获取地块的邻接列表
+public fun get_adj_tiles(template: &MapTemplate, tile_id: u64): &vector<u64> {
+    table::borrow(&template.adj, tile_id)
+}
+
 // 获取地块总数
 public fun get_tile_count(template: &MapTemplate): u64 {
     template.tile_count
@@ -476,7 +487,9 @@ public fun can_reach_in_k_steps(
 // 返回值：
 // - Some(tile_id): 下一步应该移动到的地块ID
 // - None: 无法找到路径或已到达目标
-public fun next_step_toward(
+// 【已废弃】：改用客户端计算路径，链上只验证
+#[allow(unused_function)]
+fun next_step_toward(
     template: &MapTemplate,
     from: u64,
     to: u64,

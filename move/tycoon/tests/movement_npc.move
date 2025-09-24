@@ -8,7 +8,7 @@ module tycoon::movement_npc_tests {
 
     use tycoon::test_utils::{Self as utils};
     use tycoon::game::{Self, Game, Seat};
-    use tycoon::map::{MapRegistry};
+    use tycoon::map;
     use tycoon::types;
     use tycoon::cards::{Self, CardRegistry};
     use tycoon::tycoon;
@@ -23,7 +23,6 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入并开始游戏
@@ -87,7 +86,6 @@ module tycoon::movement_npc_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -102,7 +100,6 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice()], scenario);
@@ -150,7 +147,6 @@ module tycoon::movement_npc_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -165,7 +161,6 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
@@ -226,7 +221,6 @@ module tycoon::movement_npc_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -241,7 +235,6 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         utils::join_players(&mut game, vector[utils::alice()], scenario);
@@ -284,7 +277,6 @@ module tycoon::movement_npc_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -300,7 +292,6 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         utils::start_game(&mut game, &clock, scenario);
@@ -338,7 +329,6 @@ module tycoon::movement_npc_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -353,7 +343,6 @@ module tycoon::movement_npc_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         utils::start_game(&mut game, &clock, scenario);
@@ -384,7 +373,6 @@ module tycoon::movement_npc_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }

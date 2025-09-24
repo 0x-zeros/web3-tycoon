@@ -9,7 +9,8 @@ module tycoon::game_basic_tests {
 
     use tycoon::test_utils::{Self as utils};
     use tycoon::game::{Self, Game};
-    use tycoon::map::{Self, MapRegistry};
+    use tycoon::map;
+    use tycoon::tycoon;
     use tycoon::admin::{Self, AdminCap};
     use tycoon::types;
 
@@ -22,23 +23,25 @@ module tycoon::game_basic_tests {
         // 初始化管理模块
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+            tycoon::init_for_testing(scenario::ctx(scenario));
         };
 
         // 创建并注册地图
         scenario::next_tx(scenario, utils::admin_addr());
         {
             let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-            let mut registry = scenario::take_shared<MapRegistry>(scenario);
+            let mut game_data = scenario::take_shared<tycoon::GameData>(scenario);
 
-            // 创建简单地图
-            let template_id = utils::create_simple_map(&admin_cap, &mut registry, scenario::ctx(scenario));
+            // 发布测试地图 - 直接传递整个GameData，让publish_test_map内部获取registry
+            let registry = tycoon::borrow_map_registry_mut(&mut game_data);
+            admin::publish_test_map(registry, &admin_cap, scenario::ctx(scenario));
 
-            // 验证地图已注册
-            assert!(map::has_template(&registry, template_id), 1);
+            // 验证地图已注册 (测试地图的template_id是1)
+            let registry_ref = tycoon::borrow_map_registry(&game_data);
+            assert!(map::has_template(registry_ref, 1), 1);
 
             scenario::return_to_sender(scenario, admin_cap);
-            scenario::return_shared(registry);
+            scenario::return_shared(game_data);
         };
 
         scenario::end(scenario_val);
@@ -87,16 +90,14 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
 
         // 多个玩家加入
         let players = vector[utils::alice(), utils::bob(), utils::carol()];
         utils::join_players(&mut game, players, scenario);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        game = scenario::take_shared<Game>(scenario);
+        let game = scenario::take_shared<Game>(scenario);
 
         // 验证所有玩家都已加入（创建者 + 3个玩家 = 4）
         let all_players = game::get_players(&game);
@@ -116,7 +117,6 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入
@@ -127,7 +127,7 @@ module tycoon::game_basic_tests {
         scenario::return_shared(game);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        game = scenario::take_shared<Game>(scenario);
+        let game = scenario::take_shared<Game>(scenario);
 
         // 验证游戏已开始
         assert!(game::get_status(&game) == types::status_active(), 1);
@@ -141,18 +141,15 @@ module tycoon::game_basic_tests {
 
         // 执行一个回合
         scenario::return_shared(game);
-        scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
 
         utils::play_turn(&mut game, vector[], scenario);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        game = scenario::take_shared<Game>(scenario);
+        let game = scenario::take_shared<Game>(scenario);
 
         // 验证回合已切换
         let (round2, turn2) = game::get_round_and_turn(&game);
@@ -189,7 +186,7 @@ module tycoon::game_basic_tests {
         scenario::return_shared(game);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        game = scenario::take_shared<Game>(scenario);
+        let game = scenario::take_shared<Game>(scenario);
 
         // 状态应该是active
         utils::assert_game_status(&game, types::status_active());
@@ -201,7 +198,7 @@ module tycoon::game_basic_tests {
 
     // 测试无法在游戏开始后加入
     #[test]
-    #[expected_failure(abort_code = tycoon::game::EAlreadyStarted)]
+    #[expected_failure(abort_code = 1004)] // EAlreadyStarted
     fun test_cannot_join_after_start() {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
@@ -221,7 +218,7 @@ module tycoon::game_basic_tests {
 
         // Bob尝试加入（应该失败）
         scenario::next_tx(scenario, utils::bob());
-        game = scenario::take_shared<Game>(scenario);
+        let game = scenario::take_shared<Game>(scenario);
         let coin = utils::mint_sui(10000, scenario::ctx(scenario));
         game::join_with_coin(&mut game, coin, scenario::ctx(scenario));
 

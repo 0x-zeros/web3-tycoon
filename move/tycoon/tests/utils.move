@@ -38,11 +38,14 @@ module tycoon::test_utils {
         scenario::next_tx(scenario, admin_addr());
         {
             let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-            let mut registry = scenario::take_shared<MapRegistry>(scenario);
+            let mut map_registry = scenario::take_shared<MapRegistry>(scenario);
             let game_data = scenario::take_shared<tycoon::GameData>(scenario);
 
-            // 创建简单测试地图模板
-            let template_id = create_simple_map(&admin_cap, &mut registry, scenario::ctx(scenario));
+            // 使用内置的测试地图
+            admin::publish_test_map(&mut map_registry, &admin_cap, scenario::ctx(scenario));
+
+            // 获取模板ID - 测试地图的ID是1
+            let template_id = 1;
 
             // 创建游戏 (entry函数，不返回值，但会创建共享的Game对象)
             game::create_game(
@@ -53,7 +56,7 @@ module tycoon::test_utils {
             );
 
             scenario::return_to_sender(scenario, admin_cap);
-            scenario::return_shared(registry);
+            scenario::return_shared(map_registry);
             scenario::return_shared(game_data);
 
             // 返回一个dummy ID，实际的Game对象可以通过scenario::take_shared获取
@@ -61,83 +64,7 @@ module tycoon::test_utils {
         }
     }
 
-    // 创建简单的测试地图（4个地块的环形）
-    public fun create_simple_map(
-        admin_cap: &AdminCap,
-        registry: &mut MapRegistry,
-        ctx: &mut TxContext
-    ): u64 {
-        let mut template = map::create_template(
-            b"Simple Test Map",
-            b"4-tile ring map",
-            4,  // 宽度
-            1,  // 高度
-            ctx
-        );
 
-        // 添加4个地块
-        map::add_tile(&mut template, 0, 0, types::tile_property(), b"Property 1", 1000, 100);
-        map::add_tile(&mut template, 1, 0, types::tile_property(), b"Property 2", 1500, 150);
-        map::add_tile(&mut template, 2, 0, types::tile_chance(), b"Chance", 0, 0);
-        map::add_tile(&mut template, 3, 0, types::tile_property(), b"Property 3", 2000, 200);
-
-        // 添加连接（形成环）
-        map::add_connection(&mut template, 0, 1);
-        map::add_connection(&mut template, 1, 2);
-        map::add_connection(&mut template, 2, 3);
-        map::add_connection(&mut template, 3, 0);
-
-        // 完成地图并注册
-        map::finalize_template(&mut template);
-        let template_id = map::register_template(admin_cap, registry, template, ctx);
-
-        template_id  // 返回实际的模板ID
-    }
-
-    // 创建复杂的测试地图（8个地块，包含各种类型）
-    public fun create_complex_map(
-        admin_cap: &AdminCap,
-        registry: &mut MapRegistry,
-        ctx: &mut TxContext
-    ): u64 {
-        let mut template = map::create_template(
-            b"Complex Test Map",
-            b"8-tile map with various types",
-            4,
-            2,
-            ctx
-        );
-
-        // 第一行
-        map::add_tile(&mut template, 0, 0, types::tile_property(), b"Start", 1000, 100);
-        map::add_tile(&mut template, 1, 0, types::tile_property(), b"Broadway", 2000, 200);
-        map::add_tile(&mut template, 2, 0, types::tile_hospital(), b"Hospital", 0, 0);
-        map::add_tile(&mut template, 3, 0, types::tile_property(), b"Park Place", 3000, 300);
-
-        // 第二行
-        map::add_tile(&mut template, 0, 1, types::tile_prison(), b"Prison", 0, 0);
-        map::add_tile(&mut template, 1, 1, types::tile_card(), b"Card", 0, 0);
-        map::add_tile(&mut template, 2, 1, types::tile_chance(), b"Chance", 0, 0);
-        map::add_tile(&mut template, 3, 1, types::tile_lottery(), b"Lottery", 0, 0);
-
-        // 添加连接（形成8字形路径）
-        map::add_connection(&mut template, 0, 1);
-        map::add_connection(&mut template, 1, 2);
-        map::add_connection(&mut template, 2, 3);
-        map::add_connection(&mut template, 3, 7);  // 连接到第二行
-        map::add_connection(&mut template, 7, 6);
-        map::add_connection(&mut template, 6, 5);
-        map::add_connection(&mut template, 5, 4);
-        map::add_connection(&mut template, 4, 0);  // 回到起点
-
-        // 添加分叉（在position 2可以选择走向position 5）
-        map::add_connection(&mut template, 2, 5);
-
-        map::finalize_template(&mut template);
-        let template_id = map::register_template(admin_cap, registry, template, ctx);
-
-        template_id
-    }
 
     // ===== 玩家操作辅助函数 =====
 

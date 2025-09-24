@@ -193,6 +193,7 @@ export interface RollAndStepActionEvent {
     steps: StepEffect[];        // 步骤效果列表
     cash_changes: CashDelta[];  // 现金变动列表
     end_pos: bigint;            // u64: 最终位置
+    path_choices: bigint[];     // 路径选择序列 (新增字段)
 }
 
 // ===== 事件类型枚举 =====

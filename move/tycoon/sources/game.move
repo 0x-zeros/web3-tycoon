@@ -859,71 +859,13 @@ fun get_dice_value(game: &Game, player_index: u8, generator: &mut RandomGenerato
     generator.generate_u8_in_range(1, 6)
 }
 
-
-// 计算移动目标
-// 注意：当use_adj=true时，返回from作为占位符，实际路径将通过BFS动态确定
-// 这是因为邻接寻路需要在执行时根据实际可达性来决定路径
-// 计算移动的目标位置
-//
-// 该函数根据不同的寻路模式计算玩家移动后的目标位置：
-// 1. 邻接寻路模式（use_adj=true）：
-//    - 返回起始位置，实际路径由execute_step_movement动态计算
-//    - 适用于复杂的非环形地图
-// 2. 环路导航模式（use_adj=false）：
-//    - 直接计算目标位置，按照固定的顺/逆时针方向移动
-//    - 适用于简单的环形地图（如传统大富翁）
-//
-// 参数说明：
-// - from: 起始位置
-// - steps: 移动步数（通常为骰子点数）
-// - dir_pref: 玩家的方向偏好（自动选择方向）
-// - dir_intent: 玩家的明确方向意图（如使用方向控制卡）
-// - use_adj: 是否使用邻接寻路
-fun calculate_move_target(
-    template: &MapTemplate,
-    from: u64,
-    steps: u8,
-    dir_pref: u8,
-    dir_intent: Option<u8>,
-    use_adj: bool
-): u64 {
-    // 邻接寻路模式：延迟计算，这里只返回起始位置
-    // 实际目标位置会在execute_step_movement中通过BFS算法动态计算
-    if (use_adj) {
-        return from
-    };
-
-    // 环路导航模式：直接计算目标位置
-    let mut pos = from;
-    let mut i = 0;
-
-    // 确定移动方向（优先使用玩家意图，否则使用偏好）
-    let dir = if (option::is_some(&dir_intent)) {
-        *option::borrow(&dir_intent)
-    } else {
-        dir_pref
-    };
-
-    // 按照确定的方向逐步移动
-    while (i < steps) {
-        pos = if (dir == types::dir_ccw() || dir == types::dir_forced_ccw()) {
-            map::get_ccw_next(template, pos)  // 逆时针移动
-        } else {
-            map::get_cw_next(template, pos)   // 顺时针移动
-        };
-        i = i + 1;
-    };
-
-    pos
-}
-
 // 执行玩家的逐步移动，处理路径上的所有事件
 //
 // 算法流程：
 // 1. 首先检查玩家是否被冻结（冻结状态下原地停留，不移动）
-// 2. 根据地图配置选择寻路方式：
-//    - use_adj_traversal=true: 使用BFS邻接寻路（支持复杂地图）
-//    - use_adj_traversal=false: 使用环路导航（简单环形地图）
+// 2. 根据path_choices移动：
+//    - 有path_choices时：使用客户端提供的路径选择（用于遥控骰子）
+//    - 无path_choices时：按玩家方向偏好自动移动（正常移动）
 // 3. 逐格移动，每一步都要：
 //    - 检查目标格子上的NPC（炸弹、狗、路障）
 //    - 处理经过格子的触发事件（抽卡、彩票等）
@@ -931,12 +873,11 @@ fun calculate_move_target(
 // 4. 所有事件收集到steps和cash_changes中，供上层聚合到最终事件
 //
 // 参数说明：
-// - from/to: 起始和目标位置（to仅在邻接寻路时使用）
+// - player_index: 玩家索引
 // - dice: 骰子点数，决定移动步数
-// - direction: 移动方向（顺时针/逆时针）
+// - path_choices: 客户端提供的路径选择序列（分叉点的选择）
 // - steps: 收集每一步的效果事件
 // - cash_changes: 收集现金变化事件
-// 新的移动执行函数，使用分叉选择序列
 fun execute_step_movement_with_choices(
     game: &mut Game,
     player_index: u8,
@@ -950,9 +891,9 @@ fun execute_step_movement_with_choices(
     let template = map::get_template(registry, game.template_id);
 
     // 先读取必要的玩家信息
-    let (from_pos, player_addr, direction, is_frozen) = {
+    let (from_pos, direction, is_frozen) = {
         let player = game.players.borrow(player_index as u64);
-        (player.pos, player.owner, player.dir_pref, is_buff_active(player, types::buff_frozen(), game.round))
+        (player.pos, player.dir_pref, is_buff_active(player, types::buff_frozen(), game.round))
     };
 
     if (is_frozen) {
@@ -987,8 +928,6 @@ fun execute_step_movement_with_choices(
 
     // 逐步移动主循环
     while (i < dice) {
-        let tile = map::get_tile(template, current_pos);
-
         // 确定下一个位置
         let next_pos = if (!path_choices.is_empty() &&
                           map::tile_has_adj(template, current_pos) &&

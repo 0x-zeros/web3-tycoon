@@ -436,7 +436,7 @@ public entry fun roll_and_step(
     dir_intent: Option<u8>,
     registry: &MapRegistry,
     r: &Random,
-    clock: &Clock,
+    clock: &Clock,//todo 在获取btc价格或者其他defi相关场景的时候会使用到
     ctx: &mut TxContext
 ) {
     // 验证并自动处理跳过

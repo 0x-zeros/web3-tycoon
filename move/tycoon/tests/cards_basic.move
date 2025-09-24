@@ -65,6 +65,7 @@ module tycoon::cards_basic_tests {
             option::none(),
             &map_registry,
             &r,
+            &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);
@@ -343,6 +344,7 @@ module tycoon::cards_basic_tests {
             option::none(),
             &map_registry,
             &r,
+            &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);

@@ -206,7 +206,7 @@ module tycoon::test_utils {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
         let r = scenario::take_shared<Random>(scenario);
-        game::roll_and_step(game, seat, dir_intent, registry, &r, scenario::ctx(scenario));
+        game::roll_and_step(game, seat, dir_intent, registry, &r, clock, scenario::ctx(scenario));
         scenario::return_shared(r);
     }
 
@@ -236,7 +236,7 @@ module tycoon::test_utils {
         // 执行掷骰移动
         scenario::next_tx(scenario, player);
         let r = scenario::take_shared<Random>(scenario);
-        game::roll_and_step(game, &seat, dir_intent, registry, &r, scenario::ctx(scenario));
+        game::roll_and_step(game, &seat, dir_intent, registry, &r, clock, scenario::ctx(scenario));
         scenario::return_shared(r);
 
         // 归还Seat

@@ -67,6 +67,7 @@ module tycoon::movement_npc_tests {
             option::none(),
             &registry,
             &r,
+            &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);
@@ -248,6 +249,7 @@ module tycoon::movement_npc_tests {
             option::none(),
             &registry,
             &r,
+            &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);

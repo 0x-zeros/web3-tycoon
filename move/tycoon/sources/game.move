@@ -81,24 +81,24 @@ public struct Config has store, copy, drop {
 // 统一的Buff存储结构，用于管理玩家的各种临时状态效果
 // 采用独占终止时间设计，便于统一的过期检查和清理
 //
-// Buff激活逻辑使用独占语义（exclusive semantics）：
-// - Buff激活条件：current_round < first_inactive_round
-// - Buff过期条件：current_round >= first_inactive_round
+// Buff激活逻辑使用包含语义（inclusive semantics）：
+// - Buff激活条件：current_round <= last_active_round
+// - Buff过期条件：current_round > last_active_round
 // - 示例：
-//   - first_inactive_round = round + 1 → 仅当前轮激活
-//   - first_inactive_round = round + 2 → 当前轮和下一轮激活
-//   - first_inactive_round = round + 3 → 当前轮和接下来两轮激活
+//   - last_active_round = round → 仅当前轮激活
+//   - last_active_round = round + 1 → 当前轮和下一轮激活
+//   - last_active_round = round + 2 → 当前轮和接下来两轮激活
 //
 // 字段说明：
 // - kind: Buff类型标识，对应types模块中的BUFF_*常量
-// - first_inactive_round: 首个未激活的轮次（独占边界）
+// - last_active_round: 最后一个激活轮次（包含边界）
 // - value: 附加数据，意义取决于Buff类型
 //   * BUFF_MOVE_CTRL: 存储指定的骰子点数
 //   * BUFF_RENT_FREE: 未使用（可扩展为免租比例）
 //   * BUFF_FROZEN: 未使用（可扩展为冻结来源）
 public struct BuffEntry has store, copy, drop {
     kind: u8,                  // Buff类型 (rent_free, frozen, move_ctrl等)
-    first_inactive_round: u16, // 首个未激活轮次（独占）
+    last_active_round: u16,    // 最后一个激活轮次（包含）
     value: u64                 // 数值载荷 (如move_ctrl的骰子值)
 }
 
@@ -1733,14 +1733,14 @@ fun apply_card_effect_with_collectors(
 
         // 应用buff到目标玩家
         let target_player = game.players.borrow_mut(target_index as u64);
-        apply_buff(target_player, types::buff_move_ctrl(), game.round + 1, dice_sum);
+        apply_buff(target_player, types::buff_move_ctrl(), game.round, dice_sum);
 
         // 记录buff变更
         let target_addr = game.players.borrow(target_index as u64).owner;
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_move_ctrl(),
             target_addr,
-            option::some(game.round + 1)
+            option::some(game.round)
         ));
     } else if (kind == types::card_rent_free()) {
         // 免租卡：应用给自己（可扩展为params[0]指定目标）
@@ -1752,14 +1752,14 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
         let target_player = game.players.borrow_mut(target_index as u64);
-        apply_buff(target_player, types::buff_rent_free(), game.round + 2, 0);
+        apply_buff(target_player, types::buff_rent_free(), game.round + 1, 0);
 
         // 记录buff变更
         let target_addr = game.players.borrow(target_index as u64).owner;
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_rent_free(),
             target_addr,
-            option::some(game.round + 2)
+            option::some(game.round + 1)
         ));
     } else if (kind == types::card_freeze()) {
         // 冻结：params[0]=目标玩家索引
@@ -1769,14 +1769,14 @@ fun apply_card_effect_with_collectors(
         assert!(target_index != player_index, EInvalidCardTarget);  // 不能冻结自己
 
         let target_player = game.players.borrow_mut(target_index as u64);
-        apply_buff(target_player, types::buff_frozen(), game.round + 2, 0);
+        apply_buff(target_player, types::buff_frozen(), game.round + 1, 0);
 
         // 记录buff变更
         let target_addr = game.players.borrow(target_index as u64).owner;
         vector::push_back(buff_changes, events::make_buff_change(
             types::buff_frozen(),
             target_addr,
-            option::some(game.round + 2)
+            option::some(game.round + 1)
         ));
     } else if (kind == types::card_barrier() || kind == types::card_bomb() || kind == types::card_dog()) {
         // 放置NPC类卡牌：params[0]=地块ID
@@ -1835,20 +1835,20 @@ fun apply_card_effect_with_collectors(
 // ===== Buff管理API函数 =====
 
 // 应用buff到玩家
-// first_inactive_turn: 首个未激活回合（独占）
+// last_active_round: 最后一个激活回合（包含）
 // 为玩家应用一个buff效果
 //
-// Buff系统采用独占语义（exclusive semantics）：
-// - first_inactive_turn表示buff失效的第一个回合
-// - 当current_turn < first_inactive_turn时，buff处于激活状态
-// - 当current_turn >= first_inactive_turn时，buff已过期
+// Buff系统采用包含语义（inclusive semantics）：
+// - last_active_round表示buff激活的最后一个回合
+// - 当current_round <= last_active_round时，buff处于激活状态
+// - 当current_round > last_active_round时，buff已过期
 //
 // 例如：
-// - 当前回合=10，first_inactive_turn=11 → buff仅在第10回合激活
-// - 当前回合=10，first_inactive_turn=13 → buff在第10,11,12回合激活
+// - 当前回合=10，last_active_round=10 → buff仅在第10回合激活
+// - 当前回合=10，last_active_round=12 → buff在第10,11,12回合激活
 //
 // 注意：同类型的buff会互相覆盖（同一时间只能有一个同类型buff）
-fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u16, value: u64) {
+fun apply_buff(player: &mut Player, kind: u8, last_active_round: u16, value: u64) {
     // 步骤1: 清除同类型的现有buff（确保同类型buff唯一）
     let mut i = 0;
     while (i < player.buffs.length()) {//todo 感觉每次都寻找，有点费
@@ -1861,21 +1861,21 @@ fun apply_buff(player: &mut Player, kind: u8, first_inactive_round: u16, value: 
     };
 
     // 步骤2: 添加新的buff
-    let buff = BuffEntry { kind, first_inactive_round, value };
+    let buff = BuffEntry { kind, last_active_round, value };
     player.buffs.push_back(buff);
 }
 
 // 清除所有已过期的buffs
 //
 // 遍历玩家的所有buff，移除满足以下条件的buff：
-// - current_round >= first_inactive_round（buff已经失效）
+// - current_round > last_active_round（buff已经失效）
 //
 // 注意：使用倒序遍历或不递增索引的方式处理vector::remove
 fun clear_expired_buffs(player: &mut Player, current_round: u16) {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
-        if (buff.first_inactive_round <= current_round) {
+        if (buff.last_active_round < current_round) {
             // buff已过期，移除它
             vector::remove(&mut player.buffs, i);
             // 重要：不增加i，因为vector::remove会将后续元素前移
@@ -1889,14 +1889,14 @@ fun clear_expired_buffs(player: &mut Player, current_round: u16) {
 
 // 检查玩家是否有某种类型的buff处于激活状态
 //
-// Buff激活判断：current_round < first_inactive_round
+// Buff激活判断：current_round <= last_active_round
 // 返回true表示buff正在生效，false表示没有该buff或buff已过期
 fun is_buff_active(player: &Player, kind: u8, current_round: u16): bool {
     let mut i = 0;
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         // 找到对应类型且未过期的buff
-        if (buff.kind == kind && buff.first_inactive_round > current_round) {
+        if (buff.kind == kind && buff.last_active_round >= current_round) {
             return true
         };
         i = i + 1;
@@ -1916,7 +1916,7 @@ fun get_buff_value(player: &Player, kind: u8, current_round: u16): u64 {
     while (i < player.buffs.length()) {
         let buff = player.buffs.borrow(i);
         // 找到对应类型且未过期的buff，返回其value
-        if (buff.kind == kind && buff.first_inactive_round > current_round) {
+        if (buff.kind == kind && buff.last_active_round >= current_round) {
             return buff.value
         };
         i = i + 1;

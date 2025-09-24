@@ -134,7 +134,7 @@ public struct NpcChangeItem has copy, drop, store {
 public struct BuffChangeItem has copy, drop, store {
     buff_type: u8,  // 使用types模块的buff类型常量
     target: address,
-    first_inactive_turn: option::Option<u16>  // 首个未激活回合（独占）
+    last_active_round: option::Option<u16>  // 最后激活回合（包含）
 }
 
 // NPC步骤事件
@@ -358,12 +358,12 @@ public(package) fun make_npc_change(
 public(package) fun make_buff_change(
     buff_type: u8,
     target: address,
-    first_inactive_turn: option::Option<u16>
+    last_active_round: option::Option<u16>
 ): BuffChangeItem {
     BuffChangeItem {
         buff_type,
         target,
-        first_inactive_turn
+        last_active_round
     }
 }
 

@@ -12,6 +12,7 @@ module tycoon::cards_basic_tests {
     use tycoon::cards::{Self, CardRegistry};
     use tycoon::admin::{AdminCap};
     use tycoon::types;
+    use tycoon::tycoon;
 
     // 测试遥控骰卡
     #[test]
@@ -20,7 +21,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+        tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let _game_id = utils::create_test_game(scenario);
@@ -44,21 +45,23 @@ module tycoon::cards_basic_tests {
         game::test_give_card(&mut game, utils::admin_addr(), types::card_move_ctrl(), 1);
 
         // 使用遥控骰卡
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_move_ctrl(),
             vector[],  // 无参数
-            &map_registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(game_data);
 
         // 验证玩家有遥控骰效果buff
         assert!(game::has_buff(&game, utils::admin_addr(), types::buff_move_ctrl()), 1);
 
         // 掷骰移动
         let mut r = scenario::take_shared<Random>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         // 显式更新随机信标
         random::update_randomness_state_for_testing(
             &mut r,
@@ -70,12 +73,13 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             vector[],  // 空的路径选择
-            &map_registry,
+            &game_data,
             &r,
             &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);
+        scenario::return_shared(game_data);
 
         // 验证移动了3步
         utils::assert_player_position(&game, utils::admin_addr(), 3);
@@ -97,7 +101,7 @@ module tycoon::cards_basic_tests {
         // 创建包含卡牌格的复杂地图
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+            tycoon::init_for_testing(scenario::ctx(scenario));
             // CardRegistry 在 tycoon::tycoon::init_for_testing 中创建
         };
 
@@ -113,15 +117,14 @@ module tycoon::cards_basic_tests {
 
         // 创建游戏
         scenario::next_tx(scenario, utils::admin_addr());
-        let registry = scenario::take_shared<MapRegistry>(scenario);
-        let _game_id = game::create_game_with_config(
-            b"Test Game",
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::create_game(
+            &game_data,
             template_id,
-            option::none(),
-            &registry,
+            vector[],  // 空的参数向量，表示使用默认配置
             scenario::ctx(scenario)
         );
-        scenario::return_shared(registry);
+        scenario::return_shared(game_data);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -163,7 +166,7 @@ module tycoon::cards_basic_tests {
         // 使用复杂地图设置
         scenario::next_tx(scenario, utils::admin_addr());
         {
-            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+            tycoon::init_for_testing(scenario::ctx(scenario));
             // CardRegistry 在 tycoon::tycoon::init_for_testing 中创建
         };
 
@@ -177,22 +180,21 @@ module tycoon::cards_basic_tests {
         scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
-        let registry = scenario::take_shared<MapRegistry>(scenario);
-        let _game_id = game::create_game_with_config(
-            b"Test Game",
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::create_game(
+            &game_data,
             template_id,
-            option::none(),
-            &registry,
+            vector[],  // 空的参数向量，表示使用默认配置
             scenario::ctx(scenario)
         );
-        scenario::return_shared(registry);
+        scenario::return_shared(game_data);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        scenario::return_shared(game);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // 停留在卡牌格
         scenario::next_tx(scenario, utils::admin_addr());
@@ -205,12 +207,14 @@ module tycoon::cards_basic_tests {
         game::test_set_player_position(&mut game, utils::admin_addr(), 5);
 
         // 处理停留效果
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::handle_tile_stop_effect(
             &mut game,
             utils::admin_addr(),
             5,
-            &map_registry
+            &game_data
         );
+        scenario::return_shared(game_data);
 
         // 验证获得了卡牌（停留获得2张）
         let final_cards = game::get_player_total_cards(&game, utils::admin_addr());
@@ -229,7 +233,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+        tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let _game_id = utils::create_test_game(scenario);
@@ -251,15 +255,16 @@ module tycoon::cards_basic_tests {
 
         game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 1);
 
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_barrier(),
             vector[2],  // 目标地块ID
-            &map_registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(game_data);
 
         // 验证NPC已放置
         assert!(game::has_npc_on_tile(&game, 2), 1);
@@ -275,15 +280,16 @@ module tycoon::cards_basic_tests {
 
         game::test_give_card(&mut game, utils::alice(), types::card_cleanse(), 1);
 
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_cleanse(),
             vector[2],  // 目标地块ID
-            &map_registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(game_data);
 
         // 验证NPC已被移除
         assert!(!game::has_npc_on_tile(&game, 2), 2);
@@ -303,7 +309,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+        tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let _game_id = utils::create_test_game(scenario);
@@ -325,15 +331,16 @@ module tycoon::cards_basic_tests {
 
         game::test_give_card(&mut game, utils::admin_addr(), types::card_freeze(), 1);
 
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_freeze(),
             vector[1],  // Alice的player_index是1
-            &map_registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(game_data);
 
         // 验证Alice被冻结
         assert!(game::is_player_frozen(&game, utils::alice()), 1);
@@ -349,6 +356,7 @@ module tycoon::cards_basic_tests {
 
         // 尝试移动（应该被跳过）
         let mut r = scenario::take_shared<Random>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         // 显式更新随机信标
         random::update_randomness_state_for_testing(
             &mut r,
@@ -360,12 +368,13 @@ module tycoon::cards_basic_tests {
             &mut game,
             &seat,
             vector[],  // 空的路径选择
-            &map_registry,
+            &game_data,
             &r,
             &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);
+        scenario::return_shared(game_data);
 
         // 验证回合已切换回Admin
         assert!(game::current_turn_player(&game) == utils::admin_addr(), 2);
@@ -385,7 +394,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+        tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let _game_id = utils::create_test_game(scenario);
@@ -406,7 +415,9 @@ module tycoon::cards_basic_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &seat, &map_registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
@@ -420,30 +431,34 @@ module tycoon::cards_basic_tests {
 
         let alice_initial_cash = game::get_player_cash(&game, utils::alice());
 
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_rent_free(),
             vector[],  // 无参数
-            &map_registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(game_data);
 
         // 移动到Admin的地产
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
         // 处理停留效果（应该免租）
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::handle_tile_stop_effect(
             &mut game,
             utils::alice(),
             1,
-            &map_registry
+            &game_data
         );
+        scenario::return_shared(game_data);
 
         // 验证Alice没有支付租金
         assert!(game::get_player_cash(&game, utils::alice()) == alice_initial_cash, 1);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(map_registry);
         scenario::return_shared(card_registry);
@@ -458,7 +473,7 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 初始化 admin 模块（会创建 MapRegistry 和 CardRegistry）
-        tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+        tycoon::init_for_testing(scenario::ctx(scenario));
 
         scenario::next_tx(scenario, utils::admin_addr());
         let _game_id = utils::create_test_game(scenario);
@@ -490,15 +505,16 @@ module tycoon::cards_basic_tests {
 
         // 使用一张路障卡
         let seat = utils::get_current_player_seat(&game, scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_barrier(),
             vector[1],  // 目标地块ID
-            &map_registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
+        scenario::return_shared(game_data);
 
         // 验证卡牌数量减少
         assert!(game::get_player_card_count(&game, utils::admin_addr(), types::card_barrier()) == 2, 5);

@@ -11,6 +11,7 @@ module tycoon::movement_npc_tests {
     use tycoon::map::{MapRegistry};
     use tycoon::types;
     use tycoon::cards::{Self, CardRegistry};
+    use tycoon::tycoon;
 
     // 测试路障停止移动
     #[test]
@@ -26,9 +27,9 @@ module tycoon::movement_npc_tests {
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入并开始游戏
-        scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // Admin的回合 - 放置路障在位置2
         scenario::next_tx(scenario, utils::admin_addr());
@@ -36,19 +37,19 @@ module tycoon::movement_npc_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         // 使用路障卡放置在位置2
-        let card_registry = scenario::take_shared<cards::CardRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_barrier(),
             vector[2],  // 目标地块ID
-            &registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
-        scenario::return_shared(card_registry);
+        scenario::return_shared(game_data);
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
 
         // Alice的回合 - 尝试移动经过路障
@@ -61,6 +62,7 @@ module tycoon::movement_npc_tests {
 
         // 掷骰移动（假设骰子点数会让Alice经过位置2）
         let mut r = scenario::take_shared<Random>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         // 显式更新随机信标
         random::update_randomness_state_for_testing(
             &mut r,
@@ -72,16 +74,18 @@ module tycoon::movement_npc_tests {
             &mut game,
             &seat,
             vector[],  // 空的路径选择
-            &registry,
+            &game_data,
             &r,
             &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);
+        scenario::return_shared(game_data);
 
         // 验证Alice停在路障位置（位置2）
         utils::assert_player_position(&game, utils::alice(), 2);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -101,28 +105,28 @@ module tycoon::movement_npc_tests {
         let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // Admin放置炸弹在位置3
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
         let seat = utils::get_current_player_seat(&game, scenario);
 
-        let card_registry = scenario::take_shared<cards::CardRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_bomb(),
             vector[3],  // 目标地块ID
-            &registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
-        scenario::return_shared(card_registry);
+        scenario::return_shared(game_data);
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
 
         // Alice移动到炸弹位置
@@ -142,8 +146,9 @@ module tycoon::movement_npc_tests {
         // 验证Alice被送到医院（假设医院在位置2）
         // 这里需要根据实际地图配置调整
         let player_pos = game::get_player_position(&game, utils::alice());
-        assert!(player_pos == 2, 1); // 假设位置2是医院
+        assert!(player_pos == 2, 1); // 假设位置2是医霴
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -163,9 +168,9 @@ module tycoon::movement_npc_tests {
         let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // Admin使用狗狗卡放置NPC
         scenario::next_tx(scenario, utils::admin_addr());
@@ -176,17 +181,16 @@ module tycoon::movement_npc_tests {
         game::test_give_card(&mut game, utils::admin_addr(), types::card_dog(), 1);
 
         // 使用狗狗卡放置在位置1
-        let card_registry = scenario::take_shared<cards::CardRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_dog(),
             vector[1],  // 目标地块ID
-            &registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
-        scenario::return_shared(card_registry);
+        scenario::return_shared(game_data);
 
         // 验证NPC已放置
         assert!(game::has_npc_on_tile(&game, 1), 1);
@@ -194,6 +198,7 @@ module tycoon::movement_npc_tests {
         assert!(game::get_npc_kind(npc) == types::npc_dog(), 2);
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
 
         // Alice移动到狗狗位置
@@ -219,6 +224,7 @@ module tycoon::movement_npc_tests {
         // 验证狗狗NPC已被消耗
         assert!(!game::has_npc_on_tile(&game, 1), 4);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -238,9 +244,9 @@ module tycoon::movement_npc_tests {
         let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // 设置Admin在医院
         scenario::next_tx(scenario, utils::admin_addr());
@@ -250,6 +256,7 @@ module tycoon::movement_npc_tests {
         // Admin尝试移动（应该被跳过）
         let seat = utils::get_current_player_seat(&game, scenario);
         let mut r = scenario::take_shared<Random>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         // 显式更新随机信标
         random::update_randomness_state_for_testing(
             &mut r,
@@ -261,12 +268,13 @@ module tycoon::movement_npc_tests {
             &mut game,
             &seat,
             vector[],  // 空的路径选择
-            &registry,
+            &game_data,
             &r,
             &clock,
             scenario::ctx(scenario)
         );
         scenario::return_shared(r);
+        scenario::return_shared(game_data);
 
         // 验证Admin仍在医院
         assert!(game::is_player_in_hospital(&game, utils::admin_addr()), 1);
@@ -274,6 +282,7 @@ module tycoon::movement_npc_tests {
         // 验证回合已切换到Alice
         assert!(game::current_turn_player(&game) == utils::alice(), 2);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -294,8 +303,8 @@ module tycoon::movement_npc_tests {
         let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        scenario::return_shared(game);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // 放置第一个NPC（路障）
         scenario::next_tx(scenario, utils::admin_addr());
@@ -304,31 +313,30 @@ module tycoon::movement_npc_tests {
 
         game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 2);
 
-        let card_registry = scenario::take_shared<cards::CardRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_barrier(),
             vector[1],  // 目标地块ID
-            &registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
-        scenario::return_shared(card_registry);
+        scenario::return_shared(game_data);
 
         // 尝试在同一位置放置第二个NPC（应该失败）
-        let card_registry = scenario::take_shared<cards::CardRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_barrier(),
             vector[1],  // 目标地块ID
-            &registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
-        scenario::return_shared(card_registry);
+        scenario::return_shared(game_data);
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
@@ -348,8 +356,8 @@ module tycoon::movement_npc_tests {
         let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        scenario::return_shared(game);
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -361,20 +369,20 @@ module tycoon::movement_npc_tests {
         // 尝试放置多个NPC（应全部成功）
         let mut i = 0;
         while (i < 6) {
-            let card_registry = scenario::take_shared<cards::CardRegistry>(scenario);
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
             game::use_card(
                 &mut game,
                 &seat,
                 types::card_barrier(),
                 vector[i],  // 目标地块ID
-                &registry,
-                &card_registry,
+                &game_data,
                 scenario::ctx(scenario)
             );
-            scenario::return_shared(card_registry);
+            scenario::return_shared(game_data);
             i = i + 1;
         };
 
+        scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
         scenario::return_shared(registry);
         clock::destroy_for_testing(clock);

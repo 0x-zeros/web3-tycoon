@@ -13,6 +13,7 @@ module tycoon::test_utils {
     use tycoon::game::{Self, Game, Seat};
     use tycoon::admin::{Self, AdminCap};
     use tycoon::map::{Self, MapRegistry, MapTemplate};
+    use tycoon::tycoon;
 
     // ===== 测试用户地址 =====
     public fun alice(): address { @0xA11CE }
@@ -28,7 +29,7 @@ module tycoon::test_utils {
         scenario::next_tx(scenario, admin_addr());
         {
             // 初始化所有必需的组件
-            tycoon::tycoon::init_for_testing(scenario::ctx(scenario));
+            tycoon::init_for_testing(scenario::ctx(scenario));
 
             // 创建测试用的 Random 对象
             random::create_for_testing(scenario::ctx(scenario));
@@ -38,23 +39,25 @@ module tycoon::test_utils {
         {
             let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
             let mut registry = scenario::take_shared<MapRegistry>(scenario);
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
 
             // 创建简单测试地图模板
             let template_id = create_simple_map(&admin_cap, &mut registry, scenario::ctx(scenario));
 
-            // 创建游戏
-            let game_id = game::create_game_with_config(
-                b"Test Game",
+            // 创建游戏 (entry函数，不返回值，但会创建共享的Game对象)
+            game::create_game(
+                &game_data,
                 template_id,
-                option::none(),  // 使用默认配置
-                &registry,
+                vector[],  // 空的参数向量，表示使用默认配置
                 scenario::ctx(scenario)
             );
 
             scenario::return_to_sender(scenario, admin_cap);
             scenario::return_shared(registry);
+            scenario::return_shared(game_data);
 
-            game_id
+            // 返回一个dummy ID，实际的Game对象可以通过scenario::take_shared获取
+            object::id_from_address(admin_addr())
         }
     }
 
@@ -208,13 +211,13 @@ module tycoon::test_utils {
         game: &mut Game,
         seat: &Seat,
         path_choices: vector<u64>,  // 改为路径选择
-        registry: &MapRegistry,
-        clock: &Clock,
         scenario: &mut Scenario
     ) {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
         let mut r = scenario::take_shared<Random>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = create_test_clock(scenario);
         // 显式更新随机信标，确保每次掷骰都有新的随机性
         random::update_randomness_state_for_testing(
             &mut r,
@@ -222,8 +225,17 @@ module tycoon::test_utils {
             b"test_roll", // randomness_round
             scenario::ctx(scenario)
         );
-        game::roll_and_step(game, seat, path_choices, registry, &r, clock, scenario::ctx(scenario));
+        // 转换 vector<u64> 到 vector<u16>
+        let mut path_choices_u16 = vector[];
+        let mut i = 0;
+        while (i < path_choices.length()) {
+            path_choices_u16.push_back(*path_choices.borrow(i) as u16);
+            i = i + 1;
+        };
+        game::roll_and_step(game, seat, path_choices_u16, &game_data, &r, &clock, scenario::ctx(scenario));
         scenario::return_shared(r);
+        scenario::return_shared(game_data);
+        clock::destroy_for_testing(clock);
     }
 
     // 结束回合
@@ -241,8 +253,6 @@ module tycoon::test_utils {
     public fun play_turn(
         game: &mut Game,
         path_choices: vector<u64>,  // 改为路径选择
-        registry: &MapRegistry,
-        clock: &Clock,
         scenario: &mut Scenario
     ) {
         // 获取当前玩家的Seat
@@ -252,6 +262,8 @@ module tycoon::test_utils {
         // 执行掷骰移动
         scenario::next_tx(scenario, player);
         let mut r = scenario::take_shared<Random>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = create_test_clock(scenario);
         // 显式更新随机信标
         random::update_randomness_state_for_testing(
             &mut r,
@@ -259,8 +271,17 @@ module tycoon::test_utils {
             b"test_player_roll",
             scenario::ctx(scenario)
         );
-        game::roll_and_step(game, &seat, path_choices, registry, &r, clock, scenario::ctx(scenario));
+        // 转换 vector<u64> 到 vector<u16>
+        let mut path_choices_u16 = vector[];
+        let mut i = 0;
+        while (i < path_choices.length()) {
+            path_choices_u16.push_back(*path_choices.borrow(i) as u16);
+            i = i + 1;
+        };
+        game::roll_and_step(game, &seat, path_choices_u16, &game_data, &r, &clock, scenario::ctx(scenario));
         scenario::return_shared(r);
+        scenario::return_shared(game_data);
+        clock::destroy_for_testing(clock);
 
         // 归还Seat
         scenario::return_to_sender(scenario, seat);
@@ -272,7 +293,7 @@ module tycoon::test_utils {
     public fun assert_player_position(
         game: &Game,
         player: address,
-        expected_pos: u64
+        expected_pos: u16
     ) {
         let actual_pos = game::get_player_position(game, player);
         assert!(actual_pos == expected_pos, 1001);
@@ -291,7 +312,7 @@ module tycoon::test_utils {
     // 断言地产所有者
     public fun assert_property_owner(
         game: &Game,
-        tile_id: u64,
+        tile_id: u16,
         expected_owner: Option<address>
     ) {
         let actual_owner = game::get_property_owner(game, tile_id);
@@ -301,7 +322,7 @@ module tycoon::test_utils {
     // 断言地产等级
     public fun assert_property_level(
         game: &Game,
-        tile_id: u64,
+        tile_id: u16,
         expected_level: u8
     ) {
         let actual_level = game::get_property_level(game, tile_id);

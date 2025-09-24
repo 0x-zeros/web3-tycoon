@@ -45,14 +45,14 @@ public struct Card has store, copy, drop {
 }
 
 // ===== CardRegistry 全局卡牌注册表 =====
-public struct CardRegistry has key {
+public struct CardRegistry has key, store {
     id: UID,
     cards: Table<u8, Card>,         // 卡牌定义
     card_count: u64                   // 卡牌总数
 }
 
 // ===== DropConfig 掉落配置表 =====
-public struct DropConfig has key {
+public struct DropConfig has key, store {
     id: UID,
     tile_drops: Table<u8, DropRule>,    // 不同地块的掉落规则
     pass_drop_rate: u64,                // 经过时掉落概率 (basis points, 10000 = 100%)
@@ -87,8 +87,8 @@ public fun target_player_or_tile(): u8 { 3 }
 
 // ===== Registry Creation 注册表创建 =====
 
-// 创建卡牌注册表（在模块初始化时调用）
-public(package) fun create_card_registry(ctx: &mut TxContext): ID {
+// 创建卡牌注册表（返回对象，供内部使用）
+public(package) fun create_card_registry_internal(ctx: &mut TxContext): CardRegistry {
     let mut registry = CardRegistry {
         id: object::new(ctx),
         cards: table::new(ctx),
@@ -98,13 +98,19 @@ public(package) fun create_card_registry(ctx: &mut TxContext): ID {
     // 初始化基础卡牌
     init_basic_cards(&mut registry);
 
+    registry
+}
+
+// 创建卡牌注册表（保留兼容性）
+public(package) fun create_card_registry(ctx: &mut TxContext): ID {
+    let registry = create_card_registry_internal(ctx);
     let registry_id = object::id(&registry);
     transfer::share_object(registry);
     registry_id
 }
 
-// 创建掉落配置表
-public(package) fun create_drop_config(ctx: &mut TxContext): ID {
+// 创建掉落配置表（返回对象，供内部使用）
+public(package) fun create_drop_config_internal(ctx: &mut TxContext): DropConfig {
     let mut config = DropConfig {
         id: object::new(ctx),
         tile_drops: table::new(ctx),
@@ -117,6 +123,12 @@ public(package) fun create_drop_config(ctx: &mut TxContext): ID {
     // 初始化默认掉落规则
     init_default_drop_rules(&mut config);
 
+    config
+}
+
+// 创建掉落配置表（保留兼容性）
+public(package) fun create_drop_config(ctx: &mut TxContext): ID {
+    let config = create_drop_config_internal(ctx);
     let config_id = object::id(&config);
     transfer::share_object(config);
     config_id

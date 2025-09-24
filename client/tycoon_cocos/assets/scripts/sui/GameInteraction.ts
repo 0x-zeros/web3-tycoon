@@ -27,8 +27,8 @@ export interface GameInteractionConfig {
     rpcUrl: string;
     /** 游戏包ID */
     packageId: string;
-    /** 地图注册表对象ID */
-    mapRegistryId: string;
+    /** GameData对象ID（包含所有注册表） */
+    gameDataId: string;
 }
 
 /**
@@ -123,8 +123,8 @@ export class GameInteraction {
             arguments: [
                 tx.object(params.gameId),        // game: &mut Game
                 tx.object(params.seatId),        // seat: &Seat
-                tx.pure.vector('u64', pathChoices.map(n => n.toString())), // path_choices
-                tx.object(this.config.mapRegistryId), // registry: &MapRegistry
+                tx.pure.vector('u16', pathChoices.map(n => n.toString())), // path_choices
+                tx.object(this.config.gameDataId), // game_data: &GameData
                 tx.object('0x8'),                 // random: &Random
                 tx.object('0x6'),                 // clock: &Clock
             ],
@@ -339,5 +339,141 @@ export class GameInteraction {
         }
 
         return result;
+    }
+
+    /**
+     * 创建游戏
+     * @param templateId 地图模板ID
+     * @param maxRounds 最大回合数（0表示无限）
+     * @param walletAddress 钱包地址
+     */
+    public async createGame(
+        templateId: bigint,
+        maxRounds: number,
+        walletAddress: string
+    ): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.config.packageId}::game::create_game`,
+            arguments: [
+                tx.object(this.config.gameDataId),  // game_data: &GameData
+                tx.pure.u64(templateId.toString()),  // template_id: u64
+                tx.pure.vector('u64', [maxRounds.toString()]),  // params: vector<u64>
+            ],
+        });
+
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
+            signer: walletAddress,
+            requestType: 'WaitForLocalExecution'
+        });
+
+        console.log('[GameInteraction] Game created:', result.digest);
+        return result.digest;
+    }
+
+    /**
+     * 使用卡牌
+     * @param gameId 游戏ID
+     * @param seatId 座位ID
+     * @param cardKind 卡牌类型
+     * @param params 卡牌参数
+     * @param walletAddress 钱包地址
+     */
+    public async useCard(
+        gameId: string,
+        seatId: string,
+        cardKind: number,
+        params: number[],
+        walletAddress: string
+    ): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.config.packageId}::game::use_card`,
+            arguments: [
+                tx.object(gameId),                   // game: &mut Game
+                tx.object(seatId),                   // seat: &Seat
+                tx.pure.u8(cardKind),                // kind: u8
+                tx.pure.vector('u16', params.map(p => p.toString())),  // params: vector<u16>
+                tx.object(this.config.gameDataId),   // game_data: &GameData
+                tx.object('0x8'),                    // random: &Random
+                tx.object('0x6'),                    // clock: &Clock
+            ],
+        });
+
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
+            signer: walletAddress,
+            requestType: 'WaitForLocalExecution'
+        });
+
+        console.log('[GameInteraction] Card used:', result.digest);
+        return result.digest;
+    }
+
+    /**
+     * 购买地产
+     * @param gameId 游戏ID
+     * @param seatId 座位ID
+     * @param walletAddress 钱包地址
+     */
+    public async buyProperty(
+        gameId: string,
+        seatId: string,
+        walletAddress: string
+    ): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.config.packageId}::game::buy_property`,
+            arguments: [
+                tx.object(gameId),                   // game: &mut Game
+                tx.object(seatId),                   // seat: &Seat
+                tx.object(this.config.gameDataId),   // game_data: &GameData
+            ],
+        });
+
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
+            signer: walletAddress,
+            requestType: 'WaitForLocalExecution'
+        });
+
+        console.log('[GameInteraction] Property bought:', result.digest);
+        return result.digest;
+    }
+
+    /**
+     * 升级地产
+     * @param gameId 游戏ID
+     * @param seatId 座位ID
+     * @param walletAddress 钱包地址
+     */
+    public async upgradeProperty(
+        gameId: string,
+        seatId: string,
+        walletAddress: string
+    ): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.config.packageId}::game::upgrade_property`,
+            arguments: [
+                tx.object(gameId),                   // game: &mut Game
+                tx.object(seatId),                   // seat: &Seat
+                tx.object(this.config.gameDataId),   // game_data: &GameData
+            ],
+        });
+
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
+            signer: walletAddress,
+            requestType: 'WaitForLocalExecution'
+        });
+
+        console.log('[GameInteraction] Property upgraded:', result.digest);
+        return result.digest;
     }
 }

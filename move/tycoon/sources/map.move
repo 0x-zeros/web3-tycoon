@@ -127,13 +127,18 @@ public struct MapRegistry has key, store {
 
 // ===== Entry Functions 入口函数 =====
 
-// 创建地图注册表
-public(package) fun create_registry(ctx: &mut TxContext): ID {
-    let registry = MapRegistry {
+// 创建地图注册表（返回对象，供内部使用）
+public(package) fun create_registry_internal(ctx: &mut TxContext): MapRegistry {
+    MapRegistry {
         id: object::new(ctx),
         templates: table::new(ctx),
         template_count: 0
-    };
+    }
+}
+
+// 创建地图注册表（保留兼容性）
+public(package) fun create_registry(ctx: &mut TxContext): ID {
+    let registry = create_registry_internal(ctx);
     let registry_id = object::id(&registry);
     transfer::share_object(registry);
     registry_id

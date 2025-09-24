@@ -10,6 +10,7 @@ module tycoon::economy_tests {
     use tycoon::map::{MapRegistry};
     use tycoon::types;
     use tycoon::cards::{CardRegistry};
+    use tycoon::tycoon;
 
     // 测试购买地产
     #[test]
@@ -41,7 +42,9 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
         // 购买地产
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         // 验证地产所有权
         utils::assert_property_owner(&game, 1, option::some(utils::alice()));
@@ -81,10 +84,14 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         // 升级地产到等级1
-        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
         utils::assert_property_level(&game, 1, types::level_1());
 
         // 验证现金（初始10000 - 购买1500 - 升级900 = 7600）
@@ -121,7 +128,9 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_to_sender(scenario, seat);
 
@@ -129,7 +138,9 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::bob());
         game::test_set_player_position(&mut game, utils::bob(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario)); // 应该失败
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data); // 应该失败
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
@@ -162,7 +173,9 @@ module tycoon::economy_tests {
         game::test_set_player_cash(&mut game, utils::alice(), 100);
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario)); // 应该失败
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data); // 应该失败
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
@@ -191,12 +204,16 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         // 升级到等级4
         let mut i = 0;
         while (i < 4) {
-            game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
             i = i + 1;
         };
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
@@ -281,17 +298,23 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::alice());
         game::test_set_player_position(&mut game, utils::alice(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         // 升级到等级4
         let mut i = 0;
         while (i < 4) {
-            game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
             i = i + 1;
         };
 
         // 尝试再次升级（应该失败）
-        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
@@ -321,11 +344,17 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::admin_addr());
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         // 升级到等级2
-        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
-        game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_to_sender(scenario, seat);
@@ -342,12 +371,14 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
         // 处理停留效果（支付过路费）
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::handle_tile_stop_effect(
             &mut game,
             utils::alice(),
             1,
-            &registry
+            &game_data
         );
+        scenario::return_shared(game_data);
 
         // 计算预期过路费（基础租金150 * 等级乘数）
         // 等级2的乘数是3.0，所以过路费 = 150 * 3 = 450
@@ -386,7 +417,9 @@ module tycoon::economy_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
         scenario::next_tx(scenario, utils::admin_addr());
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_to_sender(scenario, seat);
 
@@ -398,17 +431,16 @@ module tycoon::economy_tests {
         game::test_give_card(&mut game, utils::alice(), types::card_rent_free(), 1);
 
         // 使用免租卡
-        let card_registry = scenario::take_shared<CardRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
             types::card_rent_free(),
             vector[],  // 无参数
-            &registry,
-            &card_registry,
+            &game_data,
             scenario::ctx(scenario)
         );
-        scenario::return_shared(card_registry);
+        scenario::return_shared(game_data);
 
         // 记录Alice初始现金
         let alice_initial = game::get_player_cash(&game, utils::alice());
@@ -417,12 +449,14 @@ module tycoon::economy_tests {
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
         // 处理停留效果（应该免租）
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::handle_tile_stop_effect(
             &mut game,
             utils::alice(),
             1,
-            &registry
+            &game_data
         );
+        scenario::return_shared(game_data);
 
         // 验证Alice没有支付过路费
         assert!(game::get_player_cash(&game, utils::alice()) == alice_initial, 1);
@@ -461,12 +495,16 @@ module tycoon::economy_tests {
 
         // 购买多个地产
         game::test_set_player_position(&mut game, utils::admin_addr(), 1);
-        game::buy_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::buy_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         // 升级到最高级
         let mut i = 0;
         while (i < 4) {
-            game::upgrade_property(&mut game, &seat, &registry, scenario::ctx(scenario));
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
             i = i + 1;
         };
 

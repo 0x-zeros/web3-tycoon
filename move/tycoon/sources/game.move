@@ -11,6 +11,7 @@ use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
 use tycoon::cards::{Self, CardEntry};
 use tycoon::events;
+use tycoon::tycoon::{Self, GameData};
 
 // ===== Errors =====
 // 玩家相关错误
@@ -64,16 +65,6 @@ const ETemplateNotFound: u64 = 3001;
 const ETileOccupiedByNpc: u64 = 2001;
 const ENoSuchTile: u64 = 2002;
 
-// ===== Config 游戏配置 =====
-public struct Config has store, copy, drop {
-    trigger_card_on_pass: bool,
-    trigger_lottery_on_pass: bool,
-    max_players: u8,
-    max_rounds: Option<u16>,
-    bomb_to_hospital: bool,
-    dog_to_hospital: bool,
-    barrier_consumed_on_stop: bool
-}
 
 // ===== BuffEntry buff条目 =====
 //
@@ -197,7 +188,7 @@ public struct Seat has key {
 // - npc_on: 地块上的NPC实例
 //
 // 其他组件：
-// - config: 游戏配置参数
+// - max_rounds: 最大轮次限制（可选）
 // - winner: 游戏结束时的获胜者
 public struct Game has key, store {
     id: UID,
@@ -217,7 +208,8 @@ public struct Game has key, store {
     npc_on: Table<u16, NpcInst>,
     owner_index: Table<u8 /* player_index */, vector<u16>>,
 
-    config: Config,
+    // 配置
+    max_rounds: Option<u16>,        // 最大轮次限制
 
     // 额外状态
     winner: Option<address>,//todo 不需要吧？
@@ -232,23 +224,26 @@ public struct Game has key, store {
 
 // 创建游戏
 public entry fun create_game(
-    registry: &MapRegistry,
+    game_data: &GameData,
     template_id: u64,
+    params: vector<u64>,  // 通用参数（params[0]=max_rounds, 0表示无限）
     ctx: &mut TxContext
 ) {
     // 验证模板存在
-    assert!(map::has_template(registry, template_id), ETemplateNotFound);
-    let template = map::get_template(registry, template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    assert!(map::has_template(map_registry, template_id), ETemplateNotFound);
+    let template = map::get_template(map_registry, template_id);
 
-    // 创建默认配置
-    let config = Config {//todo config应该作为参数传进来，有些数值应该是需要客户端传进来
-        trigger_card_on_pass: true,
-        trigger_lottery_on_pass: true,
-        max_players: types::default_max_players(),
-        max_rounds: option::some(types::default_max_rounds()),
-        bomb_to_hospital: true,
-        dog_to_hospital: true,
-        barrier_consumed_on_stop: true
+    // 解析参数
+    let max_rounds = if (vector::is_empty(&params)) {
+        option::none()  // 默认无限轮次
+    } else {
+        let rounds = *vector::borrow(&params, 0);
+        if (rounds == 0) {
+            option::none()
+        } else {
+            option::some((rounds as u16))
+        }
     };
 
     // 创建游戏对象
@@ -268,24 +263,26 @@ public entry fun create_game(
         level_of: table::new(ctx),
         npc_on: table::new(ctx),
         owner_index: table::new(ctx),
-        config,
+        max_rounds,
         winner: option::none(),
         pending_decision: types::decision_none(),
         decision_tile: 0,
         decision_amount: 0
     };
 
-    // 创建者自动加入
+    // 创建者自动加入（使用 GameData 中的起始资金）
     let creator = ctx.sender();
-    let player = create_player(creator, types::dir_cw(), ctx);  // 默认顺时针，游戏开始时随机
+    let starting_cash = tycoon::get_starting_cash(game_data);
+    let player = create_player_with_cash(creator, types::dir_cw(), starting_cash, ctx);
     game.players.push_back(player);
 
     // 发出游戏创建事件
+    let max_players = map::get_tile_count(template);  // 使用地块数量作为最大玩家数
     events::emit_game_created_event(
         game_id_copy,
         creator,
         template_id,
-        config.max_players
+        (max_players as u8)
     );
 
     // 创建座位凭证（索引为 0）
@@ -310,7 +307,7 @@ public entry fun join(
 
     // 验证游戏状态
     assert!(game.status == types::status_ready(), EAlreadyStarted);
-    assert!(game.players.length() < (game.config.max_players as u64), EJoinFull);
+    // 暂时移除最大玩家数限制（或使用地图模板的某个属性）
 
     // 检查是否已加入
     let mut i = 0;
@@ -388,8 +385,7 @@ public entry fun use_card(
     seat: &Seat,
     kind: u8,
     params: vector<u16>,  // 统一参数：玩家索引、地块ID、骰子值等
-    registry: &MapRegistry,
-    card_registry: &cards::CardRegistry,
+    game_data: &GameData,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -412,6 +408,7 @@ public entry fun use_card(
     let mut cash_changes = vector[];
 
     // 应用卡牌效果并收集事件数据
+    let map_registry = tycoon::get_map_registry(game_data);
     apply_card_effect_with_collectors(
         game,
         seat.player_index,
@@ -420,7 +417,7 @@ public entry fun use_card(
         &mut npc_changes,
         &mut buff_changes,
         &mut cash_changes,
-        registry
+        map_registry
     );
 
     // 发射聚合事件
@@ -442,7 +439,7 @@ public entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
     path_choices: vector<u16>,  // 替换 dir_intent，传分叉选择序列
-    registry: &MapRegistry,
+    game_data: &GameData,
     r: &Random,
     clock: &Clock,//todo 在获取btc价格或者其他defi相关场景的时候会使用到
     ctx: &mut TxContext
@@ -480,6 +477,7 @@ public entry fun roll_and_step(
     let mut cash_changes = vector[];
 
     // 执行逐步移动并收集事件数据
+    let map_registry = tycoon::get_map_registry(game_data);
     execute_step_movement_with_choices(
         game,
         seat.player_index,
@@ -487,7 +485,7 @@ public entry fun roll_and_step(
         &path_choices,
         &mut steps,
         &mut cash_changes,
-        registry,
+        game_data,
         &mut generator
     );
 
@@ -521,7 +519,7 @@ public entry fun decide_rent_payment(
     game: &mut Game,
     seat: &Seat,
     use_rent_free: bool,
-    registry: &MapRegistry,
+    game_data: &GameData,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -621,7 +619,7 @@ public entry fun end_turn(
 public entry fun buy_property(
     game: &mut Game,
     seat: &Seat,
-    registry: &MapRegistry,
+    game_data: &GameData,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -639,7 +637,8 @@ public entry fun buy_property(
     assert!(tile_id == game.decision_tile, EPosMismatch);
 
     // 获取地块信息
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
 
     // 验证地块类型
@@ -682,7 +681,7 @@ public entry fun buy_property(
 public entry fun upgrade_property(
     game: &mut Game,
     seat: &Seat,
-    registry: &MapRegistry,
+    game_data: &GameData,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -700,7 +699,8 @@ public entry fun upgrade_property(
     assert!(tile_id == game.decision_tile, EPosMismatch);
 
     // 获取地块信息
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
 
     // 验证地块类型
@@ -742,8 +742,8 @@ public entry fun upgrade_property(
 
 // ===== Internal Functions 内部函数 =====
 
-// 创建玩家
-fun create_player(owner: address, dir_pref: u8, _ctx: &mut TxContext): Player {
+// 创建玩家（指定起始资金）
+fun create_player_with_cash(owner: address, dir_pref: u8, cash: u64, _ctx: &mut TxContext): Player {
     // 创建初始卡牌
     let mut initial_cards = vector::empty();
     initial_cards.push_back(cards::new_card_entry(types::card_move_ctrl(), 1));  // 遥控骰子 1 张
@@ -753,7 +753,7 @@ fun create_player(owner: address, dir_pref: u8, _ctx: &mut TxContext): Player {
     Player {
         owner,
         pos: 0,
-        cash: types::default_starting_cash(),
+        cash,
         buffs: vector::empty(),  // 初始化buffs
         in_prison_turns: 0,
         in_hospital_turns: 0,
@@ -761,6 +761,11 @@ fun create_player(owner: address, dir_pref: u8, _ctx: &mut TxContext): Player {
         cards: initial_cards,
         dir_pref  // 使用传入的方向
     }
+}
+
+// 创建玩家（默认起始资金）
+fun create_player(owner: address, dir_pref: u8, ctx: &mut TxContext): Player {
+    create_player_with_cash(owner, dir_pref, types::default_starting_cash(), ctx)
 }
 
 // 获取当前活跃玩家地址
@@ -896,10 +901,11 @@ fun execute_step_movement_with_choices(
     path_choices: &vector<u16>,
     steps: &mut vector<events::StepEffect>,
     cash_changes: &mut vector<events::CashDelta>,
-    registry: &MapRegistry,
+    game_data: &GameData,
     generator: &mut RandomGenerator
 ) {
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
 
     // 先读取必要的玩家信息
     let (from_pos, mut direction, is_frozen) = {
@@ -914,7 +920,7 @@ fun execute_step_movement_with_choices(
             player_index,
             from_pos,
             cash_changes,
-            registry,
+            game_data,
             generator
         );
 
@@ -1011,8 +1017,8 @@ fun execute_step_movement_with_choices(
                 };
 
                 // 找医院并送去
-                let hospital_tile = find_nearest_hospital(game, next_pos, registry);
-                send_to_hospital_internal(game, player_index, hospital_tile, registry);
+                let hospital_tile = find_nearest_hospital(game, next_pos, game_data);
+                send_to_hospital_internal(game, player_index, hospital_tile, game_data);
 
                 // 移除NPC
                 let consumed = consume_npc_if_consumable(game, next_pos, &npc);
@@ -1059,7 +1065,7 @@ fun execute_step_movement_with_choices(
                     player_index,
                     next_pos,
                     cash_changes,
-                    registry,
+                    game_data,
                     generator
                 ));
 
@@ -1121,7 +1127,7 @@ fun execute_step_movement_with_choices(
                 player_index,
                 next_pos,
                 cash_changes,
-                registry,
+                game_data,
                 generator
             ));
 
@@ -1180,22 +1186,23 @@ fun handle_tile_pass(
     game: &mut Game,
     player_index: u8,
     tile_id: u16,
-    registry: &MapRegistry,
+    game_data: &GameData,
     generator: &mut RandomGenerator
 ) {
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
 
-    // 只有卡片格和彩票格在经过时触发
+    // 只有卡片格和彩票格在经过时触发（固定行为）
     if (is_passable_trigger(tile_kind)) {
-        if (tile_kind == types::tile_card() && game.config.trigger_card_on_pass) {
+        if (tile_kind == types::tile_card()) {
             // 抽卡
             let random_value = generator.generate_u8();
             let (card_kind, count) = cards::draw_card_on_pass(random_value);
             let player = game.players.borrow_mut(player_index as u64);
             cards::give_card_to_player(&mut player.cards, card_kind, count);
-        } else if (tile_kind == types::tile_lottery() && game.config.trigger_lottery_on_pass) {
+        } else if (tile_kind == types::tile_lottery()) {
             // 彩票逻辑（简化）
             // TODO: 实现彩票系统
         };
@@ -1207,10 +1214,11 @@ fun handle_tile_stop(
     game: &mut Game,
     player_index: u8,
     tile_id: u16,
-    registry: &MapRegistry,
+    game_data: &GameData,
     generator: &mut RandomGenerator
 ) {
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
     let player_addr = game.players.borrow(player_index as u64).owner;
@@ -1254,10 +1262,11 @@ fun handle_tile_stop_with_collector(
     player_index: u8,
     tile_id: u16,
     cash_changes: &mut vector<events::CashDelta>,
-    registry: &MapRegistry,
+    game_data: &GameData,
     generator: &mut RandomGenerator
 ): events::StopEffect {
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
     let player_addr = game.players.borrow(player_index as u64).owner;
@@ -1532,8 +1541,9 @@ fun handle_prison_stop(game: &mut Game, player_index: u8, tile_id: u16) {
 }
 
 // 找最近的医院
-fun find_nearest_hospital(game: &Game, current_pos: u16, registry: &MapRegistry): u16 {
-    let template = map::get_template(registry, game.template_id);
+fun find_nearest_hospital(game: &Game, current_pos: u16, game_data: &GameData): u16 {
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let hospital_ids = map::get_hospital_ids(template);
 
     if (hospital_ids.is_empty()) {
@@ -1545,15 +1555,16 @@ fun find_nearest_hospital(game: &Game, current_pos: u16, registry: &MapRegistry)
 }
 
 // 送医院（内部函数）
-fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: u16, registry: &MapRegistry) {
+fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: u16, game_data: &GameData) {
     let player = game.players.borrow_mut(player_index as u64);
     player.pos = hospital_tile;
     player.in_hospital_turns = types::default_hospital_turns();
 }
 
 // 送医院
-fun send_to_hospital(game: &mut Game, player_index: u8, registry: &MapRegistry) {
-    let template = map::get_template(registry, game.template_id);
+fun send_to_hospital(game: &mut Game, player_index: u8, game_data: &GameData) {
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let hospital_ids = map::get_hospital_ids(template);
 
     if (!hospital_ids.is_empty()) {
@@ -1981,8 +1992,8 @@ fun advance_turn(game: &mut Game) {
         refresh_at_round_end(game);
 
         // 步骤4: 检查是否达到最大轮数限制
-        if (option::is_some(&game.config.max_rounds)) {
-            let max_rounds = *option::borrow(&game.config.max_rounds);
+        if (option::is_some(&game.max_rounds)) {
+            let max_rounds = *option::borrow(&game.max_rounds);
             // 使用 >= 判断：当 round >= max_rounds 时结束（完成 max_rounds 轮后结束）
             if (game.round >= max_rounds) {
                 // 达到轮次上限，游戏结束
@@ -2182,12 +2193,17 @@ public fun get_property_level(game: &Game, tile_id: u16): u8 {
 public fun create_game_with_config(
     name: vector<u8>,
     template_id: u64,
-    _config: Option<Config>,
-    registry: &MapRegistry,
+    _config: Option<u64>,  // 改为 Option<u64> 作为 max_rounds
+    game_data: &GameData,
     ctx: &mut TxContext
 ): ID {
-    // 忽略name和config参数，使用默认值创建游戏
-    create_game(registry, template_id, ctx);
+    // 忽略name，使用默认参数创建游戏
+    let params = if (option::is_some(&_config)) {
+        vector[*option::borrow(&_config)]
+    } else {
+        vector[]
+    };
+    create_game(game_data, template_id, params, ctx);
 
     // 获取刚创建的游戏ID
     // 注意：实际实现中需要返回正确的ID
@@ -2257,10 +2273,11 @@ public fun handle_tile_stop_effect(
     game: &mut Game,
     player: address,
     tile_id: u16,
-    registry: &MapRegistry
+    game_data: &GameData
 ) {
     // 处理停留效果
-    let template = map::get_template(registry, game.template_id);
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
     let tile_kind = map::tile_kind(tile);
     let player_index = find_player_index(game, player);

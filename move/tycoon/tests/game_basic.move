@@ -92,6 +92,8 @@ module tycoon::game_basic_tests {
         // 多个玩家加入
         let players = vector[utils::alice(), utils::bob(), utils::carol()];
         utils::join_players(&mut game, players, scenario);
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -101,7 +103,6 @@ module tycoon::game_basic_tests {
         assert!(all_players.length() == 4, 1);
 
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         scenario::end(scenario_val);
     }
 
@@ -123,6 +124,7 @@ module tycoon::game_basic_tests {
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -145,7 +147,9 @@ module tycoon::game_basic_tests {
         game = scenario::take_shared<Game>(scenario);
         let registry = scenario::take_shared<MapRegistry>(scenario);
 
-        utils::play_turn(&mut game, vector[], &registry, &clock, scenario);
+        utils::play_turn(&mut game, vector[], scenario);
+        scenario::return_shared(game);
+        scenario::return_shared(registry);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -158,7 +162,6 @@ module tycoon::game_basic_tests {
         assert!(next_player == utils::alice(), 6);
 
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -183,6 +186,7 @@ module tycoon::game_basic_tests {
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
@@ -197,7 +201,7 @@ module tycoon::game_basic_tests {
 
     // 测试无法在游戏开始后加入
     #[test]
-    #[expected_failure(abort_code = 1004)] // err_already_started
+    #[expected_failure(abort_code = tycoon::game::EAlreadyStarted)]
     fun test_cannot_join_after_start() {
         let mut scenario_val = scenario::begin(utils::admin_addr());
         let scenario = &mut scenario_val;
@@ -213,6 +217,7 @@ module tycoon::game_basic_tests {
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
+        scenario::return_shared(game);
 
         // Bob尝试加入（应该失败）
         scenario::next_tx(scenario, utils::bob());

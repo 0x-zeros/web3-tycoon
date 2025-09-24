@@ -62,11 +62,11 @@ module tycoon::game_basic_tests {
         assert!(game::get_round(&game) == 0, 3);
 
         // 玩家加入游戏
-        scenario::return_shared(game);
         utils::join_game(&mut game, utils::alice(), scenario);
 
+        scenario::return_shared(game);
         scenario::next_tx(scenario, utils::admin_addr());
-        game = scenario::take_shared<Game>(scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
 
         // 验证玩家数量（创建者 + Alice = 2）
         let players = game::get_players(&game);
@@ -90,7 +90,6 @@ module tycoon::game_basic_tests {
 
         // 多个玩家加入
         let players = vector[utils::alice(), utils::bob(), utils::carol()];
-        scenario::return_shared(game);
         utils::join_players(&mut game, players, scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
@@ -119,7 +118,6 @@ module tycoon::game_basic_tests {
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入
-        scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
 
         // 开始游戏
@@ -180,7 +178,6 @@ module tycoon::game_basic_tests {
         utils::assert_game_status(&game, types::status_ready());
 
         // 加入玩家
-        scenario::return_shared(game);
         utils::join_players(&mut game, vector[utils::alice()], scenario);
 
         // 开始游戏
@@ -211,7 +208,6 @@ module tycoon::game_basic_tests {
         let clock = utils::create_test_clock(scenario);
 
         // Alice加入
-        scenario::return_shared(game);
         utils::join_game(&mut game, utils::alice(), scenario);
 
         // 开始游戏

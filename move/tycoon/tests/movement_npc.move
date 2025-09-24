@@ -63,7 +63,7 @@ module tycoon::movement_npc_tests {
         let r = scenario::take_shared<Random>(scenario);
         game::roll_and_step(
             &mut game,
-            seat,
+            &seat,
             option::none(),
             &registry,
             &r,
@@ -245,7 +245,7 @@ module tycoon::movement_npc_tests {
         let r = scenario::take_shared<Random>(scenario);
         game::roll_and_step(
             &mut game,
-            seat,
+            &seat,
             option::none(),
             &registry,
             &r,

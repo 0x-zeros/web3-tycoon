@@ -5,7 +5,7 @@ module tycoon::game;
 use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
 use sui::coin;
-use sui::random::{Self, Random};
+use sui::random::{Self, Random, RandomGenerator};
 
 use tycoon::types;
 use tycoon::map::{Self, MapTemplate, MapRegistry};
@@ -450,8 +450,11 @@ public entry fun roll_and_step(
     let player_addr = seat.player;
     let player_index = seat.player_index;
 
+    // 在函数开头创建一个生成器，贯穿整个交易使用
+    let mut generator = random::new_generator(r, ctx);
+
     // 获取骰子点数
-    let dice = get_dice_value(game, player_index, r, ctx);
+    let dice = get_dice_value(game, player_index, &mut generator);
 
     let player = game.players.borrow_mut(player_index as u64);
     let from_pos = player.pos;
@@ -495,8 +498,7 @@ public entry fun roll_and_step(
         &mut steps,
         &mut cash_changes,
         registry,
-        r,
-        ctx
+        &mut generator
     );
 
     // 获取最终位置
@@ -866,7 +868,7 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
 }
 
 // 获取骰子点数
-fun get_dice_value(game: &Game, player_index: u8, r: &Random, ctx: &mut TxContext): u8 {
+fun get_dice_value(game: &Game, player_index: u8, generator: &mut RandomGenerator): u8 {
     let player = game.players.borrow(player_index as u64);
 
     // 使用buff系统检查遥控骰子
@@ -875,14 +877,9 @@ fun get_dice_value(game: &Game, player_index: u8, r: &Random, ctx: &mut TxContex
         return (value as u8)
     };
 
-    rand_1_6(r, ctx)
-}
-
-// 生成 1-6 的随机数
-fun rand_1_6(r: &Random, ctx: &mut TxContext): u8 {
-    let mut generator = random::new_generator(r, ctx);
     generator.generate_u8_in_range(1, 6)
 }
+
 
 // 计算移动目标
 // 注意：当use_adj=true时，返回from作为占位符，实际路径将通过BFS动态确定
@@ -970,8 +967,7 @@ fun execute_step_movement_with_collectors(
     steps: &mut vector<events::StepEffect>,
     cash_changes: &mut vector<events::CashDelta>,
     registry: &MapRegistry,
-    r: &Random,
-    ctx: &mut TxContext
+    generator: &mut RandomGenerator
 ) {
     let template = map::get_template(registry, game.template_id);
     let player_addr = game.players.borrow(player_index as u64).owner;
@@ -990,8 +986,7 @@ fun execute_step_movement_with_collectors(
                 from,
                 cash_changes,
                 registry,
-                r,
-                ctx
+                generator
             );
 
             // 记录步骤（停留在原地）
@@ -1107,8 +1102,7 @@ fun execute_step_movement_with_collectors(
                     next_pos,
                     cash_changes,
                     registry,
-                    r,
-                    ctx
+                    generator
                 ));
 
                 // 记录步骤并结束
@@ -1139,7 +1133,6 @@ fun execute_step_movement_with_collectors(
             // 处理经过卡牌格
             if (tile_kind == types::tile_card()) {
                 // 经过抽1张卡
-                let mut generator = random::new_generator(r, ctx);
                 let random_value = generator.generate_u8();
                 let (card_kind, _) = cards::draw_card_on_pass(random_value);
                 let player = game.players.borrow_mut(player_index as u64);
@@ -1172,8 +1165,7 @@ fun execute_step_movement_with_collectors(
                 next_pos,
                 cash_changes,
                 registry,
-                r,
-                ctx
+                generator
             ));
 
             // 记录最后的步骤
@@ -1202,8 +1194,7 @@ fun handle_tile_pass(
     player_index: u8,
     tile_id: u64,
     registry: &MapRegistry,
-    r: &Random,
-    ctx: &mut TxContext
+    generator: &mut RandomGenerator
 ) {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
@@ -1213,7 +1204,6 @@ fun handle_tile_pass(
     if (is_passable_trigger(tile_kind)) {
         if (tile_kind == types::tile_card() && game.config.trigger_card_on_pass) {
             // 抽卡
-            let mut generator = random::new_generator(r, ctx);
             let random_value = generator.generate_u8();
             let (card_kind, count) = cards::draw_card_on_pass(random_value);
             let player = game.players.borrow_mut(player_index as u64);
@@ -1231,8 +1221,7 @@ fun handle_tile_stop(
     player_index: u8,
     tile_id: u64,
     registry: &MapRegistry,
-    r: &Random,
-    ctx: &mut TxContext
+    generator: &mut RandomGenerator
 ) {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
@@ -1247,7 +1236,6 @@ fun handle_tile_stop(
         handle_prison_stop(game, player_index, tile_id);
     } else if (tile_kind == types::tile_card()) {
         // 停留时也抽卡
-        let mut generator = random::new_generator(r, ctx);
         let random_value = generator.generate_u8();
         let (card_kind, count) = cards::draw_card_on_stop(random_value);
         let player = game.players.borrow_mut(player_index as u64);
@@ -1280,8 +1268,7 @@ fun handle_tile_stop_with_collector(
     tile_id: u64,
     cash_changes: &mut vector<events::CashDelta>,
     registry: &MapRegistry,
-    r: &Random,
-    ctx: &mut TxContext
+    generator: &mut RandomGenerator
 ): events::StopEffect {
     let template = map::get_template(registry, game.template_id);
     let tile = map::get_tile(template, tile_id);
@@ -1416,7 +1403,6 @@ fun handle_tile_stop_with_collector(
         turns_opt = option::some(types::default_prison_turns());
     } else if (tile_kind == types::tile_card()) {
         // 停留时抽卡
-        let mut generator = random::new_generator(r, ctx);
         let random_value = generator.generate_u8();
         let (card_kind, count) = cards::draw_card_on_stop(random_value);
         let player = game.players.borrow_mut(player_index as u64);
@@ -2046,6 +2032,9 @@ public fun get_turn_in_round(game: &Game): u8 { game.turn }
 
 // ===== Public Query Functions 公共查询函数 =====
 
+// 获取Seat的player地址
+public fun get_seat_player(seat: &Seat): address { seat.player }
+
 public fun get_game_status(game: &Game): u8 { game.status }
 // 获取当前轮和回合
 // 返回: (轮次, 轮内回合)
@@ -2155,11 +2144,6 @@ public fun get_turn(game: &Game): u8 {
     game.turn
 }
 
-// 获取当前轮次
-#[test_only]
-public fun get_round(game: &Game): u16 {
-    game.round
-}
 
 #[test_only]
 public fun current_turn_player(game: &Game): address {
@@ -2207,10 +2191,11 @@ public fun create_game_with_config(
 #[test_only]
 public fun join_with_coin(
     game: &mut Game,
-    _coin: coin::Coin<sui::sui::SUI>,
+    coin: coin::Coin<sui::sui::SUI>,
     ctx: &mut TxContext
 ) {
-    // 忽略coin参数，直接加入游戏
+    // 销毁测试币并加入游戏
+    coin::burn_for_testing(coin);
     join(game, ctx)
 }
 

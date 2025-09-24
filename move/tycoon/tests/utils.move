@@ -37,7 +37,7 @@ module tycoon::test_utils {
         scenario::next_tx(scenario, admin_addr());
         {
             let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-            let registry = scenario::take_shared<MapRegistry>(scenario);
+            let mut registry = scenario::take_shared<MapRegistry>(scenario);
 
             // 创建简单测试地图模板
             let template_id = create_simple_map(&admin_cap, &mut registry, scenario::ctx(scenario));
@@ -216,7 +216,7 @@ module tycoon::test_utils {
         seat: &Seat,
         scenario: &mut Scenario
     ) {
-        let player = seat.player;
+        let player = game::get_seat_player(seat);
         scenario::next_tx(scenario, player);
         game::end_turn(game, seat, scenario::ctx(scenario));
     }
@@ -231,7 +231,7 @@ module tycoon::test_utils {
     ) {
         // 获取当前玩家的Seat
         let seat = get_current_player_seat(game, scenario);
-        let player = seat.player;
+        let player = game::get_seat_player(&seat);
 
         // 执行掷骰移动
         scenario::next_tx(scenario, player);
@@ -347,7 +347,7 @@ module tycoon::test_utils {
         game: &mut Game,
         player: address,
         buff_kind: u8,
-        turns: u64,
+        turns: u16,
         value: u64
     ) {
         game::apply_buff_to_player(game, player, buff_kind, turns, value);

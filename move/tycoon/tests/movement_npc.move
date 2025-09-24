@@ -60,7 +60,14 @@ module tycoon::movement_npc_tests {
         game::test_set_player_position(&mut game, utils::alice(), 1);
 
         // 掷骰移动（假设骰子点数会让Alice经过位置2）
-        let r = scenario::take_shared<Random>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标
+        random::update_randomness_state_for_testing(
+            &mut r,
+            1,
+            b"test_barrier_npc",
+            scenario::ctx(scenario)
+        );
         game::roll_and_step(
             &mut game,
             &seat,
@@ -242,7 +249,14 @@ module tycoon::movement_npc_tests {
 
         // Admin尝试移动（应该被跳过）
         let seat = utils::get_current_player_seat(&game, scenario);
-        let r = scenario::take_shared<Random>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标
+        random::update_randomness_state_for_testing(
+            &mut r,
+            3,
+            b"test_injury_skip",
+            scenario::ctx(scenario)
+        );
         game::roll_and_step(
             &mut game,
             &seat,

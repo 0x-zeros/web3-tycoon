@@ -236,10 +236,19 @@ module tycoon::game_basic_tests {
         // 不加入额外玩家，直接尝试开始游戏（只有创建者）
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标
+        random::update_randomness_state_for_testing(
+            &mut r,
+            0,
+            b"test_start_alone",
+            scenario::ctx(scenario)
+        );
         let clock = utils::create_test_clock(scenario);
-        game::start(&mut game, &clock, scenario::ctx(scenario));
+        game::start(&mut game, &r, &clock, scenario::ctx(scenario));
 
         scenario::return_shared(game);
+        scenario::return_shared(r);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }

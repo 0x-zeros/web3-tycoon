@@ -171,7 +171,16 @@ module tycoon::test_utils {
         scenario: &mut Scenario
     ) {
         scenario::next_tx(scenario, admin_addr());
-        game::start(game, clock, scenario::ctx(scenario));
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标，确保随机性
+        random::update_randomness_state_for_testing(
+            &mut r,
+            0, // current_epoch
+            b"test_start_game", // randomness_round
+            scenario::ctx(scenario)
+        );
+        game::start(game, &r, clock, scenario::ctx(scenario));
+        scenario::return_shared(r);
     }
 
     // 开始游戏（自动创建clock）
@@ -205,7 +214,14 @@ module tycoon::test_utils {
     ) {
         let player = game::current_turn_player(game);
         scenario::next_tx(scenario, player);
-        let r = scenario::take_shared<Random>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标，确保每次掷骰都有新的随机性
+        random::update_randomness_state_for_testing(
+            &mut r,
+            game::get_round(game) as u64, // 使用当前轮次作为epoch
+            b"test_roll", // randomness_round
+            scenario::ctx(scenario)
+        );
         game::roll_and_step(game, seat, path_choices, registry, &r, clock, scenario::ctx(scenario));
         scenario::return_shared(r);
     }
@@ -235,7 +251,14 @@ module tycoon::test_utils {
 
         // 执行掷骰移动
         scenario::next_tx(scenario, player);
-        let r = scenario::take_shared<Random>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标
+        random::update_randomness_state_for_testing(
+            &mut r,
+            game::get_round(game) as u64,
+            b"test_player_roll",
+            scenario::ctx(scenario)
+        );
         game::roll_and_step(game, &seat, path_choices, registry, &r, clock, scenario::ctx(scenario));
         scenario::return_shared(r);
 

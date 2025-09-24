@@ -58,7 +58,14 @@ module tycoon::cards_basic_tests {
         assert!(game::has_buff(&game, utils::admin_addr(), types::buff_move_ctrl()), 1);
 
         // 掷骰移动
-        let r = scenario::take_shared<Random>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标
+        random::update_randomness_state_for_testing(
+            &mut r,
+            1,
+            b"test_move_ctrl_card",
+            scenario::ctx(scenario)
+        );
         game::roll_and_step(
             &mut game,
             &seat,
@@ -341,7 +348,14 @@ module tycoon::cards_basic_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         // 尝试移动（应该被跳过）
-        let r = scenario::take_shared<Random>(scenario);
+        let mut r = scenario::take_shared<Random>(scenario);
+        // 显式更新随机信标
+        random::update_randomness_state_for_testing(
+            &mut r,
+            2,
+            b"test_freeze_skip",
+            scenario::ctx(scenario)
+        );
         game::roll_and_step(
             &mut game,
             &seat,

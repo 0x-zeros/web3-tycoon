@@ -12,6 +12,13 @@ const ENoSuchTile: u64 = 2002;
 const ETemplateNotFound: u64 = 3001;
 const ETemplateAlreadyExists: u64 = 3002;
 const ETileAlreadyExists: u64 = 3003;  // 地块已存在
+const ETileIdTooLarge: u64 = 3010;     // tile_id超过最大允许值
+const EInvalidNextTileId: u64 = 3011;  // 无效的下一个地块ID
+const ETargetTileNotExist: u64 = 3012; // 目标地块不存在
+
+// ===== Constants =====
+const INVALID_TILE_ID: u16 = 65535;    // u16::MAX 作为无效/未设置的tile_id
+const MAX_TILE_ID: u16 = 65534;        // 实际可用的最大tile_id
 
 // ===== TileStatic 静态地块信息 =====
 //
@@ -181,8 +188,8 @@ public fun new_tile_static(
         price,
         base_toll,
         special,
-        cw_next: 0,     // 默认值，后续通过set_cw_next设置
-        ccw_next: 0,    // 默认值，后续通过set_ccw_next设置
+        cw_next: INVALID_TILE_ID,     // 使用无效值作为未设置标记
+        ccw_next: INVALID_TILE_ID,    // 使用无效值作为未设置标记
         ring_id: 0,     // 默认值，后续通过set_ring_info设置
         ring_idx: 0     // 默认值，后续通过set_ring_info设置
     }
@@ -202,6 +209,16 @@ public fun new_tile_static_with_nav(
     ring_id: u8,
     ring_idx: u16
 ): TileStatic {
+    // 验证导航字段的有效性
+    // 允许 INVALID_TILE_ID 表示未设置（将在add_tile_to_template中处理）
+    // 但如果不是 INVALID_TILE_ID，必须是有效范围内
+    if (cw_next != INVALID_TILE_ID) {
+        assert!(cw_next <= MAX_TILE_ID, ETileIdTooLarge);
+    };
+    if (ccw_next != INVALID_TILE_ID) {
+        assert!(ccw_next <= MAX_TILE_ID, ETileIdTooLarge);
+    };
+
     TileStatic {
         x,
         y,
@@ -250,14 +267,16 @@ public fun add_tile_to_template(
     tile_id: u16,
     mut tile: TileStatic
 ) {
+    // 添加tile_id边界检查
+    assert!(tile_id <= MAX_TILE_ID, ETileIdTooLarge);
     assert!(!table::contains(&template.tiles_static, tile_id), ETileAlreadyExists);
 
-    // 如果导航字段为0（未设置），初始化为自环
+    // 如果导航字段未设置（等于INVALID_TILE_ID），初始化为自环
     // 这样新创建的地块默认是"孤岛"，后续通过set_cw_next/set_ccw_next建立连接
-    if (tile.cw_next == 0) {
+    if (tile.cw_next == INVALID_TILE_ID) {
         tile.cw_next = tile_id;
     };
-    if (tile.ccw_next == 0) {
+    if (tile.ccw_next == INVALID_TILE_ID) {
         tile.ccw_next = tile_id;
     };
 
@@ -297,6 +316,18 @@ public fun set_cw_next(
     next_id: u16
 ) {
     assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+
+    // 验证next_id的有效性
+    // 允许自环（next_id == tile_id）用于表示端点
+    // 但禁止设置为INVALID_TILE_ID（除非是真正的未设置状态）
+    assert!(next_id != INVALID_TILE_ID, EInvalidNextTileId);
+    assert!(next_id <= MAX_TILE_ID, ETileIdTooLarge);
+
+    // 如果不是自环，验证目标地块存在
+    if (next_id != tile_id) {
+        assert!(table::contains(&template.tiles_static, next_id), ETargetTileNotExist);
+    };
+
     let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
     tile.cw_next = next_id;
 }
@@ -308,6 +339,18 @@ public fun set_ccw_next(
     next_id: u16
 ) {
     assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+
+    // 验证next_id的有效性
+    // 允许自环（next_id == tile_id）用于表示端点
+    // 但禁止设置为INVALID_TILE_ID（除非是真正的未设置状态）
+    assert!(next_id != INVALID_TILE_ID, EInvalidNextTileId);
+    assert!(next_id <= MAX_TILE_ID, ETileIdTooLarge);
+
+    // 如果不是自环，验证目标地块存在
+    if (next_id != tile_id) {
+        assert!(table::contains(&template.tiles_static, next_id), ETargetTileNotExist);
+    };
+
     let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
     tile.ccw_next = next_id;
 }

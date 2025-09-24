@@ -66,8 +66,8 @@ entry fun publish_test_map(
 entry fun publish_custom_map_template(
     registry: &mut MapRegistry,
     template_id: u64,
-    width: u16,
-    height: u16,
+    width: u8,
+    height: u8,
     _admin: &AdminCap,
     ctx: &mut TxContext
 ) {
@@ -106,8 +106,8 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
         let kind = if (i == 5) { types::tile_card() } else { types::tile_property() };
         let price = 1000 + i * 200;
         let toll = 100 + i * 20;
-        map::add_tile_to_template(&mut template, i,
-            map::new_tile_static((i as u16), 0, kind, types::size_1x1(), price, toll, 0));
+        map::add_tile_to_template(&mut template, (i as u16),
+            map::new_tile_static((i as u8), 0, kind, types::size_1x1(), price, toll, 0));
         i = i + 1;
     };
 
@@ -118,11 +118,11 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 第二边（东边）
     i = 11;
     while (i < 20) {
-        let y = ((i - 10) as u16);
+        let y = ((i - 10) as u8);
         let kind = if (i == 15) { types::tile_hospital() } else { types::tile_property() };
         let price = 2000 + (i - 10) * 200;
         let toll = 200 + (i - 10) * 20;
-        map::add_tile_to_template(&mut template, i,
+        map::add_tile_to_template(&mut template, (i as u16),
             map::new_tile_static(10, y, kind, types::size_1x1(), price, toll, 0));
         i = i + 1;
     };
@@ -134,11 +134,11 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 第三边（北边）
     i = 21;
     while (i < 30) {
-        let x = (10 - (i - 20)) as u16;
+        let x = (10 - (i - 20)) as u8;
         let kind = if (i == 25) { types::tile_chance() } else { types::tile_property() };
         let price = 3000 + (i - 20) * 200;
         let toll = 300 + (i - 20) * 20;
-        map::add_tile_to_template(&mut template, i,
+        map::add_tile_to_template(&mut template, (i as u16),
             map::new_tile_static(x, 10, kind, types::size_1x1(), price, toll, 0));
         i = i + 1;
     };
@@ -150,11 +150,11 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 第四边（西边）
     i = 31;
     while (i < 40) {
-        let y = (10 - (i - 30)) as u16;
+        let y = ((10 - (i - 30)) as u8);
         let kind = if (i == 35) { types::tile_news() } else { types::tile_property() };
         let price = 4000 + (i - 30) * 200;
         let toll = 400 + (i - 30) * 20;
-        map::add_tile_to_template(&mut template, i,
+        map::add_tile_to_template(&mut template, (i as u16),
             map::new_tile_static(0, y, kind, types::size_1x1(), price, toll, 0));
         i = i + 1;
     };
@@ -162,9 +162,9 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 设置顺时针和逆时针路径
     i = 0;
     while (i < 40) {
-        map::set_cw_next(&mut template, i, (i + 1) % 40);//cw,ccw 反了？todo
-        map::set_ccw_next(&mut template, i, (i + 39) % 40);
-        map::set_ring_info(&mut template, i, 0, (i as u32));
+        map::set_cw_next(&mut template, (i as u16), ((i + 1) % 40) as u16);//cw,ccw 反了？todo
+        map::set_ccw_next(&mut template, (i as u16), ((i + 39) % 40) as u16);
+        map::set_ring_info(&mut template, (i as u16), 0, (i as u16));
         i = i + 1;
     };
 

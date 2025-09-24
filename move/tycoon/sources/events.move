@@ -116,7 +116,7 @@ public struct CashDelta has copy, drop, store {
 
 // 卡牌获取项
 public struct CardDrawItem has copy, drop, store {
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     count: u8,
     is_pass: bool
@@ -124,7 +124,7 @@ public struct CardDrawItem has copy, drop, store {
 
 // NPC变更项
 public struct NpcChangeItem has copy, drop, store {
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     action: u8,  // NPC_ACTION_*
     consumed: bool
@@ -139,16 +139,16 @@ public struct BuffChangeItem has copy, drop, store {
 
 // NPC步骤事件
 public struct NpcStepEvent has copy, drop, store {
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     result: u8,  // NPC_RESULT_*
     consumed: bool,
-    result_tile: option::Option<u64>
+    result_tile: option::Option<u16>
 }
 
 // 停留效果
 public struct StopEffect has copy, drop, store {
-    tile_id: u64,
+    tile_id: u16,
     tile_kind: u8,
     stop_type: u8,  // STOP_*
     amount: u64,
@@ -161,8 +161,8 @@ public struct StopEffect has copy, drop, store {
 // 步骤效果
 public struct StepEffect has copy, drop, store {
     step_index: u8,
-    from_tile: u64,
-    to_tile: u64,
+    from_tile: u16,
+    to_tile: u16,
     remaining_steps: u8,
     pass_draws: vector<CardDrawItem>,
     npc_event: option::Option<NpcStepEvent>,
@@ -176,7 +176,7 @@ public struct UseCardActionEvent has copy, drop {
     round: u16,
     turn_in_round: u8,
     kind: u8,
-    params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
+    params: vector<u16>,  // 统一参数：玩家索引、地块ID、骰子值等
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
     cash_changes: vector<CashDelta>
@@ -189,11 +189,11 @@ public struct RollAndStepActionEvent has copy, drop {
     round: u16,
     turn_in_round: u8,
     dice: u8,
-    path_choices: vector<u64>,  // 分叉选择序列（新增）
-    from: u64,
+    path_choices: vector<u16>,  // 分叉选择序列（新增）
+    from: u16,
     steps: vector<StepEffect>,
     cash_changes: vector<CashDelta>,//todo casedelta 也应该放到stepeffect里？
-    end_pos: u64
+    end_pos: u16
 }
 
 
@@ -326,7 +326,7 @@ public(package) fun make_cash_delta(
 
 // 构造卡牌获取项
 public(package) fun make_card_draw_item(
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     count: u8,
     is_pass: bool
@@ -341,7 +341,7 @@ public(package) fun make_card_draw_item(
 
 // 构造NPC变更项
 public(package) fun make_npc_change(
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     action: u8,
     consumed: bool
@@ -369,11 +369,11 @@ public(package) fun make_buff_change(
 
 // 构造NPC步骤事件
 public(package) fun make_npc_step_event(
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     result: u8,
     consumed: bool,
-    result_tile: option::Option<u64>
+    result_tile: option::Option<u16>
 ): NpcStepEvent {
     NpcStepEvent {
         tile_id,
@@ -386,7 +386,7 @@ public(package) fun make_npc_step_event(
 
 // 构造停留效果
 public(package) fun make_stop_effect(
-    tile_id: u64,
+    tile_id: u16,
     tile_kind: u8,
     stop_type: u8,
     amount: u64,
@@ -410,8 +410,8 @@ public(package) fun make_stop_effect(
 // 构造步骤效果
 public(package) fun make_step_effect(
     step_index: u8,
-    from_tile: u64,
-    to_tile: u64,
+    from_tile: u16,
+    to_tile: u16,
     remaining_steps: u8,
     pass_draws: vector<CardDrawItem>,
     npc_event: option::Option<NpcStepEvent>,
@@ -435,7 +435,7 @@ public(package) fun emit_use_card_action_event(
     round: u16,
     turn_in_round: u8,
     kind: u8,
-    params: vector<u64>,  // 统一参数
+    params: vector<u16>,  // 统一参数
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
     cash_changes: vector<CashDelta>
@@ -460,11 +460,11 @@ public(package) fun emit_roll_and_step_action_event_with_choices(
     round: u16,
     turn_in_round: u8,
     dice: u8,
-    path_choices: vector<u64>,
-    from: u64,
+    path_choices: vector<u16>,
+    from: u16,
     steps: vector<StepEffect>,
     cash_changes: vector<CashDelta>,
-    end_pos: u64
+    end_pos: u16
 ) {
     event::emit(RollAndStepActionEvent {
         game: game_id,
@@ -488,10 +488,10 @@ public(package) fun emit_roll_and_step_action_event(
     turn_in_round: u8,
     dice: u8,
     dir: u8,
-    from: u64,
+    from: u16,
     steps: vector<StepEffect>,
     cash_changes: vector<CashDelta>,
-    end_pos: u64
+    end_pos: u16
 ) {
     emit_roll_and_step_action_event_with_choices(
         game_id,

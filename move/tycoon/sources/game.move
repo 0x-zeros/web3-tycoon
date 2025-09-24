@@ -120,7 +120,7 @@ public struct BuffEntry has store, copy, drop {
 // - buffs: 当前激活的所有Buff列表
 public struct Player has store {
     owner: address,
-    pos: u64,  // tile_id
+    pos: u16,  // tile_id (最多65535个地块)
     cash: u64,
     in_prison_turns: u8,
     in_hospital_turns: u8,
@@ -212,10 +212,10 @@ public struct Game has key, store {
     has_rolled: bool,  // 是否已经掷骰
 
 
-    owner_of: Table<u64 /* tile_id */, u8 /* player_index */>,
-    level_of: Table<u64, u8>,
-    npc_on: Table<u64, NpcInst>,
-    owner_index: Table<u8 /* player_index */, vector<u64>>,
+    owner_of: Table<u16 /* tile_id */, u8 /* player_index */>,
+    level_of: Table<u16, u8>,
+    npc_on: Table<u16, NpcInst>,
+    owner_index: Table<u8 /* player_index */, vector<u16>>,
 
     config: Config,
 
@@ -224,7 +224,7 @@ public struct Game has key, store {
 
     // 待决策状态
     pending_decision: u8,           // 待决策类型
-    decision_tile: u64,             // 相关的地块ID
+    decision_tile: u16,             // 相关的地块ID
     decision_amount: u64            // 相关金额（如租金）
 }
 
@@ -387,7 +387,7 @@ public entry fun use_card(
     game: &mut Game,
     seat: &Seat,
     kind: u8,
-    params: vector<u64>,  // 统一参数：玩家索引、地块ID、骰子值等
+    params: vector<u16>,  // 统一参数：玩家索引、地块ID、骰子值等
     registry: &MapRegistry,
     card_registry: &cards::CardRegistry,
     ctx: &mut TxContext
@@ -441,7 +441,7 @@ public entry fun use_card(
 public entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
-    path_choices: vector<u64>,  // 替换 dir_intent，传分叉选择序列
+    path_choices: vector<u16>,  // 替换 dir_intent，传分叉选择序列
     registry: &MapRegistry,
     r: &Random,
     clock: &Clock,//todo 在获取btc价格或者其他defi相关场景的时候会使用到
@@ -893,7 +893,7 @@ fun execute_step_movement_with_choices(
     game: &mut Game,
     player_index: u8,
     dice: u8,
-    path_choices: &vector<u64>,
+    path_choices: &vector<u16>,
     steps: &mut vector<events::StepEffect>,
     cash_changes: &mut vector<events::CashDelta>,
     registry: &MapRegistry,
@@ -977,11 +977,22 @@ fun execute_step_movement_with_choices(
             chosen
         } else {
             // 无分叉或无选择，按方向偏好自动前进
-            if (direction == types::dir_ccw()) {
+            let mut next_pos = if (direction == types::dir_ccw()) {
                 map::get_ccw_next(template, current_pos)
             } else {
                 map::get_cw_next(template, current_pos)
-            }
+            };
+
+            // 如果遇到自环（终端地块），自动掉头
+            if (next_pos == current_pos) {
+                next_pos = if (direction == types::dir_ccw()) {
+                    map::get_cw_next(template, current_pos)  // 掉头走cw方向
+                } else {
+                    map::get_ccw_next(template, current_pos)  // 掉头走ccw方向
+                };
+            };
+
+            next_pos
         };
 
         let mut pass_draws = vector[];
@@ -1136,7 +1147,12 @@ fun execute_step_movement_with_choices(
 }
 
 // 验证选择的下一格是否合法
-fun is_valid_next_tile(template: &MapTemplate, current: u64, chosen: u64): bool {
+fun is_valid_next_tile(template: &MapTemplate, current: u16, chosen: u16): bool {
+    // 禁止选择停留在原地（自环）
+    if (chosen == current) {
+        return false
+    };
+
     let tile = map::get_tile(template, current);
 
     // 检查是否是cw/ccw
@@ -1163,7 +1179,7 @@ fun is_valid_next_tile(template: &MapTemplate, current: u64, chosen: u64): bool 
 fun handle_tile_pass(
     game: &mut Game,
     player_index: u8,
-    tile_id: u64,
+    tile_id: u16,
     registry: &MapRegistry,
     generator: &mut RandomGenerator
 ) {
@@ -1190,7 +1206,7 @@ fun handle_tile_pass(
 fun handle_tile_stop(
     game: &mut Game,
     player_index: u8,
-    tile_id: u64,
+    tile_id: u16,
     registry: &MapRegistry,
     generator: &mut RandomGenerator
 ) {
@@ -1236,7 +1252,7 @@ fun handle_tile_stop(
 fun handle_tile_stop_with_collector(
     game: &mut Game,
     player_index: u8,
-    tile_id: u64,
+    tile_id: u16,
     cash_changes: &mut vector<events::CashDelta>,
     registry: &MapRegistry,
     generator: &mut RandomGenerator
@@ -1318,7 +1334,7 @@ fun handle_tile_stop_with_collector(
                             true,  // is_debit
                             actual_payment,
                             1,  // reason: toll
-                            tile_id
+                            (tile_id as u64)
                         ));
 
                         // 记录现金变动 - 收款方
@@ -1327,7 +1343,7 @@ fun handle_tile_stop_with_collector(
                             false,  // is_debit (income)
                             actual_payment,
                             1,  // reason: toll
-                            tile_id
+                            (tile_id as u64)
                         ));
 
                         stop_type = events::stop_property_toll();
@@ -1399,7 +1415,7 @@ fun handle_tile_stop_with_collector(
             false,  // is_debit (income)
             bonus,
             4,  // reason: bonus
-            tile_id
+            (tile_id as u64)
         ));
 
         stop_type = events::stop_bonus();
@@ -1424,7 +1440,7 @@ fun handle_tile_stop_with_collector(
                 true,  // is_debit
                 actual_payment,
                 5,  // reason: fee
-                tile_id
+                (tile_id as u64)
             ));
         };
 
@@ -1454,7 +1470,7 @@ fun handle_tile_stop_with_collector(
 fun handle_property_stop(
     game: &mut Game,
     player_index: u8,
-    tile_id: u64,
+    tile_id: u16,
     tile: &map::TileStatic
 ) {
     let player_addr = game.players.borrow(player_index as u64).owner;
@@ -1504,19 +1520,19 @@ fun handle_property_stop(
 }
 
 // 处理医院停留
-fun handle_hospital_stop(game: &mut Game, player_index: u8, tile_id: u64) {
+fun handle_hospital_stop(game: &mut Game, player_index: u8, tile_id: u16) {
     let player = game.players.borrow_mut(player_index as u64);
     player.in_hospital_turns = types::default_hospital_turns();
 }
 
 // 处理监狱停留
-fun handle_prison_stop(game: &mut Game, player_index: u8, tile_id: u64) {
+fun handle_prison_stop(game: &mut Game, player_index: u8, tile_id: u16) {
     let player = game.players.borrow_mut(player_index as u64);
     player.in_prison_turns = types::default_prison_turns();
 }
 
 // 找最近的医院
-fun find_nearest_hospital(game: &Game, current_pos: u64, registry: &MapRegistry): u64 {
+fun find_nearest_hospital(game: &Game, current_pos: u16, registry: &MapRegistry): u16 {
     let template = map::get_template(registry, game.template_id);
     let hospital_ids = map::get_hospital_ids(template);
 
@@ -1529,7 +1545,7 @@ fun find_nearest_hospital(game: &Game, current_pos: u64, registry: &MapRegistry)
 }
 
 // 送医院（内部函数）
-fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: u64, registry: &MapRegistry) {
+fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: u16, registry: &MapRegistry) {
     let player = game.players.borrow_mut(player_index as u64);
     player.pos = hospital_tile;
     player.in_hospital_turns = types::default_hospital_turns();
@@ -1642,7 +1658,7 @@ fun handle_bankruptcy(
 // 共享内部函数：统一NPC放置与移除
 fun place_npc_internal(
     game: &mut Game,
-    tile_id: u64,
+    tile_id: u16,
     kind: u8,
     consumable: bool,
     npc_changes: &mut vector<events::NpcChangeItem>,
@@ -1659,7 +1675,7 @@ fun place_npc_internal(
 
 fun remove_npc_internal(
     game: &mut Game,
-    tile_id: u64,
+    tile_id: u16,
     npc_changes: &mut vector<events::NpcChangeItem>,
 ) {
     if (table::contains(&game.npc_on, tile_id)) {
@@ -1675,7 +1691,7 @@ fun remove_npc_internal(
 // 注意：这个函数不生成NpcChangeItem事件，因为消耗信息已经在NpcStepEvent中体现
 fun consume_npc_if_consumable(
     game: &mut Game,
-    tile_id: u64,
+    tile_id: u16,
     npc: &NpcInst
 ): bool {
     if (npc.consumable) {
@@ -1691,7 +1707,7 @@ fun apply_card_effect_with_collectors(
     game: &mut Game,
     player_index: u8,
     kind: u8,
-    params: &vector<u64>,  // 统一参数
+    params: &vector<u16>,  // 统一参数
     npc_changes: &mut vector<events::NpcChangeItem>,
     buff_changes: &mut vector<events::BuffChangeItem>,
     cash_changes: &mut vector<events::CashDelta>,
@@ -1711,7 +1727,7 @@ fun apply_card_effect_with_collectors(
         while (i < params.length()) {
             let dice = *params.borrow(i);
             assert!(dice >= 1 && dice <= 6, EInvalidParams);  // 验证骰子值范围
-            dice_sum = dice_sum + dice;
+            dice_sum = dice_sum + (dice as u64);
             i = i + 1;
         };
 
@@ -2035,7 +2051,7 @@ public fun get_active_player_index(game: &Game): u8 { game.active_idx }
 public fun get_player_count(game: &Game): u64 { game.players.length() }
 public fun get_template_id(game: &Game): u64 { game.template_id }
 
-public fun get_player_position(game: &Game, player: address): u64 {
+public fun get_player_position(game: &Game, player: address): u16 {
     let player_index = find_player_index(game, player);
     game.players.borrow(player_index as u64).pos
 }
@@ -2045,17 +2061,17 @@ public fun get_player_cash(game: &Game, player: address): u64 {
     game.players.borrow(player_index as u64).cash
 }
 
-public fun is_tile_owned(game: &Game, tile_id: u64): bool {
+public fun is_tile_owned(game: &Game, tile_id: u16): bool {
     table::contains(&game.owner_of, tile_id)
 }
 
-public fun get_tile_owner(game: &Game, tile_id: u64): address {
+public fun get_tile_owner(game: &Game, tile_id: u16): address {
     assert!(table::contains(&game.owner_of, tile_id), ENoSuchTile);
     let owner_index = *table::borrow(&game.owner_of, tile_id);
     game.players.borrow(owner_index as u64).owner
 }
 
-public fun get_tile_level(game: &Game, tile_id: u64): u8 {
+public fun get_tile_level(game: &Game, tile_id: u16): u8 {
     if (table::contains(&game.level_of, tile_id)) {
         *table::borrow(&game.level_of, tile_id)
     } else {
@@ -2142,7 +2158,7 @@ public fun current_turn_player(game: &Game): address {
 }
 
 #[test_only]
-public fun get_property_owner(game: &Game, tile_id: u64): option::Option<address> {
+public fun get_property_owner(game: &Game, tile_id: u16): option::Option<address> {
     if (table::contains(&game.owner_of, tile_id)) {
         let owner_index = *table::borrow(&game.owner_of, tile_id);
         let owner_addr = game.players.borrow(owner_index as u64).owner;
@@ -2153,7 +2169,7 @@ public fun get_property_owner(game: &Game, tile_id: u64): option::Option<address
 }
 
 #[test_only]
-public fun get_property_level(game: &Game, tile_id: u64): u8 {
+public fun get_property_level(game: &Game, tile_id: u16): u8 {
     if (table::contains(&game.level_of, tile_id)) {
         *table::borrow(&game.level_of, tile_id)
     } else {
@@ -2240,7 +2256,7 @@ public fun is_player_in_hospital(
 public fun handle_tile_stop_effect(
     game: &mut Game,
     player: address,
-    tile_id: u64,
+    tile_id: u16,
     registry: &MapRegistry
 ) {
     // 处理停留效果
@@ -2288,12 +2304,12 @@ public fun handle_tile_stop_effect(
 }
 
 #[test_only]
-public fun has_npc_on_tile(game: &Game, tile_id: u64): bool {
+public fun has_npc_on_tile(game: &Game, tile_id: u16): bool {
     table::contains(&game.npc_on, tile_id)
 }
 
 #[test_only]
-public fun get_npc_on_tile(game: &Game, tile_id: u64): &NpcInst {
+public fun get_npc_on_tile(game: &Game, tile_id: u16): &NpcInst {
     table::borrow(&game.npc_on, tile_id)
 }
 

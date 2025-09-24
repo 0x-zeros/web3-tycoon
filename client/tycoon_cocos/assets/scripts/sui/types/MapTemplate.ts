@@ -146,13 +146,20 @@ export function getTileNeighbors(
     const neighbors: bigint[] = [];
 
     // 按优先级添加：cw → ccw → adj
-    // 不再使用0作为"无邻居"的标记值
-    pushIfValid(template, neighbors, tile.cw_next);
-    pushIfValid(template, neighbors, tile.ccw_next);
+    // 过滤掉自环（终端地块标记）
+    if (tile.cw_next !== tileId) {
+        pushIfValid(template, neighbors, tile.cw_next);
+    }
 
-    // 添加所有邻接地块
+    if (tile.ccw_next !== tileId) {
+        pushIfValid(template, neighbors, tile.ccw_next);
+    }
+
+    // 添加所有邻接地块（排除自环）
     for (const adjId of tile.adj) {
-        pushIfValid(template, neighbors, adjId);
+        if (adjId !== tileId) {
+            pushIfValid(template, neighbors, adjId);
+        }
     }
 
     return neighbors;

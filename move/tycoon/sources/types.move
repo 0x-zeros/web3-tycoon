@@ -63,6 +63,7 @@ const CARD_DOG: u8 = 11;
 const CARD_RENT_FREE: u8 = 20;
 const CARD_FREEZE: u8 = 30;
 const CARD_CLEANSE: u8 = 41;
+const CARD_TURN: u8 = 50;  // 转向卡
 
 public fun card_move_ctrl(): u8 { CARD_MOVE_CTRL }
 public fun card_barrier(): u8 { CARD_BARRIER }
@@ -71,6 +72,7 @@ public fun card_dog(): u8 { CARD_DOG }
 public fun card_rent_free(): u8 { CARD_RENT_FREE }
 public fun card_freeze(): u8 { CARD_FREEZE }
 public fun card_cleanse(): u8 { CARD_CLEANSE }
+public fun card_turn(): u8 { CARD_TURN }
 
 // ===== BuffKind Buff类型 =====
 const BUFF_MOVE_CTRL: u8 = 1;
@@ -97,17 +99,11 @@ public fun phase_events(): u8 { PHASE_EVENTS }
 public fun phase_end(): u8 { PHASE_END }
 
 // ===== DirMode 移动方向模式 =====
-const DIR_AUTO: u8 = 0;
-const DIR_CW: u8 = 1;
-const DIR_CCW: u8 = 2;
-const DIR_FORCED_CW: u8 = 3;
-const DIR_FORCED_CCW: u8 = 4;
+const DIR_CW: u8 = 0;   // 顺时针
+const DIR_CCW: u8 = 1;  // 逆时针
 
-public fun dir_auto(): u8 { DIR_AUTO }
 public fun dir_cw(): u8 { DIR_CW }
 public fun dir_ccw(): u8 { DIR_CCW }
-public fun dir_forced_cw(): u8 { DIR_FORCED_CW }
-public fun dir_forced_ccw(): u8 { DIR_FORCED_CCW }
 
 // ===== GameStatus 游戏状态 =====
 const STATUS_READY: u8 = 0;

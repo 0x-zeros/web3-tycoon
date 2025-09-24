@@ -277,7 +277,7 @@ public entry fun create_game(
 
     // 创建者自动加入
     let creator = ctx.sender();
-    let player = create_player(creator, ctx);
+    let player = create_player(creator, types::dir_cw(), ctx);  // 默认顺时针，游戏开始时随机
     game.players.push_back(player);
 
     // 发出游戏创建事件
@@ -321,7 +321,7 @@ public entry fun join(
     };
 
     // 创建玩家
-    let player = create_player(player_addr, ctx);
+    let player = create_player(player_addr, types::dir_cw(), ctx);  // 默认顺时针，游戏开始时随机
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 
@@ -346,6 +346,7 @@ public entry fun join(
 // 开始游戏
 public entry fun start(
     game: &mut Game,
+    r: &Random,  // 新增：用于随机分配方向
     clock: &Clock,
     ctx: &mut TxContext
 ) {
@@ -358,6 +359,16 @@ public entry fun start(
     // round和turn已在创建时初始化为0
     game.active_idx = 0;
     game.has_rolled = false;
+
+    // 为每个玩家随机分配初始方向
+    let mut generator = random::new_generator(r, ctx);
+    let mut i = 0;
+    while (i < game.players.length()) {
+        let player = game.players.borrow_mut(i);
+        let random_bit = generator.generate_u8() % 2;
+        player.dir_pref = if (random_bit == 0) types::dir_cw() else types::dir_ccw();
+        i = i + 1;
+    };
 
     let starting_player = game.players.borrow(0).owner;
 
@@ -732,7 +743,7 @@ public entry fun upgrade_property(
 // ===== Internal Functions 内部函数 =====
 
 // 创建玩家
-fun create_player(owner: address, _ctx: &mut TxContext): Player {
+fun create_player(owner: address, dir_pref: u8, _ctx: &mut TxContext): Player {
     // 创建初始卡牌
     let mut initial_cards = vector::empty();
     initial_cards.push_back(cards::new_card_entry(types::card_move_ctrl(), 1));  // 遥控骰子 1 张
@@ -748,7 +759,7 @@ fun create_player(owner: address, _ctx: &mut TxContext): Player {
         in_hospital_turns: 0,
         bankrupt: false,
         cards: initial_cards,
-        dir_pref: types::dir_auto()
+        dir_pref  // 使用传入的方向
     }
 }
 
@@ -1683,6 +1694,13 @@ fun apply_card_effect_with_collectors(
         let target_player = game.players.borrow_mut(target_index as u64);
         apply_buff(target_player, types::buff_move_ctrl(), game.round + 1, dice_sum);
 
+        // 使用遥控骰时，同时切换目标玩家的方向
+        target_player.dir_pref = if (target_player.dir_pref == types::dir_cw()) {
+            types::dir_ccw()
+        } else {
+            types::dir_cw()
+        };
+
         // 记录buff变更
         let target_addr = game.players.borrow(target_index as u64).owner;
         vector::push_back(buff_changes, events::make_buff_change(
@@ -1758,6 +1776,25 @@ fun apply_card_effect_with_collectors(
             remove_npc_internal(game, tile_id, npc_changes);
             i = i + 1;
         };
+    } else if (kind == types::card_turn()) {
+        // 转向卡：切换玩家的方向偏好
+        // params[0]=目标玩家索引（可选，默认为自己）
+        let target_index = if (params.length() > 0) {
+            (*params.borrow(0) as u8)
+        } else {
+            player_index  // 默认给自己
+        };
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        // 切换方向
+        let target_player = game.players.borrow_mut(target_index as u64);
+        target_player.dir_pref = if (target_player.dir_pref == types::dir_cw()) {
+            types::dir_ccw()
+        } else {
+            types::dir_cw()
+        };
+
+        // 转向卡是即时效果，不需要记录buff
     }
 }
 

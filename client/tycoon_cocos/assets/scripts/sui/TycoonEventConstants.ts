@@ -134,7 +134,9 @@ export const CARD_KIND = {
     /** 冻结卡 */
     FREEZE: 30,
     /** 清除卡 */
-    CLEANSE: 41
+    CLEANSE: 41,
+    /** 转向卡 */
+    TURN: 50
 } as const;
 
 export type CardKind = typeof CARD_KIND[keyof typeof CARD_KIND];
@@ -312,7 +314,8 @@ export function getCardKindName(kind: CardKind): string {
         [CARD_KIND.DOG]: '狗卡',
         [CARD_KIND.RENT_FREE]: '免租卡',
         [CARD_KIND.FREEZE]: '冻结卡',
-        [CARD_KIND.CLEANSE]: '清除卡'
+        [CARD_KIND.CLEANSE]: '清除卡',
+        [CARD_KIND.TURN]: '转向卡'
     };
     return names[kind] || '未知';
 }

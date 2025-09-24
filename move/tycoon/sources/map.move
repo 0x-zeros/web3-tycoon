@@ -29,6 +29,10 @@ const ETileAlreadyExists: u64 = 3003;  // 地块已存在
 // - base_toll: 基础过路费（等级升级后按倍数增加）
 // - special: 额外参数位，用于特殊功能扩展
 //   * 可用于存储地块颜色、组别、特殊效果等
+// - cw_next: 顺时针下一个地块ID
+// - ccw_next: 逆时针下一个地块ID
+// - ring_id: 所属环路ID（支持多环路）
+// - ring_idx: 在环路中的位置索引
 public struct TileStatic has store, copy, drop {
     x: u16,
     y: u16,
@@ -36,7 +40,11 @@ public struct TileStatic has store, copy, drop {
     size: u8,       // 1x1 or 2x2
     price: u64,
     base_toll: u64,
-    special: u64    // 额外参数位
+    special: u64,   // 额外参数位
+    cw_next: u64,   // 顺时针下一个地块ID
+    ccw_next: u64,  // 逆时针下一个地块ID
+    ring_id: u16,   // 所属环路ID
+    ring_idx: u32   // 在环路中的索引
 }
 
 // ===== MapTemplate 地图模板（静态，不随对局变化） =====
@@ -87,10 +95,7 @@ public struct MapTemplate has store {
     tile_count: u64,
     tiles_static: Table<u64 /* tile_id */, TileStatic>,
     adj: Table<u64 /* tile_id */, vector<u64> /* neighbors */>,
-    cw_next: Table<u64, u64>,     // 顺时针下一格                   //todo cw_next 这样的指针，一个u64就直接放tile里最好呀
-    ccw_next: Table<u64, u64>,    // 逆时针下一格
-    ring_id: Table<u64, u16>,     // 所属环路ID
-    ring_idx: Table<u64, u32>,    // 在环路中的索引
+    // 导航信息已集成到 TileStatic 中，不再需要独立的 Table
     hospital_ids: vector<u64>,
     prison_ids: vector<u64>,
     shop_ids: vector<u64>,
@@ -158,7 +163,7 @@ public fun has_template(registry: &MapRegistry, template_id: u64): bool {
 
 // ===== Template Creation Functions 模板创建函数 =====
 
-// 创建地块静态信息
+// 创建地块静态信息（使用默认导航值）
 public fun new_tile_static(
     x: u16,
     y: u16,
@@ -175,7 +180,40 @@ public fun new_tile_static(
         size,
         price,
         base_toll,
-        special
+        special,
+        cw_next: 0,     // 默认值，后续通过set_cw_next设置
+        ccw_next: 0,    // 默认值，后续通过set_ccw_next设置
+        ring_id: 0,     // 默认值，后续通过set_ring_info设置
+        ring_idx: 0     // 默认值，后续通过set_ring_info设置
+    }
+}
+
+// 创建地块静态信息（带完整导航信息）
+public fun new_tile_static_with_nav(
+    x: u16,
+    y: u16,
+    kind: u8,
+    size: u8,
+    price: u64,
+    base_toll: u64,
+    special: u64,
+    cw_next: u64,
+    ccw_next: u64,
+    ring_id: u16,
+    ring_idx: u32
+): TileStatic {
+    TileStatic {
+        x,
+        y,
+        kind,
+        size,
+        price,
+        base_toll,
+        special,
+        cw_next,
+        ccw_next,
+        ring_id,
+        ring_idx
     }
 }
 
@@ -194,10 +232,6 @@ public fun new_map_template(
         tile_count: 0,
         tiles_static: table::new(ctx),
         adj: table::new(ctx),
-        cw_next: table::new(ctx),
-        ccw_next: table::new(ctx),
-        ring_id: table::new(ctx),
-        ring_idx: table::new(ctx),
         hospital_ids: vector::empty(),
         prison_ids: vector::empty(),
         shop_ids: vector::empty(),
@@ -252,11 +286,9 @@ public fun set_cw_next(
     tile_id: u64,
     next_id: u64
 ) {
-    if (table::contains(&template.cw_next, tile_id)) {
-        *table::borrow_mut(&mut template.cw_next, tile_id) = next_id;
-    } else {
-        table::add(&mut template.cw_next, tile_id, next_id);
-    };
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
+    tile.cw_next = next_id;
 }
 
 // 设置逆时针下一格
@@ -265,11 +297,9 @@ public fun set_ccw_next(
     tile_id: u64,
     next_id: u64
 ) {
-    if (table::contains(&template.ccw_next, tile_id)) {
-        *table::borrow_mut(&mut template.ccw_next, tile_id) = next_id;
-    } else {
-        table::add(&mut template.ccw_next, tile_id, next_id);
-    };
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
+    tile.ccw_next = next_id;
 }
 
 // 设置环路信息
@@ -279,17 +309,10 @@ public fun set_ring_info(
     ring_id: u16,
     ring_idx: u32
 ) {
-    if (table::contains(&template.ring_id, tile_id)) {
-        *table::borrow_mut(&mut template.ring_id, tile_id) = ring_id;
-    } else {
-        table::add(&mut template.ring_id, tile_id, ring_id);
-    };
-
-    if (table::contains(&template.ring_idx, tile_id)) {
-        *table::borrow_mut(&mut template.ring_idx, tile_id) = ring_idx;
-    } else {
-        table::add(&mut template.ring_idx, tile_id, ring_idx);
-    };
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
+    tile.ring_id = ring_id;
+    tile.ring_idx = ring_idx;
 }
 
 
@@ -303,14 +326,30 @@ public fun get_tile(template: &MapTemplate, tile_id: u64): &TileStatic {
 
 // 获取顺时针下一格
 public fun get_cw_next(template: &MapTemplate, tile_id: u64): u64 {
-    assert!(table::contains(&template.cw_next, tile_id), ENoSuchTile);
-    *table::borrow(&template.cw_next, tile_id)
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
+    tile.cw_next
 }
 
 // 获取逆时针下一格
 public fun get_ccw_next(template: &MapTemplate, tile_id: u64): u64 {
-    assert!(table::contains(&template.ccw_next, tile_id), ENoSuchTile);
-    *table::borrow(&template.ccw_next, tile_id)
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
+    tile.ccw_next
+}
+
+// 获取地块所属环路ID
+public fun get_ring_id(template: &MapTemplate, tile_id: u64): u16 {
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
+    tile.ring_id
+}
+
+// 获取地块在环路中的索引
+public fun get_ring_idx(template: &MapTemplate, tile_id: u64): u32 {
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
+    tile.ring_idx
 }
 
 // 获取邻接地块
@@ -399,6 +438,10 @@ public fun tile_size(tile: &TileStatic): u8 { tile.size }
 public fun tile_price(tile: &TileStatic): u64 { tile.price }
 public fun tile_base_toll(tile: &TileStatic): u64 { tile.base_toll }
 public fun tile_special(tile: &TileStatic): u64 { tile.special }
+public fun tile_cw_next(tile: &TileStatic): u64 { tile.cw_next }
+public fun tile_ccw_next(tile: &TileStatic): u64 { tile.ccw_next }
+public fun tile_ring_id(tile: &TileStatic): u16 { tile.ring_id }
+public fun tile_ring_idx(tile: &TileStatic): u32 { tile.ring_idx }
 
 // ===== Test Helper Functions 测试辅助函数 =====
 

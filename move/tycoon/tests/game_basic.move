@@ -5,6 +5,7 @@ module tycoon::game_basic_tests {
     use sui::test_scenario::{Self as scenario};
     use sui::clock;
     use sui::object;
+    use sui::random::{Self, Random};
 
     use tycoon::test_utils::{Self as utils};
     use tycoon::game::{Self, Game};

@@ -252,7 +252,7 @@ public entry fun create_game(
 
     let mut game = Game {
         id: game_id,
-        status: types::status_ready(),
+        status: types::STATUS_READY(),
         template_id,
         players: vector[],
         round: 0,
@@ -265,7 +265,7 @@ public entry fun create_game(
         owner_index: table::new(ctx),
         max_rounds,
         winner: option::none(),
-        pending_decision: types::decision_none(),
+        pending_decision: types::DECISION_NONE(),
         decision_tile: 0,
         decision_amount: 0
     };
@@ -273,7 +273,7 @@ public entry fun create_game(
     // 创建者自动加入（使用 GameData 中的起始资金）
     let creator = ctx.sender();
     let starting_cash = tycoon::get_starting_cash(game_data);
-    let player = create_player_with_cash(creator, types::dir_cw(), starting_cash, ctx);
+    let player = create_player_with_cash(creator, types::DIR_CW(), starting_cash, ctx);
     game.players.push_back(player);
 
     // 发出游戏创建事件
@@ -307,7 +307,7 @@ public entry fun join(
     let player_addr = ctx.sender();
 
     // 验证游戏状态
-    assert!(game.status == types::status_ready(), EAlreadyStarted);
+    assert!(game.status == types::STATUS_READY(), EAlreadyStarted);
     // 暂时移除最大玩家数限制（或使用地图模板的某个属性）
 
     // 检查是否已加入
@@ -320,7 +320,7 @@ public entry fun join(
 
     // 创建玩家 - 使用GameData中的起始资金
     let starting_cash = tycoon::get_starting_cash(game_data);
-    let player = create_player_with_cash(player_addr, types::dir_cw(), starting_cash, ctx);  // 默认顺时针，游戏开始时随机
+    let player = create_player_with_cash(player_addr, types::DIR_CW(), starting_cash, ctx);  // 默认顺时针，游戏开始时随机
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 
@@ -350,11 +350,11 @@ public entry fun start(
     ctx: &mut TxContext
 ) {
     // 验证状态
-    assert!(game.status == types::status_ready(), EAlreadyStarted);
+    assert!(game.status == types::STATUS_READY(), EAlreadyStarted);
     assert!(game.players.length() >= 2, ENotEnoughPlayers);
 
     // 设置游戏状态
-    game.status = types::status_active();
+    game.status = types::STATUS_ACTIVE();
     // round和turn已在创建时初始化为0
     game.active_idx = 0;
     game.has_rolled = false;
@@ -365,7 +365,7 @@ public entry fun start(
     while (i < game.players.length()) {
         let player = &mut game.players[i];
         let random_bit = generator.generate_u8() % 2;
-        player.dir_pref = if (random_bit == 0) types::dir_cw() else types::dir_ccw();
+        player.dir_pref = if (random_bit == 0) types::DIR_CW() else types::DIR_CCW();
         i = i + 1;
     };
 
@@ -468,7 +468,7 @@ public entry fun roll_and_step(
     let from_pos = player.pos;
 
     // 验证path_choices：有遥控骰子时才能提供路径选择
-    if (is_buff_active(player, types::buff_move_ctrl(), game.round)) {
+    if (is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round)) {
         // 有遥控骰子buff，可以提供路径选择
     } else {
         // 无遥控骰子，不应提供路径选择
@@ -529,7 +529,7 @@ public entry fun decide_rent_payment(
     validate_seat_and_turn(game, seat);
 
     // 验证待决策状态
-    assert!(game.pending_decision == types::decision_pay_rent(), EInvalidDecision);
+    assert!(game.pending_decision == types::DECISION_PAY_RENT(), EInvalidDecision);
 
     let player_addr = seat.player;
     let player_index = seat.player_index;
@@ -543,11 +543,11 @@ public entry fun decide_rent_payment(
     if (use_rent_free) {
         // 使用免租卡
         let player = &game.players[player_index as u64];
-        assert!(cards::player_has_card(&player.cards, types::card_rent_free()), ECardNotFound);
+        assert!(cards::player_has_card(&player.cards, types::CARD_RENT_FREE()), ECardNotFound);
 
         // 消耗免租卡
         let player_mut = &mut game.players[player_index as u64];
-        let used = cards::use_player_card(&mut player_mut.cards, types::card_rent_free());
+        let used = cards::use_player_card(&mut player_mut.cards, types::CARD_RENT_FREE());
         assert!(used, ECardNotFound);
 
         // TODO: 发出免租事件
@@ -579,8 +579,8 @@ public entry fun skip_property_decision(
 
     // 验证有待决策
     assert!(
-        game.pending_decision == types::decision_buy_property() ||
-        game.pending_decision == types::decision_upgrade_property(),
+        game.pending_decision == types::DECISION_BUY_PROPERTY() ||
+        game.pending_decision == types::DECISION_UPGRADE_PROPERTY(),
         EInvalidDecision
     );
 
@@ -598,7 +598,7 @@ public entry fun end_turn(
     validate_seat_and_turn(game, seat);
 
     // 验证没有待决策
-    assert!(game.pending_decision == types::decision_none(), EPendingDecision);
+    assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
 
     let player_addr = seat.player;
     let player_index = seat.player_index;
@@ -629,7 +629,7 @@ public entry fun buy_property(
     validate_seat_and_turn(game, seat);
 
     // 验证待决策状态
-    assert!(game.pending_decision == types::decision_buy_property(), EInvalidDecision);
+    assert!(game.pending_decision == types::DECISION_BUY_PROPERTY(), EInvalidDecision);
 
     let player_addr = seat.player;
     let player_index = seat.player_index;
@@ -645,7 +645,7 @@ public entry fun buy_property(
     let tile = map::get_tile(template, tile_id);
 
     // 验证地块类型
-    assert!(map::tile_kind(tile) == types::tile_property(), ENotProperty);
+    assert!(map::tile_kind(tile) == types::TILE_PROPERTY(), ENotProperty);
 
     // 验证地块无主
     assert!(!table::contains(&game.owner_of, tile_id), EPropertyOwned);
@@ -691,7 +691,7 @@ public entry fun upgrade_property(
     validate_seat_and_turn(game, seat);
 
     // 验证待决策状态
-    assert!(game.pending_decision == types::decision_upgrade_property(), EInvalidDecision);
+    assert!(game.pending_decision == types::DECISION_UPGRADE_PROPERTY(), EInvalidDecision);
 
     let player_addr = seat.player;
     let player_index = seat.player_index;
@@ -707,7 +707,7 @@ public entry fun upgrade_property(
     let tile = map::get_tile(template, tile_id);
 
     // 验证地块类型
-    assert!(map::tile_kind(tile) == types::tile_property(), ENotProperty);
+    assert!(map::tile_kind(tile) == types::TILE_PROPERTY(), ENotProperty);
 
     // 验证地块所有权
     assert!(table::contains(&game.owner_of, tile_id), EPropertyNotOwned);
@@ -716,7 +716,7 @@ public entry fun upgrade_property(
 
     // 验证等级
     let current_level = *table::borrow(&game.level_of, tile_id);
-    assert!(current_level < types::level_4(), EMaxLevel);
+    assert!(current_level < types::LEVEL_4(), EMaxLevel);
 
     // 计算升级费用
     let price = map::tile_price(tile);
@@ -749,9 +749,9 @@ public entry fun upgrade_property(
 fun create_player_with_cash(owner: address, dir_pref: u8, cash: u64, _ctx: &mut TxContext): Player {
     // 创建初始卡牌
     let mut initial_cards = vector[];
-    initial_cards.push_back(cards::new_card_entry(types::card_move_ctrl(), 1));  // 遥控骰子 1 张
-    initial_cards.push_back(cards::new_card_entry(types::card_barrier(), 1));     // 路障卡 1 张
-    initial_cards.push_back(cards::new_card_entry(types::card_cleanse(), 1));     // 清除卡 1 张
+    initial_cards.push_back(cards::new_card_entry(types::CARD_MOVE_CTRL(), 1));  // 遥控骰子 1 张
+    initial_cards.push_back(cards::new_card_entry(types::CARD_BARRIER(), 1));     // 路障卡 1 张
+    initial_cards.push_back(cards::new_card_entry(types::CARD_CLEANSE(), 1));     // 清除卡 1 张
 
     Player {
         owner,
@@ -789,7 +789,7 @@ fun get_player_mut_by_seat(game: &mut Game, seat: &Seat): &mut Player {
 
 // 清理决策状态
 fun clear_decision_state(game: &mut Game) {
-    game.pending_decision = types::decision_none();
+    game.pending_decision = types::DECISION_NONE();
     game.decision_tile = 0;
     game.decision_amount = 0;
 }
@@ -824,7 +824,7 @@ fun validate_seat_and_turn(game: &Game, seat: &Seat) {
     assert!(seat.player == active_player, ENotActivePlayer);
 
     // 验证游戏状态
-    assert!(game.status == types::status_active(), EGameNotActive);
+    assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
 }
 
 // 验证并自动处理跳过
@@ -853,10 +853,10 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
 
     let reason = if (player.in_prison_turns > 0) {
         player.in_prison_turns = player.in_prison_turns - 1;
-        types::skip_prison()
+        types::SKIP_PRISON()
     } else {
         player.in_hospital_turns = player.in_hospital_turns - 1;
-        types::skip_hospital()
+        types::SKIP_HOSPITAL()
     };
 
     events::emit_skip_turn_event(
@@ -871,8 +871,8 @@ fun get_dice_value(game: &Game, player_index: u8, generator: &mut RandomGenerato
     let player = &game.players[player_index as u64];
 
     // 使用buff系统检查遥控骰子
-    if (is_buff_active(player, types::buff_move_ctrl(), game.round)) {
-        let value = get_buff_value(player, types::buff_move_ctrl(), game.round);
+    if (is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round)) {
+        let value = get_buff_value(player, types::BUFF_MOVE_CTRL(), game.round);
         return (value as u8)
     };
 
@@ -914,7 +914,7 @@ fun execute_step_movement_with_choices(
     // 先读取必要的玩家信息
     let (from_pos, mut direction, is_frozen) = {
         let player = &game.players[player_index as u64];
-        (player.pos, player.dir_pref, is_buff_active(player, types::buff_frozen(), game.round))
+        (player.pos, player.dir_pref, is_buff_active(player, types::BUFF_FROZEN(), game.round))
     };
 
     if (is_frozen) {
@@ -968,9 +968,9 @@ fun execute_step_movement_with_choices(
                 // 如果选择的是 cw 或 ccw 方向，更新玩家方向偏好
                 if (chosen == cw_next || chosen == ccw_next) {
                     let new_direction = if (chosen == ccw_next) {
-                        types::dir_ccw()
+                        types::DIR_CCW()
                     } else {
-                        types::dir_cw()
+                        types::DIR_CW()
                     };
 
                     // 更新玩家的持久方向偏好
@@ -987,7 +987,7 @@ fun execute_step_movement_with_choices(
             chosen
         } else {
             // 无分叉或无选择，按方向偏好自动前进
-            let mut next_pos = if (direction == types::dir_ccw()) {
+            let mut next_pos = if (direction == types::DIR_CCW()) {
                 map::get_ccw_next(template, current_pos)
             } else {
                 map::get_cw_next(template, current_pos)
@@ -995,7 +995,7 @@ fun execute_step_movement_with_choices(
 
             // 如果遇到自环（终端地块），自动掉头
             if (next_pos == current_pos) {
-                next_pos = if (direction == types::dir_ccw()) {
+                next_pos = if (direction == types::DIR_CCW()) {
                     map::get_cw_next(template, current_pos)  // 掉头走cw方向
                 } else {
                     map::get_ccw_next(template, current_pos)  // 掉头走ccw方向
@@ -1047,7 +1047,7 @@ fun execute_step_movement_with_choices(
                     option::none()
                 ));
                 break  // 送医后结束移动
-            } else if (npc.kind == types::npc_barrier()) {
+            } else if (npc.kind == types::NPC_BARRIER()) {
                 // 路障 - 停止移动
                 {
                     let player = &mut game.players[player_index as u64];
@@ -1098,7 +1098,7 @@ fun execute_step_movement_with_choices(
             let tile_kind = map::tile_kind(next_tile);
 
             // 经过卡牌格抽卡
-            if (tile_kind == types::tile_card()) {
+            if (tile_kind == types::TILE_CARD()) {
                 let random_value = generator.generate_u8();
                 let (card_kind, _) = cards::draw_card_on_pass(random_value);
                 {
@@ -1200,13 +1200,13 @@ fun handle_tile_pass(
 
     // 只有卡片格和彩票格在经过时触发（固定行为）
     if (is_passable_trigger(tile_kind)) {
-        if (tile_kind == types::tile_card()) {
+        if (tile_kind == types::TILE_CARD()) {
             // 抽卡
             let random_value = generator.generate_u8();
             let (card_kind, count) = cards::draw_card_on_pass(random_value);
             let player = &mut game.players[player_index as u64];
             cards::give_card_to_player(&mut player.cards, card_kind, count);
-        } else if (tile_kind == types::tile_lottery()) {
+        } else if (tile_kind == types::TILE_LOTTERY()) {
             // 彩票逻辑（简化）
             // TODO: 实现彩票系统
         };
@@ -1227,26 +1227,26 @@ fun handle_tile_stop(
     let tile_kind = map::tile_kind(tile);
     let player_addr = (&game.players[player_index as u64]).owner;
 
-    if (tile_kind == types::tile_property()) {
+    if (tile_kind == types::TILE_PROPERTY()) {
         handle_property_stop(game, player_index, tile_id, tile, game_data);
-    } else if (tile_kind == types::tile_hospital()) {
+    } else if (tile_kind == types::TILE_HOSPITAL()) {
         handle_hospital_stop(game, player_index, tile_id);
-    } else if (tile_kind == types::tile_prison()) {
+    } else if (tile_kind == types::TILE_PRISON()) {
         handle_prison_stop(game, player_index, tile_id);
-    } else if (tile_kind == types::tile_card()) {
+    } else if (tile_kind == types::TILE_CARD()) {
         // 停留时也抽卡
         let random_value = generator.generate_u8();
         let (card_kind, count) = cards::draw_card_on_stop(random_value);
         let player = &mut game.players[player_index as u64];
         cards::give_card_to_player(&mut player.cards, card_kind, count);
-    } else if (tile_kind == types::tile_chance()) {
+    } else if (tile_kind == types::TILE_CHANCE()) {
         // TODO: 实现机会事件
-    } else if (tile_kind == types::tile_bonus()) {
+    } else if (tile_kind == types::TILE_BONUS()) {
         // 奖励
         let bonus = map::tile_special(tile);
         let player = &mut game.players[player_index as u64];
         player.cash = player.cash + bonus;
-    } else if (tile_kind == types::tile_fee()) {
+    } else if (tile_kind == types::TILE_FEE()) {
         // 罚款
         let fee = map::tile_special(tile);
         let player = &mut game.players[player_index as u64];
@@ -1282,11 +1282,11 @@ fun handle_tile_stop_with_collector(
     let mut turns_opt = option::none<u8>();
     let mut card_gains = vector[];
 
-    if (tile_kind == types::tile_property()) {
+    if (tile_kind == types::TILE_PROPERTY()) {
         if (!table::contains(&game.owner_of, tile_id)) {
             // 无主地产 - 设置待决策状态
             stop_type = events::stop_property_unowned();
-            game.pending_decision = types::decision_buy_property();
+            game.pending_decision = types::DECISION_BUY_PROPERTY();
             game.decision_tile = tile_id;
             game.decision_amount = map::tile_price(tile);
         } else {
@@ -1297,8 +1297,8 @@ fun handle_tile_stop_with_collector(
 
                 // 检查免租情况
                 let player = &game.players[player_index as u64];
-                let has_rent_free_buff = is_buff_active(player, types::buff_rent_free(), game.round);
-                let has_rent_free_card = cards::player_has_card(&player.cards, types::card_rent_free());
+                let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
+                let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
 
                 if (has_rent_free_buff) {
                     // 有免租buff - 直接免租，无需决策
@@ -1310,7 +1310,7 @@ fun handle_tile_stop_with_collector(
                 } else if (has_rent_free_card) {
                     // 没有buff但有免租卡 - 设置待决策状态
                     stop_type = events::stop_property_toll();
-                    game.pending_decision = types::decision_pay_rent();
+                    game.pending_decision = types::DECISION_PAY_RENT();
                     game.decision_tile = tile_id;
                     game.decision_amount = toll;
                     let owner_addr = (&game.players[owner_index as u64]).owner;
@@ -1376,10 +1376,10 @@ fun handle_tile_stop_with_collector(
             } else {
                 // 自己的地产 - 检查是否可以升级
                 let level = *table::borrow(&game.level_of, tile_id);
-                if (level < types::level_4()) {
+                if (level < types::LEVEL_4()) {
                     // 可以升级 - 设置待决策状态
                     stop_type = events::stop_none();  // 自己的地产，无特殊效果
-                    game.pending_decision = types::decision_upgrade_property();
+                    game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
                     game.decision_tile = tile_id;
                     let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level, game_data);
                     game.decision_amount = upgrade_cost;
@@ -1391,17 +1391,17 @@ fun handle_tile_stop_with_collector(
                 level_opt = option::some(level);
             }
         }
-    } else if (tile_kind == types::tile_hospital()) {
+    } else if (tile_kind == types::TILE_HOSPITAL()) {
         let player = &mut game.players[player_index as u64];
-        player.in_hospital_turns = types::default_hospital_turns();
+        player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
         stop_type = events::stop_hospital();
-        turns_opt = option::some(types::default_hospital_turns());
-    } else if (tile_kind == types::tile_prison()) {
+        turns_opt = option::some(types::DEFAULT_HOSPITAL_TURNS());
+    } else if (tile_kind == types::TILE_PRISON()) {
         let player = &mut game.players[player_index as u64];
-        player.in_prison_turns = types::default_prison_turns();
+        player.in_prison_turns = types::DEFAULT_PRISON_TURNS();
         stop_type = events::stop_prison();
-        turns_opt = option::some(types::default_prison_turns());
-    } else if (tile_kind == types::tile_card()) {
+        turns_opt = option::some(types::DEFAULT_PRISON_TURNS());
+    } else if (tile_kind == types::TILE_CARD()) {
         // 停留时抽卡
         let random_value = generator.generate_u8();
         let (card_kind, count) = cards::draw_card_on_stop(random_value);
@@ -1416,7 +1416,7 @@ fun handle_tile_stop_with_collector(
             false  // not pass, but stop
         ));
         stop_type = events::stop_card_stop();
-    } else if (tile_kind == types::tile_bonus()) {
+    } else if (tile_kind == types::TILE_BONUS()) {
         // 奖励
         let bonus = map::tile_special(tile);
         let player = &mut game.players[player_index as u64];
@@ -1433,7 +1433,7 @@ fun handle_tile_stop_with_collector(
 
         stop_type = events::stop_bonus();
         amount = bonus;
-    } else if (tile_kind == types::tile_fee()) {
+    } else if (tile_kind == types::TILE_FEE()) {
         // 罚款
         let fee = map::tile_special(tile);
         let player = &mut game.players[player_index as u64];
@@ -1502,7 +1502,7 @@ fun handle_property_stop(
             let player = &mut game.players[player_index as u64];
 
             // 检查免租
-            let has_rent_free = is_buff_active(player, types::buff_rent_free(), game.round);
+            let has_rent_free = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
 
             if (has_rent_free) {
                 // 免租
@@ -1536,13 +1536,13 @@ fun handle_property_stop(
 // 处理医院停留
 fun handle_hospital_stop(game: &mut Game, player_index: u8, tile_id: u16) {
     let player = &mut game.players[player_index as u64];
-    player.in_hospital_turns = types::default_hospital_turns();
+    player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
 }
 
 // 处理监狱停留
 fun handle_prison_stop(game: &mut Game, player_index: u8, tile_id: u16) {
     let player = &mut game.players[player_index as u64];
-    player.in_prison_turns = types::default_prison_turns();
+    player.in_prison_turns = types::DEFAULT_PRISON_TURNS();
 }
 
 // 找最近的医院
@@ -1563,7 +1563,7 @@ fun find_nearest_hospital(game: &Game, current_pos: u16, game_data: &GameData): 
 fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: u16, game_data: &GameData) {
     let player = &mut game.players[player_index as u64];
     player.pos = hospital_tile;
-    player.in_hospital_turns = types::default_hospital_turns();
+    player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
 }
 
 // 送医院
@@ -1576,7 +1576,7 @@ fun send_to_hospital(game: &mut Game, player_index: u8, game_data: &GameData) {
         let hospital_tile = hospital_ids[0];
         let player = &mut game.players[player_index as u64];
         player.pos = hospital_tile;
-        player.in_hospital_turns = types::default_hospital_turns();
+        player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
     }
 }
 
@@ -1658,7 +1658,7 @@ fun handle_bankruptcy(
 
     // 如果只剩一个玩家，宣布游戏结束并确定获胜者
     if (non_bankrupt_count == 1) {
-        game.status = types::status_ended();
+        game.status = types::STATUS_ENDED();
         game.winner = winner;  // 设置最后的赢家
         events::emit_game_ended_event(
             game.id.to_inner(),
@@ -1729,7 +1729,7 @@ fun apply_card_effect_with_collectors(
 ) {
     let player_addr = (&game.players[player_index as u64]).owner;
 
-    if (kind == types::card_move_ctrl()) {
+    if (kind == types::CARD_MOVE_CTRL()) {
         // 遥控骰：params[0]=目标玩家索引, params[1..]=骰子值（支持多个）
         assert!(params.length() >= 2, EInvalidParams);
         let target_index = (params[0] as u8);
@@ -1747,16 +1747,16 @@ fun apply_card_effect_with_collectors(
 
         // 应用buff到目标玩家
         let target_player = &mut game.players[target_index as u64];
-        apply_buff(target_player, types::buff_move_ctrl(), game.round, dice_sum);
+        apply_buff(target_player, types::BUFF_MOVE_CTRL(), game.round, dice_sum);
 
         // 记录buff变更
         let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
-            types::buff_move_ctrl(),
+            types::BUFF_MOVE_CTRL(),
             target_addr,
             option::some(game.round)
         ));
-    } else if (kind == types::card_rent_free()) {
+    } else if (kind == types::CARD_RENT_FREE()) {
         // 免租卡：应用给自己（可扩展为params[0]指定目标）
         let target_index = if (params.length() > 0) {
             (params[0] as u8)
@@ -1766,16 +1766,16 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
         let target_player = &mut game.players[target_index as u64];
-        apply_buff(target_player, types::buff_rent_free(), game.round + 1, 0);
+        apply_buff(target_player, types::BUFF_RENT_FREE(), game.round + 1, 0);
 
         // 记录buff变更
         let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
-            types::buff_rent_free(),
+            types::BUFF_RENT_FREE(),
             target_addr,
             option::some(game.round + 1)
         ));
-    } else if (kind == types::card_freeze()) {
+    } else if (kind == types::CARD_FREEZE()) {
         // 冻结：params[0]=目标玩家索引
         assert!(params.length() >= 1, EInvalidParams);
         let target_index = (params[0] as u8);
@@ -1783,27 +1783,27 @@ fun apply_card_effect_with_collectors(
         assert!(target_index != player_index, EInvalidCardTarget);  // 不能冻结自己
 
         let target_player = &mut game.players[target_index as u64];
-        apply_buff(target_player, types::buff_frozen(), game.round + 1, 0);
+        apply_buff(target_player, types::BUFF_FROZEN(), game.round + 1, 0);
 
         // 记录buff变更
         let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
-            types::buff_frozen(),
+            types::BUFF_FROZEN(),
             target_addr,
             option::some(game.round + 1)
         ));
-    } else if (kind == types::card_barrier() || kind == types::card_bomb() || kind == types::card_dog()) {
+    } else if (kind == types::CARD_BARRIER() || kind == types::CARD_BOMB() || kind == types::CARD_DOG()) {
         // 放置NPC类卡牌：params[0]=地块ID
         assert!(params.length() >= 1, EInvalidParams);
         let tile_id = params[0];
 
         // 确定NPC类型
-        let npc_kind = if (kind == types::card_barrier()) {
-            types::npc_barrier()
-        } else if (kind == types::card_bomb()) {
-            types::npc_bomb()
+        let npc_kind = if (kind == types::CARD_BARRIER()) {
+            types::NPC_BARRIER()
+        } else if (kind == types::CARD_BOMB()) {
+            types::NPC_BOMB()
         } else {
-            types::npc_dog()
+            types::NPC_DOG()
         };
 
         // 尝试放置NPC（如果地块已被占用会跳过）
@@ -1816,7 +1816,7 @@ fun apply_card_effect_with_collectors(
                 npc_changes
             );
         };
-    } else if (kind == types::card_cleanse()) {
+    } else if (kind == types::CARD_CLEANSE()) {
         // 清除NPC：params[..]=所有要清除的地块ID
         let mut i = 0;
         while (i < params.length()) {
@@ -1824,7 +1824,7 @@ fun apply_card_effect_with_collectors(
             remove_npc_internal(game, tile_id, npc_changes);
             i = i + 1;
         };
-    } else if (kind == types::card_turn()) {
+    } else if (kind == types::CARD_TURN()) {
         // 转向卡：切换玩家的方向偏好
         // params[0]=目标玩家索引（可选，默认为自己）
         let target_index = if (params.length() > 0) {
@@ -1836,10 +1836,10 @@ fun apply_card_effect_with_collectors(
 
         // 切换方向
         let target_player = &mut game.players[target_index as u64];
-        target_player.dir_pref = if (target_player.dir_pref == types::dir_cw()) {
-            types::dir_ccw()
+        target_player.dir_pref = if (target_player.dir_pref == types::DIR_CW()) {
+            types::DIR_CCW()
         } else {
-            types::dir_cw()
+            types::DIR_CW()
         };
 
         // 转向卡是即时效果，不需要记录buff
@@ -2000,7 +2000,7 @@ fun advance_turn(game: &mut Game) {
             // 使用 >= 判断：当 round >= max_rounds 时结束（完成 max_rounds 轮后结束）
             if (game.round >= max_rounds) {
                 // 达到轮次上限，游戏结束
-                game.status = types::status_ended();
+                game.status = types::STATUS_ENDED();
                 events::emit_game_ended_event(
                     game.id.to_inner(),
                     option::none(),  // TODO: 实现按资产确定赢家
@@ -2167,7 +2167,7 @@ public fun get_turn(game: &Game): u8 {
 
 #[test_only]
 public fun current_turn_player(game: &Game): address {
-    assert!(game.status == types::status_active(), EGameNotActive);
+    assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
     game.players[game.active_idx as u64].owner
 }
 
@@ -2187,7 +2187,7 @@ public fun get_property_level(game: &Game, tile_id: u16): u8 {
     if (table::contains(&game.level_of, tile_id)) {
         *table::borrow(&game.level_of, tile_id)
     } else {
-        types::level_0()
+        types::LEVEL_0()
     }
 }
 
@@ -2286,7 +2286,7 @@ public fun handle_tile_stop_effect(
     let tile_kind = map::tile_kind(tile);
     let player_index = find_player_index(game, player);
 
-    if (tile_kind == types::tile_property()) {
+    if (tile_kind == types::TILE_PROPERTY()) {
         // 处理地产过路费
         if (table::contains(&game.owner_of, tile_id)) {
             let owner_index = *table::borrow(&game.owner_of, tile_id);
@@ -2301,7 +2301,7 @@ public fun handle_tile_stop_effect(
                 // 先检查免租buff
                 let has_rent_free = {
                     let player_data = &game.players[player_index as u64];
-                    is_buff_active(player_data, types::buff_rent_free(), game.round)
+                    is_buff_active(player_data, types::BUFF_RENT_FREE(), game.round)
                 };
 
                 // 如果不免租，执行转账
@@ -2316,7 +2316,7 @@ public fun handle_tile_stop_effect(
                 };
             };
         };
-    } else if (tile_kind == types::tile_card()) {
+    } else if (tile_kind == types::TILE_CARD()) {
         // 停留抽2张卡
         let player_data = &mut game.players[player_index as u64];
         let (card_kind, _) = cards::draw_card_on_stop(0);
@@ -2353,7 +2353,7 @@ public fun get_player_total_cards(game: &Game, player: address): u64 {
 public fun is_player_frozen(game: &Game, player: address): bool {
     let player_index = find_player_index(game, player);
     let player_data = &game.players[player_index as u64];
-    is_buff_active(player_data, types::buff_frozen(), game.round)
+    is_buff_active(player_data, types::BUFF_FROZEN(), game.round)
 }
 
 #[test_only]
@@ -2429,29 +2429,29 @@ public fun calculate_toll(base_toll: u64, level: u8, game_data: &GameData): u64 
 
 // 检查是否是NPC类型
 public fun is_npc(kind: u8): bool {
-    kind == types::npc_barrier() || kind == types::npc_bomb() || kind == types::npc_dog()
+    kind == types::NPC_BARRIER() || kind == types::NPC_BOMB() || kind == types::NPC_DOG()
 }
 
 // 检查是否是会送医院的NPC
 public fun is_hospital_npc(kind: u8): bool {
-    kind == types::npc_bomb() || kind == types::npc_dog()
+    kind == types::NPC_BOMB() || kind == types::NPC_DOG()
 }
 
 // 检查是否是可停留地块
 public fun is_stoppable_tile(kind: u8): bool {
-    kind == types::tile_property() ||
-    kind == types::tile_hospital() ||
-    kind == types::tile_prison() ||
-    kind == types::tile_chance() ||
-    kind == types::tile_bonus() ||
-    kind == types::tile_fee() ||
-    kind == types::tile_card() ||
-    kind == types::tile_news() ||
-    kind == types::tile_lottery() ||
-    kind == types::tile_shop()
+    kind == types::TILE_PROPERTY() ||
+    kind == types::TILE_HOSPITAL() ||
+    kind == types::TILE_PRISON() ||
+    kind == types::TILE_CHANCE() ||
+    kind == types::TILE_BONUS() ||
+    kind == types::TILE_FEE() ||
+    kind == types::TILE_CARD() ||
+    kind == types::TILE_NEWS() ||
+    kind == types::TILE_LOTTERY() ||
+    kind == types::TILE_SHOP()
 }
 
 // 检查是否是可经过触发的地块
 public fun is_passable_trigger(kind: u8): bool {
-    kind == types::tile_card() || kind == types::tile_lottery()
+    kind == types::TILE_CARD() || kind == types::TILE_LOTTERY()
 }

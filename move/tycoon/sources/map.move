@@ -136,12 +136,10 @@ public(package) fun create_registry_internal(ctx: &mut TxContext): MapRegistry {
     }
 }
 
-// 创建地图注册表（保留兼容性）
-public(package) fun create_registry(ctx: &mut TxContext): ID {
+// 创建并共享地图注册表
+public(package) fun create_and_share_registry(ctx: &mut TxContext) {
     let registry = create_registry_internal(ctx);
-    let registry_id = object::id(&registry);
     transfer::share_object(registry);
-    registry_id
 }
 
 // ===== Public Functions 公共函数 =====
@@ -289,13 +287,13 @@ public fun add_tile_to_template(
     template.tile_count = template.tile_count + 1;
 
     // 根据地块类型添加到对应的ID列表
-    if (tile.kind == types::tile_hospital()) {
+    if (tile.kind == types::TILE_HOSPITAL()) {
         template.hospital_ids.push_back(tile_id);
-    } else if (tile.kind == types::tile_prison()) {
+    } else if (tile.kind == types::TILE_PRISON()) {
         template.prison_ids.push_back(tile_id);
-    } else if (tile.kind == types::tile_shop()) {
+    } else if (tile.kind == types::TILE_SHOP()) {
         template.shop_ids.push_back(tile_id);
-    } else if (tile.kind == types::tile_news()) {
+    } else if (tile.kind == types::TILE_NEWS()) {
         template.news_ids.push_back(tile_id);
     };
 }
@@ -510,35 +508,35 @@ public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
     // 创建8个地块，形成环形
     // tile 0: 起点 (0,0) - PROPERTY
     add_tile_to_template(&mut template, 0,
-        new_tile_static(0, 0, types::tile_property(), types::size_1x1(), 1000, 100, 0));
+        new_tile_static(0, 0, types::TILE_PROPERTY(), types::SIZE_1X1(), 1000, 100, 0));
 
     // tile 1: (1,0) - PROPERTY
     add_tile_to_template(&mut template, 1,
-        new_tile_static(1, 0, types::tile_property(), types::size_1x1(), 1200, 120, 0));
+        new_tile_static(1, 0, types::TILE_PROPERTY(), types::SIZE_1X1(), 1200, 120, 0));
 
     // tile 2: (2,0) - CARD
     add_tile_to_template(&mut template, 2,
-        new_tile_static(2, 0, types::tile_card(), types::size_1x1(), 0, 0, 0));
+        new_tile_static(2, 0, types::TILE_CARD(), types::SIZE_1X1(), 0, 0, 0));
 
     // tile 3: (2,1) - PROPERTY
     add_tile_to_template(&mut template, 3,
-        new_tile_static(2, 1, types::tile_property(), types::size_1x1(), 1500, 150, 0));
+        new_tile_static(2, 1, types::TILE_PROPERTY(), types::SIZE_1X1(), 1500, 150, 0));
 
     // tile 4: (2,2) - PROPERTY
     add_tile_to_template(&mut template, 4,
-        new_tile_static(2, 2, types::tile_property(), types::size_1x1(), 1800, 180, 0));
+        new_tile_static(2, 2, types::TILE_PROPERTY(), types::SIZE_1X1(), 1800, 180, 0));
 
     // tile 5: (1,2) - HOSPITAL
     add_tile_to_template(&mut template, 5,
-        new_tile_static(1, 2, types::tile_hospital(), types::size_1x1(), 0, 0, 2)); // special=2表示停留2回合
+        new_tile_static(1, 2, types::TILE_HOSPITAL(), types::SIZE_1X1(), 0, 0, 2)); // special=2表示停留2回合
 
     // tile 6: (0,2) - PROPERTY
     add_tile_to_template(&mut template, 6,
-        new_tile_static(0, 2, types::tile_property(), types::size_1x1(), 2000, 200, 0));
+        new_tile_static(0, 2, types::TILE_PROPERTY(), types::SIZE_1X1(), 2000, 200, 0));
 
     // tile 7: (0,1) - PROPERTY
     add_tile_to_template(&mut template, 7,
-        new_tile_static(0, 1, types::tile_property(), types::size_1x1(), 2200, 220, 0));
+        new_tile_static(0, 1, types::TILE_PROPERTY(), types::SIZE_1X1(), 2200, 220, 0));
 
     // 设置顺时针路径
     let mut i = 0;
@@ -593,7 +591,7 @@ public fun add_tile(
     add_tile_to_template(
         template,
         tile_id,
-        new_tile_static(x, y, kind, types::size_1x1(), price, toll, 0)
+        new_tile_static(x, y, kind, types::SIZE_1X1(), price, toll, 0)
     );
 }
 

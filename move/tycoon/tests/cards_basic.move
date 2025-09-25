@@ -45,14 +45,14 @@ module tycoon::cards_basic_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         // 给Admin遥控骰卡
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_move_ctrl(), 1);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_MOVE_CTRL(), 1);
 
         // 使用遥控骰卡
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_move_ctrl(),
+            types::CARD_MOVE_CTRL(),
             vector[],  // 无参数
             &game_data,
             scenario::ctx(scenario)
@@ -60,7 +60,7 @@ module tycoon::cards_basic_tests {
         scenario::return_shared(game_data);
 
         // 验证玩家有遥控骰效果buff
-        assert!(game::has_buff(&game, utils::admin_addr(), types::buff_move_ctrl()), 1);
+        assert!(game::has_buff(&game, utils::admin_addr(), types::BUFF_MOVE_CTRL()), 1);
 
         // 掷骰移动
         let mut r = scenario::take_shared<Random>(scenario);
@@ -212,13 +212,13 @@ module tycoon::cards_basic_tests {
         game = scenario::take_shared<Game>(scenario);
         let seat = utils::get_current_player_seat(&game, scenario);
 
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 1);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_BARRIER(), 1);
 
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_barrier(),
+            types::CARD_BARRIER(),
             vector[2],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -237,13 +237,13 @@ module tycoon::cards_basic_tests {
         game = scenario::take_shared<Game>(scenario);
         let seat = utils::get_current_player_seat(&game, scenario);
 
-        game::test_give_card(&mut game, utils::alice(), types::card_cleanse(), 1);
+        game::test_give_card(&mut game, utils::alice(), types::CARD_CLEANSE(), 1);
 
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_cleanse(),
+            types::CARD_CLEANSE(),
             vector[2],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -289,13 +289,13 @@ module tycoon::cards_basic_tests {
         game = scenario::take_shared<Game>(scenario);
         let seat = utils::get_current_player_seat(&game, scenario);
 
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_freeze(), 1);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_FREEZE(), 1);
 
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_freeze(),
+            types::CARD_FREEZE(),
             vector[1],  // Alice的player_index是1
             &game_data,
             scenario::ctx(scenario)
@@ -388,7 +388,7 @@ module tycoon::cards_basic_tests {
         game = scenario::take_shared<Game>(scenario);
         let seat = utils::get_current_player_seat(&game, scenario);
 
-        game::test_give_card(&mut game, utils::alice(), types::card_rent_free(), 1);
+        game::test_give_card(&mut game, utils::alice(), types::CARD_RENT_FREE(), 1);
 
         let alice_initial_cash = game::get_player_cash(&game, utils::alice());
 
@@ -396,7 +396,7 @@ module tycoon::cards_basic_tests {
         game::use_card(
             &mut game,
             &seat,
-            types::card_rent_free(),
+            types::CARD_RENT_FREE(),
             vector[],  // 无参数
             &game_data,
             scenario::ctx(scenario)
@@ -448,14 +448,14 @@ module tycoon::cards_basic_tests {
         game = scenario::take_shared<Game>(scenario);
 
         // 给玩家多张卡牌
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 3);
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_bomb(), 2);
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_freeze(), 1);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_BARRIER(), 3);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_BOMB(), 2);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_FREEZE(), 1);
 
         // 验证各种卡牌数量
-        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::card_barrier()) == 3, 1);
-        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::card_bomb()) == 2, 2);
-        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::card_freeze()) == 1, 3);
+        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::CARD_BARRIER()) == 3, 1);
+        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::CARD_BOMB()) == 2, 2);
+        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::CARD_FREEZE()) == 1, 3);
 
         // 验证总卡牌数
         assert!(game::get_player_total_cards(&game, utils::admin_addr()) == 6, 4);
@@ -466,7 +466,7 @@ module tycoon::cards_basic_tests {
         game::use_card(
             &mut game,
             &seat,
-            types::card_barrier(),
+            types::CARD_BARRIER(),
             vector[1],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -474,7 +474,7 @@ module tycoon::cards_basic_tests {
         scenario::return_shared(game_data);
 
         // 验证卡牌数量减少
-        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::card_barrier()) == 2, 5);
+        assert!(game::get_player_card_count(&game, utils::admin_addr(), types::CARD_BARRIER()) == 2, 5);
         assert!(game::get_player_total_cards(&game, utils::admin_addr()) == 5, 6);
 
         scenario::return_to_sender(scenario, seat);

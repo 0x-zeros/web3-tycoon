@@ -46,7 +46,7 @@ module tycoon::movement_npc_tests {
         game::use_card(
             &mut game,
             &seat,
-            types::card_barrier(),
+            types::CARD_BARRIER(),
             vector[2],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -126,7 +126,7 @@ module tycoon::movement_npc_tests {
         game::use_card(
             &mut game,
             &seat,
-            types::card_bomb(),
+            types::CARD_BOMB(),
             vector[3],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -189,14 +189,14 @@ module tycoon::movement_npc_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         // 给Admin发狗狗卡
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_dog(), 1);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_DOG(), 1);
 
         // 使用狗狗卡放置在位置1
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_dog(),
+            types::CARD_DOG(),
             vector[1],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -206,7 +206,7 @@ module tycoon::movement_npc_tests {
         // 验证NPC已放置
         assert!(game::has_npc_on_tile(&game, 1), 1);
         let npc = game::get_npc_on_tile(&game, 1);
-        assert!(game::get_npc_kind(npc) == types::npc_dog(), 2);
+        assert!(game::get_npc_kind(npc) == types::NPC_DOG(), 2);
 
         game::end_turn(&mut game, &seat, scenario::ctx(scenario));
         scenario::return_to_sender(scenario, seat);
@@ -323,13 +323,13 @@ module tycoon::movement_npc_tests {
         game = scenario::take_shared<Game>(scenario);
         let seat = utils::get_current_player_seat(&game, scenario);
 
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 2);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_BARRIER(), 2);
 
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_barrier(),
+            types::CARD_BARRIER(),
             vector[1],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -341,7 +341,7 @@ module tycoon::movement_npc_tests {
         game::use_card(
             &mut game,
             &seat,
-            types::card_barrier(),
+            types::CARD_BARRIER(),
             vector[1],  // 目标地块ID
             &game_data,
             scenario::ctx(scenario)
@@ -374,7 +374,7 @@ module tycoon::movement_npc_tests {
         let seat = utils::get_current_player_seat(&game, scenario);
 
         // 给足够的卡牌
-        game::test_give_card(&mut game, utils::admin_addr(), types::card_barrier(), 10);
+        game::test_give_card(&mut game, utils::admin_addr(), types::CARD_BARRIER(), 10);
 
         // 尝试放置多个NPC（应全部成功）
         let mut i = 0;
@@ -383,7 +383,7 @@ module tycoon::movement_npc_tests {
             game::use_card(
                 &mut game,
                 &seat,
-                types::card_barrier(),
+                types::CARD_BARRIER(),
                 vector[i],  // 目标地块ID
                 &game_data,
                 scenario::ctx(scenario)

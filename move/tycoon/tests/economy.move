@@ -52,7 +52,7 @@ module tycoon::economy_tests {
 
         // 验证地产所有权
         utils::assert_property_owner(&game, 1, option::some(utils::alice()));
-        utils::assert_property_level(&game, 1, types::level_0());
+        utils::assert_property_level(&game, 1, types::LEVEL_0());
 
         // 验证现金减少（初始10000 - 1500 = 8500）
         utils::assert_player_cash(&game, utils::alice(), 8500);
@@ -96,7 +96,7 @@ module tycoon::economy_tests {
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::upgrade_property(&mut game, &seat, &game_data, scenario::ctx(scenario));
         scenario::return_shared(game_data);
-        utils::assert_property_level(&game, 1, types::level_1());
+        utils::assert_property_level(&game, 1, types::LEVEL_1());
 
         // 验证现金（初始10000 - 购买1500 - 升级900 = 7600）
         // 升级成本 = 1500 * 0.6 = 900
@@ -273,7 +273,7 @@ module tycoon::economy_tests {
         game::test_trigger_bankruptcy(&mut game, utils::carol(), 10000, option::none());
 
         // 验证游戏结束，Alice是赢家
-        assert!(game::get_status(&game) == types::status_ended(), 1);
+        assert!(game::get_status(&game) == types::STATUS_ENDED(), 1);
         assert!(game::get_winner(&game) == option::some(utils::alice()), 2);
 
         scenario::return_shared(game);
@@ -435,14 +435,14 @@ module tycoon::economy_tests {
         scenario::next_tx(scenario, utils::alice());
 
         // 给Alice免租卡
-        game::test_give_card(&mut game, utils::alice(), types::card_rent_free(), 1);
+        game::test_give_card(&mut game, utils::alice(), types::CARD_RENT_FREE(), 1);
 
         // 使用免租卡
         let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         game::use_card(
             &mut game,
             &seat,
-            types::card_rent_free(),
+            types::CARD_RENT_FREE(),
             vector[],  // 无参数
             &game_data,
             scenario::ctx(scenario)
@@ -530,13 +530,13 @@ module tycoon::economy_tests {
         game::test_trigger_bankruptcy(&mut game, utils::bob(), 5000, option::some(utils::admin_addr()));
 
         // 此时游戏还没结束（还有2个非破产玩家）
-        assert!(game::get_status(&game) == types::status_active(), 1);
+        assert!(game::get_status(&game) == types::STATUS_ACTIVE(), 1);
 
         // 最后一个破产导致游戏结束
         game::test_trigger_bankruptcy(&mut game, utils::carol(), 5000, option::some(utils::admin_addr()));
 
         // 验证游戏结束，Admin是赢家
-        assert!(game::get_status(&game) == types::status_ended(), 2);
+        assert!(game::get_status(&game) == types::STATUS_ENDED(), 2);
         assert!(game::get_winner(&game) == option::some(utils::admin_addr()), 3);
 
         scenario::return_to_sender(scenario, seat);

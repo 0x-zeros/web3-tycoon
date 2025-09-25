@@ -61,7 +61,7 @@ module tycoon::game_basic_tests {
         let mut game = scenario::take_shared<Game>(scenario);
 
         // 验证初始状态
-        assert!(game::get_status(&game) == types::status_ready(), 1);
+        assert!(game::get_status(&game) == types::STATUS_READY(), 1);
         assert!(game::get_turn(&game) == 0, 2);
         assert!(game::get_round(&game) == 0, 3);
 
@@ -136,7 +136,7 @@ module tycoon::game_basic_tests {
         let game = scenario::take_shared<Game>(scenario);
 
         // 验证游戏已开始
-        assert!(game::get_status(&game) == types::status_active(), 1);
+        assert!(game::get_status(&game) == types::STATUS_ACTIVE(), 1);
         let (round, turn) = game::get_round_and_turn(&game);
         assert!(round == 0, 2);  // 第一轮
         assert!(turn == 0, 3);   // 第一个玩家的回合
@@ -183,7 +183,7 @@ module tycoon::game_basic_tests {
         let clock = utils::create_test_clock(scenario);
 
         // 初始状态应该是ready
-        utils::assert_game_status(&game, types::status_ready());
+        utils::assert_game_status(&game, types::STATUS_READY());
 
         // 加入玩家
         utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
@@ -197,7 +197,7 @@ module tycoon::game_basic_tests {
         let game = scenario::take_shared<Game>(scenario);
 
         // 状态应该是active
-        utils::assert_game_status(&game, types::status_active());
+        utils::assert_game_status(&game, types::STATUS_ACTIVE());
 
         scenario::return_shared(game);
         clock::destroy_for_testing(clock);

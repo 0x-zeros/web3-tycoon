@@ -331,7 +331,7 @@ module tycoon::test_utils {
     public fun print_game_state(game: &Game) {
         let status = game::get_status(game);
         let turn = game::get_turn(game);
-        let current_player = if (status == types::status_active()) {
+        let current_player = if (status == types::STATUS_ACTIVE()) {
             option::some(game::current_turn_player(game))
         } else {
             option::none()

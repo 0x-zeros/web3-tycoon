@@ -34,20 +34,6 @@ public struct GameDataCreated has copy, drop {
     data_id: ID
 }
 
-/// 地图注册表创建事件（保留兼容）
-public struct MapRegistryCreated has copy, drop {
-    registry_id: ID
-}
-
-/// 卡牌注册表创建事件（保留兼容）
-public struct CardRegistryCreated has copy, drop {
-    registry_id: ID
-}
-
-/// 掉落配置创建事件（保留兼容）
-public struct DropConfigCreated has copy, drop {
-    config_id: ID
-}
 
 // ===== Package Init 包初始化 =====
 
@@ -115,10 +101,6 @@ public(package) fun borrow_map_registry_mut(game_data: &mut GameData): &mut map:
     &mut game_data.map_registry
 }
 
-/// 获取可变的地图注册表（兼容旧函数名）
-public(package) fun borrow_map_registry(game_data: &GameData): &map::MapRegistry {
-    &game_data.map_registry
-}
 
 /// 获取可变的卡牌注册表
 public(package) fun borrow_card_registry_mut(game_data: &mut GameData): &mut cards::CardRegistry {

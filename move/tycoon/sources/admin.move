@@ -38,11 +38,6 @@ public(package) fun create_admin_cap(ctx: &mut TxContext) {
 
 // ===== Entry Functions 入口函数 =====
 
-// [已废弃] 地图注册表现在在 init 中创建
-// entry fun create_map_registry(ctx: &mut TxContext) {
-//     map::create_registry(ctx);
-// }
-
 // 发布测试地图
 entry fun publish_test_map(
     registry: &mut MapRegistry,
@@ -98,64 +93,64 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
 
     // 起点
     map::add_tile_to_template(&mut template, 0,
-        map::new_tile_static(0, 0, types::tile_property(), types::size_1x1(), 0, 0, 0));
+        map::new_tile_static(0, 0, types::TILE_PROPERTY(), types::SIZE_1X1(), 0, 0, 0));
 
     // 第一边（南边）
     let mut i = 1;
     while (i < 10) {
-        let kind = if (i == 5) { types::tile_card() } else { types::tile_property() };
+        let kind = if (i == 5) { types::TILE_CARD() } else { types::TILE_PROPERTY() };
         let price = 1000 + i * 200;
         let toll = 100 + i * 20;
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static((i as u8), 0, kind, types::size_1x1(), price, toll, 0));
+            map::new_tile_static((i as u8), 0, kind, types::SIZE_1X1(), price, toll, 0));
         i = i + 1;
     };
 
     // 监狱角
     map::add_tile_to_template(&mut template, 10,
-        map::new_tile_static(10, 0, types::tile_prison(), types::size_1x1(), 0, 0, 2));
+        map::new_tile_static(10, 0, types::TILE_PRISON(), types::SIZE_1X1(), 0, 0, 2));
 
     // 第二边（东边）
     i = 11;
     while (i < 20) {
         let y = ((i - 10) as u8);
-        let kind = if (i == 15) { types::tile_hospital() } else { types::tile_property() };
+        let kind = if (i == 15) { types::TILE_HOSPITAL() } else { types::TILE_PROPERTY() };
         let price = 2000 + (i - 10) * 200;
         let toll = 200 + (i - 10) * 20;
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static(10, y, kind, types::size_1x1(), price, toll, 0));
+            map::new_tile_static(10, y, kind, types::SIZE_1X1(), price, toll, 0));
         i = i + 1;
     };
 
     // 免费停车角
     map::add_tile_to_template(&mut template, 20,
-        map::new_tile_static(10, 10, types::tile_bonus(), types::size_1x1(), 0, 0, 5000));
+        map::new_tile_static(10, 10, types::TILE_BONUS(), types::SIZE_1X1(), 0, 0, 5000));
 
     // 第三边（北边）
     i = 21;
     while (i < 30) {
         let x = (10 - (i - 20)) as u8;
-        let kind = if (i == 25) { types::tile_chance() } else { types::tile_property() };
+        let kind = if (i == 25) { types::TILE_CHANCE() } else { types::TILE_PROPERTY() };
         let price = 3000 + (i - 20) * 200;
         let toll = 300 + (i - 20) * 20;
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static(x, 10, kind, types::size_1x1(), price, toll, 0));
+            map::new_tile_static(x, 10, kind, types::SIZE_1X1(), price, toll, 0));
         i = i + 1;
     };
 
     // 前往监狱角
     map::add_tile_to_template(&mut template, 30,
-        map::new_tile_static(0, 10, types::tile_prison(), types::size_1x1(), 0, 0, 3));
+        map::new_tile_static(0, 10, types::TILE_PRISON(), types::SIZE_1X1(), 0, 0, 3));
 
     // 第四边（西边）
     i = 31;
     while (i < 40) {
         let y = ((10 - (i - 30)) as u8);
-        let kind = if (i == 35) { types::tile_news() } else { types::tile_property() };
+        let kind = if (i == 35) { types::TILE_NEWS() } else { types::TILE_PROPERTY() };
         let price = 4000 + (i - 30) * 200;
         let toll = 400 + (i - 30) * 20;
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static(0, y, kind, types::size_1x1(), price, toll, 0));
+            map::new_tile_static(0, y, kind, types::SIZE_1X1(), price, toll, 0));
         i = i + 1;
     };
 

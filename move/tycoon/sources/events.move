@@ -163,7 +163,7 @@ public struct StepEffect has copy, drop, store {
     step_index: u8,
     from_tile: u16,
     to_tile: u16,
-    remaining_steps: u8,
+    remaining_steps: u8, //todo 多余字段？
     pass_draws: vector<CardDrawItem>,
     npc_event: option::Option<NpcStepEvent>,
     stop_effect: option::Option<StopEffect>
@@ -480,32 +480,6 @@ public(package) fun emit_roll_and_step_action_event_with_choices(
     });
 }
 
-// 兼容旧版本（已废弃）
-public(package) fun emit_roll_and_step_action_event(
-    game_id: ID,
-    player: address,
-    round: u16,
-    turn_in_round: u8,
-    dice: u8,
-    dir: u8,
-    from: u16,
-    steps: vector<StepEffect>,
-    cash_changes: vector<CashDelta>,
-    end_pos: u16
-) {
-    emit_roll_and_step_action_event_with_choices(
-        game_id,
-        player,
-        round,
-        turn_in_round,
-        dice,
-        vector[],  // 空的路径选择
-        from,
-        steps,
-        cash_changes,
-        end_pos
-    );
-}
 
 // ===== Aggregated Event Constant Getters 聚合事件常量获取函数 =====
 
@@ -531,22 +505,4 @@ public fun stop_fee(): u8 { STOP_FEE }
 public fun stop_card_stop(): u8 { STOP_CARD_STOP }
 public fun stop_property_unowned(): u8 { STOP_PROPERTY_UNOWNED }
 
-// ===== Constructor Functions 构造函数（保留兼容） =====
-
-public fun new_game_created_event(
-    game: ID,
-    creator: address,
-    template_id: u64,
-    max_players: u8
-): GameCreatedEvent {
-    GameCreatedEvent { game, creator, template_id, max_players }
-}
-
-public fun new_player_joined_event(game: ID, player: address, player_index: u8): PlayerJoinedEvent {
-    PlayerJoinedEvent { game, player, player_index }
-}
-
-public fun new_game_started_event(game: ID, player_count: u8, starting_player: address): GameStartedEvent {
-    GameStartedEvent { game, player_count, starting_player }
-}
 

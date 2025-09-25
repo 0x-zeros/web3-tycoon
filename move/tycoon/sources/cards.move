@@ -101,12 +101,10 @@ public(package) fun create_card_registry_internal(ctx: &mut TxContext): CardRegi
     registry
 }
 
-// 创建卡牌注册表（保留兼容性）
-public(package) fun create_card_registry(ctx: &mut TxContext): ID {
+// 创建并共享卡牌注册表
+public(package) fun create_and_share_card_registry(ctx: &mut TxContext) {
     let registry = create_card_registry_internal(ctx);
-    let registry_id = object::id(&registry);
     transfer::share_object(registry);
-    registry_id
 }
 
 // 创建掉落配置表（返回对象，供内部使用）
@@ -126,19 +124,17 @@ public(package) fun create_drop_config_internal(ctx: &mut TxContext): DropConfig
     config
 }
 
-// 创建掉落配置表（保留兼容性）
-public(package) fun create_drop_config(ctx: &mut TxContext): ID {
+// 创建并共享掉落配置表
+public(package) fun create_and_share_drop_config(ctx: &mut TxContext) {
     let config = create_drop_config_internal(ctx);
-    let config_id = object::id(&config);
     transfer::share_object(config);
-    config_id
 }
 
 // 初始化基础卡牌
 fun init_basic_cards(registry: &mut CardRegistry) {
     // 遥控骰子卡
     register_card_internal(registry,
-        types::card_move_ctrl(),
+        types::CARD_MOVE_CTRL(),
         b"Move Control",
         b"Control your next dice roll",
         target_none(), //todo player?
@@ -148,7 +144,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 路障卡
     register_card_internal(registry,
-        types::card_barrier(),
+        types::CARD_BARRIER(),
         b"Barrier",
         b"Place a barrier on a tile",
         target_tile(),
@@ -158,7 +154,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 炸弹卡
     register_card_internal(registry,
-        types::card_bomb(),
+        types::CARD_BOMB(),
         b"Bomb",
         b"Place a bomb on a tile",
         target_tile(),
@@ -168,7 +164,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 免租卡
     register_card_internal(registry,
-        types::card_rent_free(),
+        types::CARD_RENT_FREE(),
         b"Rent Free",
         b"Avoid paying rent this turn",
         target_none(),
@@ -178,7 +174,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 冻结卡
     register_card_internal(registry,
-        types::card_freeze(),
+        types::CARD_FREEZE(),
         b"Freeze",
         b"Freeze a player for one turn",
         target_player(),
@@ -188,7 +184,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 狗狗卡
     register_card_internal(registry,
-        types::card_dog(),
+        types::CARD_DOG(),
         b"Dog",
         b"Place a dog NPC on a tile",
         target_tile(),
@@ -198,7 +194,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 清除卡
     register_card_internal(registry,
-        types::card_cleanse(),
+        types::CARD_CLEANSE(),
         b"Cleanse",
         b"Remove an NPC from a tile",
         target_tile(),
@@ -208,7 +204,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // 转向卡
     register_card_internal(registry,
-        types::card_turn(),
+        types::CARD_TURN(),
         b"Turn Card",
         b"Reverse your movement direction",
         target_none(),  // 即时效果，不需要目标
@@ -221,14 +217,14 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 fun init_default_drop_rules(config: &mut DropConfig) {
     // 设置默认卡牌池
     config.default_pool = vector[
-        types::card_move_ctrl(),
-        types::card_barrier(),
-        types::card_bomb(),
-        types::card_rent_free(),
-        types::card_freeze(),
-        types::card_dog(),
-        types::card_cleanse(),
-        types::card_turn()
+        types::CARD_MOVE_CTRL(),
+        types::CARD_BARRIER(),
+        types::CARD_BOMB(),
+        types::CARD_RENT_FREE(),
+        types::CARD_FREEZE(),
+        types::CARD_DOG(),
+        types::CARD_CLEANSE(),
+        types::CARD_TURN()
     ];
 
     // 设置默认权重（common=40, rare=30, epic=10）
@@ -249,7 +245,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         weights: config.default_weights,
         quantity: 2  // 停留时抽2张
     };
-    table::add(&mut config.tile_drops, types::tile_card(), card_tile_rule);
+    table::add(&mut config.tile_drops, types::TILE_CARD(), card_tile_rule);
 
     // 设置奖励格的掉落规则（更高概率稀有卡）
     let bonus_tile_rule = DropRule {
@@ -257,7 +253,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         weights: vector[20, 20, 40, 40, 30, 40, 20, 20],  // 提高稀有卡权重，包含转向卡
         quantity: 3  // 奖励格抽3张
     };
-    table::add(&mut config.tile_drops, types::tile_bonus(), bonus_tile_rule);
+    table::add(&mut config.tile_drops, types::TILE_BONUS(), bonus_tile_rule);
 }
 
 // 内部函数：注册卡牌到注册表
@@ -457,13 +453,13 @@ public fun validate_card_target(
 public fun determine_card_draw(random_value: u8): u8 {
     // 简单的随机卡牌选择
     let card_types = vector[
-        types::card_move_ctrl(),
-        types::card_barrier(),
-        types::card_bomb(),
-        types::card_rent_free(),
-        types::card_freeze(),
-        types::card_dog(),
-        types::card_cleanse()
+        types::CARD_MOVE_CTRL(),
+        types::CARD_BARRIER(),
+        types::CARD_BOMB(),
+        types::CARD_RENT_FREE(),
+        types::CARD_FREEZE(),
+        types::CARD_DOG(),
+        types::CARD_CLEANSE()
     ];
 
     let index = ((random_value as u64) % card_types.length());
@@ -503,7 +499,7 @@ public fun create_effect_context(
 
 // 获取卡牌效果持续时间
 public fun get_card_duration(card: &Card, current_turn: u64): Option<u64> {
-    if (card.kind == types::card_rent_free() || card.kind == types::card_freeze()) {
+    if (card.kind == types::CARD_RENT_FREE() || card.kind == types::CARD_FREEZE()) {
         option::some(current_turn + card.value)
     } else {
         option::none()

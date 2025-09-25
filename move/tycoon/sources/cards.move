@@ -439,13 +439,13 @@ public fun validate_card_target(
     let target_type = card.target_type;
 
     if (target_type == target_none()) {
-        target_player.is_none() && target_tile.is_none()
+        option::is_none(&target_player) && option::is_none(&target_tile)
     } else if (target_type == target_player()) {
-        target_player.is_some() && target_tile.is_none()
+        option::is_some(&target_player) && option::is_none(&target_tile)
     } else if (target_type == target_tile()) {
-        target_player.is_none() && target_tile.is_some()
+        option::is_none(&target_player) && option::is_some(&target_tile)
     } else if (target_type == target_player_or_tile()) {
-        target_player.is_some() || target_tile.is_some()
+        option::is_some(&target_player) || option::is_some(&target_tile)
     } else {
         false
     }

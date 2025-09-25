@@ -1995,8 +1995,8 @@ fun advance_turn(game: &mut Game) {
         refresh_at_round_end(game);
 
         // 步骤4: 检查是否达到最大轮数限制
-        if (game.max_rounds.is_some()) {
-            let max_rounds = *game.max_rounds.borrow();
+        if (option::is_some(&game.max_rounds)) {
+            let max_rounds = *option::borrow(&game.max_rounds);
             // 使用 >= 判断：当 round >= max_rounds 时结束（完成 max_rounds 轮后结束）
             if (game.round >= max_rounds) {
                 // 达到轮次上限，游戏结束
@@ -2201,8 +2201,8 @@ public fun create_game_with_config(
     ctx: &mut TxContext
 ): ID {
     // 忽略name，使用默认参数创建游戏
-    let params = if (_config.is_some()) {
-        vector[*_config.borrow()]
+    let params = if (option::is_some(&_config)) {
+        vector[*option::borrow(&_config)]
     } else {
         vector[]
     };

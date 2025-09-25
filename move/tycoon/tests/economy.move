@@ -24,11 +24,15 @@ module tycoon::economy_tests {
         // 获取游戏和注册表
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入游戏
-        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 玩家加入游戏
+        utils::join_players(&mut game, &game_data, vector[utils::alice(), utils::bob()], scenario);
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
@@ -59,7 +63,6 @@ module tycoon::economy_tests {
         // 清理
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -74,10 +77,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买地产
@@ -102,7 +106,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -118,10 +121,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice(), utils::bob()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买地产1
@@ -144,7 +148,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -160,10 +163,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         let seat = utils::get_current_player_seat(&game, scenario);
@@ -179,7 +183,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -194,10 +197,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice(), utils::bob()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         // Alice购买并升级地产1到最高级
@@ -239,7 +243,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -254,10 +257,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[
+
+        utils::join_players(&mut game, &game_data, vector[
             utils::alice(),
             utils::bob(),
             utils::carol()
@@ -273,7 +277,6 @@ module tycoon::economy_tests {
         assert!(game::get_winner(&game) == option::some(utils::alice()), 2);
 
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -289,10 +292,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         let seat = utils::get_current_player_seat(&game, scenario);
@@ -318,7 +322,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -333,11 +336,15 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 两个玩家加入
-        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 两个玩家加入
+        utils::join_players(&mut game, &game_data, vector[utils::alice(), utils::bob()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买并升级地产
@@ -392,7 +399,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -407,10 +413,11 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
 
         // Admin购买地产
@@ -463,7 +470,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -478,11 +484,15 @@ module tycoon::economy_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let registry = scenario::take_shared<MapRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 四个玩家加入
-        utils::join_players(&mut game, vector[
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 四个玩家加入
+        utils::join_players(&mut game, &game_data, vector[
             utils::alice(),
             utils::bob(),
             utils::carol()
@@ -531,7 +541,6 @@ module tycoon::economy_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }

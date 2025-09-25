@@ -301,6 +301,7 @@ public entry fun create_game(
 // 加入游戏
 public entry fun join(
     game: &mut Game,
+    game_data: &GameData,
     ctx: &mut TxContext
 ) {
     let player_addr = ctx.sender();
@@ -317,8 +318,9 @@ public entry fun join(
         i = i + 1;
     };
 
-    // 创建玩家
-    let player = create_player(player_addr, types::dir_cw(), ctx);  // 默认顺时针，游戏开始时随机
+    // 创建玩家 - 使用GameData中的起始资金
+    let starting_cash = tycoon::get_starting_cash(game_data);
+    let player = create_player_with_cash(player_addr, types::dir_cw(), starting_cash, ctx);  // 默认顺时针，游戏开始时随机
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 
@@ -435,6 +437,7 @@ public entry fun use_card(
 }
 
 // 掷骰并移动
+//todo 改为entry fun
 public entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
@@ -717,7 +720,7 @@ public entry fun upgrade_property(
 
     // 计算升级费用
     let price = map::tile_price(tile);
-    let upgrade_cost = calculate_upgrade_cost(price, current_level);
+    let upgrade_cost = calculate_upgrade_cost(price, current_level, game_data);
 
     // 验证现金
     assert!(player.cash >= upgrade_cost, EInsufficientCash);
@@ -763,9 +766,10 @@ fun create_player_with_cash(owner: address, dir_pref: u8, cash: u64, _ctx: &mut 
     }
 }
 
-// 创建玩家（默认起始资金）
-fun create_player(owner: address, dir_pref: u8, ctx: &mut TxContext): Player {
-    create_player_with_cash(owner, dir_pref, types::default_starting_cash(), ctx)
+// 创建玩家（使用GameData中的起始资金）
+fun create_player(owner: address, dir_pref: u8, game_data: &GameData, ctx: &mut TxContext): Player {
+    let starting_cash = tycoon::get_starting_cash(game_data);
+    create_player_with_cash(owner, dir_pref, starting_cash, ctx)
 }
 
 // 获取当前活跃玩家地址
@@ -1224,7 +1228,7 @@ fun handle_tile_stop(
     let player_addr = game.players.borrow(player_index as u64).owner;
 
     if (tile_kind == types::tile_property()) {
-        handle_property_stop(game, player_index, tile_id, tile);
+        handle_property_stop(game, player_index, tile_id, tile, game_data);
     } else if (tile_kind == types::tile_hospital()) {
         handle_hospital_stop(game, player_index, tile_id);
     } else if (tile_kind == types::tile_prison()) {
@@ -1289,7 +1293,7 @@ fun handle_tile_stop_with_collector(
             let owner_index = *table::borrow(&game.owner_of, tile_id);
             if (owner_index != player_index) {
                 let level = *table::borrow(&game.level_of, tile_id);
-                let toll = calculate_toll(map::tile_base_toll(tile), level);
+                let toll = calculate_toll(map::tile_base_toll(tile), level, game_data);
 
                 // 检查免租情况
                 let player = game.players.borrow(player_index as u64);
@@ -1377,7 +1381,7 @@ fun handle_tile_stop_with_collector(
                     stop_type = events::stop_none();  // 自己的地产，无特殊效果
                     game.pending_decision = types::decision_upgrade_property();
                     game.decision_tile = tile_id;
-                    let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level);
+                    let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level, game_data);
                     game.decision_amount = upgrade_cost;
                 } else {
                     // 已达最高级
@@ -1480,7 +1484,8 @@ fun handle_property_stop(
     game: &mut Game,
     player_index: u8,
     tile_id: u16,
-    tile: &map::TileStatic
+    tile: &map::TileStatic,
+    game_data: &GameData
 ) {
     let player_addr = game.players.borrow(player_index as u64).owner;
 
@@ -1492,7 +1497,7 @@ fun handle_property_stop(
         if (owner_index != player_index) {
             // 需要支付过路费
             let level = *table::borrow(&game.level_of, tile_id);
-            let toll = calculate_toll(map::tile_base_toll(tile), level);
+            let toll = calculate_toll(map::tile_base_toll(tile), level, game_data);
 
             let player = game.players.borrow_mut(player_index as u64);
 
@@ -2213,12 +2218,13 @@ public fun create_game_with_config(
 #[test_only]
 public fun join_with_coin(
     game: &mut Game,
+    game_data: &GameData,
     coin: coin::Coin<sui::sui::SUI>,
     ctx: &mut TxContext
 ) {
     // 销毁测试币并加入游戏
     coin::burn_for_testing(coin);
-    join(game, ctx)
+    join(game, game_data, ctx)
 }
 
 #[test_only]
@@ -2385,26 +2391,41 @@ public fun get_buff_value_for_test(
 
 // ===== Helper Functions (moved from types) =====
 
-// 获取等级倍率数组（用于计算过路费）
-public fun get_level_multipliers(): vector<u64> {
-    vector[1, 2, 4, 8, 16]  // M[0..4]
-}
+// 计算升级成本 - 使用GameData中的配置
+public fun calculate_upgrade_cost(price: u64, level: u8, game_data: &GameData): u64 {
+    let multipliers = tycoon::get_upgrade_multipliers(game_data);
 
-// 计算升级成本
-public fun calculate_upgrade_cost(price: u64, level: u8): u64 {
-    // cost(level) = price * (0.6 + 0.5 * level)
-    let multiplier = 60 + 50 * (level as u64);  // 以百分比计算
-    (price * multiplier) / 100
-}
+    // 防御性编程：如果配置为空，使用默认倍率 150% (1.5x)
+    if (multipliers.length() == 0) {
+        return (price * 150) / 100
+    };
 
-// 计算过路费
-public fun calculate_toll(base_toll: u64, level: u8): u64 {
-    let multipliers = get_level_multipliers();
     let idx = (level as u64);
     if (idx >= multipliers.length()) {
-        base_toll  // 防御性编程
+        // 如果等级超出配置，使用最后一个倍率
+        let last_idx = multipliers.length() - 1;
+        (price * *multipliers.borrow(last_idx)) / 100
     } else {
-        base_toll * *multipliers.borrow(idx)
+        (price * *multipliers.borrow(idx)) / 100
+    }
+}
+
+// 计算过路费 - 使用GameData中的配置
+public fun calculate_toll(base_toll: u64, level: u8, game_data: &GameData): u64 {
+    let multipliers = tycoon::get_toll_multipliers(game_data);
+
+    // 防御性编程：如果配置为空，使用默认倍率 100% (1x)
+    if (multipliers.length() == 0) {
+        return base_toll
+    };
+
+    let idx = (level as u64);
+    if (idx >= multipliers.length()) {
+        // 如果等级超出配置，使用最后一个倍率
+        let last_idx = multipliers.length() - 1;
+        (base_toll * *multipliers.borrow(last_idx)) / 100
+    } else {
+        (base_toll * *multipliers.borrow(idx)) / 100
     }
 }
 

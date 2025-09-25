@@ -187,6 +187,9 @@ public fun init_for_testing(ctx: &mut TxContext) {
     create_admin_cap(ctx);
 }
 
+// ===== GameData Configuration Functions 配置更新函数 =====
+// 注意：这些函数已移至 tycoon 模块以避免循环依赖
+
 // ===== Query Functions 查询函数 =====
 
 // 验证是否有管理员权限

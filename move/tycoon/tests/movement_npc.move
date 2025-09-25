@@ -26,9 +26,15 @@ module tycoon::movement_npc_tests {
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入并开始游戏
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        // 玩家加入并开始游戏
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin的回合 - 放置路障在位置2
         scenario::next_tx(scenario, utils::admin_addr());
@@ -102,9 +108,14 @@ module tycoon::movement_npc_tests {
         let mut game = scenario::take_shared<Game>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin放置炸弹在位置3
         scenario::next_tx(scenario, utils::admin_addr());
@@ -163,9 +174,14 @@ module tycoon::movement_npc_tests {
         let mut game = scenario::take_shared<Game>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice(), utils::bob()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin使用狗狗卡放置NPC
         scenario::next_tx(scenario, utils::admin_addr());
@@ -237,9 +253,14 @@ module tycoon::movement_npc_tests {
         let mut game = scenario::take_shared<Game>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // 设置Admin在医院
         scenario::next_tx(scenario, utils::admin_addr());

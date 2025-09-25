@@ -38,11 +38,11 @@ module tycoon::test_utils {
         scenario::next_tx(scenario, admin_addr());
         {
             let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-            let mut map_registry = scenario::take_shared<MapRegistry>(scenario);
-            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+            let mut game_data = scenario::take_shared<tycoon::GameData>(scenario);
 
             // 使用内置的测试地图
-            admin::publish_test_map(&mut map_registry, &admin_cap, scenario::ctx(scenario));
+            let map_registry = tycoon::borrow_map_registry_mut(&mut game_data);
+            admin::publish_test_map(map_registry, &admin_cap, scenario::ctx(scenario));
 
             // 获取模板ID - 测试地图的ID是1
             let template_id = 1;
@@ -56,7 +56,6 @@ module tycoon::test_utils {
             );
 
             scenario::return_to_sender(scenario, admin_cap);
-            scenario::return_shared(map_registry);
             scenario::return_shared(game_data);
 
             // 返回一个dummy ID，实际的Game对象可以通过scenario::take_shared获取
@@ -71,25 +70,27 @@ module tycoon::test_utils {
     // 让玩家加入游戏
     public fun join_game(
         game: &mut Game,
+        game_data: &tycoon::GameData,
         player: address,
         scenario: &mut Scenario
     ) {
         scenario::next_tx(scenario, player);
         {
             let coin = coin::mint_for_testing<SUI>(20000, scenario::ctx(scenario));
-            game::join_with_coin(game, coin, scenario::ctx(scenario));
+            game::join_with_coin(game, game_data, coin, scenario::ctx(scenario));
         };
     }
 
     // 批量加入玩家
     public fun join_players(
         game: &mut Game,
+        game_data: &tycoon::GameData,
         players: vector<address>,
         scenario: &mut Scenario
     ) {
         let mut i = 0;
         while (i < players.length()) {
-            join_game(game, *players.borrow(i), scenario);
+            join_game(game, game_data, *players.borrow(i), scenario);
             i = i + 1;
         };
     }

@@ -108,6 +108,54 @@ public(package) fun get_toll_multipliers(game_data: &GameData): &vector<u64> {
     &game_data.toll_multipliers
 }
 
+// ===== Mutable Accessor Functions 可变访问器函数 =====
+
+/// 获取可变的地图注册表（用于测试）
+public(package) fun borrow_map_registry_mut(game_data: &mut GameData): &mut map::MapRegistry {
+    &mut game_data.map_registry
+}
+
+/// 获取可变的地图注册表（兼容旧函数名）
+public(package) fun borrow_map_registry(game_data: &GameData): &map::MapRegistry {
+    &game_data.map_registry
+}
+
+/// 获取可变的卡牌注册表
+public(package) fun borrow_card_registry_mut(game_data: &mut GameData): &mut cards::CardRegistry {
+    &mut game_data.card_registry
+}
+
+// ===== Admin Functions 管理员函数 =====
+
+/// 更新起始资金（需要AdminCap）
+entry fun update_starting_cash(
+    game_data: &mut GameData,
+    new_cash: u64,
+    _admin: &admin::AdminCap
+) {
+    game_data.starting_cash = new_cash;
+}
+
+/// 更新升级倍率（需要AdminCap）
+entry fun update_upgrade_multipliers(
+    game_data: &mut GameData,
+    new_multipliers: vector<u64>,
+    _admin: &admin::AdminCap
+) {
+    assert!(!new_multipliers.is_empty(), 0); // 确保不为空
+    game_data.upgrade_multipliers = new_multipliers;
+}
+
+/// 更新租金倍率（需要AdminCap）
+entry fun update_toll_multipliers(
+    game_data: &mut GameData,
+    new_multipliers: vector<u64>,
+    _admin: &admin::AdminCap
+) {
+    assert!(!new_multipliers.is_empty(), 0); // 确保不为空
+    game_data.toll_multipliers = new_multipliers;
+}
+
 // ===== Test Helper 测试辅助 =====
 
 #[test_only]

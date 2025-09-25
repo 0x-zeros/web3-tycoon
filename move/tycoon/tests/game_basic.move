@@ -66,7 +66,9 @@ module tycoon::game_basic_tests {
         assert!(game::get_round(&game) == 0, 3);
 
         // 玩家加入游戏
-        utils::join_game(&mut game, utils::alice(), scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        utils::join_game(&mut game, &game_data, utils::alice(), scenario);
+        scenario::return_shared(game_data);
 
         scenario::return_shared(game);
         scenario::next_tx(scenario, utils::admin_addr());
@@ -90,11 +92,13 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
 
         // 多个玩家加入
         let players = vector[utils::alice(), utils::bob(), utils::carol()];
-        utils::join_players(&mut game, players, scenario);
+        utils::join_players(&mut game, &game_data, players, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game = scenario::take_shared<Game>(scenario);
@@ -117,14 +121,16 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 玩家加入
-        utils::join_players(&mut game, vector[utils::alice(), utils::bob()], scenario);
+        utils::join_players(&mut game, &game_data, vector[utils::alice(), utils::bob()], scenario);
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game = scenario::take_shared<Game>(scenario);
@@ -173,17 +179,19 @@ module tycoon::game_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         // 初始状态应该是ready
         utils::assert_game_status(&game, types::status_ready());
 
         // 加入玩家
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let game = scenario::take_shared<Game>(scenario);
@@ -210,7 +218,9 @@ module tycoon::game_basic_tests {
         let clock = utils::create_test_clock(scenario);
 
         // Alice加入
-        utils::join_game(&mut game, utils::alice(), scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        utils::join_game(&mut game, &game_data, utils::alice(), scenario);
+        scenario::return_shared(game_data);
 
         // 开始游戏
         utils::start_game(&mut game, &clock, scenario);
@@ -218,11 +228,13 @@ module tycoon::game_basic_tests {
 
         // Bob尝试加入（应该失败）
         scenario::next_tx(scenario, utils::bob());
-        let game = scenario::take_shared<Game>(scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
         let coin = utils::mint_sui(10000, scenario::ctx(scenario));
-        game::join_with_coin(&mut game, coin, scenario::ctx(scenario));
+        game::join_with_coin(&mut game, &game_data, coin, scenario::ctx(scenario));
 
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }

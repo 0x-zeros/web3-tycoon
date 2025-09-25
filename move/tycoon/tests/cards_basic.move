@@ -28,13 +28,16 @@ module tycoon::cards_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
-        let card_registry = scenario::take_shared<CardRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin使用遥控骰卡
         scenario::next_tx(scenario, utils::admin_addr());
@@ -86,8 +89,6 @@ module tycoon::cards_basic_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
-        scenario::return_shared(card_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -99,45 +100,25 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 创建包含卡牌格的复杂地图
-        scenario::next_tx(scenario, utils::admin_addr());
-        {
-            tycoon::init_for_testing(scenario::ctx(scenario));
-            // CardRegistry 在 tycoon::tycoon::init_for_testing 中创建
-        };
-
-        scenario::next_tx(scenario, utils::admin_addr());
-        let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-        let mut registry = scenario::take_shared<MapRegistry>(scenario);
-
-        // 创建复杂地图（包含卡牌格）
-        let template_id = utils::create_complex_map(&admin_cap, &mut registry, scenario::ctx(scenario));
-
-        scenario::return_to_sender(scenario, admin_cap);
-        scenario::return_shared(registry);
-
-        // 创建游戏
-        scenario::next_tx(scenario, utils::admin_addr());
-        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
-        game::create_game(
-            &game_data,
-            template_id,
-            vector[],  // 空的参数向量，表示使用默认配置
-            scenario::ctx(scenario)
-        );
-        scenario::return_shared(game_data);
+        // 创建测试游戏（使用默认的测试地图）
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin移动经过卡牌格（位置5是卡牌格）
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
 
         // 获取初始卡牌数量
         let initial_cards = game::get_player_total_cards(&game, utils::admin_addr());
@@ -152,7 +133,6 @@ module tycoon::cards_basic_tests {
         assert!(final_cards == initial_cards + 1, 1);
 
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -164,30 +144,8 @@ module tycoon::cards_basic_tests {
         let scenario = &mut scenario_val;
 
         // 使用复杂地图设置
-        scenario::next_tx(scenario, utils::admin_addr());
-        {
-            tycoon::init_for_testing(scenario::ctx(scenario));
-            // CardRegistry 在 tycoon::tycoon::init_for_testing 中创建
-        };
-
-        scenario::next_tx(scenario, utils::admin_addr());
-        let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
-        let mut registry = scenario::take_shared<MapRegistry>(scenario);
-
-        let template_id = utils::create_complex_map(&admin_cap, &mut registry, scenario::ctx(scenario));
-
-        scenario::return_to_sender(scenario, admin_cap);
-        scenario::return_shared(registry);
-
-        scenario::next_tx(scenario, utils::admin_addr());
-        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
-        game::create_game(
-            &game_data,
-            template_id,
-            vector[],  // 空的参数向量，表示使用默认配置
-            scenario::ctx(scenario)
-        );
-        scenario::return_shared(game_data);
+        // 创建测试游戏（使用默认的测试地图）
+        let _game_id = utils::create_test_game(scenario);
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
@@ -199,7 +157,6 @@ module tycoon::cards_basic_tests {
         // 停留在卡牌格
         scenario::next_tx(scenario, utils::admin_addr());
         game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
 
         let initial_cards = game::get_player_total_cards(&game, utils::admin_addr());
 
@@ -221,7 +178,6 @@ module tycoon::cards_basic_tests {
         assert!(final_cards == initial_cards + 2, 1);
 
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -240,13 +196,16 @@ module tycoon::cards_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
-        let card_registry = scenario::take_shared<CardRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin放置路障
         scenario::next_tx(scenario, utils::admin_addr());
@@ -296,8 +255,6 @@ module tycoon::cards_basic_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
-        scenario::return_shared(card_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -316,13 +273,16 @@ module tycoon::cards_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
-        let card_registry = scenario::take_shared<CardRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin使用冻结卡冻结Alice
         scenario::next_tx(scenario, utils::admin_addr());
@@ -381,8 +341,6 @@ module tycoon::cards_basic_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
-        scenario::return_shared(card_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -401,13 +359,16 @@ module tycoon::cards_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
-        let card_registry = scenario::take_shared<CardRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
-        utils::join_players(&mut game, vector[utils::alice()], scenario);
+        let mut game = scenario::take_shared<Game>(scenario);
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        let clock = utils::create_test_clock(scenario);
+
+        utils::join_players(&mut game, &game_data, vector[utils::alice()], scenario);
         utils::start_game(&mut game, &clock, scenario);
         scenario::return_shared(game);
+        scenario::return_shared(game_data);
 
         // Admin购买地产
         scenario::next_tx(scenario, utils::admin_addr());
@@ -460,8 +421,6 @@ module tycoon::cards_basic_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
-        scenario::return_shared(card_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }
@@ -480,8 +439,6 @@ module tycoon::cards_basic_tests {
 
         scenario::next_tx(scenario, utils::admin_addr());
         let mut game = scenario::take_shared<Game>(scenario);
-        let map_registry = scenario::take_shared<MapRegistry>(scenario);
-        let card_registry = scenario::take_shared<CardRegistry>(scenario);
         let clock = utils::create_test_clock(scenario);
 
         utils::start_game(&mut game, &clock, scenario);
@@ -522,8 +479,6 @@ module tycoon::cards_basic_tests {
 
         scenario::return_to_sender(scenario, seat);
         scenario::return_shared(game);
-        scenario::return_shared(map_registry);
-        scenario::return_shared(card_registry);
         clock::destroy_for_testing(clock);
         scenario::end(scenario_val);
     }

@@ -537,8 +537,8 @@ public entry fun decide_rent_payment(
     let toll = game.decision_amount;
 
     // 获取地产所有者
-    assert!(game.owner_of.contains(tile_id), EPropertyNotOwned);
-    let owner_index = *&game.owner_of[tile_id];
+    assert!(table::contains(&game.owner_of, tile_id), EPropertyNotOwned);
+    let owner_index = *table::borrow(&game.owner_of, tile_id);
 
     if (use_rent_free) {
         // 使用免租卡
@@ -648,7 +648,7 @@ public entry fun buy_property(
     assert!(map::tile_kind(tile) == types::tile_property(), ENotProperty);
 
     // 验证地块无主
-    assert!(!game.owner_of.contains(tile_id), EPropertyOwned);
+    assert!(!table::contains(&game.owner_of, tile_id), EPropertyOwned);
 
     // 验证价格和现金
     let price = map::tile_price(tile);
@@ -662,14 +662,14 @@ public entry fun buy_property(
     };
 
     // 设置所有权和等级
-    game.owner_of.add(tile_id, player_index);
-    game.level_of.add(tile_id, 1);
+    table::add(&mut game.owner_of, tile_id, player_index);
+    table::add(&mut game.level_of, tile_id, 1);
 
     // 更新owner_index
-    if (!game.owner_index.contains(player_index)) {
-        game.owner_index.add(player_index, vector[]);
+    if (!table::contains(&game.owner_index, player_index)) {
+        table::add(&mut game.owner_index, player_index, vector[]);
     };
-    let owner_tiles = game.owner_index.borrow_mut(player_index);
+    let owner_tiles = table::borrow_mut(&mut game.owner_index, player_index);
     owner_tiles.push_back(tile_id);
 
     // 清除待决策状态
@@ -710,12 +710,12 @@ public entry fun upgrade_property(
     assert!(map::tile_kind(tile) == types::tile_property(), ENotProperty);
 
     // 验证地块所有权
-    assert!(game.owner_of.contains(tile_id), EPropertyNotOwned);
-    let owner_idx = *&game.owner_of[tile_id];
+    assert!(table::contains(&game.owner_of, tile_id), EPropertyNotOwned);
+    let owner_idx = *table::borrow(&game.owner_of, tile_id);
     assert!(owner_idx == player_index, ENotOwner);
 
     // 验证等级
-    let current_level = *&game.level_of[tile_id];
+    let current_level = *table::borrow(&game.level_of, tile_id);
     assert!(current_level < types::level_4(), EMaxLevel);
 
     // 计算升级费用
@@ -732,7 +732,7 @@ public entry fun upgrade_property(
     };
 
     // 提升等级
-    let level_mut = game.level_of.borrow_mut(tile_id);
+    let level_mut = table::borrow_mut(&mut game.level_of, tile_id);
     *level_mut = current_level + 1;
 
     // 清除待决策状态
@@ -1010,8 +1010,8 @@ fun execute_step_movement_with_choices(
         let mut stop_effect_opt = option::none<events::StopEffect>();
 
         // 检查下一格的NPC/机关
-        if (game.npc_on.contains(next_pos)) {
-            let npc = *&game.npc_on[next_pos];
+        if (table::contains(&game.npc_on, next_pos)) {
+            let npc = *table::borrow(&game.npc_on, next_pos);
 
             if (is_hospital_npc(npc.kind)) {
                 // 炸弹或狗狗 - 送医院
@@ -1283,16 +1283,16 @@ fun handle_tile_stop_with_collector(
     let mut card_gains = vector[];
 
     if (tile_kind == types::tile_property()) {
-        if (!game.owner_of.contains(tile_id)) {
+        if (!table::contains(&game.owner_of, tile_id)) {
             // 无主地产 - 设置待决策状态
             stop_type = events::stop_property_unowned();
             game.pending_decision = types::decision_buy_property();
             game.decision_tile = tile_id;
             game.decision_amount = map::tile_price(tile);
         } else {
-            let owner_index = *&game.owner_of[tile_id];
+            let owner_index = *table::borrow(&game.owner_of, tile_id);
             if (owner_index != player_index) {
-                let level = *&game.level_of[tile_id];
+                let level = *table::borrow(&game.level_of, tile_id);
                 let toll = calculate_toll(map::tile_base_toll(tile), level, game_data);
 
                 // 检查免租情况
@@ -1375,7 +1375,7 @@ fun handle_tile_stop_with_collector(
                 }
             } else {
                 // 自己的地产 - 检查是否可以升级
-                let level = *&game.level_of[tile_id];
+                let level = *table::borrow(&game.level_of, tile_id);
                 if (level < types::level_4()) {
                     // 可以升级 - 设置待决策状态
                     stop_type = events::stop_none();  // 自己的地产，无特殊效果
@@ -1489,14 +1489,14 @@ fun handle_property_stop(
 ) {
     let player_addr = (&game.players[player_index as u64]).owner;
 
-    if (!game.owner_of.contains(tile_id)) {
+    if (!table::contains(&game.owner_of, tile_id)) {
         // 无主地产 - 可以购买
         // TODO: 实现购买逻辑（需要用户确认）
     } else {
-        let owner_index = *&game.owner_of[tile_id];
+        let owner_index = *table::borrow(&game.owner_of, tile_id);
         if (owner_index != player_index) {
             // 需要支付过路费
-            let level = *&game.level_of[tile_id];
+            let level = *table::borrow(&game.level_of, tile_id);
             let toll = calculate_toll(map::tile_base_toll(tile), level, game_data);
 
             let player = &mut game.players[player_index as u64];
@@ -1610,27 +1610,27 @@ fun handle_bankruptcy(
     };
 
     // 步骤2: 释放玩家拥有的所有地产
-    if (game.owner_index.contains(player_index)) {
-        let owned_tiles = *&game.owner_index[player_index];
+    if (table::contains(&game.owner_index, player_index)) {
+        let owned_tiles = *table::borrow(&game.owner_index, player_index);
         let mut i = 0;
         while (i < owned_tiles.length()) {
             let tile_id = owned_tiles[i];
 
             // 从全局所有权表中移除该地产的所有权记录
-            if (game.owner_of.contains(tile_id)) {
-                game.owner_of.remove(tile_id);
+            if (table::contains(&game.owner_of, tile_id)) {
+                table::remove(&mut game.owner_of, tile_id);
             };
 
             // 重置地产等级为0（变回无主地产）
-            if (game.level_of.contains(tile_id)) {
-                *game.level_of.borrow_mut(tile_id) = 0;
+            if (table::contains(&game.level_of, tile_id)) {
+                *table::borrow_mut(&mut game.level_of, tile_id) = 0;
             };
 
             i = i + 1;
         };
 
         // 清空玩家的地产拥有列表
-        let owner_tiles_mut = game.owner_index.borrow_mut(player_index);
+        let owner_tiles_mut = table::borrow_mut(&mut game.owner_index, player_index);
         *owner_tiles_mut = vector[];
     };
 
@@ -1680,9 +1680,9 @@ fun place_npc_internal(
     npc_changes: &mut vector<events::NpcChangeItem>,
 ) {
     // 仅限制同一地块不可重复放置
-    assert!(!game.npc_on.contains(tile_id), ETileOccupiedByNpc);
+    assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
     let npc = NpcInst { kind, consumable };
-    game.npc_on.add(tile_id, npc);
+    table::add(&mut game.npc_on, tile_id, npc);
     npc_changes.push_back(
         events::make_npc_change(tile_id, kind, events::npc_action_spawn(), consumable)
     );
@@ -1693,8 +1693,8 @@ fun remove_npc_internal(
     tile_id: u16,
     npc_changes: &mut vector<events::NpcChangeItem>,
 ) {
-    if (game.npc_on.contains(tile_id)) {
-        let npc = game.npc_on.remove(tile_id);
+    if (table::contains(&game.npc_on, tile_id)) {
+        let npc = table::remove(&mut game.npc_on, tile_id);
         npc_changes.push_back(
             events::make_npc_change(tile_id, npc.kind, events::npc_action_remove(), npc.consumable)
         );
@@ -1709,7 +1709,7 @@ fun consume_npc_if_consumable(
     npc: &NpcInst
 ): bool {
     if (npc.consumable) {
-        game.npc_on.remove(tile_id);
+        table::remove(&mut game.npc_on, tile_id);
         true
     } else {
         false
@@ -1807,7 +1807,7 @@ fun apply_card_effect_with_collectors(
         };
 
         // 尝试放置NPC（如果地块已被占用会跳过）
-        if (!game.npc_on.contains(tile_id)) {
+        if (!table::contains(&game.npc_on, tile_id)) {
             place_npc_internal(
                 game,
                 tile_id,
@@ -2076,18 +2076,18 @@ public fun get_player_cash(game: &Game, player: address): u64 {
 }
 
 public fun is_tile_owned(game: &Game, tile_id: u16): bool {
-    game.owner_of.contains(tile_id)
+    table::contains(&game.owner_of, tile_id)
 }
 
 public fun get_tile_owner(game: &Game, tile_id: u16): address {
-    assert!(game.owner_of.contains(tile_id), ENoSuchTile);
-    let owner_index = *&game.owner_of[tile_id];
+    assert!(table::contains(&game.owner_of, tile_id), ENoSuchTile);
+    let owner_index = *table::borrow(&game.owner_of, tile_id);
     game.players[owner_index as u64].owner
 }
 
 public fun get_tile_level(game: &Game, tile_id: u16): u8 {
-    if (game.level_of.contains(tile_id)) {
-        *&game.level_of[tile_id]
+    if (table::contains(&game.level_of, tile_id)) {
+        *table::borrow(&game.level_of, tile_id)
     } else {
         0
     }
@@ -2173,8 +2173,8 @@ public fun current_turn_player(game: &Game): address {
 
 #[test_only]
 public fun get_property_owner(game: &Game, tile_id: u16): option::Option<address> {
-    if (game.owner_of.contains(tile_id)) {
-        let owner_index = *&game.owner_of[tile_id];
+    if (table::contains(&game.owner_of, tile_id)) {
+        let owner_index = *table::borrow(&game.owner_of, tile_id);
         let owner_addr = (&game.players[owner_index as u64]).owner;
         option::some(owner_addr)
     } else {
@@ -2184,8 +2184,8 @@ public fun get_property_owner(game: &Game, tile_id: u16): option::Option<address
 
 #[test_only]
 public fun get_property_level(game: &Game, tile_id: u16): u8 {
-    if (game.level_of.contains(tile_id)) {
-        *&game.level_of[tile_id]
+    if (table::contains(&game.level_of, tile_id)) {
+        *table::borrow(&game.level_of, tile_id)
     } else {
         types::level_0()
     }
@@ -2288,11 +2288,11 @@ public fun handle_tile_stop_effect(
 
     if (tile_kind == types::tile_property()) {
         // 处理地产过路费
-        if (game.owner_of.contains(tile_id)) {
-            let owner_index = *&game.owner_of[tile_id];
+        if (table::contains(&game.owner_of, tile_id)) {
+            let owner_index = *table::borrow(&game.owner_of, tile_id);
             if (owner_index != player_index) {
                 // 计算并支付过路费
-                let level = *&game.level_of[tile_id];
+                let level = *table::borrow(&game.level_of, tile_id);
                 let base_toll = map::tile_base_toll(tile);
                 // 计算过路费倍数：0级=1.0, 1级=2.0, 2级=3.0, 3级=4.0, 4级=5.0
                 let multiplier = ((level + 1) as u64) * 100;
@@ -2326,12 +2326,12 @@ public fun handle_tile_stop_effect(
 
 #[test_only]
 public fun has_npc_on_tile(game: &Game, tile_id: u16): bool {
-    game.npc_on.contains(tile_id)
+    table::contains(&game.npc_on, tile_id)
 }
 
 #[test_only]
 public fun get_npc_on_tile(game: &Game, tile_id: u16): &NpcInst {
-    &game.npc_on[tile_id]
+    table::borrow(&game.npc_on, tile_id)
 }
 
 #[test_only]

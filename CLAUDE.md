@@ -328,3 +328,5 @@ web3-tycoon/
 - **Bug fixes**: 尽量使用KISS原则
 - **Refactoring**: 不需要向后兼容，以保持设计架构最优为优先
 - **Move contracts**: See move/tycoon/CLAUDE.md for contract-specific guidance
+- Move 2024：Vector 用新语法（索引`v[i]`、方法`.push_back()`），Table 保持函数式（`table::borrow()`）以示区分，Option
+  需前缀（`option::some()`），复杂类型优先引用避免复制。

@@ -249,7 +249,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         weights: config.default_weights,
         quantity: 2  // 停留时抽2张
     };
-    config.tile_drops.add(types::tile_card(), card_tile_rule);
+    table::add(&mut config.tile_drops, types::tile_card(), card_tile_rule);
 
     // 设置奖励格的掉落规则（更高概率稀有卡）
     let bonus_tile_rule = DropRule {
@@ -257,7 +257,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         weights: vector[20, 20, 40, 40, 30, 40, 20, 20],  // 提高稀有卡权重，包含转向卡
         quantity: 3  // 奖励格抽3张
     };
-    config.tile_drops.add(types::tile_bonus(), bonus_tile_rule);
+    table::add(&mut config.tile_drops, types::tile_bonus(), bonus_tile_rule);
 }
 
 // 内部函数：注册卡牌到注册表
@@ -279,10 +279,10 @@ fun register_card_internal(
         rarity
     };
 
-    if (registry.cards.contains(kind)) {
-        *registry.cards.borrow_mut(kind) = card;
+    if (table::contains(&registry.cards, kind)) {
+        *table::borrow_mut(&mut registry.cards, kind) = card;
     } else {
-        registry.cards.add(kind, card);
+        table::add(&mut registry.cards, kind, card);
         registry.card_count = registry.card_count + 1;
     };
 }
@@ -312,10 +312,10 @@ public fun update_drop_config(
     rule: DropRule,
     _ctx: &mut TxContext
 ) {
-    if (config.tile_drops.contains(tile_type)) {
-        *config.tile_drops.borrow_mut(tile_type) = rule;
+    if (table::contains(&config.tile_drops, tile_type)) {
+        *table::borrow_mut(&mut config.tile_drops, tile_type) = rule;
     } else {
-        config.tile_drops.add(tile_type, rule);
+        table::add(&mut config.tile_drops, tile_type, rule);
     };
 }
 
@@ -323,13 +323,13 @@ public fun update_drop_config(
 
 // 获取卡牌信息
 public fun get_card(registry: &CardRegistry, kind: u8): &Card {
-    assert!(registry.cards.contains(kind), ECardNotOwned);
-    &registry.cards[kind]
+    assert!(table::contains(&registry.cards, kind), ECardNotOwned);
+    table::borrow(&registry.cards, kind)
 }
 
 // 检查卡牌是否存在
 public fun has_card(registry: &CardRegistry, kind: u8): bool {
-    registry.cards.contains(kind)
+    table::contains(&registry.cards, kind)
 }
 
 // ===== Card Management Functions 卡牌管理函数 =====
@@ -368,7 +368,7 @@ public fun player_has_card(
     let len = player_cards.length();
 
     while (i < len) {
-        let entry = player_cards.borrow(i);
+        let entry = &player_cards[i];
         if (entry.kind == kind && entry.count > 0) {
             return true
         };
@@ -386,7 +386,7 @@ public fun get_player_card_count(
     let len = player_cards.length();
 
     while (i < len) {
-        let entry = player_cards.borrow(i);
+        let entry = &player_cards[i];
         if (entry.kind == kind) {
             return entry.count
         };
@@ -563,7 +563,7 @@ public fun count_total_cards(player_cards: &vector<CardEntry>): u64 {
     let len = player_cards.length();
 
     while (i < len) {
-        let entry = player_cards.borrow(i);
+        let entry = &player_cards[i];
         total = total + (entry.count as u64);
         i = i + 1;
     };

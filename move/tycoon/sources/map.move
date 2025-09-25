@@ -155,22 +155,22 @@ public fun publish_template(
     let template_id = template.id;
 
     // 检查模板是否已存在
-    assert!(!registry.templates.contains(template_id), ETemplateAlreadyExists);
+    assert!(!table::contains(&registry.templates, template_id), ETemplateAlreadyExists);
 
     // 添加模板到注册表
-    registry.templates.add(template_id, template);
+    table::add(&mut registry.templates, template_id, template);
     registry.template_count = registry.template_count + 1;
 }
 
 // 获取地图模板（只读）
 public fun get_template(registry: &MapRegistry, template_id: u64): &MapTemplate {
-    assert!(registry.templates.contains(template_id), ETemplateNotFound);
-    &registry.templates[template_id]
+    assert!(table::contains(&registry.templates, template_id), ETemplateNotFound);
+    table::borrow(&registry.templates, template_id)
 }
 
 // 检查模板是否存在
 public fun has_template(registry: &MapRegistry, template_id: u64): bool {
-    registry.templates.contains(template_id)
+    table::contains(&registry.templates, template_id)
 }
 
 // ===== Template Creation Functions 模板创建函数 =====
@@ -274,7 +274,7 @@ public fun add_tile_to_template(
 ) {
     // 添加tile_id边界检查
     assert!(tile_id <= MAX_TILE_ID, ETileIdTooLarge);
-    assert!(!template.tiles_static.contains(tile_id), ETileAlreadyExists);
+    assert!(!table::contains(&template.tiles_static, tile_id), ETileAlreadyExists);
 
     // 如果导航字段未设置（等于INVALID_TILE_ID），初始化为自环
     // 这样新创建的地块默认是"孤岛"，后续通过set_cw_next/set_ccw_next建立连接
@@ -285,7 +285,7 @@ public fun add_tile_to_template(
         tile.ccw_next = tile_id;
     };
 
-    template.tiles_static.add(tile_id, tile);
+    table::add(&mut template.tiles_static, tile_id, tile);
     template.tile_count = template.tile_count + 1;
 
     // 根据地块类型添加到对应的ID列表
@@ -306,11 +306,11 @@ public fun set_tile_adjacency(
     tile_id: u16,
     neighbors: vector<u16>
 ) {
-    if (template.adj.contains(tile_id)) {
-        let adj_list = template.adj.borrow_mut(tile_id);
+    if (table::contains(&template.adj, tile_id)) {
+        let adj_list = table::borrow_mut(&mut template.adj, tile_id);
         *adj_list = neighbors;
     } else {
-        template.adj.add(tile_id, neighbors);
+        table::add(&mut template.adj, tile_id, neighbors);
     };
 }
 
@@ -320,7 +320,7 @@ public fun set_cw_next(
     tile_id: u16,
     next_id: u16
 ) {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
 
     // 验证next_id的有效性
     // 允许自环（next_id == tile_id）用于表示端点
@@ -330,10 +330,10 @@ public fun set_cw_next(
 
     // 如果不是自环，验证目标地块存在
     if (next_id != tile_id) {
-        assert!(template.tiles_static.contains(next_id), ETargetTileNotExist);
+        assert!(table::contains(&template.tiles_static, next_id), ETargetTileNotExist);
     };
 
-    let tile = template.tiles_static.borrow_mut(tile_id);
+    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
     tile.cw_next = next_id;
 }
 
@@ -343,7 +343,7 @@ public fun set_ccw_next(
     tile_id: u16,
     next_id: u16
 ) {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
 
     // 验证next_id的有效性
     // 允许自环（next_id == tile_id）用于表示端点
@@ -353,10 +353,10 @@ public fun set_ccw_next(
 
     // 如果不是自环，验证目标地块存在
     if (next_id != tile_id) {
-        assert!(template.tiles_static.contains(next_id), ETargetTileNotExist);
+        assert!(table::contains(&template.tiles_static, next_id), ETargetTileNotExist);
     };
 
-    let tile = template.tiles_static.borrow_mut(tile_id);
+    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
     tile.ccw_next = next_id;
 }
 
@@ -367,8 +367,8 @@ public fun set_ring_info(
     ring_id: u8,
     ring_idx: u16
 ) {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = template.tiles_static.borrow_mut(tile_id);
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
     tile.ring_id = ring_id;
     tile.ring_idx = ring_idx;
 }
@@ -378,42 +378,42 @@ public fun set_ring_info(
 
 // 获取地块信息
 public fun get_tile(template: &MapTemplate, tile_id: u16): &TileStatic {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    &template.tiles_static[tile_id]
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    table::borrow(&template.tiles_static, tile_id)
 }
 
 // 获取顺时针下一格
 public fun get_cw_next(template: &MapTemplate, tile_id: u16): u16 {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id];
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
     tile.cw_next
 }
 
 // 获取逆时针下一格
 public fun get_ccw_next(template: &MapTemplate, tile_id: u16): u16 {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id];
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
     tile.ccw_next
 }
 
 // 获取地块所属环路ID
 public fun get_ring_id(template: &MapTemplate, tile_id: u16): u8 {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id];
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
     tile.ring_id
 }
 
 // 获取地块在环路中的索引
 public fun get_ring_idx(template: &MapTemplate, tile_id: u16): u16 {
-    assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id];
+    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    let tile = table::borrow(&template.tiles_static, tile_id);
     tile.ring_idx
 }
 
 // 获取邻接地块
 public fun get_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
-    if (template.adj.contains(tile_id)) {
-        *&template.adj[tile_id]
+    if (table::contains(&template.adj, tile_id)) {
+        *table::borrow(&template.adj, tile_id)
     } else {
         vector[]
     }
@@ -421,7 +421,7 @@ public fun get_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
 
 // 检查地块是否存在
 public fun has_tile(template: &MapTemplate, tile_id: u16): bool {
-    template.tiles_static.contains(tile_id)
+    table::contains(&template.tiles_static, tile_id)
 }
 
 // 获取医院地块ID列表
@@ -456,13 +456,13 @@ public fun get_height(template: &MapTemplate): u8 {
 
 // 检查地块是否有邻接表（分叉）
 public fun tile_has_adj(template: &MapTemplate, tile_id: u16): bool {
-    template.adj.contains(tile_id) &&
-    !(&template.adj[tile_id]).is_empty()
+    table::contains(&template.adj, tile_id) &&
+    !(table::borrow(&template.adj, tile_id)).is_empty()
 }
 
 // 获取地块的邻接列表
 public fun get_adj_tiles(template: &MapTemplate, tile_id: u16): &vector<u16> {
-    &template.adj[tile_id]
+    table::borrow(&template.adj, tile_id)
 }
 
 // 获取地块总数
@@ -478,13 +478,13 @@ public fun get_template_id(template: &MapTemplate): u64 {
 
 // 设置模板状态（允许更新，不加权限控制）
 public fun set_template_status(registry: &mut MapRegistry, template_id: u64, status: u8) {
-    let template = registry.templates.borrow_mut(template_id);
+    let template = table::borrow_mut(&mut registry.templates, template_id);
     template.status = status;
 }
 
 // 获取模板状态
 public fun get_template_status(registry: &MapRegistry, template_id: u64): u8 {
-    let template = &registry.templates[template_id];
+    let template = table::borrow(&registry.templates, template_id);
     template.status
 }
 

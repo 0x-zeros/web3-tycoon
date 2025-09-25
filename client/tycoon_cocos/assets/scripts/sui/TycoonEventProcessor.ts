@@ -155,7 +155,7 @@ export class TycoonEventProcessor {
         this._gameState.set(event.game, {
             id: event.game,
             creator: event.creator,
-            templateId: event.template_id,
+            templateId: event.template_id,  // 现在是 number (u16)
             maxPlayers: event.max_players,
             createdAt: event.created_at_ms,
             players: [],

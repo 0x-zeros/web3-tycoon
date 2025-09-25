@@ -214,7 +214,7 @@ export class TycoonEventExample extends Component {
             gameId: event.game,
             creator: event.creator,
             maxPlayers: event.max_players,
-            templateId: event.template_id.toString()
+            templateId: event.template_id
         });
 
         // 如果是自己创建的游戏，自动设置为当前游戏

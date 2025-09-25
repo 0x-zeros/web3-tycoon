@@ -270,7 +270,7 @@ export class TycoonEventIndexer {
         return {
             game: fields.game,
             creator: fields.creator,
-            template_id: BigInt(fields.template_id),
+            template_id: Number(fields.template_id),  // u16: 转换为 number
             max_players: Number(fields.max_players),
             created_at_ms: BigInt(fields.created_at_ms)
         };

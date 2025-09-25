@@ -13,7 +13,7 @@
 export interface GameCreatedEvent {
     game: string;               // ID类型
     creator: string;            // address
-    template_id: bigint;        // u64
+    template_id: number;        // u16 (0-65535)
     max_players: number;        // u8
     created_at_ms: bigint;      // u64
 }
@@ -285,7 +285,7 @@ export function isGameCreatedEvent(event: any): event is GameCreatedEvent {
     return event &&
            typeof event.game === 'string' &&
            typeof event.creator === 'string' &&
-           typeof event.template_id === 'bigint' &&
+           typeof event.template_id === 'number' &&
            typeof event.max_players === 'number';
 }
 

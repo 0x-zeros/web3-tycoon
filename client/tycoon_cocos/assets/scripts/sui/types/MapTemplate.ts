@@ -24,8 +24,8 @@ export interface TileInfo {
  * 对应Move中的MapTemplate结构
  */
 export interface MapTemplate {
-    /** 模板ID */
-    id: bigint;
+    /** 模板ID (u16: 0-65535) */
+    id: number;
     /** 模板名称 */
     name: string;
     /** 描述 */
@@ -91,7 +91,7 @@ export function createMapTemplateFromJSON(data: any): MapTemplate {
     }
 
     return {
-        id: BigInt(data.id || 0),
+        id: Number(data.id || 0),
         name: data.name || '',
         description: data.description || '',
         tiles,

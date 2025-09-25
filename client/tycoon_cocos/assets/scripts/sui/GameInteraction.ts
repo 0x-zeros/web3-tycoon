@@ -52,8 +52,8 @@ export interface RollAndStepParams {
 export class GameInteraction {
     private client: SuiClient;
     private config: GameInteractionConfig;
-    private mapTemplates: Map<bigint, MapTemplate>;
-    private mapGraphs: Map<bigint, MapGraph>;
+    private mapTemplates: Map<number, MapTemplate>;
+    private mapGraphs: Map<number, MapGraph>;
 
     constructor(config: GameInteractionConfig) {
         this.config = config;
@@ -64,9 +64,9 @@ export class GameInteraction {
 
     /**
      * 加载地图模板
-     * @param templateId 模板ID
+     * @param templateId 模板ID (u16: 0-65535)
      */
-    public async loadMapTemplate(templateId: bigint): Promise<MapTemplate> {
+    public async loadMapTemplate(templateId: number): Promise<MapTemplate> {
         // 检查缓存
         if (this.mapTemplates.has(templateId)) {
             return this.mapTemplates.get(templateId)!;
@@ -217,24 +217,24 @@ export class GameInteraction {
     /**
      * 获取游戏使用的地图模板ID
      * @param gameId 游戏ID
-     * @returns 地图模板ID
+     * @returns 地图模板ID (u16: 0-65535)
      */
-    private async getGameTemplateId(gameId: string): Promise<bigint> {
+    private async getGameTemplateId(gameId: string): Promise<number> {
         // TODO: 实际实现需要查询链上状态
         // 这里暂时返回默认模板ID
-        return BigInt(1);
+        return 1;
     }
 
     /**
      * 从链上获取地图模板数据
-     * @param templateId 模板ID
+     * @param templateId 模板ID (u16: 0-65535)
      * @returns 地图模板数据
      */
-    private async fetchMapTemplateFromChain(templateId: bigint): Promise<any> {
+    private async fetchMapTemplateFromChain(templateId: number): Promise<any> {
         // TODO: 实际实现需要从MapRegistry读取
         // 这里返回一个示例模板
         return {
-            id: templateId.toString(),
+            id: templateId,
             name: "Test Map",
             description: "A test map for development",
             starting_tile: "0",
@@ -270,13 +270,13 @@ export class GameInteraction {
      * 获取可达地块（用于UI显示）
      * @param currentPos 当前位置
      * @param steps 步数
-     * @param templateId 地图模板ID
+     * @param templateId 地图模板ID (u16: 0-65535)
      * @returns 可达地块列表
      */
     public async getReachableTiles(
         currentPos: bigint,
         steps: number,
-        templateId: bigint
+        templateId: number
     ): Promise<bigint[]> {
         const graph = this.mapGraphs.get(templateId);
         if (!graph) {
@@ -308,14 +308,14 @@ export class GameInteraction {
      * @param currentPos 当前位置
      * @param targetTile 目标地块
      * @param steps 步数
-     * @param templateId 地图模板ID
+     * @param templateId 地图模板ID (u16: 0-65535)
      * @returns 路径选择结果
      */
     public async generateAndValidatePath(
         currentPos: bigint,
         targetTile: bigint,
         steps: number,
-        templateId: bigint
+        templateId: number
     ): Promise<PathChoiceResult> {
         const graph = this.mapGraphs.get(templateId);
         if (!graph) {
@@ -343,12 +343,12 @@ export class GameInteraction {
 
     /**
      * 创建游戏
-     * @param templateId 地图模板ID
+     * @param templateId 地图模板ID (u16: 0-65535)
      * @param maxRounds 最大回合数（0表示无限）
      * @param walletAddress 钱包地址
      */
     public async createGame(
-        templateId: bigint,
+        templateId: number,
         maxRounds: number,
         walletAddress: string
     ): Promise<string> {
@@ -358,7 +358,7 @@ export class GameInteraction {
             target: `${this.config.packageId}::game::create_game`,
             arguments: [
                 tx.object(this.config.gameDataId),  // game_data: &GameData
-                tx.pure.u64(templateId.toString()),  // template_id: u64
+                tx.pure.u16(templateId),  // template_id: u16
                 tx.pure.vector('u64', [maxRounds.toString()]),  // params: vector<u64>
             ],
         });

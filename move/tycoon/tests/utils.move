@@ -90,7 +90,7 @@ module tycoon::test_utils {
     ) {
         let mut i = 0;
         while (i < players.length()) {
-            join_game(game, game_data, *players.borrow(i), scenario);
+            join_game(game, game_data, players[i], scenario);
             i = i + 1;
         };
     }
@@ -157,7 +157,7 @@ module tycoon::test_utils {
         let mut path_choices_u16 = vector[];
         let mut i = 0;
         while (i < path_choices.length()) {
-            path_choices_u16.push_back(*path_choices.borrow(i) as u16);
+            path_choices_u16.push_back(path_choices[i] as u16);
             i = i + 1;
         };
         game::roll_and_step(game, seat, path_choices_u16, &game_data, &r, &clock, scenario::ctx(scenario));
@@ -203,7 +203,7 @@ module tycoon::test_utils {
         let mut path_choices_u16 = vector[];
         let mut i = 0;
         while (i < path_choices.length()) {
-            path_choices_u16.push_back(*path_choices.borrow(i) as u16);
+            path_choices_u16.push_back(path_choices[i] as u16);
             i = i + 1;
         };
         game::roll_and_step(game, &seat, path_choices_u16, &game_data, &r, &clock, scenario::ctx(scenario));

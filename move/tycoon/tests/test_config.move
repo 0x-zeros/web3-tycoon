@@ -29,12 +29,12 @@ module tycoon::test_config {
             // Test upgrade multipliers
             let upgrade_mults = tycoon::get_upgrade_multipliers(&game_data);
             assert!(upgrade_mults.length() == 4, 2);
-            assert!(*upgrade_mults.borrow(0) == 150, 3);
+            assert!(upgrade_mults[0] == 150, 3);
 
             // Test toll multipliers
             let toll_mults = tycoon::get_toll_multipliers(&game_data);
             assert!(toll_mults.length() == 5, 4);
-            assert!(*toll_mults.borrow(0) == 100, 5);
+            assert!(toll_mults[0] == 100, 5);
 
             // Update starting cash
             tycoon::update_starting_cash(&mut game_data, 20000, &admin_cap);
@@ -44,7 +44,7 @@ module tycoon::test_config {
             let new_upgrade_mults = vector[200, 300, 400, 600];
             tycoon::update_upgrade_multipliers(&mut game_data, new_upgrade_mults, &admin_cap);
             let updated_mults = tycoon::get_upgrade_multipliers(&game_data);
-            assert!(*updated_mults.borrow(0) == 200, 7);
+            assert!(updated_mults[0] == 200, 7);
 
             test_scenario::return_shared(game_data);
             test_scenario::return_to_sender(scenario, admin_cap);

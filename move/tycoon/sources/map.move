@@ -165,7 +165,7 @@ public fun publish_template(
 // 获取地图模板（只读）
 public fun get_template(registry: &MapRegistry, template_id: u64): &MapTemplate {
     assert!(registry.templates.contains(template_id), ETemplateNotFound);
-    registry.templates[template_id]
+    &registry.templates[template_id]
 }
 
 // 检查模板是否存在
@@ -379,41 +379,41 @@ public fun set_ring_info(
 // 获取地块信息
 public fun get_tile(template: &MapTemplate, tile_id: u16): &TileStatic {
     assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    template.tiles_static[tile_id]
+    &template.tiles_static[tile_id]
 }
 
 // 获取顺时针下一格
 public fun get_cw_next(template: &MapTemplate, tile_id: u16): u16 {
     assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = template.tiles_static[tile_id];
+    let tile = &template.tiles_static[tile_id];
     tile.cw_next
 }
 
 // 获取逆时针下一格
 public fun get_ccw_next(template: &MapTemplate, tile_id: u16): u16 {
     assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = template.tiles_static[tile_id];
+    let tile = &template.tiles_static[tile_id];
     tile.ccw_next
 }
 
 // 获取地块所属环路ID
 public fun get_ring_id(template: &MapTemplate, tile_id: u16): u8 {
     assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = template.tiles_static[tile_id];
+    let tile = &template.tiles_static[tile_id];
     tile.ring_id
 }
 
 // 获取地块在环路中的索引
 public fun get_ring_idx(template: &MapTemplate, tile_id: u16): u16 {
     assert!(template.tiles_static.contains(tile_id), ENoSuchTile);
-    let tile = template.tiles_static[tile_id];
+    let tile = &template.tiles_static[tile_id];
     tile.ring_idx
 }
 
 // 获取邻接地块
 public fun get_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
     if (template.adj.contains(tile_id)) {
-        *template.adj[tile_id]
+        *&template.adj[tile_id]
     } else {
         vector[]
     }
@@ -457,12 +457,12 @@ public fun get_height(template: &MapTemplate): u8 {
 // 检查地块是否有邻接表（分叉）
 public fun tile_has_adj(template: &MapTemplate, tile_id: u16): bool {
     template.adj.contains(tile_id) &&
-    !template.adj[tile_id].is_empty()
+    !(&template.adj[tile_id]).is_empty()
 }
 
 // 获取地块的邻接列表
 public fun get_adj_tiles(template: &MapTemplate, tile_id: u16): &vector<u16> {
-    template.adj[tile_id]
+    &template.adj[tile_id]
 }
 
 // 获取地块总数
@@ -484,7 +484,7 @@ public fun set_template_status(registry: &mut MapRegistry, template_id: u64, sta
 
 // 获取模板状态
 public fun get_template_status(registry: &MapRegistry, template_id: u64): u8 {
-    let template = registry.templates[template_id];
+    let template = &registry.templates[template_id];
     template.status
 }
 

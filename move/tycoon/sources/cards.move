@@ -1,6 +1,6 @@
 module tycoon::cards;
 
-use std::option::Option;
+use std::option::{Self, Option};
 use sui::table::{Self, Table};
 use sui::transfer;
 use sui::object::{Self, UID, ID};
@@ -324,7 +324,7 @@ public fun update_drop_config(
 // 获取卡牌信息
 public fun get_card(registry: &CardRegistry, kind: u8): &Card {
     assert!(registry.cards.contains(kind), ECardNotOwned);
-    registry.cards[kind]
+    &registry.cards[kind]
 }
 
 // 检查卡牌是否存在
@@ -504,9 +504,9 @@ public fun create_effect_context(
 // 获取卡牌效果持续时间
 public fun get_card_duration(card: &Card, current_turn: u64): Option<u64> {
     if (card.kind == types::card_rent_free() || card.kind == types::card_freeze()) {
-        some(current_turn + card.value)
+        option::some(current_turn + card.value)
     } else {
-        none()
+        option::none()
     }
 }
 

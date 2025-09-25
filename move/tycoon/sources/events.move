@@ -10,7 +10,7 @@ use sui::event;
 public struct GameCreatedEvent has copy, drop {
     game: ID,
     creator: address,
-    template_id: u64,
+    template_id: u16,
     max_players: u8
 }
 
@@ -139,11 +139,11 @@ public struct BuffChangeItem has copy, drop, store {
 
 // NPC步骤事件
 public struct NpcStepEvent has copy, drop, store {
-    tile_id: u16,
-    kind: u8,
-    result: u8,  // NPC_RESULT_*
-    consumed: bool,
-    result_tile: option::Option<u16>
+    tile_id: u16,        // 遇到 NPC 的地块ID
+    kind: u8,            // NPC 类型（路障/炸弹/狗）
+    result: u8,          // 交互结果（送医院/停止移动等）
+    consumed: bool,      // NPC 是否被消耗
+    result_tile: option::Option<u16>  // 结果地块（如送医院的目标地块）
 }
 
 // 停留效果
@@ -202,7 +202,7 @@ public struct RollAndStepActionEvent has copy, drop {
 public(package) fun emit_game_created_event(
     game_id: ID,
     creator: address,
-    template_id: u64,
+    template_id: u16,
     max_players: u8
 ) {
     event::emit(GameCreatedEvent {

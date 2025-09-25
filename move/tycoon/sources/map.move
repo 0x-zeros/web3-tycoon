@@ -95,7 +95,7 @@ public struct TileStatic has store, copy, drop {
 // - 3 = blocked（封禁，前端隐藏，不可新建；旧局仍可读）
 // - 4 = archived（归档，完全隐藏，仅链上存证）
 public struct MapTemplate has store {
-    id: u64,
+    id: u16,
     status: u8,                    // 模板状态
     width: u8,
     height: u8,
@@ -121,7 +121,7 @@ public struct MapTemplate has store {
 // - template_count: 已注册的模板总数
 public struct MapRegistry has key, store {
     id: UID,
-    templates: Table<u64, MapTemplate>,
+    templates: Table<u16, MapTemplate>,
     template_count: u64
 }
 
@@ -161,13 +161,13 @@ public fun publish_template(
 }
 
 // 获取地图模板（只读）
-public fun get_template(registry: &MapRegistry, template_id: u64): &MapTemplate {
+public fun get_template(registry: &MapRegistry, template_id: u16): &MapTemplate {
     assert!(table::contains(&registry.templates, template_id), ETemplateNotFound);
     table::borrow(&registry.templates, template_id)
 }
 
 // 检查模板是否存在
-public fun has_template(registry: &MapRegistry, template_id: u64): bool {
+public fun has_template(registry: &MapRegistry, template_id: u16): bool {
     table::contains(&registry.templates, template_id)
 }
 
@@ -239,7 +239,7 @@ public fun new_tile_static_with_nav(
 
 // 创建地图模板
 public fun new_map_template(
-    id: u64,
+    id: u16,
     width: u8,
     height: u8,
     ctx: &mut TxContext
@@ -469,19 +469,19 @@ public fun get_tile_count(template: &MapTemplate): u64 {
 }
 
 // 获取模板ID
-public fun get_template_id(template: &MapTemplate): u64 {
+public fun get_template_id(template: &MapTemplate): u16 {
     template.id
 }
 
 
 // 设置模板状态（允许更新，不加权限控制）
-public fun set_template_status(registry: &mut MapRegistry, template_id: u64, status: u8) {
+public fun set_template_status(registry: &mut MapRegistry, template_id: u16, status: u8) {
     let template = table::borrow_mut(&mut registry.templates, template_id);
     template.status = status;
 }
 
 // 获取模板状态
-public fun get_template_status(registry: &MapRegistry, template_id: u64): u8 {
+public fun get_template_status(registry: &MapRegistry, template_id: u16): u8 {
     let template = table::borrow(&registry.templates, template_id);
     template.status
 }
@@ -618,7 +618,7 @@ public fun register_template<T>(
     registry: &mut MapRegistry,
     template: MapTemplate,
     ctx: &mut TxContext
-): u64 {
+): u16 {
     let tid = template.id;
     publish_template(registry, template, ctx);
     tid

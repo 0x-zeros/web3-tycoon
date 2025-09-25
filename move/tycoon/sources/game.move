@@ -193,7 +193,7 @@ public struct Seat has key {
 public struct Game has key, store {
     id: UID,
     status: u8,  // 0=ready, 1=active, 2=ended
-    template_id: u64,
+    template_id: u16,
 
     players: vector<Player>,
 
@@ -225,7 +225,7 @@ public struct Game has key, store {
 // 创建游戏
 public entry fun create_game(
     game_data: &GameData,
-    template_id: u64,
+    template_id: u16,
     params: vector<u64>,  // 通用参数（params[0]=max_rounds, 0表示无限）
     ctx: &mut TxContext
 ) {
@@ -2063,7 +2063,7 @@ public fun get_current_turn(game: &Game): (u16, u8) {
 }
 public fun get_active_player_index(game: &Game): u8 { game.active_idx }
 public fun get_player_count(game: &Game): u64 { game.players.length() }
-public fun get_template_id(game: &Game): u64 { game.template_id }
+public fun get_template_id(game: &Game): u16 { game.template_id }
 
 public fun get_player_position(game: &Game, player: address): u16 {
     let player_index = find_player_index(game, player);

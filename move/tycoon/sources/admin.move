@@ -15,7 +15,7 @@ public struct AdminCap has key, store { //todo
 
 // ===== Admin Events 管理事件 =====
 public struct MapTemplatePublishedEvent has copy, drop {
-    template_id: u64,
+    template_id: u16,
     publisher: address,
     tile_count: u64
 }
@@ -60,7 +60,7 @@ entry fun publish_test_map(
 // 发布自定义地图模板
 entry fun publish_custom_map_template(
     registry: &mut MapRegistry,
-    template_id: u64,
+    template_id: u16,
     width: u8,
     height: u8,
     _admin: &AdminCap,

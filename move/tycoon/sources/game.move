@@ -241,7 +241,7 @@ public struct Game has key, store {
     // 地块动态数据（与MapTemplate.tiles_static对齐）
     tiles: vector<Tile>,
     npc_on: Table<u16, NpcInst>,  // NPC实例完整数据
-    owner_index: Table<u8 /* player_index */, vector<u16>>,
+    owner_index: Table<u8 /* player_index */, vector<u16>>, //用于优化计算的数据, 不是必须
 
     // NPC生成系统
     npc_spawn_pool: vector<NpcSpawnEntry>,  // NPC生成池
@@ -251,7 +251,7 @@ public struct Game has key, store {
     price_rise_days: u8,            // 物价提升天数
 
     // 额外状态
-    winner: Option<address>,//todo 不需要吧？
+    winner: Option<address>,//todo 重构使用Player.rank u8， 第一名就是winner
 
     // 待决策状态
     pending_decision: u8,           // 待决策类型
@@ -444,19 +444,59 @@ public entry fun start(
         i = i + 1;
     };
 
+    // 获取地图模板（提前获取，供位置分配和NPC生成使用）
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+
+    // 为每个玩家随机分配不同的初始位置
+    let player_count = game.players.length();
+    let mut occupied_tiles = vector[];  // 记录已分配的位置
+    let mut player_positions = vector[];  // 存储每个玩家的位置
+
+    // 先找出所有玩家的位置
+    let mut i = 0;
+    while (i < player_count) {
+        // 尝试找到一个未被占用的位置
+        let mut attempts = 0;
+        let mut assigned_pos = 0u16;  // 默认位置
+
+        while (attempts < 10) {  // 最多尝试10次
+            let mut tile_opt = random_spawn_tile(game, template, &mut generator);
+            if (tile_opt.is_some()) {
+                let tile_id = tile_opt.extract();
+                // 检查是否已被其他玩家占用
+                if (!occupied_tiles.contains(&tile_id)) {
+                    assigned_pos = tile_id;
+                    occupied_tiles.push_back(tile_id);
+                    break
+                }
+            };
+            attempts = attempts + 1;
+        };
+
+        player_positions.push_back(assigned_pos);
+        i = i + 1;
+    };
+
+    // 然后分配位置给玩家
+    let mut i = 0;
+    while (i < player_count) {
+        let player = &mut game.players[i];
+        player.pos = player_positions[i];
+        i = i + 1;
+    };
+
     let starting_player = (&game.players[0]).owner;
 
     // 生成初始NPC（尝试生成3个）
-    let map_registry = tycoon::get_map_registry(game_data);
-    let template = map::get_template(map_registry, game.template_id);
     let mut i = 0;
     while (i < 3) {
         spawn_random_npc(game, template, &mut generator);
         i = i + 1;
     };
 
-    // 发出开始事件
-    events::emit_game_started_event(//todo 传回去的参数太少
+    // 发出开始事件 //该消息不需要太多信息，客户端在收到该event以后，应该重新获取game object，得到游戏的全部数据。
+    events::emit_game_started_event(
         game.id.to_inner(),
         game.players.length() as u8,
         starting_player

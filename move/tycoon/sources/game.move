@@ -2335,11 +2335,43 @@ fun is_buff_npc(npc_kind: u8): bool {
     npc_kind == types::NPC_FORTUNE_GOD()
 }
 
+// 随机选择一个可用的出生地块
+// 用于NPC和玩家的随机放置
+// 返回Option<u16>，如果没有可用地块返回none
+fun random_spawn_tile(
+    game: &Game,
+    template: &MapTemplate,
+    gen: &mut RandomGenerator
+): Option<u16> {
+    // 收集所有可用地块
+    let mut available_tiles = vector[];
+    let mut i = 0;
+    while (i < game.tiles.length()) {
+        let tile_static = map::get_tile(template, i as u16);
+        // 可以在EMPTY或PROPERTY地块上生成，且没有NPC
+        if (map::can_place_npc_on_tile(map::tile_kind(tile_static)) &&
+            game.tiles[i].npc_on == NO_NPC &&
+            !table::contains(&game.npc_on, i as u16)) {
+            available_tiles.push_back(i as u16);
+        };
+        i = i + 1;
+    };
+
+    // 如果没有可用地块，返回none
+    if (available_tiles.is_empty()) {
+        return option::none()
+    };
+
+    // 随机选择一个地块
+    let tile_idx = random::generate_u64(gen) % available_tiles.length();
+    option::some(available_tiles[tile_idx])
+}
+
 // 随机生成一个NPC到地图上
 // 采用简单直接的随机逻辑：
 // 1. 在spawn_pool中随机选择一个index
 // 2. 如果该NPC不在冷却，尝试放置
-// 3. 如果在冷却或无法放置，直接返回
+// 3. 如果在冷却或无法放置，直接返回（注意：没有可用地块时不设置冷却）
 // 注意：使用传入的RandomGenerator，符合一个交易一个generator的最佳实践
 public(package) fun spawn_random_npc(
     game: &mut Game,
@@ -2357,28 +2389,15 @@ public(package) fun spawn_random_npc(
     // 检查是否在冷却中
     let entry = &game.npc_spawn_pool[pool_idx as u64];
     if (entry.next_active_round > current_round) {
-        return; // 在冷却中，直接返回
+        return // 在冷却中，直接返回（保持原有冷却）
     };
 
-    // 寻找可用地块
-    let mut available_tiles = vector[];
-    let mut i = 0;
-    while (i < game.tiles.length()) {
-        let tile_static = map::get_tile(template, i as u16);
-        if (map::can_place_npc_on_tile(map::tile_kind(tile_static)) &&
-            game.tiles[i].npc_on == NO_NPC &&
-            !table::contains(&game.npc_on, i as u16)) {
-            available_tiles.push_back(i as u16);
-        };
-        i = i + 1;
+    // 随机选择一个出生地块
+    let mut tile_id_opt = random_spawn_tile(game, template, gen);
+    if (tile_id_opt.is_none()) {
+        return // 没有可用地块，不设置冷却时间！
     };
-
-    // 如果没有可用地块，直接返回
-    if (available_tiles.is_empty()) return;
-
-    // 随机选择一个地块
-    let tile_idx = random::generate_u64(gen) % available_tiles.length();
-    let tile_id = available_tiles[tile_idx];
+    let tile_id = tile_id_opt.extract();
 
     // 放置NPC
     let npc = NpcInst {
@@ -2389,7 +2408,8 @@ public(package) fun spawn_random_npc(
     table::add(&mut game.npc_on, tile_id, npc);
     game.tiles[tile_id as u64].npc_on = entry.npc_kind;
 
-    // 设置冷却
+    // 只有成功放置NPC后才设置冷却
+    // 这确保了如果因为地块不足而失败，NPC不会进入冷却，下次还有机会生成
     let cooldown_rounds = if (is_buff_npc(entry.npc_kind)) {
         3  // Buff型NPC：3轮冷却
     } else {

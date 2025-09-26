@@ -216,6 +216,17 @@ export interface PropertyNFTTransferredEvent {
 }
 
 /**
+ * 回合和轮次事件
+ */
+export interface RoundEndedEvent {
+    gameId: string;
+    round: number;      // 刚结束的轮次
+    npcKind: number;    // 新生成的NPC类型（0表示没有生成）
+    tileId: number;     // NPC放置的地块ID（npcKind为0时无意义）
+    timestamp: number;
+}
+
+/**
  * 特殊位置事件
  */
 export interface JailEnteredEvent {
@@ -247,6 +258,7 @@ export enum SuiEventType {
     GameCreated = 'GameCreated',
     GameStarted = 'GameStarted',
     GameEnded = 'GameEnded',
+    RoundEnded = 'RoundEnded',
 
     // 玩家动作
     PlayerJoined = 'PlayerJoined',

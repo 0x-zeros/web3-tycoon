@@ -12,6 +12,7 @@ import {
     GameCreatedEvent,
     RollAndStepActionEvent,
     UseCardActionEvent,
+    RoundEndedEvent,
     SuiTycoonEvent
 } from './TycoonEventTypes';
 import {
@@ -155,6 +156,10 @@ export class TycoonEventExample extends Component {
         // 监听破产事件
         EventBus.on(`tycoon:event:${TycoonEventType.Bankrupt}`,
             this._onPlayerBankrupt.bind(this));
+
+        // 监听轮次结束事件
+        EventBus.on(`tycoon:event:${TycoonEventType.RoundEnded}`,
+            this._onRoundEnded.bind(this));
     }
 
     /**
@@ -170,6 +175,8 @@ export class TycoonEventExample extends Component {
             this._onUseCard.bind(this));
         EventBus.off(`tycoon:event:${TycoonEventType.Bankrupt}`,
             this._onPlayerBankrupt.bind(this));
+        EventBus.off(`tycoon:event:${TycoonEventType.RoundEnded}`,
+            this._onRoundEnded.bind(this));
     }
 
     /**
@@ -202,6 +209,10 @@ export class TycoonEventExample extends Component {
 
             case TycoonEventType.GameEnded:
                 tycoonEventProcessor.processGameEnded(event.data);
+                break;
+
+            case TycoonEventType.RoundEnded:
+                tycoonEventProcessor.processRoundEnded(event.data);
                 break;
         }
     }
@@ -358,6 +369,44 @@ export class TycoonEventExample extends Component {
             debt: event.debt.toString(),
             creditor: event.creditor
         });
+    }
+
+    /**
+     * 处理轮次结束事件
+     */
+    private _onRoundEnded(event: RoundEndedEvent): void {
+        console.log('[TycoonExample] 轮次结束:', {
+            gameId: event.game,
+            round: event.round,
+            npcKind: event.npc_kind,
+            tileId: event.tile_id
+        });
+
+        // 如果生成了NPC（npc_kind不为0）
+        if (event.npc_kind !== 0) {
+            const npcName = this._getNPCName(event.npc_kind);
+            console.log(`[TycoonExample] 新的${npcName}出现在地块${event.tile_id}!`);
+
+            // 这里可以触发视觉效果
+            // 例如：在地图上显示NPC生成动画
+            // this._showNPCSpawnEffect(event.tile_id, event.npc_kind);
+        }
+    }
+
+    /**
+     * 获取NPC名称
+     */
+    private _getNPCName(npcKind: number): string {
+        switch (npcKind) {
+            case NPC_KIND.BARRIER:
+                return '路障';
+            case NPC_KIND.BOMB:
+                return '炸弹';
+            case NPC_KIND.DOG:
+                return '狗狗';
+            default:
+                return 'NPC';
+        }
     }
 
     // ===== 测试方法 =====

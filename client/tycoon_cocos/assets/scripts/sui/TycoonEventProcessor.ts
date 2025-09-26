@@ -11,6 +11,7 @@ import {
     GameCreatedEvent,
     GameStartedEvent,
     GameEndedEvent,
+    RoundEndedEvent,
     PlayerJoinedEvent,
     BankruptEvent,
     TurnStartEvent,
@@ -229,6 +230,35 @@ export class TycoonEventProcessor {
             turn: event.turn,
             reason: event.reason
         });
+    }
+
+    /**
+     * 处理轮次结束事件
+     */
+    public async processRoundEnded(event: RoundEndedEvent): Promise<void> {
+        if (this._config.debug) {
+            console.log('[TycoonProcessor] 轮次结束:', event);
+        }
+
+        // 发送轮次结束UI事件
+        EventBus.emit(EventTypes.Game.RoundEnded, {
+            gameId: event.game,
+            round: event.round
+        });
+
+        // 如果生成了NPC（npc_kind不为0）
+        if (event.npc_kind !== 0) {
+            // 发送NPC生成事件，触发视觉效果
+            EventBus.emit(EventTypes.Map.NpcSpawned, {
+                gameId: event.game,
+                tileId: event.tile_id,
+                npcKind: event.npc_kind
+            });
+
+            if (this._config.debug) {
+                console.log(`[TycoonProcessor] NPC生成在地块${event.tile_id}，类型:${event.npc_kind}`);
+            }
+        }
     }
 
     // ===== 聚合事件处理 =====

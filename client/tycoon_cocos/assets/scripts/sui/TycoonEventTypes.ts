@@ -83,6 +83,16 @@ export interface BankruptEvent {
     creditor?: string;          // Option<address>
 }
 
+/**
+ * 轮次结束事件
+ */
+export interface RoundEndedEvent {
+    game: string;               // ID: 游戏 ID
+    round: number;              // u16: 刚结束的轮次
+    npc_kind: number;           // u8: 新生成的NPC类型（0表示没有生成）
+    tile_id: number;            // u16: NPC放置的地块ID（npc_kind为0时无意义）
+}
+
 // ===== 聚合事件数据类型 =====
 
 /**
@@ -206,6 +216,7 @@ export enum TycoonEventType {
     GameCreated = 'GameCreatedEvent',
     GameStarted = 'GameStartedEvent',
     GameEnded = 'GameEndedEvent',
+    RoundEnded = 'RoundEndedEvent',
 
     // 玩家事件
     PlayerJoined = 'PlayerJoinedEvent',

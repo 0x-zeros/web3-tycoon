@@ -12,6 +12,7 @@ import {
     PlayerJoinedEvent,
     GameStartedEvent,
     GameEndedEvent,
+    RoundEndedEvent,
     BankruptEvent,
     RollAndStepActionEvent,
     UseCardActionEvent,
@@ -170,6 +171,7 @@ export class TycoonEventIndexer {
         this._registerEvent(TycoonEventType.PlayerJoined, this._parsePlayerJoinedEvent);
         this._registerEvent(TycoonEventType.GameStarted, this._parseGameStartedEvent);
         this._registerEvent(TycoonEventType.GameEnded, this._parseGameEndedEvent);
+        this._registerEvent(TycoonEventType.RoundEnded, this._parseRoundEndedEvent);
         this._registerEvent(TycoonEventType.TurnStart, this._parseTurnStartEvent);
         this._registerEvent(TycoonEventType.SkipTurn, this._parseSkipTurnEvent);
         this._registerEvent(TycoonEventType.EndTurn, this._parseEndTurnEvent);
@@ -301,6 +303,16 @@ export class TycoonEventIndexer {
             winner: fields.winner || undefined,
             turn: BigInt(fields.turn),
             reason: Number(fields.reason)
+        };
+    }
+
+    private _parseRoundEndedEvent(event: SuiEvent): RoundEndedEvent {
+        const fields = event.parsedJson as any;
+        return {
+            game: fields.game,
+            round: Number(fields.round),
+            npc_kind: Number(fields.npc_kind),
+            tile_id: Number(fields.tile_id)
         };
     }
 

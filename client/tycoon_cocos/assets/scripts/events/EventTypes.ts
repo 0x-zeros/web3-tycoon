@@ -50,7 +50,9 @@ export const EventTypes = {
         /** 地块移除 */
         BlockRemoved: "map_block_removed",
         /** 地图编辑模式切换 */
-        EditModeToggled: "map_edit_mode_toggled"
+        EditModeToggled: "map_edit_mode_toggled",
+        /** NPC生成 */
+        NpcSpawned: "map_npc_spawned"
     },
 
     /** 游戏逻辑事件 */
@@ -63,6 +65,8 @@ export const EventTypes = {
         GameStart: "game_start",
         /** 游戏结束 */
         GameEnd: "game_end",
+        /** 游戏结束（新名称） */
+        Ended: "game_ended",
         /** 游戏暂停 */
         GamePause: "game_pause",
         /** 游戏恢复 */
@@ -77,6 +81,8 @@ export const EventTypes = {
         TurnStart: "game_turn_start",
         /** 回合结束 */
         TurnEnd: "game_turn_end",
+        /** 轮次结束 */
+        RoundEnded: "game_round_ended",
         
         // 地图相关事件
         /** 地图被选择 */
@@ -122,7 +128,11 @@ export const EventTypes = {
         /** 使用道具 */
         UseItem: "player_use_item",
         /** 等级提升 */
-        LevelUp: "player_level_up"
+        LevelUp: "player_level_up",
+        /** 掷骰子 */
+        DiceRolled: "player_dice_rolled",
+        /** 玩家移动 */
+        Moved: "player_moved"
     },
 
     /** 卡片相关事件 */

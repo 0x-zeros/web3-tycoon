@@ -209,7 +209,8 @@ public struct Game has key, store {
     owner_index: Table<u8 /* player_index */, vector<u16>>,
 
     // 配置
-    max_rounds: Option<u16>,        // 最大轮次限制
+    max_rounds: u8,                 // 最大回合数（0表示无限期）
+    price_rise_days: u8,            // 物价提升天数
 
     // 额外状态
     winner: Option<address>,//todo 不需要吧？
@@ -221,6 +222,32 @@ public struct Game has key, store {
 }
 
 // ===== Entry Functions 入口函数 =====
+
+// 解析游戏创建参数
+// params[0]: starting_cash (0=默认100000)
+// params[1]: price_rise_days (0=默认15)
+// params[2]: max_rounds (0=无限期)
+fun parse_game_params(params: &vector<u64>): (u64, u8, u8) {
+    let starting_cash = if (params.length() > 0) {
+        tycoon::validate_starting_cash(params[0])
+    } else {
+        tycoon::DEFAULT_STARTING_CASH()
+    };
+
+    let price_rise_days = if (params.length() > 1) {
+        tycoon::validate_price_rise_days((params[1] as u8))
+    } else {
+        tycoon::DEFAULT_PRICE_RISE_DAYS()
+    };
+
+    let max_rounds = if (params.length() > 2) {
+        tycoon::validate_max_rounds((params[2] as u8))
+    } else {
+        0  // 默认无限期
+    };
+
+    (starting_cash, price_rise_days, max_rounds)
+}
 
 // 创建游戏
 public entry fun create_game(
@@ -235,16 +262,7 @@ public entry fun create_game(
     let template = map::get_template(map_registry, template_id);
 
     // 解析参数
-    let max_rounds = if (params.is_empty()) {
-        option::none()  // 默认无限轮次
-    } else {
-        let rounds = params[0];
-        if (rounds == 0) {
-            option::none()
-        } else {
-            option::some((rounds as u16))
-        }
-    };
+    let (starting_cash, price_rise_days, max_rounds) = parse_game_params(&params);
 
     // 创建游戏对象
     let game_id = object::new(ctx);
@@ -264,15 +282,15 @@ public entry fun create_game(
         npc_on: table::new(ctx),
         owner_index: table::new(ctx),
         max_rounds,
+        price_rise_days,
         winner: option::none(),
         pending_decision: types::DECISION_NONE(),
         decision_tile: 0,
         decision_amount: 0
     };
 
-    // 创建者自动加入（使用 GameData 中的起始资金）
+    // 创建者自动加入（使用解析后的起始资金）
     let creator = ctx.sender();
-    let starting_cash = tycoon::get_starting_cash(game_data);
     let player = create_player_with_cash(creator, types::DIR_CW(), starting_cash, ctx);
     game.players.push_back(player);
 
@@ -318,8 +336,13 @@ public entry fun join(
         i = i + 1;
     };
 
-    // 创建玩家 - 使用GameData中的起始资金
-    let starting_cash = tycoon::get_starting_cash(game_data);
+    // 创建玩家 - 复制第一个玩家的现金作为起始资金
+    // 游戏未开始时，第一个玩家的cash就是starting_cash
+    let starting_cash = if (game.players.length() > 0) {
+        game.players[0].cash  // 直接用第一个玩家的现金
+    } else {
+        tycoon::get_starting_cash(game_data)  // 兜底使用默认值
+    };
     let player = create_player_with_cash(player_addr, types::DIR_CW(), starting_cash, ctx);  // 默认顺时针，游戏开始时随机
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
@@ -764,12 +787,6 @@ fun create_player_with_cash(owner: address, dir_pref: u8, cash: u64, _ctx: &mut 
         cards: initial_cards,
         dir_pref  // 使用传入的方向
     }
-}
-
-// 创建玩家（使用GameData中的起始资金）
-fun create_player(owner: address, dir_pref: u8, game_data: &GameData, ctx: &mut TxContext): Player {
-    let starting_cash = tycoon::get_starting_cash(game_data);
-    create_player_with_cash(owner, dir_pref, starting_cash, ctx)
 }
 
 // 获取当前活跃玩家地址
@@ -1995,10 +2012,9 @@ fun advance_turn(game: &mut Game) {
         refresh_at_round_end(game);
 
         // 步骤4: 检查是否达到最大轮数限制
-        if (option::is_some(&game.max_rounds)) {
-            let max_rounds = *option::borrow(&game.max_rounds);
+        if (game.max_rounds > 0) {  // 0表示无限期
             // 使用 >= 判断：当 round >= max_rounds 时结束（完成 max_rounds 轮后结束）
-            if (game.round >= max_rounds) {
+            if (game.round >= (game.max_rounds as u16)) {
                 // 达到轮次上限，游戏结束
                 game.status = types::STATUS_ENDED();
                 events::emit_game_ended_event(

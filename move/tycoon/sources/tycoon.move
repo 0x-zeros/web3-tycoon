@@ -62,6 +62,23 @@ fun init(ctx: &mut TxContext) {
     event::emit(GameDataCreated { data_id: game_data_id });
 }
 
+// ===== Game Configuration Constants 游戏配置常量 =====
+
+// 起始现金配置
+const DEFAULT_STARTING_CASH: u64 = 100000;
+const MIN_STARTING_CASH: u64 = 10000;
+const MAX_STARTING_CASH: u64 = 500000;
+
+// 物价提升天数配置
+const DEFAULT_PRICE_RISE_DAYS: u8 = 15;
+const MIN_PRICE_RISE_DAYS: u8 = 1;
+const MAX_PRICE_RISE_DAYS: u8 = 100;
+
+// 最大回合数配置
+const DEFAULT_MAX_ROUNDS: u8 = 50;
+const MIN_MAX_ROUNDS: u8 = 10;
+const MAX_MAX_ROUNDS: u8 = 200;
+
 // ===== GameData Accessor Functions 访问器函数 =====
 
 /// 获取地图注册表
@@ -93,6 +110,56 @@ public(package) fun get_upgrade_multipliers(game_data: &GameData): &vector<u64> 
 public(package) fun get_toll_multipliers(game_data: &GameData): &vector<u64> {
     &game_data.toll_multipliers
 }
+
+// ===== Configuration Validation Functions 配置验证函数 =====
+
+/// 验证并获取起始现金（带默认值）
+public(package) fun validate_starting_cash(value: u64): u64 {
+    if (value == 0) {
+        DEFAULT_STARTING_CASH
+    } else if (value < MIN_STARTING_CASH) {
+        MIN_STARTING_CASH
+    } else if (value > MAX_STARTING_CASH) {
+        MAX_STARTING_CASH
+    } else {
+        value
+    }
+}
+
+/// 验证并获取物价提升天数
+public(package) fun validate_price_rise_days(value: u8): u8 {
+    if (value == 0) {
+        DEFAULT_PRICE_RISE_DAYS
+    } else if (value < MIN_PRICE_RISE_DAYS) {
+        MIN_PRICE_RISE_DAYS
+    } else if (value > MAX_PRICE_RISE_DAYS) {
+        MAX_PRICE_RISE_DAYS
+    } else {
+        value
+    }
+}
+
+/// 验证并获取最大回合数（0表示无限期）
+public(package) fun validate_max_rounds(value: u8): u8 {
+    if (value == 0) {
+        0  // 0表示无限期
+    } else if (value < MIN_MAX_ROUNDS) {
+        MIN_MAX_ROUNDS
+    } else if (value > MAX_MAX_ROUNDS) {
+        MAX_MAX_ROUNDS
+    } else {
+        value
+    }
+}
+
+/// 获取默认起始现金
+public fun DEFAULT_STARTING_CASH(): u64 { DEFAULT_STARTING_CASH }
+
+/// 获取默认物价提升天数
+public fun DEFAULT_PRICE_RISE_DAYS(): u8 { DEFAULT_PRICE_RISE_DAYS }
+
+/// 获取默认最大回合数
+public fun DEFAULT_MAX_ROUNDS(): u8 { DEFAULT_MAX_ROUNDS }
 
 // ===== Mutable Accessor Functions 可变访问器函数 =====
 

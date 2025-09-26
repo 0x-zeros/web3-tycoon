@@ -20,6 +20,28 @@ export enum BuffType {
 }
 
 /**
+ * 游戏配置常量 (对应Move中的tycoon.move)
+ */
+export const GameConfig = {
+    startingCash: {
+        default: 100000,
+        min: 10000,
+        max: 500000
+    },
+    priceRiseDays: {
+        default: 15,
+        min: 1,
+        max: 100
+    },
+    maxRounds: {
+        default: 50,
+        min: 10,
+        max: 200,
+        infinite: 0  // 0表示无限期
+    }
+};
+
+/**
  * 游戏交互配置
  */
 export interface GameInteractionConfig {
@@ -344,12 +366,16 @@ export class GameInteraction {
     /**
      * 创建游戏
      * @param templateId 地图模板ID (u16: 0-65535)
-     * @param maxRounds 最大回合数（0表示无限）
+     * @param startingCash 初始现金（0=默认100000）
+     * @param priceRiseDays 物价提升天数（0=默认15）
+     * @param maxRounds 最大回合数（0=无限期）
      * @param walletAddress 钱包地址
      */
     public async createGame(
         templateId: number,
-        maxRounds: number,
+        startingCash: number = 100000,
+        priceRiseDays: number = 15,
+        maxRounds: number = 0,
         walletAddress: string
     ): Promise<string> {
         const tx = new Transaction();
@@ -359,7 +385,11 @@ export class GameInteraction {
             arguments: [
                 tx.object(this.config.gameDataId),  // game_data: &GameData
                 tx.pure.u16(templateId),  // template_id: u16
-                tx.pure.vector('u64', [maxRounds.toString()]),  // params: vector<u64>
+                tx.pure.vector('u64', [
+                    startingCash.toString(),
+                    priceRiseDays.toString(),
+                    maxRounds.toString()
+                ]),  // params: vector<u64> - [starting_cash, price_rise_days, max_rounds]
             ],
         });
 

@@ -13,8 +13,9 @@ const ETemplateNotFound: u64 = 3001;
 const ETemplateAlreadyExists: u64 = 3002;
 const ETileAlreadyExists: u64 = 3003;  // 地块已存在
 const ETileIdTooLarge: u64 = 3010;     // tile_id超过最大允许值
-const EInvalidNextTileId: u64 = 3011;  // 无效的下一个地块ID
-const ETargetTileNotExist: u64 = 3012; // 目标地块不存在
+const ETileIdNotSequential: u64 = 3011; // tile_id必须连续
+const EInvalidNextTileId: u64 = 3012;  // 无效的下一个地块ID
+const ETargetTileNotExist: u64 = 3013; // 目标地块不存在
 
 // ===== Constants =====
 const INVALID_TILE_ID: u16 = 65535;    // u16::MAX 作为无效/未设置的tile_id
@@ -100,7 +101,7 @@ public struct MapTemplate has store {
     width: u8,
     height: u8,
     tile_count: u64,
-    tiles_static: Table<u16 /* tile_id */, TileStatic>,
+    tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
     adj: Table<u16 /* tile_id */, vector<u16> /* neighbors */>,
     // 导航信息已集成到 TileStatic 中，不再需要独立的 Table
     hospital_ids: vector<u16>,
@@ -250,7 +251,7 @@ public fun new_map_template(
         width,
         height,
         tile_count: 0,
-        tiles_static: table::new(ctx),
+        tiles_static: vector[],  // 初始化为空 vector
         adj: table::new(ctx),
         hospital_ids: vector[],
         prison_ids: vector[],
@@ -272,7 +273,10 @@ public fun add_tile_to_template(
 ) {
     // 添加tile_id边界检查
     assert!(tile_id <= MAX_TILE_ID, ETileIdTooLarge);
-    assert!(!table::contains(&template.tiles_static, tile_id), ETileAlreadyExists);
+
+    // 确保 tile_id 是连续的（必须等于当前 vector 长度）
+    let current_count = template.tiles_static.length() as u16;
+    assert!(tile_id == current_count, ETileIdNotSequential);
 
     // 如果导航字段未设置（等于INVALID_TILE_ID），初始化为自环
     // 这样新创建的地块默认是"孤岛"，后续通过set_cw_next/set_ccw_next建立连接
@@ -283,7 +287,7 @@ public fun add_tile_to_template(
         tile.ccw_next = tile_id;
     };
 
-    table::add(&mut template.tiles_static, tile_id, tile);
+    template.tiles_static.push_back(tile);
     template.tile_count = template.tile_count + 1;
 
     // 根据地块类型添加到对应的ID列表
@@ -318,7 +322,7 @@ public fun set_cw_next(
     tile_id: u16,
     next_id: u16
 ) {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
 
     // 验证next_id的有效性
     // 允许自环（next_id == tile_id）用于表示端点
@@ -328,10 +332,10 @@ public fun set_cw_next(
 
     // 如果不是自环，验证目标地块存在
     if (next_id != tile_id) {
-        assert!(table::contains(&template.tiles_static, next_id), ETargetTileNotExist);
+        assert!((next_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
     };
 
-    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
+    let tile = &mut template.tiles_static[tile_id as u64];
     tile.cw_next = next_id;
 }
 
@@ -341,7 +345,7 @@ public fun set_ccw_next(
     tile_id: u16,
     next_id: u16
 ) {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
 
     // 验证next_id的有效性
     // 允许自环（next_id == tile_id）用于表示端点
@@ -351,10 +355,10 @@ public fun set_ccw_next(
 
     // 如果不是自环，验证目标地块存在
     if (next_id != tile_id) {
-        assert!(table::contains(&template.tiles_static, next_id), ETargetTileNotExist);
+        assert!((next_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
     };
 
-    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
+    let tile = &mut template.tiles_static[tile_id as u64];
     tile.ccw_next = next_id;
 }
 
@@ -365,8 +369,8 @@ public fun set_ring_info(
     ring_id: u8,
     ring_idx: u16
 ) {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
-    let tile = table::borrow_mut(&mut template.tiles_static, tile_id);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    let tile = &mut template.tiles_static[tile_id as u64];
     tile.ring_id = ring_id;
     tile.ring_idx = ring_idx;
 }
@@ -376,35 +380,35 @@ public fun set_ring_info(
 
 // 获取地块信息
 public fun get_tile(template: &MapTemplate, tile_id: u16): &TileStatic {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
-    table::borrow(&template.tiles_static, tile_id)
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    &template.tiles_static[tile_id as u64]
 }
 
 // 获取顺时针下一格
 public fun get_cw_next(template: &MapTemplate, tile_id: u16): u16 {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
-    let tile = table::borrow(&template.tiles_static, tile_id);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    let tile = &template.tiles_static[tile_id as u64];
     tile.cw_next
 }
 
 // 获取逆时针下一格
 public fun get_ccw_next(template: &MapTemplate, tile_id: u16): u16 {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
-    let tile = table::borrow(&template.tiles_static, tile_id);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    let tile = &template.tiles_static[tile_id as u64];
     tile.ccw_next
 }
 
 // 获取地块所属环路ID
 public fun get_ring_id(template: &MapTemplate, tile_id: u16): u8 {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
-    let tile = table::borrow(&template.tiles_static, tile_id);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    let tile = &template.tiles_static[tile_id as u64];
     tile.ring_id
 }
 
 // 获取地块在环路中的索引
 public fun get_ring_idx(template: &MapTemplate, tile_id: u16): u16 {
-    assert!(table::contains(&template.tiles_static, tile_id), ENoSuchTile);
-    let tile = table::borrow(&template.tiles_static, tile_id);
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    let tile = &template.tiles_static[tile_id as u64];
     tile.ring_idx
 }
 
@@ -419,7 +423,7 @@ public fun get_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
 
 // 检查地块是否存在
 public fun has_tile(template: &MapTemplate, tile_id: u16): bool {
-    table::contains(&template.tiles_static, tile_id)
+    (tile_id as u64) < template.tiles_static.length()
 }
 
 // 获取医院地块ID列表

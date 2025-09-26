@@ -59,6 +59,8 @@ const ENoPathAllowed: u64 = 4002;  // 无遥控骰子时不允许提供路径
 const EInvalidPathChoice: u64 = 4003;  // 路径选择不是有效的邻居
 
 // NPC相关错误（已无全局数量限制）
+const E_NPC_SPAWN_POOL_INDEX_OUT_OF_BOUNDS: u64 = 8001;  // NPC生成池索引越界
+const E_TILE_INDEX_OUT_OF_BOUNDS: u64 = 8002;  // 地块索引越界
 
 // Map相关错误（game.move中使用的部分）
 const ETemplateNotFound: u64 = 3001;
@@ -2029,6 +2031,36 @@ fun clear_expired_buffs(player: &mut Player, current_round: u16) {
     }
 }
 
+// 处理并清理过期buffs（包括NPC冷却）
+fun process_and_clear_expired_buffs(game: &mut Game, player_index: u8) {
+    let current_round = game.round;
+
+    // 先收集过期的buff用于处理NPC冷却
+    let mut expired_buffs = vector[];
+    {
+        let player = &game.players[player_index as u64];
+        let mut i = 0;
+        while (i < player.buffs.length()) {
+            let buff = player.buffs[i];
+            if (buff.last_active_round < current_round) {
+                expired_buffs.push_back(buff);
+            };
+            i = i + 1;
+        }
+    };
+
+    // 处理过期buff的NPC冷却
+    let mut j = 0;
+    while (j < expired_buffs.length()) {
+        handle_buff_expired(game, &expired_buffs[j]);
+        j = j + 1;
+    };
+
+    // 清理过期的buff
+    let player = &mut game.players[player_index as u64];
+    clear_expired_buffs(player, current_round);
+}
+
 // 检查玩家是否有某种类型的buff处于激活状态
 //
 // Buff激活判断：current_round <= last_active_round
@@ -2068,10 +2100,8 @@ fun get_buff_value(player: &Player, kind: u8, current_round: u16): u64 {
 
 // 清理回合状态
 fun clean_turn_state(game: &mut Game, player_index: u8) {
-    let player = &mut game.players[player_index as u64];
-
-    // 清理过期的buff
-    clear_expired_buffs(player, game.round);
+    // 处理并清理过期的buff（包括NPC冷却）
+    process_and_clear_expired_buffs(game, player_index);
 }
 
 // 推进游戏到下一个玩家的回合
@@ -2339,21 +2369,54 @@ public(package) fun spawn_random_npcs(
 
     // 随机放置NPC
     let mut placed = 0;
-    while (placed < max_npcs &&
-           !available_indices.is_empty() &&
-           !available_tiles.is_empty()) {
+    // 在循环外创建一次随机数生成器
+    let mut gen = random::new_generator(r, ctx);
+
+    // 最多尝试次数设为max_npcs，确保每个NPC最多尝试一次
+    // 这是为了保持冷却机制的游戏性：
+    // - 如果所有NPC都在冷却中，本轮就不应该生成NPC
+    // - 一轮没有NPC生成是正常的游戏机制，体现了资源的稀缺性
+    // - 避免通过重试来"绕过"冷却限制
+    // - 防止无限循环的同时保持游戏平衡
+    let max_attempts = max_npcs;
+    let mut attempts = 0;
+
+    while (placed < max_npcs && attempts < max_attempts) {
+        attempts = attempts + 1;
+
+        // 如果没有可用的条目或地块，退出
+        if (available_indices.is_empty() || available_tiles.is_empty()) break;
 
         // 随机选择NPC
-        let mut gen = random::new_generator(r, ctx);
         let spawn_idx = random::generate_u64(&mut gen) % available_indices.length();
         let pool_idx = available_indices[spawn_idx];
+
+        // 验证索引范围
+        if (pool_idx >= game.npc_spawn_pool.length() as u16) continue;
+
         let entry = game.npc_spawn_pool[pool_idx as u64];  // Copy the entry
+
+        // 再次检查冷却（防止并发修改）
+        if (entry.next_active_round > current_round) {
+            // 从可用列表中移除
+            available_indices.remove(spawn_idx);
+            continue;
+        };
 
         // 随机选择地块
         let tile_idx = random::generate_u64(&mut gen) % available_tiles.length();
         let tile_id = available_tiles[tile_idx];
 
-        // 放置NPC（使用0xFFFF-1表示随机生成的索引）
+        // 验证tile_id范围
+        if (tile_id >= game.tiles.length() as u16) continue;
+
+        // 再次检查地块是否被占用（防止并发修改）
+        if (table::contains(&game.npc_on, tile_id)) {
+            available_tiles.remove(tile_idx);
+            continue;
+        };
+
+        // 放置NPC
         let npc = NpcInst {
             kind: entry.npc_kind,
             consumable: is_npc_consumable(entry.npc_kind),
@@ -2362,8 +2425,16 @@ public(package) fun spawn_random_npcs(
         table::add(&mut game.npc_on, tile_id, npc);
         game.tiles[tile_id as u64].npc_on = entry.npc_kind;
 
-        // 设置冷却（立即进入冷却）
-        game.npc_spawn_pool[pool_idx as u64].next_active_round = current_round + 1;
+        // 设置冷却
+        // 根据NPC类型设置不同的冷却时间
+        let cooldown_rounds = if (is_buff_npc(entry.npc_kind)) {
+            // Buff型NPC：需要等待更长时间（暂时设为3轮）
+            3
+        } else {
+            // 普通NPC：2轮冷却
+            2
+        };
+        game.npc_spawn_pool[pool_idx as u64].next_active_round = current_round + cooldown_rounds;
 
         // 发出事件
         npc_changes.push_back(

@@ -153,13 +153,13 @@ public(package) fun validate_max_rounds(value: u8): u8 {
 }
 
 /// 获取默认起始现金
-public fun DEFAULT_STARTING_CASH(): u64 { DEFAULT_STARTING_CASH }
+public fun get_default_starting_cash(): u64 { DEFAULT_STARTING_CASH }
 
 /// 获取默认物价提升天数
-public fun DEFAULT_PRICE_RISE_DAYS(): u8 { DEFAULT_PRICE_RISE_DAYS }
+public fun get_default_price_rise_days(): u8 { DEFAULT_PRICE_RISE_DAYS }
 
 /// 获取默认最大回合数
-public fun DEFAULT_MAX_ROUNDS(): u8 { DEFAULT_MAX_ROUNDS }
+public fun get_default_max_rounds(): u8 { DEFAULT_MAX_ROUNDS }
 
 // ===== Mutable Accessor Functions 可变访问器函数 =====
 

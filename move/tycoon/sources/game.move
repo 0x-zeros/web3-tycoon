@@ -231,13 +231,13 @@ fun parse_game_params(params: &vector<u64>): (u64, u8, u8) {
     let starting_cash = if (params.length() > 0) {
         tycoon::validate_starting_cash(params[0])
     } else {
-        tycoon::DEFAULT_STARTING_CASH()
+        tycoon::get_default_starting_cash()
     };
 
     let price_rise_days = if (params.length() > 1) {
         tycoon::validate_price_rise_days((params[1] as u8))
     } else {
-        tycoon::DEFAULT_PRICE_RISE_DAYS()
+        tycoon::get_default_price_rise_days()
     };
 
     let max_rounds = if (params.length() > 2) {
@@ -673,9 +673,11 @@ public entry fun buy_property(
     // 验证地块无主
     assert!(!table::contains(&game.owner_of, tile_id), EPropertyOwned);
 
-    // 验证价格和现金
-    let price = map::tile_price(tile);
-    assert!(price > 0, EInvalidPrice);
+    // 验证价格和现金（应用物价指数）
+    let base_price = map::tile_price(tile);
+    assert!(base_price > 0, EInvalidPrice);
+    let price_index = calculate_price_index(game);
+    let price = (base_price * price_index);
     assert!(player.cash >= price, EInsufficientCash);
 
     // 扣除现金
@@ -743,7 +745,7 @@ public entry fun upgrade_property(
 
     // 计算升级费用
     let price = map::tile_price(tile);
-    let upgrade_cost = calculate_upgrade_cost(price, current_level, game_data);
+    let upgrade_cost = calculate_upgrade_cost(price, current_level, game, game_data);
 
     // 验证现金
     assert!(player.cash >= upgrade_cost, EInsufficientCash);
@@ -1260,12 +1262,16 @@ fun handle_tile_stop(
         // TODO: 实现机会事件
     } else if (tile_kind == types::TILE_BONUS()) {
         // 奖励
-        let bonus = map::tile_special(tile);
+        let base_bonus = map::tile_special(tile);
+        let price_index = calculate_price_index(game);
+        let bonus = base_bonus * price_index;  // 应用物价指数
         let player = &mut game.players[player_index as u64];
         player.cash = player.cash + bonus;
     } else if (tile_kind == types::TILE_FEE()) {
         // 罚款
-        let fee = map::tile_special(tile);
+        let base_fee = map::tile_special(tile);
+        let price_index = calculate_price_index(game);
+        let fee = base_fee * price_index;  // 应用物价指数
         let player = &mut game.players[player_index as u64];
         if (player.cash >= fee) {
             player.cash = player.cash - fee;
@@ -1301,16 +1307,18 @@ fun handle_tile_stop_with_collector(
 
     if (tile_kind == types::TILE_PROPERTY()) {
         if (!table::contains(&game.owner_of, tile_id)) {
-            // 无主地产 - 设置待决策状态
+            // 无主地产 - 设置待决策状态（应用物价指数）
             stop_type = events::stop_property_unowned();
             game.pending_decision = types::DECISION_BUY_PROPERTY();
             game.decision_tile = tile_id;
-            game.decision_amount = map::tile_price(tile);
+            let base_price = map::tile_price(tile);
+            let price_index = calculate_price_index(game);
+            game.decision_amount = base_price * price_index;
         } else {
             let owner_index = *table::borrow(&game.owner_of, tile_id);
             if (owner_index != player_index) {
                 let level = *table::borrow(&game.level_of, tile_id);
-                let toll = calculate_toll(map::tile_base_toll(tile), level, game_data);
+                let toll = calculate_toll(map::tile_base_toll(tile), level, game, game_data);
 
                 // 检查免租情况
                 let player = &game.players[player_index as u64];
@@ -1398,7 +1406,7 @@ fun handle_tile_stop_with_collector(
                     stop_type = events::stop_none();  // 自己的地产，无特殊效果
                     game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
                     game.decision_tile = tile_id;
-                    let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level, game_data);
+                    let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level, game, game_data);
                     game.decision_amount = upgrade_cost;
                 } else {
                     // 已达最高级
@@ -1435,7 +1443,10 @@ fun handle_tile_stop_with_collector(
         stop_type = events::stop_card_stop();
     } else if (tile_kind == types::TILE_BONUS()) {
         // 奖励
-        let bonus = map::tile_special(tile);
+        let base_bonus = map::tile_special(tile);
+        let price_index = calculate_price_index(game);
+        let bonus = base_bonus * price_index;  // 应用物价指数
+
         let player = &mut game.players[player_index as u64];
         player.cash = player.cash + bonus;
 
@@ -1452,7 +1463,10 @@ fun handle_tile_stop_with_collector(
         amount = bonus;
     } else if (tile_kind == types::TILE_FEE()) {
         // 罚款
-        let fee = map::tile_special(tile);
+        let base_fee = map::tile_special(tile);
+        let price_index = calculate_price_index(game);
+        let fee = base_fee * price_index;  // 应用物价指数
+
         let player = &mut game.players[player_index as u64];
         let actual_payment = if (player.cash >= fee) {
             player.cash = player.cash - fee;
@@ -1514,7 +1528,7 @@ fun handle_property_stop(
         if (owner_index != player_index) {
             // 需要支付过路费
             let level = *table::borrow(&game.level_of, tile_id);
-            let toll = calculate_toll(map::tile_base_toll(tile), level, game_data);
+            let toll = calculate_toll(map::tile_base_toll(tile), level, game, game_data);
 
             let player = &mut game.players[player_index as u64];
 
@@ -2389,41 +2403,56 @@ public fun get_buff_value_for_test(
 // ===== Helper Functions (moved from types) =====
 
 // 计算升级成本 - 使用GameData中的配置
-public fun calculate_upgrade_cost(price: u64, level: u8, game_data: &GameData): u64 {
+public fun calculate_upgrade_cost(price: u64, level: u8, game: &Game, game_data: &GameData): u64 {
     let multipliers = tycoon::get_upgrade_multipliers(game_data);
 
     // 防御性编程：如果配置为空，使用默认倍率 150% (1.5x)
     if (multipliers.length() == 0) {
-        return (price * 150) / 100
+        let price_index = calculate_price_index(game);
+        return (price * 150 * price_index) / 100
     };
 
     let idx = (level as u64);
-    if (idx >= multipliers.length()) {
+    let level_multiplier = if (idx >= multipliers.length()) {
         // 如果等级超出配置，使用最后一个倍率
         let last_idx = multipliers.length() - 1;
-        (price * multipliers[last_idx]) / 100
+        multipliers[last_idx]
     } else {
-        (price * multipliers[idx]) / 100
-    }
+        multipliers[idx]
+    };
+
+    // 应用物价指数
+    let price_index = calculate_price_index(game);
+    (price * level_multiplier * price_index) / 100
 }
 
-// 计算过路费 - 使用GameData中的配置
-public fun calculate_toll(base_toll: u64, level: u8, game_data: &GameData): u64 {
+// 计算当前物价指数（内部函数）
+// 公式: (round / price_rise_days) + 1
+// 返回整数倍率：1, 2, 3...
+fun calculate_price_index(game: &Game): u64 {
+    let index_level = (game.round as u64) / (game.price_rise_days as u64);
+    index_level + 1
+}
+
+// 计算过路费 - 加入物价指数影响
+public fun calculate_toll(base_toll: u64, level: u8, game: &Game, game_data: &GameData): u64 {
     let multipliers = tycoon::get_toll_multipliers(game_data);
 
-    // 防御性编程：如果配置为空，使用默认倍率 100% (1x)
-    if (multipliers.length() == 0) {
-        return base_toll
-    };
-
+    // 获取等级倍率
     let idx = (level as u64);
-    if (idx >= multipliers.length()) {
+    let level_multiplier = if (idx >= multipliers.length()) {
         // 如果等级超出配置，使用最后一个倍率
         let last_idx = multipliers.length() - 1;
-        (base_toll * multipliers[last_idx]) / 100
+        multipliers[last_idx]
     } else {
-        (base_toll * multipliers[idx]) / 100
-    }
+        multipliers[idx]
+    };
+
+    // 计算物价指数
+    let price_index = calculate_price_index(game);
+
+    // 应用等级倍率和物价指数
+    (base_toll * level_multiplier * price_index) / 100
 }
 
 // 检查是否是NPC类型

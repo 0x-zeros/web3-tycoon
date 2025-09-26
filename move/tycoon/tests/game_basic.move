@@ -260,7 +260,9 @@ module tycoon::game_basic_tests {
             scenario::ctx(scenario)
         );
         let clock = utils::create_test_clock(scenario);
-        game::start(&mut game, &r, &clock, scenario::ctx(scenario));
+        let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+        game::start(&mut game, &game_data, &r, &clock, scenario::ctx(scenario));
+        scenario::return_shared(game_data);
 
         scenario::return_shared(game);
         scenario::return_shared(r);

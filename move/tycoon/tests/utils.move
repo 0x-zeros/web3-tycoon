@@ -340,4 +340,82 @@ module tycoon::test_utils {
         // 这里可以添加更多调试信息
         // 注意：实际测试中，这些信息会通过事件或返回值查看
     }
+
+    // ===== 新增：快速初始化函数 =====
+
+    // 初始化游戏环境（创建必要的共享对象）
+    public fun init_game_env(scenario: &mut Scenario) {
+        scenario::next_tx(scenario, admin_addr());
+        {
+            tycoon::init_for_testing(scenario::ctx(scenario));
+            random::create_for_testing(scenario::ctx(scenario));
+            clock::create_for_testing(scenario::ctx(scenario));
+        };
+
+        // 创建并注册地图
+        scenario::next_tx(scenario, admin_addr());
+        {
+            let admin_cap = scenario::take_from_sender<AdminCap>(scenario);
+            let mut game_data = scenario::take_shared<tycoon::GameData>(scenario);
+
+            let registry = tycoon::borrow_map_registry_mut(&mut game_data);
+            admin::publish_test_map(registry, &admin_cap, scenario::ctx(scenario));
+
+            scenario::return_to_sender(scenario, admin_cap);
+            scenario::return_shared(game_data);
+        };
+    }
+
+    // 快速设置两个玩家并开始游戏
+    public fun setup_two_players_and_start(scenario: &mut Scenario) {
+        // 加入两个玩家
+        scenario::next_tx(scenario, admin_addr());
+        {
+            let mut game = scenario::take_shared<Game>(scenario);
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+            game::join(&mut game, &game_data, scenario::ctx(scenario));
+            scenario::return_shared(game);
+            scenario::return_shared(game_data);
+        };
+
+        scenario::next_tx(scenario, player_addr(1));
+        {
+            let mut game = scenario::take_shared<Game>(scenario);
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+            game::join(&mut game, &game_data, scenario::ctx(scenario));
+            scenario::return_shared(game);
+            scenario::return_shared(game_data);
+        };
+
+        // 开始游戏
+        scenario::next_tx(scenario, admin_addr());
+        {
+            let mut game = scenario::take_shared<Game>(scenario);
+            let game_data = scenario::take_shared<tycoon::GameData>(scenario);
+            let r = scenario::take_shared<Random>(scenario);
+            let clock = scenario::take_shared<Clock>(scenario);
+
+            game::start(&mut game, &game_data, &r, &clock, scenario::ctx(scenario));
+
+            scenario::return_shared(game);
+            scenario::return_shared(game_data);
+            scenario::return_shared(r);
+            scenario::return_shared(clock);
+        };
+    }
+
+    // 生成测试用玩家地址
+    public fun player_addr(index: u64): address {
+        if (index == 0) {
+            admin_addr()
+        } else if (index == 1) {
+            alice()
+        } else if (index == 2) {
+            bob()
+        } else if (index == 3) {
+            carol()
+        } else {
+            dave()
+        }
+    }
 }

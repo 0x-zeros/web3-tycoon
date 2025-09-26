@@ -2974,3 +2974,35 @@ public fun get_tile_npc_for_testing(tiles: &vector<Tile>, index: u64): u8 {
 public fun get_template_id_for_testing(game: &Game): u16 {
     game.template_id
 }
+
+// 测试辅助函数：手动放置NPC
+#[test_only]
+public fun test_place_npc(game: &mut Game, tile_id: u16, npc_kind: u8) {
+    // 直接在地块上放置NPC（跳过所有验证）
+    let npc = NpcInst {
+        kind: npc_kind,
+        consumable: is_npc_consumable(npc_kind),
+        spawn_index: 0xFFFF  // 标记为手动放置
+    };
+
+    // 更新npc_on表
+    if (table::contains(&game.npc_on, tile_id)) {
+        let _ = table::remove(&mut game.npc_on, tile_id);
+    };
+    table::add(&mut game.npc_on, tile_id, npc);
+
+    // 更新tiles中的标记
+    game.tiles[tile_id as u64].npc_on = npc_kind;
+}
+
+// 测试辅助函数：移除NPC
+#[test_only]
+public fun test_remove_npc(game: &mut Game, tile_id: u16) {
+    // 从npc_on表移除
+    if (table::contains(&game.npc_on, tile_id)) {
+        let _ = table::remove(&mut game.npc_on, tile_id);
+    };
+
+    // 清除tiles中的标记
+    game.tiles[tile_id as u64].npc_on = NO_NPC;
+}

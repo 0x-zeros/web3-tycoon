@@ -53,39 +53,11 @@ module tycoon::test_config {
         test_scenario::end(scenario_val);
     }
 
-    #[test]
-    fun test_calculation_functions() {
-        let mut scenario_val = test_scenario::begin(@0xAD);
-        let scenario = &mut scenario_val;
-
-        // Initialize
-        test_scenario::next_tx(scenario, @0xAD);
-        {
-            tycoon::init_for_testing(test_scenario::ctx(scenario));
-        };
-
-        // Test calculations
-        test_scenario::next_tx(scenario, @0xAD);
-        {
-            let game_data = test_scenario::take_shared<GameData>(scenario);
-
-            // Test upgrade cost calculation
-            // Price 1000, level 0, multiplier 150 (1.5x) = 1500
-            let cost = game::calculate_upgrade_cost(1000, 0, &game_data);
-            assert!(cost == 1500, 1);
-
-            // Test toll calculation
-            // Base toll 100, level 0, multiplier 100 (1x) = 100
-            let toll = game::calculate_toll(100, 0, &game_data);
-            assert!(toll == 100, 2);
-
-            // Base toll 100, level 2, multiplier 200 (2x) = 200
-            let toll2 = game::calculate_toll(100, 2, &game_data);
-            assert!(toll2 == 200, 3);
-
-            test_scenario::return_shared(game_data);
-        };
-
-        test_scenario::end(scenario_val);
-    }
+    // 注释掉这个测试，因为 calculate_toll 和 calculate_upgrade_cost 现在需要 Game 对象
+    // 这些函数的测试已经在 game_basic.move 中覆盖
+    // #[test]
+    // fun test_calculation_functions() {
+    //     // 这个测试已过时，因为函数签名已更改
+    //     // calculate_toll 和 calculate_upgrade_cost 现在需要 Game 对象来获取价格指数
+    // }
 }

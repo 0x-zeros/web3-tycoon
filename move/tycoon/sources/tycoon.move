@@ -9,6 +9,7 @@ use sui::event;
 use tycoon::admin::{Self, AdminCap};
 use tycoon::map;
 use tycoon::cards;
+use tycoon::types;
 
 // ===== GameData 统一的策划数据容器 =====
 
@@ -25,6 +26,9 @@ public struct GameData has key, store {
     starting_cash: u64,
     upgrade_multipliers: vector<u64>,  // 升级费用倍率
     toll_multipliers: vector<u64>,     // 租金倍率
+
+    // NPC生成配置（权重表）
+    npc_spawn_weights: vector<u8>,     // NPC类型的权重列表
 }
 
 // ===== Events 事件 =====
@@ -55,6 +59,18 @@ fun init(ctx: &mut TxContext) {
         starting_cash: 10000,
         upgrade_multipliers: vector[150, 200, 300, 500],  // 1.5x, 2x, 3x, 5x
         toll_multipliers: vector[100, 150, 200, 300, 500], // 1x, 1.5x, 2x, 3x, 5x
+
+        // NPC生成权重配置
+        // 格式：[NPC类型, 权重, NPC类型, 权重, ...]
+        npc_spawn_weights: vector[
+            types::NPC_BARRIER(), 3,     // 路障 权重3
+            types::NPC_BOMB(), 2,         // 炸弹 权重2
+            types::NPC_DOG(), 2,          // 狗 权重2
+            types::NPC_LAND_GOD(), 1,     // 土地神 权重1
+            types::NPC_WEALTH_GOD(), 1,   // 财神 权重1
+            types::NPC_FORTUNE_GOD(), 1,  // 福神 权重1
+            types::NPC_POOR_GOD(), 2,     // 穷神 权重2
+        ],
     };
 
     let game_data_id = object::id(&game_data);
@@ -109,6 +125,11 @@ public(package) fun get_upgrade_multipliers(game_data: &GameData): &vector<u64> 
 /// 获取租金倍率
 public(package) fun get_toll_multipliers(game_data: &GameData): &vector<u64> {
     &game_data.toll_multipliers
+}
+
+/// 获取NPC生成权重配置
+public(package) fun get_npc_spawn_weights(game_data: &GameData): &vector<u8> {
+    &game_data.npc_spawn_weights
 }
 
 // ===== Configuration Validation Functions 配置验证函数 =====

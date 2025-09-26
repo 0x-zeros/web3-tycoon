@@ -87,10 +87,13 @@ const ENoSuchTile: u64 = 2002;
 //   * BUFF_MOVE_CTRL: 存储指定的骰子点数
 //   * BUFF_RENT_FREE: 未使用（可扩展为免租比例）
 //   * BUFF_FROZEN: 未使用（可扩展为冻结来源）
+// - spawn_index: 关联的NPC spawn索引
+//   * 0xFFFF: 表示非NPC产生的buff
 public struct BuffEntry has store, copy, drop {
     kind: u8,                  // Buff类型 (rent_free, frozen, move_ctrl等)
     last_active_round: u16,    // 最后一个激活轮次（包含）
-    value: u64                 // 数值载荷 (如move_ctrl的骰子值)
+    value: u64,                // 数值载荷 (如move_ctrl的骰子值)
+    spawn_index: u16          // 关联的NPC spawn索引，0xFFFF表示非NPC产生
 }
 
 // ===== Player 玩家状态 =====
@@ -132,9 +135,25 @@ public struct Player has store {
 // - consumable: 是否可被消耗
 //   * true: 触发后自动移除（如炸弹）
 //   * false: 触发后保留（如路障）
+// - spawn_index: 指向spawn_pool的索引
+//   * 0xFFFF: 表示玩家手动放置（非随机生成）
 public struct NpcInst has store, copy, drop {
     kind: u8,  // NpcKind
-    consumable: bool
+    consumable: bool,
+    spawn_index: u16  // 指向spawn_pool的索引，0xFFFF表示玩家放置
+}
+
+// ===== NpcSpawnEntry NPC生成池条目 =====
+//
+// 功能说明：
+// 用于追踪NPC生成池中每个条目的状态
+//
+// 字段说明：
+// - npc_kind: NPC类型
+// - next_active_round: 可以参与随机生成的最早轮次
+public struct NpcSpawnEntry has store, copy, drop {
+    npc_kind: u8,
+    next_active_round: u16  // 可以参与随机的轮次
 }
 
 // ===== Seat 座位（入座凭证） =====
@@ -222,6 +241,9 @@ public struct Game has key, store {
     npc_on: Table<u16, NpcInst>,  // NPC实例完整数据
     owner_index: Table<u8 /* player_index */, vector<u16>>,
 
+    // NPC生成系统
+    npc_spawn_pool: vector<NpcSpawnEntry>,  // NPC生成池
+
     // 配置
     max_rounds: u8,                 // 最大回合数（0表示无限期）
     price_rise_days: u8,            // 物价提升天数
@@ -307,6 +329,7 @@ public entry fun create_game(
         tiles,
         npc_on: table::new(ctx),
         owner_index: table::new(ctx),
+        npc_spawn_pool: init_npc_spawn_pool(tycoon::get_npc_spawn_weights(game_data)),
         max_rounds,
         price_rise_days,
         winner: option::none(),
@@ -394,6 +417,7 @@ public entry fun join(
 // 开始游戏
 public entry fun start(
     game: &mut Game,
+    game_data: &GameData,
     r: &Random,  // 新增：用于随机分配方向
     clock: &Clock,
     ctx: &mut TxContext
@@ -419,6 +443,11 @@ public entry fun start(
     };
 
     let starting_player = (&game.players[0]).owner;
+
+    // 生成初始NPC
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+    spawn_random_npcs(game, template, r, 3, ctx); // 初始生成3个NPC
 
     // 发出开始事件
     events::emit_game_started_event(//todo 传回去的参数太少
@@ -497,7 +526,7 @@ public entry fun roll_and_step(
     ctx: &mut TxContext
 ) {
     // 验证并自动处理跳过
-    if (validate_and_auto_skip(game, seat)) {
+    if (validate_and_auto_skip(game, seat, game_data, r, ctx)) {
         return
     };
 
@@ -563,7 +592,7 @@ public entry fun roll_and_step(
     clean_turn_state(game, player_index);
 
     // 结束回合
-    advance_turn(game);
+    advance_turn(game, game_data, r, ctx);
 }
 
 // 决定租金支付方式（使用免租卡或支付现金）
@@ -641,7 +670,9 @@ public entry fun skip_property_decision(
 // 结束回合（手动）
 public entry fun end_turn(
     game: &mut Game,
+    game_data: &GameData,
     seat: &Seat,
+    r: &Random,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -665,7 +696,7 @@ public entry fun end_turn(
     );
 
     // 推进回合
-    advance_turn(game);
+    advance_turn(game, game_data, r, ctx);
 }
 
 // 购买地产
@@ -875,13 +906,19 @@ fun validate_seat_and_turn(game: &Game, seat: &Seat) {
 }
 
 // 验证并自动处理跳过
-fun validate_and_auto_skip(game: &mut Game, seat: &Seat): bool {
+fun validate_and_auto_skip(
+    game: &mut Game,
+    seat: &Seat,
+    game_data: &GameData,
+    r: &Random,
+    ctx: &mut TxContext
+): bool {
     validate_seat_and_turn(game, seat);
 
     // 如果需要跳过，自动处理
     if (should_skip_turn(game, seat.player_index)) {
         handle_skip_turn(game, seat.player_index);
-        advance_turn(game);
+        advance_turn(game, game_data, r, ctx);
         return true  // 表示已跳过
     };
     false  // 表示未跳过
@@ -1738,7 +1775,11 @@ fun place_npc_internal(
 ) {
     // 仅限制同一地块不可重复放置
     assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
-    let npc = NpcInst { kind, consumable };
+    let npc = NpcInst {
+        kind,
+        consumable,
+        spawn_index: 0xFFFF  // 玩家手动放置的NPC
+    };
     table::add(&mut game.npc_on, tile_id, npc);
     // 更新 Tile 中的 NPC 类型记录
     game.tiles[tile_id as u64].npc_on = kind;
@@ -1938,7 +1979,31 @@ fun apply_buff(player: &mut Player, kind: u8, last_active_round: u16, value: u64
     };
 
     // 步骤2: 添加新的buff
-    let buff = BuffEntry { kind, last_active_round, value };
+    let buff = BuffEntry { kind, last_active_round, value, spawn_index: 0xFFFF };
+    player.buffs.push_back(buff);
+}
+
+// 带来源的buff应用（支持NPC生成的buff）
+fun apply_buff_with_source(
+    player: &mut Player,
+    kind: u8,
+    last_active_round: u16,
+    value: u64,
+    spawn_index: u16
+) {
+    // 步骤1: 清除同类型的现有buff（确保同类型buff唯一）
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        let buff = player.buffs[i];
+        if (buff.kind == kind) {
+            player.buffs.remove(i);
+            break  // 找到并移除后即可退出
+        };
+        i = i + 1;
+    };
+
+    // 步骤2: 添加新的buff
+    let buff = BuffEntry { kind, last_active_round, value, spawn_index };
     player.buffs.push_back(buff);
 }
 
@@ -2022,7 +2087,12 @@ fun clean_turn_state(game: &mut Game, player_index: u8) {
 // 4. 重置游戏阶段为掷骰子阶段
 //
 // 推进到下一个玩家
-fun advance_turn(game: &mut Game) {
+fun advance_turn(
+    game: &mut Game,
+    game_data: &GameData,
+    r: &Random,
+    ctx: &mut TxContext
+) {
     let player_count = game.players.length() as u8;
     let mut attempts = 0;  // 安全计数器
 
@@ -2055,7 +2125,7 @@ fun advance_turn(game: &mut Game) {
         game.round = game.round + 1;  // 增加轮次
 
         // 轮次结束时的刷新操作
-        refresh_at_round_end(game);
+        refresh_at_round_end(game, game_data, r, ctx);
 
         // 步骤4: 检查是否达到最大轮数限制
         if (game.max_rounds > 0) {  // 0表示无限期
@@ -2079,9 +2149,19 @@ fun advance_turn(game: &mut Game) {
 }
 
 // 轮次结束时的刷新操作
-fun refresh_at_round_end(game: &mut Game) {
+fun refresh_at_round_end(
+    game: &mut Game,
+    game_data: &GameData,
+    r: &Random,
+    ctx: &mut TxContext
+) {
     // 清理过期的NPC
     clean_expired_npcs(game);
+
+    // 生成新的随机NPC
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+    spawn_random_npcs(game, template, r, 2, ctx); // 每轮生成2个NPC
 
     // TODO: 刷新地产指数
     // refresh_property_index(game);
@@ -2174,6 +2254,167 @@ public fun get_player_card_count(game: &Game, player: address, kind: u8): u8 {
         i = i + 1;
     };
     0
+}
+
+// ===== NPC Spawn Helper Functions NPC生成辅助函数 =====
+
+// 初始化NPC生成池
+fun init_npc_spawn_pool(weights: &vector<u8>): vector<NpcSpawnEntry> {
+    let mut pool = vector[];
+    let mut i = 0;
+
+    // 权重配置格式：[NPC类型, 权重, NPC类型, 权重, ...]
+    while (i < weights.length()) {
+        let npc_kind = weights[i];
+        let weight = weights[i + 1];
+
+        // 根据权重添加对应数量的条目
+        let mut j = 0;
+        while (j < weight) {
+            pool.push_back(NpcSpawnEntry {
+                npc_kind,
+                next_active_round: 0  // 初始时所有NPC都可以立即生成
+            });
+            j = j + 1;
+        };
+
+        i = i + 2;  // 移动到下一对(类型,权重)
+    };
+
+    pool
+}
+
+// 判断NPC是否可消耗
+fun is_npc_consumable(npc_kind: u8): bool {
+    // 炸弹、财神、土地神、福神、穷神是一次性的
+    npc_kind == types::NPC_BOMB() ||
+    npc_kind == types::NPC_WEALTH_GOD() ||
+    npc_kind == types::NPC_LAND_GOD() ||
+    npc_kind == types::NPC_FORTUNE_GOD() ||
+    npc_kind == types::NPC_POOR_GOD()
+}
+
+// 判断NPC是否是buff型
+fun is_buff_npc(npc_kind: u8): bool {
+    npc_kind == types::NPC_LAND_GOD() ||
+    npc_kind == types::NPC_FORTUNE_GOD()
+}
+
+// 随机生成NPC到地图上
+public(package) fun spawn_random_npcs(
+    game: &mut Game,
+    template: &MapTemplate,
+    r: &Random,
+    max_npcs: u8,
+    ctx: &mut TxContext
+) {
+    let current_round = game.round;
+    let mut npc_changes = vector[];
+
+    // 收集可用的spawn条目
+    let mut available_indices = vector[];
+    let mut i = 0;
+    while (i < game.npc_spawn_pool.length()) {
+        let entry = &game.npc_spawn_pool[i];
+        if (entry.next_active_round <= current_round) {
+            available_indices.push_back(i as u16);
+        };
+        i = i + 1;
+    };
+
+    if (available_indices.is_empty()) return;
+
+    // 收集可放置NPC的空闲地块
+    let mut available_tiles = vector[];
+    let mut j = 0;
+    while (j < game.tiles.length()) {
+        let tile_static = map::get_tile(template, j as u16);
+        if (map::can_place_npc_on_tile(map::tile_kind(tile_static)) &&
+            game.tiles[j].npc_on == NO_NPC &&
+            !table::contains(&game.npc_on, j as u16)) {
+            available_tiles.push_back(j as u16);
+        };
+        j = j + 1;
+    };
+
+    // 随机放置NPC
+    let mut placed = 0;
+    while (placed < max_npcs &&
+           !available_indices.is_empty() &&
+           !available_tiles.is_empty()) {
+
+        // 随机选择NPC
+        let mut gen = random::new_generator(r, ctx);
+        let spawn_idx = random::generate_u64(&mut gen) % available_indices.length();
+        let pool_idx = available_indices[spawn_idx];
+        let entry = game.npc_spawn_pool[pool_idx as u64];  // Copy the entry
+
+        // 随机选择地块
+        let tile_idx = random::generate_u64(&mut gen) % available_tiles.length();
+        let tile_id = available_tiles[tile_idx];
+
+        // 放置NPC（使用0xFFFF-1表示随机生成的索引）
+        let npc = NpcInst {
+            kind: entry.npc_kind,
+            consumable: is_npc_consumable(entry.npc_kind),
+            spawn_index: pool_idx
+        };
+        table::add(&mut game.npc_on, tile_id, npc);
+        game.tiles[tile_id as u64].npc_on = entry.npc_kind;
+
+        // 设置冷却（立即进入冷却）
+        game.npc_spawn_pool[pool_idx as u64].next_active_round = current_round + 1;
+
+        // 发出事件
+        npc_changes.push_back(
+            events::make_npc_change(tile_id, entry.npc_kind, events::npc_action_spawn(), npc.consumable)
+        );
+
+        // 移除已使用的选项
+        available_indices.remove(spawn_idx);
+        available_tiles.remove(tile_idx);
+
+        placed = placed + 1;
+    };
+
+    // TODO: 发出NPC生成事件
+}
+
+// 处理NPC消失后的冷却
+fun handle_npc_consumed(
+    game: &mut Game,
+    npc: &NpcInst,
+    is_buff_npc: bool
+) {
+    if (npc.spawn_index == 0xFFFF) {
+        return; // 玩家放置的，不处理
+    };
+
+    let current_round = game.round;
+    let pool_entry = &mut game.npc_spawn_pool[npc.spawn_index as u64];
+
+    if (is_buff_npc) {
+        // Buff型NPC需要更长冷却
+        // 将在buff过期后由handle_buff_expired设置
+    } else {
+        // 普通NPC：下下回合可重新加入
+        pool_entry.next_active_round = current_round + 2;
+    }
+}
+
+// 处理Buff过期后的NPC冷却
+fun handle_buff_expired(
+    game: &mut Game,
+    buff: &BuffEntry
+) {
+    if (buff.spawn_index == 0xFFFF) {
+        return; // 非NPC产生的buff
+    };
+
+    // Buff过期后，对应NPC可重新加入随机池
+    let current_round = game.round;
+    let pool_entry = &mut game.npc_spawn_pool[buff.spawn_index as u64];
+    pool_entry.next_active_round = current_round + 2;
 }
 
 // ===== Test Helper Functions 测试辅助函数 =====

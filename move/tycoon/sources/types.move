@@ -29,6 +29,14 @@ public fun NPC_BARRIER(): u8 { 20 }
 public fun NPC_BOMB(): u8 { 21 }
 public fun NPC_DOG(): u8 { 22 }
 
+// 增益型NPC
+public fun NPC_LAND_GOD(): u8 { 23 }      // 土地神
+public fun NPC_WEALTH_GOD(): u8 { 24 }    // 财神
+public fun NPC_FORTUNE_GOD(): u8 { 25 }   // 福神
+
+// 干扰型NPC
+public fun NPC_POOR_GOD(): u8 { 26 }      // 穷神
+
 // ===== CardKind 卡牌类型 =====
 public fun CARD_MOVE_CTRL(): u8 { 1 }
 public fun CARD_BARRIER(): u8 { 2 }
@@ -43,6 +51,8 @@ public fun CARD_TURN(): u8 { 50 }  // 转向卡
 public fun BUFF_MOVE_CTRL(): u8 { 1 }
 public fun BUFF_FROZEN(): u8 { 2 }
 public fun BUFF_RENT_FREE(): u8 { 3 }
+public fun BUFF_LAND_BLESSING(): u8 { 4 }  // 土地神祝福
+public fun BUFF_FORTUNE(): u8 { 5 }         // 福神幸运
 
 // ===== Phase 游戏阶段 =====
 public fun PHASE_ROLL(): u8 { 1 }

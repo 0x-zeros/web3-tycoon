@@ -467,6 +467,12 @@ public fun get_adj_tiles(template: &MapTemplate, tile_id: u16): &vector<u16> {
     table::borrow(&template.adj, tile_id)
 }
 
+// 检查地块是否可以放置NPC
+public fun can_place_npc_on_tile(tile_kind: u8): bool {
+    tile_kind == types::TILE_PROPERTY() ||
+    tile_kind == types::TILE_EMPTY()
+}
+
 // 获取地块总数
 public fun get_tile_count(template: &MapTemplate): u64 {
     template.tile_count

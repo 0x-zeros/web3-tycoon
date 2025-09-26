@@ -122,7 +122,7 @@ module tycoon::probing_test {
             // 尝试生成10个NPC，测试探针法在地图逐渐变满时的表现
             let mut i = 0;
             while (i < 10) {
-                game::spawn_random_npc(&mut game, template, &mut generator);
+                let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
                 i = i + 1;
             };
 

@@ -62,7 +62,7 @@ module tycoon::npc_spawn_probing_tests {
             // 尝试生成5个NPC
             let mut i = 0;
             while (i < 5) {
-                game::spawn_random_npc(&mut game, template, &mut generator);
+                let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
                 i = i + 1;
             };
 
@@ -125,7 +125,7 @@ module tycoon::npc_spawn_probing_tests {
                 let mut successes = 0;
                 while (attempts < 10) {
                     let before = count_npcs(&game);
-                    game::spawn_random_npc(&mut game, template, &mut generator);
+                    let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
                     let after = count_npcs(&game);
 
                     if (after > before) {
@@ -195,7 +195,7 @@ module tycoon::npc_spawn_probing_tests {
             let initial_count = count_npcs(&game);
 
             // 在高密度下，探针法可能失败，但混合策略应该仍能找到空位
-            game::spawn_random_npc(&mut game, template, &mut generator);
+            let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
 
             let final_count = count_npcs(&game);
 
@@ -252,7 +252,7 @@ module tycoon::npc_spawn_probing_tests {
             // 生成多个NPC并统计类型
             let mut i = 0;
             while (i < 20) {
-                game::spawn_random_npc(&mut game, template, &mut generator);
+                let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
                 i = i + 1;
             };
 
@@ -320,7 +320,7 @@ module tycoon::npc_spawn_probing_tests {
             let before_full = count_npcs(&game);
 
             // 尝试生成NPC（应该失败但不崩溃）
-            game::spawn_random_npc(&mut game, template, &mut generator);
+            let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
 
             let after_full = count_npcs(&game);
 
@@ -334,7 +334,7 @@ module tycoon::npc_spawn_probing_tests {
             assert!(after_clear == 0, 5002);
 
             // 应该能成功生成
-            game::spawn_random_npc(&mut game, template, &mut generator);
+            let (_npc_kind, _tile_id) = game::spawn_random_npc(&mut game, template, &mut generator);
 
             let after_spawn = count_npcs(&game);
             // 注意：可能因为spawn_pool配置而无法生成

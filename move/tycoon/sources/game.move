@@ -491,7 +491,8 @@ public entry fun start(
     // 生成初始NPC（尝试生成3个）
     let mut i = 0;
     while (i < 3) {
-        spawn_random_npc(game, template, &mut generator);
+        let (_npc_kind, _tile_id) = spawn_random_npc(game, template, &mut generator);
+        // 游戏开始时的NPC生成不需要关心返回值
         i = i + 1;
     };
 
@@ -2232,23 +2233,20 @@ fun refresh_at_round_end(
     // 清理过期的NPC
     clean_expired_npcs(game);
 
-    // 生成新的随机NPC（尝试生成2个）
+    // 生成新的随机NPC（只生成1个）
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
     let mut gen = random::new_generator(r, ctx);
-    spawn_random_npc(game, template, &mut gen);
 
-    // TODO: 刷新地产指数
-    // refresh_property_index(game);
-
-    // TODO: 其他刷新逻辑
-    // refresh_special_tiles(game);
+    // 调用 spawn_random_npc 并获取返回值
+    let (npc_kind, tile_id) = spawn_random_npc(game, template, &mut gen);
 
     // 发射轮次结束事件
     events::emit_round_ended_event(
         game.id.to_inner(),
         (game.round - 1),  // 当前轮次已经递增，所以减1表示刚结束的轮次
-        (game.round as u64) * (game.players.length())  // 新一轮的第0个全局索引
+        npc_kind,          // 新生成的NPC类型（0表示没有生成）
+        tile_id            // NPC放置的地块ID
     );
 }
 
@@ -2531,9 +2529,9 @@ public(package) fun spawn_random_npc(
     game: &mut Game,
     template: &MapTemplate,
     gen: &mut RandomGenerator
-) {
+): (u8, u16) {  // 返回 (npc_kind, tile_id)，如果失败返回 (0, 0)
     // 如果spawn_pool为空，直接返回
-    if (game.npc_spawn_pool.is_empty()) return;
+    if (game.npc_spawn_pool.is_empty()) return (0, 0);
 
     let current_round = game.round;
 
@@ -2543,11 +2541,12 @@ public(package) fun spawn_random_npc(
     // 检查是否在冷却中
     let entry = &game.npc_spawn_pool[pool_idx as u64];
     if (entry.next_active_round > current_round) {
-        return // 在冷却中，直接返回（保持原有冷却）
+        return (0, 0) // 在冷却中，直接返回（保持原有冷却）
     };
 
-    // 获取NPC类型
+    // 获取NPC类型（复制值，避免后续借用冲突）
     let npc_kind = entry.npc_kind;
+    let is_consumable = is_npc_consumable(npc_kind);
 
     // 优化：先尝试探针法找空位（传入NPC类型避免同类聚集）
     let mut tile_id_opt = random_spawn_tile_probing(game, template, gen, npc_kind);
@@ -2559,30 +2558,30 @@ public(package) fun spawn_random_npc(
 
     // 如果还是没找到，说明地图已满
     if (tile_id_opt.is_none()) {
-        return // 没有可用地块，不设置冷却时间！
+        return (0, 0) // 没有可用地块，不设置冷却时间！
     };
     let tile_id = tile_id_opt.extract();
 
     // 放置NPC
     let npc = NpcInst {
-        kind: entry.npc_kind,
-        consumable: is_npc_consumable(entry.npc_kind),
+        kind: npc_kind,
+        consumable: is_consumable,
         spawn_index: pool_idx
     };
     table::add(&mut game.npc_on, tile_id, npc);
-    game.tiles[tile_id as u64].npc_on = entry.npc_kind;
+    game.tiles[tile_id as u64].npc_on = npc_kind;
 
     // 只有成功放置NPC后才设置冷却
     // 这确保了如果因为地块不足而失败，NPC不会进入冷却，下次还有机会生成
-    let cooldown_rounds = if (is_buff_npc(entry.npc_kind)) {
+    let cooldown_rounds = if (is_buff_npc(npc_kind)) {
         3  // Buff型NPC：3轮冷却
     } else {
         2  // 普通NPC：2轮冷却
     };
     game.npc_spawn_pool[pool_idx as u64].next_active_round = current_round + cooldown_rounds;
 
-    // TODO: 发出NPC生成事件
-    // events::make_npc_change(tile_id, entry.npc_kind, events::npc_action_spawn(), npc.consumable)
+    // 返回生成的NPC信息
+    (npc_kind, tile_id)
 }
 
 // 处理NPC消失后的冷却

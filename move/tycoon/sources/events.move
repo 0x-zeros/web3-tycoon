@@ -64,9 +64,10 @@ public struct EndTurnEvent has copy, drop {
 
 // 轮次结束事件
 public struct RoundEndedEvent has copy, drop {
-    game: ID,
-    round: u16,
-    global_turn: u64 //新一轮的 0 全局索引
+    game: ID,           // 游戏 ID
+    round: u16,         // 刚结束的轮次
+    npc_kind: u8,       // 新生成的NPC类型（0表示没有生成）
+    tile_id: u16        // NPC放置的地块ID（npc_kind为0时无意义）
 }
 
 // ===== Economy Events 经济事件 =====
@@ -296,12 +297,14 @@ public(package) fun emit_end_turn_event(
 public(package) fun emit_round_ended_event(
     game_id: ID,
     round: u16,
-    global_turn: u64
+    npc_kind: u8,
+    tile_id: u16
 ) {
     event::emit(RoundEndedEvent {
         game: game_id,
         round,
-        global_turn
+        npc_kind,
+        tile_id
     });
 }
 

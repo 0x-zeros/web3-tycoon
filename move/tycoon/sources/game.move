@@ -446,10 +446,14 @@ public entry fun start(
 
     let starting_player = (&game.players[0]).owner;
 
-    // 生成初始NPC
+    // 生成初始NPC（尝试生成3个）
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
-    spawn_random_npcs(game, template, r, 3, ctx); // 初始生成3个NPC
+    let mut i = 0;
+    while (i < 3) {
+        spawn_random_npc(game, template, &mut generator);
+        i = i + 1;
+    };
 
     // 发出开始事件
     events::emit_game_started_event(//todo 传回去的参数太少
@@ -2188,10 +2192,15 @@ fun refresh_at_round_end(
     // 清理过期的NPC
     clean_expired_npcs(game);
 
-    // 生成新的随机NPC
+    // 生成新的随机NPC（尝试生成2个）
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
-    spawn_random_npcs(game, template, r, 2, ctx); // 每轮生成2个NPC
+    let mut gen = random::new_generator(r, ctx);
+    let mut i = 0;
+    while (i < 2) {
+        spawn_random_npc(game, template, &mut gen);
+        i = i + 1;
+    };
 
     // TODO: 刷新地产指数
     // refresh_property_index(game);
@@ -2330,125 +2339,70 @@ fun is_buff_npc(npc_kind: u8): bool {
     npc_kind == types::NPC_FORTUNE_GOD()
 }
 
-// 随机生成NPC到地图上
-public(package) fun spawn_random_npcs(
+// 随机生成一个NPC到地图上
+// 采用简单直接的随机逻辑：
+// 1. 在spawn_pool中随机选择一个index
+// 2. 如果该NPC不在冷却，尝试放置
+// 3. 如果在冷却或无法放置，直接返回
+// 注意：使用传入的RandomGenerator，符合一个交易一个generator的最佳实践
+public(package) fun spawn_random_npc(
     game: &mut Game,
     template: &MapTemplate,
-    r: &Random,
-    max_npcs: u8,
-    ctx: &mut TxContext
+    gen: &mut RandomGenerator
 ) {
-    let current_round = game.round;
-    let mut npc_changes = vector[];
+    // 如果spawn_pool为空，直接返回
+    if (game.npc_spawn_pool.is_empty()) return;
 
-    // 收集可用的spawn条目
-    let mut available_indices = vector[];
+    let current_round = game.round;
+
+    // 随机选择一个spawn_pool索引
+    let pool_idx = (random::generate_u64(gen) % game.npc_spawn_pool.length()) as u16;
+
+    // 检查是否在冷却中
+    let entry = &game.npc_spawn_pool[pool_idx as u64];
+    if (entry.next_active_round > current_round) {
+        return; // 在冷却中，直接返回
+    };
+
+    // 寻找可用地块
+    let mut available_tiles = vector[];
     let mut i = 0;
-    while (i < game.npc_spawn_pool.length()) {
-        let entry = &game.npc_spawn_pool[i];
-        if (entry.next_active_round <= current_round) {
-            available_indices.push_back(i as u16);
+    while (i < game.tiles.length()) {
+        let tile_static = map::get_tile(template, i as u16);
+        if (map::can_place_npc_on_tile(map::tile_kind(tile_static)) &&
+            game.tiles[i].npc_on == NO_NPC &&
+            !table::contains(&game.npc_on, i as u16)) {
+            available_tiles.push_back(i as u16);
         };
         i = i + 1;
     };
 
-    if (available_indices.is_empty()) return;
+    // 如果没有可用地块，直接返回
+    if (available_tiles.is_empty()) return;
 
-    // 收集可放置NPC的空闲地块
-    let mut available_tiles = vector[];
-    let mut j = 0;
-    while (j < game.tiles.length()) {
-        let tile_static = map::get_tile(template, j as u16);
-        if (map::can_place_npc_on_tile(map::tile_kind(tile_static)) &&
-            game.tiles[j].npc_on == NO_NPC &&
-            !table::contains(&game.npc_on, j as u16)) {
-            available_tiles.push_back(j as u16);
-        };
-        j = j + 1;
+    // 随机选择一个地块
+    let tile_idx = random::generate_u64(gen) % available_tiles.length();
+    let tile_id = available_tiles[tile_idx];
+
+    // 放置NPC
+    let npc = NpcInst {
+        kind: entry.npc_kind,
+        consumable: is_npc_consumable(entry.npc_kind),
+        spawn_index: pool_idx
     };
+    table::add(&mut game.npc_on, tile_id, npc);
+    game.tiles[tile_id as u64].npc_on = entry.npc_kind;
 
-    // 随机放置NPC
-    let mut placed = 0;
-    // 在循环外创建一次随机数生成器
-    let mut gen = random::new_generator(r, ctx);
-
-    // 最多尝试次数设为max_npcs，确保每个NPC最多尝试一次
-    // 这是为了保持冷却机制的游戏性：
-    // - 如果所有NPC都在冷却中，本轮就不应该生成NPC
-    // - 一轮没有NPC生成是正常的游戏机制，体现了资源的稀缺性
-    // - 避免通过重试来"绕过"冷却限制
-    // - 防止无限循环的同时保持游戏平衡
-    let max_attempts = max_npcs;
-    let mut attempts = 0;
-
-    while (placed < max_npcs && attempts < max_attempts) {
-        attempts = attempts + 1;
-
-        // 如果没有可用的条目或地块，退出
-        if (available_indices.is_empty() || available_tiles.is_empty()) break;
-
-        // 随机选择NPC
-        let spawn_idx = random::generate_u64(&mut gen) % available_indices.length();
-        let pool_idx = available_indices[spawn_idx];
-
-        // 验证索引范围
-        if (pool_idx >= game.npc_spawn_pool.length() as u16) continue;
-
-        let entry = game.npc_spawn_pool[pool_idx as u64];  // Copy the entry
-
-        // 再次检查冷却（防止并发修改）
-        if (entry.next_active_round > current_round) {
-            // 从可用列表中移除
-            available_indices.remove(spawn_idx);
-            continue;
-        };
-
-        // 随机选择地块
-        let tile_idx = random::generate_u64(&mut gen) % available_tiles.length();
-        let tile_id = available_tiles[tile_idx];
-
-        // 验证tile_id范围
-        if (tile_id >= game.tiles.length() as u16) continue;
-
-        // 再次检查地块是否被占用（防止并发修改）
-        if (table::contains(&game.npc_on, tile_id)) {
-            available_tiles.remove(tile_idx);
-            continue;
-        };
-
-        // 放置NPC
-        let npc = NpcInst {
-            kind: entry.npc_kind,
-            consumable: is_npc_consumable(entry.npc_kind),
-            spawn_index: pool_idx
-        };
-        table::add(&mut game.npc_on, tile_id, npc);
-        game.tiles[tile_id as u64].npc_on = entry.npc_kind;
-
-        // 设置冷却
-        // 根据NPC类型设置不同的冷却时间
-        let cooldown_rounds = if (is_buff_npc(entry.npc_kind)) {
-            // Buff型NPC：需要等待更长时间（暂时设为3轮）
-            3
-        } else {
-            // 普通NPC：2轮冷却
-            2
-        };
-        game.npc_spawn_pool[pool_idx as u64].next_active_round = current_round + cooldown_rounds;
-
-        // 发出事件
-        npc_changes.push_back(
-            events::make_npc_change(tile_id, entry.npc_kind, events::npc_action_spawn(), npc.consumable)
-        );
-
-        // 移除已使用的选项
-        available_indices.remove(spawn_idx);
-        available_tiles.remove(tile_idx);
-
-        placed = placed + 1;
+    // 设置冷却
+    let cooldown_rounds = if (is_buff_npc(entry.npc_kind)) {
+        3  // Buff型NPC：3轮冷却
+    } else {
+        2  // 普通NPC：2轮冷却
     };
+    game.npc_spawn_pool[pool_idx as u64].next_active_round = current_round + cooldown_rounds;
 
     // TODO: 发出NPC生成事件
+    // events::make_npc_change(tile_id, entry.npc_kind, events::npc_action_spawn(), npc.consumable)
 }
 
 // 处理NPC消失后的冷却

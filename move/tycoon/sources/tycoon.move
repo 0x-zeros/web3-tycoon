@@ -62,14 +62,15 @@ fun init(ctx: &mut TxContext) {
 
         // NPC生成权重配置
         // 格式：[NPC类型, 权重, NPC类型, 权重, ...]
+        // 权重也是spawn npc在地图里同时存在的最大数量
         npc_spawn_weights: vector[
-            types::NPC_BARRIER(), 3,     // 路障 权重3
-            types::NPC_BOMB(), 2,         // 炸弹 权重2
+            // types::NPC_BARRIER(), 3,     // 路障 权重3 //路障只能通过玩家使用card放置
+            types::NPC_BOMB(), 1,         // 炸弹 权重2
             types::NPC_DOG(), 2,          // 狗 权重2
             types::NPC_LAND_GOD(), 1,     // 土地神 权重1
             types::NPC_WEALTH_GOD(), 1,   // 财神 权重1
-            types::NPC_FORTUNE_GOD(), 1,  // 福神 权重1
-            types::NPC_POOR_GOD(), 2,     // 穷神 权重2
+            types::NPC_FORTUNE_GOD(), 2,  // 福神 权重1
+            types::NPC_POOR_GOD(), 1,     // 穷神 权重2
         ],
     };
 

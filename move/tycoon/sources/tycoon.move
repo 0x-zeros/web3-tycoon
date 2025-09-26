@@ -24,8 +24,27 @@ public struct GameData has key, store {
 
     // 全局游戏数值配置
     starting_cash: u64,
-    upgrade_multipliers: vector<u64>,  // 升级费用倍率
-    toll_multipliers: vector<u64>,     // 租金倍率
+    upgrade_multipliers: vector<u64>,  // 升级费用倍率（废弃，保留兼容）
+    toll_multipliers: vector<u64>,     // 租金倍率（废弃，保留兼容）
+
+    // ===== 新数值系统配置（×100存储避免浮点运算） =====
+    // 小地产租金倍率：[L0空地, L1, L2, L3, L4, L5]
+    // 对应倍率：[0.5, 1, 2.5, 5, 10, 15]
+    rent_multipliers: vector<u64>,
+
+    // 土地庙加成倍率：[1级, 2级, 3级, 4级, 5级]
+    // 对应倍率：[1.3, 1.4, 1.5, 1.7, 2.0]
+    temple_multipliers: vector<u64>,
+
+    // 小地产升级价格表：[L0, L1, L2, L3, L4, L5]
+    // 基础价格加上这个值再乘以物价系数F
+    property_upgrade_costs: vector<u64>,
+
+    // 大地产租金倍率：[L1, L2, L3, L4, L5]
+    large_property_multipliers: vector<u64>,
+
+    // 大地产升级价格：[L1, L2, L3, L4, L5]
+    large_property_costs: vector<u64>,
 
     // NPC生成配置（权重表）
     npc_spawn_weights: vector<u8>,     // NPC类型的权重列表
@@ -57,8 +76,24 @@ fun init(ctx: &mut TxContext) {
 
         // 全局游戏数值配置
         starting_cash: 10000,
-        upgrade_multipliers: vector[150, 200, 300, 500],  // 1.5x, 2x, 3x, 5x
-        toll_multipliers: vector[100, 150, 200, 300, 500], // 1x, 1.5x, 2x, 3x, 5x
+        upgrade_multipliers: vector[150, 200, 300, 500],  // 废弃，保留兼容
+        toll_multipliers: vector[100, 150, 200, 300, 500], // 废弃，保留兼容
+
+        // 新数值系统配置（×100存储）
+        // 小地产租金倍率：L0-L5 对应 [0.5, 1, 2.5, 5, 10, 15]倍
+        rent_multipliers: vector[50, 100, 250, 500, 1000, 1500],
+
+        // 土地庙加成倍率：1-5级对应 [1.3, 1.4, 1.5, 1.7, 2.0]倍
+        temple_multipliers: vector[130, 140, 150, 170, 200],
+
+        // 小地产升级加价表：L0-L5
+        property_upgrade_costs: vector[0, 1000, 1500, 6000, 15000, 35000],
+
+        // 大地产租金倍率：L1-L5
+        large_property_multipliers: vector[150, 200, 300, 500, 800],
+
+        // 大地产升级价格：L1-L5
+        large_property_costs: vector[2000, 3000, 7000, 18000, 40000],
 
         // NPC生成权重配置
         // 格式：[NPC类型, 权重, NPC类型, 权重, ...]
@@ -131,6 +166,33 @@ public(package) fun get_toll_multipliers(game_data: &GameData): &vector<u64> {
 /// 获取NPC生成权重配置
 public(package) fun get_npc_spawn_weights(game_data: &GameData): &vector<u8> {
     &game_data.npc_spawn_weights
+}
+
+// ===== 新数值系统访问函数 =====
+
+/// 获取小地产租金倍率
+public(package) fun get_rent_multipliers(game_data: &GameData): &vector<u64> {
+    &game_data.rent_multipliers
+}
+
+/// 获取土地庙加成倍率
+public(package) fun get_temple_multipliers(game_data: &GameData): &vector<u64> {
+    &game_data.temple_multipliers
+}
+
+/// 获取小地产升级价格表
+public(package) fun get_property_upgrade_costs(game_data: &GameData): &vector<u64> {
+    &game_data.property_upgrade_costs
+}
+
+/// 获取大地产租金倍率
+public(package) fun get_large_property_multipliers(game_data: &GameData): &vector<u64> {
+    &game_data.large_property_multipliers
+}
+
+/// 获取大地产升级价格
+public(package) fun get_large_property_costs(game_data: &GameData): &vector<u64> {
+    &game_data.large_property_costs
 }
 
 // ===== Configuration Validation Functions 配置验证函数 =====

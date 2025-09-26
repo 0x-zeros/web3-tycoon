@@ -1430,7 +1430,7 @@ fun handle_tile_stop_with_collector(
             let owner_index = game.tiles[tile_id as u64].owner;
             if (owner_index != player_index) {
                 let level = game.tiles[tile_id as u64].level;
-                let toll = calculate_toll(map::tile_base_toll(tile), level, game, game_data);
+                let toll = calculate_toll(game, tile_id, template, game_data);
 
                 // 检查免租情况
                 let player = &game.players[player_index as u64];
@@ -1630,6 +1630,8 @@ fun handle_property_stop(
     tile: &map::TileStatic,
     game_data: &GameData
 ) {
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
     let player_addr = (&game.players[player_index as u64]).owner;
 
     if (game.tiles[tile_id as u64].owner == NO_OWNER) {
@@ -1640,7 +1642,7 @@ fun handle_property_stop(
         if (owner_index != player_index) {
             // 需要支付过路费
             let level = game.tiles[tile_id as u64].level;
-            let toll = calculate_toll(map::tile_base_toll(tile), level, game, game_data);
+            let toll = calculate_toll(game, tile_id, template, game_data);
 
             let player = &mut game.players[player_index as u64];
 
@@ -2904,25 +2906,366 @@ fun calculate_price_index(game: &Game): u64 {
     index_level + 1
 }
 
-// 计算过路费 - 加入物价指数影响
-public fun calculate_toll(base_toll: u64, level: u8, game: &Game, game_data: &GameData): u64 {
-    let multipliers = tycoon::get_toll_multipliers(game_data);
 
-    // 获取等级倍率
-    let idx = (level as u64);
-    let level_multiplier = if (idx >= multipliers.length()) {
-        // 如果等级超出配置，使用最后一个倍率
-        let last_idx = multipliers.length() - 1;
-        multipliers[last_idx]
-    } else {
-        multipliers[idx]
+// ===== 新数值系统：连街判定和租金计算 =====
+
+/// 检查从某地块开始的连街情况
+/// 从中心地块向左右各查最多max_range格，找出连续的同owner小地产
+/// 返回：(是否形成连街, 连街地块列表)
+fun check_chain_tiles(
+    game: &Game,
+    center_tile_id: u16,
+    owner: u8,
+    template: &MapTemplate,
+    max_range: u8  // 左右各查几格，一般传2
+): (bool, vector<u16>) {
+    let mut chain_tiles = vector::empty<u16>();
+
+    // 中心地块必须是小地产（1x1的地产）
+    let center_static = map::get_tile(template, center_tile_id);
+    if (!types::is_small_property_by_size(map::tile_size(center_static), map::tile_kind(center_static))) {
+        return (false, chain_tiles)
     };
 
-    // 计算物价指数
+    // 加入中心地块
+    chain_tiles.push_back(center_tile_id);
+
+    // 向顺时针方向查找
+    let mut current_id = center_tile_id;
+    let mut cw_count = 0;
+    while (cw_count < max_range) {
+        let current_static = map::get_tile(template, current_id);
+        let next_id = map::tile_cw_next(current_static);
+        // 避免绕回到起点
+        if (next_id == center_tile_id) break;
+
+        let next_static = map::get_tile(template, next_id);
+        let next_tile = &game.tiles[next_id as u64];
+
+        // 检查是否为同owner的小地产（1x1的地产）
+        if (types::is_small_property_by_size(map::tile_size(next_static), map::tile_kind(next_static)) &&
+            next_tile.owner == owner) {
+            chain_tiles.push_back(next_id);
+            current_id = next_id;
+            cw_count = cw_count + 1;
+        } else {
+            break; // 连街中断
+        };
+    };
+
+    // 向逆时针方向查找
+    current_id = center_tile_id;
+    let mut ccw_count = 0;
+    while (ccw_count < max_range) {
+        let current_static = map::get_tile(template, current_id);
+        let next_id = map::tile_ccw_next(current_static);
+        // 避免绕回到起点
+        if (next_id == center_tile_id) break;
+
+        let next_static = map::get_tile(template, next_id);
+        let next_tile = &game.tiles[next_id as u64];
+
+        // 检查是否为同owner的小地产（1x1的地产）
+        if (types::is_small_property_by_size(map::tile_size(next_static), map::tile_kind(next_static)) &&
+            next_tile.owner == owner) {
+            // 避免重复添加
+            if (!chain_tiles.contains(&next_id)) {
+                chain_tiles.push_back(next_id);
+            };
+            current_id = next_id;
+            ccw_count = ccw_count + 1;
+        } else {
+            break; // 连街中断
+        };
+    };
+
+    // 至少2块地才算连街
+    let is_chained = chain_tiles.length() >= 2;
+    (is_chained, chain_tiles)
+}
+
+/// 查找影响某地块的土地庙
+/// 在地块左右range格内查找土地庙
+fun find_nearby_temples(
+    game: &Game,
+    center_tile_id: u16,
+    template: &MapTemplate,
+    range: u8  // 查找范围（左右各几格），一般传3
+): vector<u8> {
+    let mut temple_levels = vector::empty<u8>();
+    let mut checked_tiles = vector::empty<u16>();
+
+    // 检查中心地块自己是否是土地庙
+    let center_static = map::get_tile(template, center_tile_id);
+    let center_tile = &game.tiles[center_tile_id as u64];
+    if (map::tile_kind(center_static) == types::TILE_TEMPLE() && center_tile.owner != NO_OWNER) {
+        temple_levels.push_back(center_tile.level);
+    };
+    checked_tiles.push_back(center_tile_id);
+
+    // 向顺时针查找
+    let mut current_id = center_tile_id;
+    let mut i = 0;
+    while (i < range) {
+        let current_static = map::get_tile(template, current_id);
+        let next_id = map::tile_cw_next(current_static);
+        // 避免循环
+        if (checked_tiles.contains(&next_id)) break;
+
+        checked_tiles.push_back(next_id);
+
+        // 检查是否为土地庙
+        let tile_static = map::get_tile(template, next_id);
+        let tile = &game.tiles[next_id as u64];
+
+        if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
+            tile.owner != NO_OWNER &&
+            tile.level > 0) {
+            temple_levels.push_back(tile.level);
+        };
+
+        current_id = next_id;
+        i = i + 1;
+    };
+
+    // 向逆时针查找
+    current_id = center_tile_id;
+    i = 0;
+    while (i < range) {
+        let current_static = map::get_tile(template, current_id);
+        let next_id = map::tile_ccw_next(current_static);
+        // 避免循环
+        if (checked_tiles.contains(&next_id)) break;
+
+        checked_tiles.push_back(next_id);
+
+        // 检查是否为土地庙
+        let tile_static = map::get_tile(template, next_id);
+        let tile = &game.tiles[next_id as u64];
+
+        if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
+            tile.owner != NO_OWNER &&
+            tile.level > 0) {
+            temple_levels.push_back(tile.level);
+        };
+
+        current_id = next_id;
+        i = i + 1;
+    };
+
+    temple_levels
+}
+
+/// 计算单块地的基础租金
+/// 公式：P × 倍率 × I
+/// 其中P为地价，倍率根据等级从rent_multipliers取得，I为物价指数
+fun calculate_single_tile_rent(
+    price: u64,        // 基础地价P
+    level: u8,         // 等级L0-L5
+    price_index: u64,  // 物价指数I
+    game_data: &GameData
+): u64 {
+    let rent_multipliers = tycoon::get_rent_multipliers(game_data);
+
+    // 获取等级对应的倍率（×100存储）
+    let multiplier = if ((level as u64) < rent_multipliers.length()) {
+        rent_multipliers[level as u64]
+    } else {
+        100  // 默认1倍
+    };
+
+    // 计算：P × 倍率 × I / 10000 （因为倍率×100存储）
+    (price * multiplier * price_index) / 10000
+}
+
+/// 计算土地庙加成（分别相加模式）
+/// 多个土地庙不是连乘，而是各自计算加成后相加
+fun calculate_temple_bonus(
+    base_rent: u64,
+    temple_levels: &vector<u8>,
+    game_data: &GameData
+): u64 {
+    let mut bonus = 0u64;
+    let temple_multipliers = tycoon::get_temple_multipliers(game_data);
+
+    let mut i = 0;
+    while (i < temple_levels.length()) {
+        let level = temple_levels[i];
+        if (level > 0 && (level as u64) <= temple_multipliers.length()) {
+            let multiplier = temple_multipliers[(level - 1) as u64];
+            // 分别相加：每个庙独立计算加成
+            bonus = bonus + (base_rent * multiplier) / 100;
+        };
+        i = i + 1;
+    };
+
+    bonus
+}
+
+/// 计算完整过路费（支持连街和土地庙）
+public fun calculate_toll(
+    game: &Game,
+    landing_tile_id: u16,
+    template: &MapTemplate,
+    game_data: &GameData
+): u64 {
+    let tile = &game.tiles[landing_tile_id as u64];
+
+    // 无主地块不收租
+    if (tile.owner == NO_OWNER) return 0;
+
+    // 物价指数
     let price_index = calculate_price_index(game);
 
-    // 应用等级倍率和物价指数
-    (base_toll * level_multiplier * price_index) / 100
+    // 检查连街（左右各查2格）
+    let (is_chained, chain_tiles) = check_chain_tiles(
+        game,
+        landing_tile_id,
+        tile.owner,
+        template,
+        2  // 左右各查2格
+    );
+
+    let mut total_rent = 0u64;
+
+    if (!is_chained) {
+        // 非连街：单地计算
+        let tile_static = map::get_tile(template, landing_tile_id);
+        let base_rent = calculate_single_tile_rent(
+            map::tile_price(tile_static),
+            tile.level,
+            price_index,
+            game_data
+        );
+
+        // 查找附近的土地庙（左右各3格）
+        let temples = find_nearby_temples(game, landing_tile_id, template, 3);
+        let temple_bonus = calculate_temple_bonus(base_rent, &temples, game_data);
+
+        total_rent = base_rent + temple_bonus;
+    } else {
+        // 连街：所有连街地块租金总和
+        let mut i = 0;
+        while (i < chain_tiles.length()) {
+            let tile_id = chain_tiles[i];
+            let t_static = map::get_tile(template, tile_id);
+            let t = &game.tiles[tile_id as u64];
+
+            let base_rent = calculate_single_tile_rent(
+                map::tile_price(t_static),
+                t.level,
+                price_index,
+                game_data
+            );
+
+            // 每个地块独立计算土地庙加成
+            let temples = find_nearby_temples(game, tile_id, template, 3);
+            let temple_bonus = calculate_temple_bonus(base_rent, &temples, game_data);
+
+            total_rent = total_rent + base_rent + temple_bonus;
+            i = i + 1;
+        };
+    };
+
+    total_rent
+}
+
+/// 计算物价系数F
+/// 公式：F = 0.2 × I，用于购地和升级价格计算
+fun calculate_price_factor(game: &Game): u64 {
+    let price_index = calculate_price_index(game);
+    // F = 0.2 × I，这里×100存储为整数
+    price_index * 20
+}
+
+/// 计算地产购买/升级价格（统一版本，根据size自动选择价格表）
+/// 小地产(1x1): 购地价公式：(P + 级别加价) × F / 100
+/// 大地产(2x2): 使用大地产价格表 × F / 100
+public fun calculate_property_price(
+    tile_static: &map::TileStatic,  // 地块静态信息
+    current_level: u8, // 当前等级
+    target_level: u8,  // 目标等级
+    game: &Game,
+    game_data: &GameData
+): u64 {
+    // 不能降级
+    if (target_level <= current_level) return 0;
+
+    let price_factor = calculate_price_factor(game);  // F×100
+
+    // 根据地块大小选择不同的价格表
+    if (map::tile_size(tile_static) == types::SIZE_1X1()) {
+        // 小地产(1x1)价格计算
+        let base_price = map::tile_price(tile_static);
+        let upgrade_costs = tycoon::get_property_upgrade_costs(game_data);
+
+        // 获取当前等级的加价
+        let current_cost = if ((current_level as u64) < upgrade_costs.length()) {
+            upgrade_costs[current_level as u64]
+        } else {
+            0
+        };
+
+        // 获取目标等级的加价
+        let target_cost = if ((target_level as u64) < upgrade_costs.length()) {
+            upgrade_costs[target_level as u64]
+        } else {
+            return 0  // 无效等级
+        };
+
+        // 当前等级的总价：(P + 当前加价) × F / 100
+        let current_total = ((base_price + current_cost) * price_factor) / 10000;
+
+        // 目标等级的总价：(P + 目标加价) × F / 100
+        let target_total = ((base_price + target_cost) * price_factor) / 10000;
+
+        // 升级费用 = 目标总价 - 当前总价
+        if (target_total > current_total) {
+            target_total - current_total
+        } else {
+            0
+        }
+    } else if (map::tile_size(tile_static) == types::SIZE_2X2()) {
+        // 大地产(2x2)价格计算
+        let property_kind = map::tile_kind(tile_static);
+
+        // 土地庙不能升级，只能建造
+        if (property_kind == types::TILE_TEMPLE() && current_level > 0) {
+            return 0
+        };
+
+        let large_costs = tycoon::get_large_property_costs(game_data);
+
+        // 大地产等级从1开始，所以要减1作为数组索引
+        let current_idx = if (current_level > 0) { (current_level - 1) as u64 } else { 0 };
+        let target_idx = (target_level - 1) as u64;
+
+        // 获取当前等级的价格
+        let current_cost = if (current_level > 0 && current_idx < large_costs.length()) {
+            large_costs[current_idx]
+        } else {
+            0
+        };
+
+        // 获取目标等级的价格
+        let target_cost = if (target_idx < large_costs.length()) {
+            large_costs[target_idx]
+        } else {
+            return 0  // 无效等级
+        };
+
+        // 计算升级费用（目标价格 - 当前价格）× F / 100
+        let upgrade_diff = if (target_cost > current_cost) {
+            target_cost - current_cost
+        } else {
+            target_cost  // 从0级开始建造
+        };
+
+        (upgrade_diff * price_factor) / 10000
+    } else {
+        // 未知大小，返回0
+        0
+    }
 }
 
 // 检查是否是NPC类型

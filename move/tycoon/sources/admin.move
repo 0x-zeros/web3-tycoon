@@ -98,11 +98,42 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 第一边（南边）
     let mut i = 1;
     while (i < 10) {
-        let kind = if (i == 5) { types::TILE_CARD() } else { types::TILE_PROPERTY() };
-        let price = 1000 + i * 200;
-        let toll = 100 + i * 20;
+        // 在第3格放置土地庙（2x2）
+        let kind = if (i == 3) {
+            types::TILE_TEMPLE()
+        } else if (i == 5) {
+            types::TILE_CARD()
+        } else if (i == 7) {
+            // 在第7格放置研究所（2x2）
+            types::TILE_RESEARCH()
+        } else {
+            types::TILE_PROPERTY()
+        };
+
+        let size = if (kind == types::TILE_TEMPLE() || kind == types::TILE_RESEARCH()) {
+            types::SIZE_2X2()
+        } else {
+            types::SIZE_1X1()
+        };
+
+        let price = if (types::is_large_property_by_size(size, kind)) {
+            2000  // 大地产基础价格
+        } else if (kind == types::TILE_CARD()) {
+            0
+        } else {
+            1000 + i * 200
+        };
+
+        let toll = if (types::is_large_property_by_size(size, kind)) {
+            200  // 大地产基础租金
+        } else if (kind == types::TILE_CARD()) {
+            0
+        } else {
+            100 + i * 20
+        };
+
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static((i as u8), 0, kind, types::SIZE_1X1(), price, toll, 0));
+            map::new_tile_static((i as u8), 0, kind, size, price, toll, 0));
         i = i + 1;
     };
 
@@ -114,11 +145,39 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     i = 11;
     while (i < 20) {
         let y = ((i - 10) as u8);
-        let kind = if (i == 15) { types::TILE_HOSPITAL() } else { types::TILE_PROPERTY() };
-        let price = 2000 + (i - 10) * 200;
-        let toll = 200 + (i - 10) * 20;
+        // 在第13格放置石油公司（2x2）
+        let kind = if (i == 13) {
+            types::TILE_OIL()
+        } else if (i == 15) {
+            types::TILE_HOSPITAL()
+        } else {
+            types::TILE_PROPERTY()
+        };
+
+        let size = if (kind == types::TILE_OIL()) {
+            types::SIZE_2X2()
+        } else {
+            types::SIZE_1X1()
+        };
+
+        let price = if (types::is_large_property_by_size(size, kind)) {
+            3000  // 石油公司基础价格
+        } else if (kind == types::TILE_HOSPITAL()) {
+            0
+        } else {
+            2000 + (i - 10) * 200
+        };
+
+        let toll = if (types::is_large_property_by_size(size, kind)) {
+            300  // 石油公司基础租金
+        } else if (kind == types::TILE_HOSPITAL()) {
+            0
+        } else {
+            200 + (i - 10) * 20
+        };
+
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static(10, y, kind, types::SIZE_1X1(), price, toll, 0));
+            map::new_tile_static(10, y, kind, size, price, toll, 0));
         i = i + 1;
     };
 
@@ -130,11 +189,46 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     i = 21;
     while (i < 30) {
         let x = (10 - (i - 20)) as u8;
-        let kind = if (i == 25) { types::TILE_CHANCE() } else { types::TILE_PROPERTY() };
-        let price = 3000 + (i - 20) * 200;
-        let toll = 300 + (i - 20) * 20;
+        // 在第23格放置商业中心（2x2）
+        let kind = if (i == 23) {
+            types::TILE_COMMERCIAL()
+        } else if (i == 25) {
+            types::TILE_CHANCE()
+        } else if (i == 27) {
+            // 在第27格放置大饭店（2x2）
+            types::TILE_HOTEL()
+        } else {
+            types::TILE_PROPERTY()
+        };
+
+        let size = if (kind == types::TILE_COMMERCIAL() || kind == types::TILE_HOTEL()) {
+            types::SIZE_2X2()
+        } else {
+            types::SIZE_1X1()
+        };
+
+        let price = if (kind == types::TILE_COMMERCIAL()) {
+            4000  // 商业中心基础价格
+        } else if (kind == types::TILE_HOTEL()) {
+            5000  // 大饭店基础价格
+        } else if (kind == types::TILE_CHANCE()) {
+            0
+        } else {
+            3000 + (i - 20) * 200
+        };
+
+        let toll = if (kind == types::TILE_COMMERCIAL()) {
+            400  // 商业中心基础租金
+        } else if (kind == types::TILE_HOTEL()) {
+            500  // 大饭店基础租金
+        } else if (kind == types::TILE_CHANCE()) {
+            0
+        } else {
+            300 + (i - 20) * 20
+        };
+
         map::add_tile_to_template(&mut template, (i as u16),
-            map::new_tile_static(x, 10, kind, types::SIZE_1X1(), price, toll, 0));
+            map::new_tile_static(x, 10, kind, size, price, toll, 0));
         i = i + 1;
     };
 

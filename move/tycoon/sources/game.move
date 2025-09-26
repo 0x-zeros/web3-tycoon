@@ -178,18 +178,27 @@ public struct Seat has key {
 
 // TurnCap 已被移除，使用 Seat 进行身份验证
 
+// ===== Property Dynamic Data 地产动态数据 =====
+
+// 地产动态数据结构
+// 与MapTemplate.properties_static对应，存储游戏中变化的数据
+// 使用vector索引对齐，property_id即为数组下标
+public struct Property has store, copy, drop {
+    owner: u8,     // 所有者玩家索引（255表示无主）
+    level: u8      // 地产等级（0-5级）
+}
+
 // ===== Tile Dynamic Data 地块动态数据 =====
 
 // 地块动态数据结构
 // 与MapTemplate.tiles_static对应，存储游戏中变化的数据
 // 使用vector索引对齐，tile_id即为数组下标
+// 现在只存储NPC信息，地产信息移至Property结构
 public struct Tile has store, copy, drop {
-    owner: u8,     // 所有者玩家索引（255表示无主）
-    level: u8,     // 地产等级（0-4级）
     npc_on: u8     // NPC类型（0表示无NPC，用于查询密度）
 }
 
-// 无主地块的owner值
+// 无主地产的owner值
 const NO_OWNER: u8 = 255;
 // 无NPC的标记值
 const NO_NPC: u8 = 0;
@@ -218,7 +227,8 @@ const NO_NPC: u8 = 0;
 //
 // 地产系统：
 // - tiles: 地块动态数据vector，索引对应tile_id
-// - owner_index: 反向索引，快速查找玩家的所有地产
+// - properties: 地产动态数据vector，索引对应property_id
+// - owner_index: 反向索引，快速查找玩家的所有地产（property_id）
 //
 // NPC系统：
 // - npc_on: 地块上的NPC实例（完整数据）
@@ -240,8 +250,10 @@ public struct Game has key, store {
 
     // 地块动态数据（与MapTemplate.tiles_static对齐）
     tiles: vector<Tile>,
+    // 地产动态数据（与MapTemplate.properties_static对齐）
+    properties: vector<Property>,
     npc_on: Table<u16, NpcInst>,  // NPC实例完整数据
-    owner_index: Table<u8 /* player_index */, vector<u16>>, //用于优化计算的数据, 不是必须
+    owner_index: Table<u8 /* player_index */, vector<u16 /* property_id */>>, //用于优化计算的数据, 不是必须
 
     // NPC生成系统
     npc_spawn_pool: vector<NpcSpawnEntry>,  // NPC生成池
@@ -312,11 +324,21 @@ public entry fun create_game(
     let mut i = 0;
     while (i < tile_count) {
         tiles.push_back(Tile {
-            owner: NO_OWNER,
-            level: 0,
             npc_on: NO_NPC
         });
         i = i + 1;
+    };
+
+    // 根据地图模板初始化properties vector
+    let property_count = template.properties_static.length();
+    let mut properties = vector[];
+    let mut j = 0;
+    while (j < property_count) {
+        properties.push_back(Property {
+            owner: NO_OWNER,
+            level: 0
+        });
+        j = j + 1;
     };
 
     let mut game = Game {
@@ -329,6 +351,7 @@ public entry fun create_game(
         active_idx: 0,
         has_rolled: false,
         tiles,
+        properties,
         npc_on: table::new(ctx),
         owner_index: table::new(ctx),
         npc_spawn_pool: init_npc_spawn_pool(tycoon::get_npc_spawn_weights(game_data)),
@@ -770,16 +793,25 @@ public entry fun buy_property(
     // 获取地块信息
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
-    let tile = map::get_tile(template, tile_id);
+    let tile_static = map::get_tile(template, tile_id);
+    let tile_kind = map::tile_kind(tile_static);
 
-    // 验证地块类型
-    assert!(map::tile_kind(tile) == types::TILE_PROPERTY(), ENotProperty);
+    // 验证是地产类型
+    assert!(types::is_property(tile_kind), ENotProperty);
 
-    // 验证地块无主
-    assert!(game.tiles[tile_id as u64].owner == NO_OWNER, EPropertyOwned);
+    // 获取property_id
+    let property_id = map::tile_property_id(tile_static);
+    assert!(property_id != map::no_property(), ENotProperty);
+
+    // 验证地产无主
+    let property = &game.properties[property_id as u64];
+    assert!(property.owner == NO_OWNER, EPropertyOwned);
+
+    // 获取地产静态信息
+    let property_static = map::get_property(template, property_id);
 
     // 验证价格和现金（应用物价指数）
-    let base_price = map::tile_price(tile);
+    let base_price = map::property_price(property_static);
     assert!(base_price > 0, EInvalidPrice);
     let price_index = calculate_price_index(game);
     let price = (base_price * price_index);
@@ -791,12 +823,12 @@ public entry fun buy_property(
         player_mut.cash = player_mut.cash - price;
     };
 
-    // 设置所有权和等级
-    let tile = &mut game.tiles[tile_id as u64];
-    tile.owner = player_index;
-    tile.level = 1;
+    // 设置地产所有权和等级
+    let property_mut = &mut game.properties[property_id as u64];
+    property_mut.owner = player_index;
+    property_mut.level = 1;
 
-    // 更新owner_index
+    // 更新owner_index（保持不变，仍然记录tile_id用于连街判定）
     if (!table::contains(&game.owner_index, player_index)) {
         table::add(&mut game.owner_index, player_index, vector[]);
     };
@@ -835,23 +867,31 @@ public entry fun upgrade_property(
     // 获取地块信息
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
-    let tile = map::get_tile(template, tile_id);
+    let tile_static = map::get_tile(template, tile_id);
+    let tile_kind = map::tile_kind(tile_static);
 
-    // 验证地块类型
-    assert!(map::tile_kind(tile) == types::TILE_PROPERTY(), ENotProperty);
+    // 验证是地产类型
+    assert!(types::is_property(tile_kind), ENotProperty);
 
-    // 验证地块所有权
-    let tile_dyn = &game.tiles[tile_id as u64];
-    assert!(tile_dyn.owner != NO_OWNER, EPropertyNotOwned);
-    let owner_idx = tile_dyn.owner;
+    // 获取property_id
+    let property_id = map::tile_property_id(tile_static);
+    assert!(property_id != map::no_property(), ENotProperty);
+
+    // 验证地产所有权
+    let property = &game.properties[property_id as u64];
+    assert!(property.owner != NO_OWNER, EPropertyNotOwned);
+    let owner_idx = property.owner;
     assert!(owner_idx == player_index, ENotOwner);
 
     // 验证等级
-    let current_level = tile_dyn.level;
+    let current_level = property.level;
     assert!(current_level < types::LEVEL_4(), EMaxLevel);
 
+    // 获取地产静态信息
+    let property_static = map::get_property(template, property_id);
+
     // 计算升级费用
-    let price = map::tile_price(tile);
+    let price = map::property_price(property_static);
     let upgrade_cost = calculate_upgrade_cost(price, current_level, game, game_data);
 
     // 验证现金
@@ -864,7 +904,7 @@ public entry fun upgrade_property(
     };
 
     // 提升等级
-    game.tiles[tile_id as u64].level = current_level + 1;
+    game.properties[property_id as u64].level = current_level + 1;
 
     // 清除待决策状态
     clear_decision_state(game);
@@ -1417,20 +1457,27 @@ fun handle_tile_stop_with_collector(
     let mut turns_opt = option::none<u8>();
     let mut card_gains = vector[];
 
-    if (tile_kind == types::TILE_PROPERTY()) {
-        if (game.tiles[tile_id as u64].owner == NO_OWNER) {
-            // 无主地产 - 设置待决策状态（应用物价指数）
-            stop_type = events::stop_property_unowned();
-            game.pending_decision = types::DECISION_BUY_PROPERTY();
-            game.decision_tile = tile_id;
-            let base_price = map::tile_price(tile);
-            let price_index = calculate_price_index(game);
-            game.decision_amount = base_price * price_index;
-        } else {
-            let owner_index = game.tiles[tile_id as u64].owner;
-            if (owner_index != player_index) {
-                let level = game.tiles[tile_id as u64].level;
-                let toll = calculate_toll(game, tile_id, template, game_data);
+    // 检查是否是地产类型（包括小地产和大地产）
+    if (types::is_property(tile_kind)) {
+        // 获取property_id
+        let property_id = map::tile_property_id(tile);
+        if (property_id != map::no_property()) {
+            let property = &game.properties[property_id as u64];
+            let property_static = map::get_property(template, property_id);
+
+            if (property.owner == NO_OWNER) {
+                // 无主地产 - 设置待决策状态（应用物价指数）
+                stop_type = events::stop_property_unowned();
+                game.pending_decision = types::DECISION_BUY_PROPERTY();
+                game.decision_tile = tile_id;
+                let base_price = map::property_price(property_static);
+                let price_index = calculate_price_index(game);
+                game.decision_amount = base_price * price_index;
+            } else {
+                let owner_index = property.owner;
+                if (owner_index != player_index) {
+                    let level = property.level;
+                    let toll = calculate_toll(game, tile_id, template, game_data);
 
                 // 检查免租情况
                 let player = &game.players[player_index as u64];
@@ -1512,13 +1559,14 @@ fun handle_tile_stop_with_collector(
                 }
             } else {
                 // 自己的地产 - 检查是否可以升级
-                let level = game.tiles[tile_id as u64].level;
+                let level = property.level;
                 if (level < types::LEVEL_4()) {
                     // 可以升级 - 设置待决策状态
                     stop_type = events::stop_none();  // 自己的地产，无特殊效果
                     game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
                     game.decision_tile = tile_id;
-                    let upgrade_cost = calculate_upgrade_cost(map::tile_price(tile), level, game, game_data);
+                    let base_price = map::property_price(property_static);
+                    let upgrade_cost = calculate_upgrade_cost(base_price, level, game, game_data);
                     game.decision_amount = upgrade_cost;
                 } else {
                     // 已达最高级
@@ -1527,6 +1575,9 @@ fun handle_tile_stop_with_collector(
                 owner_opt = option::some(player_addr);
                 level_opt = option::some(level);
             }
+        } else {
+            // 非地产的tile（例如可能是大地产的一部分但没有property_id）
+            stop_type = events::stop_none();
         }
     } else if (tile_kind == types::TILE_HOSPITAL()) {
         let player = &mut game.players[player_index as u64];
@@ -1627,21 +1678,29 @@ fun handle_property_stop(
     game: &mut Game,
     player_index: u8,
     tile_id: u16,
-    tile: &map::TileStatic,
+    tile_static: &map::TileStatic,
     game_data: &GameData
 ) {
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
     let player_addr = (&game.players[player_index as u64]).owner;
 
-    if (game.tiles[tile_id as u64].owner == NO_OWNER) {
+    // 获取property_id
+    let property_id = map::tile_property_id(tile_static);
+    if (property_id == map::no_property()) {
+        return  // 非地产tile
+    };
+
+    let property = &game.properties[property_id as u64];
+
+    if (property.owner == NO_OWNER) {
         // 无主地产 - 可以购买
         // TODO: 实现购买逻辑（需要用户确认）
     } else {
-        let owner_index = game.tiles[tile_id as u64].owner;
+        let owner_index = property.owner;
         if (owner_index != player_index) {
             // 需要支付过路费
-            let level = game.tiles[tile_id as u64].level;
+            let level = property.level;
             let toll = calculate_toll(game, tile_id, template, game_data);
 
             let player = &mut game.players[player_index as u64];
@@ -2923,7 +2982,18 @@ fun check_chain_tiles(
 
     // 中心地块必须是小地产（1x1的地产）
     let center_static = map::get_tile(template, center_tile_id);
-    if (!types::is_small_property_by_size(map::tile_size(center_static), map::tile_kind(center_static))) {
+    let center_property_id = map::tile_property_id(center_static);
+
+    // 非地产tile不能连街
+    if (center_property_id == map::no_property()) {
+        return (false, chain_tiles)
+    };
+
+    // 检查是否为小地产
+    let center_property_static = map::get_property(template, center_property_id);
+    let center_kind = map::property_kind(center_property_static);
+    let center_size = map::property_size(center_property_static);
+    if (!types::is_small_property_by_size(center_size, center_kind)) {
         return (false, chain_tiles)
     };
 
@@ -2940,11 +3010,19 @@ fun check_chain_tiles(
         if (next_id == center_tile_id) break;
 
         let next_static = map::get_tile(template, next_id);
-        let next_tile = &game.tiles[next_id as u64];
+        let next_property_id = map::tile_property_id(next_static);
+
+        // 跳过非地产tile
+        if (next_property_id == map::no_property()) break;
+
+        let next_property = &game.properties[next_property_id as u64];
+        let next_property_static = map::get_property(template, next_property_id);
+        let next_kind = map::property_kind(next_property_static);
+        let next_size = map::property_size(next_property_static);
 
         // 检查是否为同owner的小地产（1x1的地产）
-        if (types::is_small_property_by_size(map::tile_size(next_static), map::tile_kind(next_static)) &&
-            next_tile.owner == owner) {
+        if (types::is_small_property_by_size(next_size, next_kind) &&
+            next_property.owner == owner) {
             chain_tiles.push_back(next_id);
             current_id = next_id;
             cw_count = cw_count + 1;
@@ -2963,11 +3041,19 @@ fun check_chain_tiles(
         if (next_id == center_tile_id) break;
 
         let next_static = map::get_tile(template, next_id);
-        let next_tile = &game.tiles[next_id as u64];
+        let next_property_id = map::tile_property_id(next_static);
+
+        // 跳过非地产tile
+        if (next_property_id == map::no_property()) break;
+
+        let next_property = &game.properties[next_property_id as u64];
+        let next_property_static = map::get_property(template, next_property_id);
+        let next_kind = map::property_kind(next_property_static);
+        let next_size = map::property_size(next_property_static);
 
         // 检查是否为同owner的小地产（1x1的地产）
-        if (types::is_small_property_by_size(map::tile_size(next_static), map::tile_kind(next_static)) &&
-            next_tile.owner == owner) {
+        if (types::is_small_property_by_size(next_size, next_kind) &&
+            next_property.owner == owner) {
             // 避免重复添加
             if (!chain_tiles.contains(&next_id)) {
                 chain_tiles.push_back(next_id);
@@ -2997,9 +3083,12 @@ fun find_nearby_temples(
 
     // 检查中心地块自己是否是土地庙
     let center_static = map::get_tile(template, center_tile_id);
-    let center_tile = &game.tiles[center_tile_id as u64];
-    if (map::tile_kind(center_static) == types::TILE_TEMPLE() && center_tile.owner != NO_OWNER) {
-        temple_levels.push_back(center_tile.level);
+    let center_property_id = map::tile_property_id(center_static);
+    if (center_property_id != map::no_property()) {
+        let center_property = &game.properties[center_property_id as u64];
+        if (map::tile_kind(center_static) == types::TILE_TEMPLE() && center_property.owner != NO_OWNER) {
+            temple_levels.push_back(center_property.level);
+        };
     };
     checked_tiles.push_back(center_tile_id);
 
@@ -3016,12 +3105,14 @@ fun find_nearby_temples(
 
         // 检查是否为土地庙
         let tile_static = map::get_tile(template, next_id);
-        let tile = &game.tiles[next_id as u64];
-
-        if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
-            tile.owner != NO_OWNER &&
-            tile.level > 0) {
-            temple_levels.push_back(tile.level);
+        let property_id = map::tile_property_id(tile_static);
+        if (property_id != map::no_property()) {
+            let property = &game.properties[property_id as u64];
+            if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
+                property.owner != NO_OWNER &&
+                property.level > 0) {
+                temple_levels.push_back(property.level);
+            };
         };
 
         current_id = next_id;
@@ -3041,12 +3132,14 @@ fun find_nearby_temples(
 
         // 检查是否为土地庙
         let tile_static = map::get_tile(template, next_id);
-        let tile = &game.tiles[next_id as u64];
-
-        if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
-            tile.owner != NO_OWNER &&
-            tile.level > 0) {
-            temple_levels.push_back(tile.level);
+        let property_id = map::tile_property_id(tile_static);
+        if (property_id != map::no_property()) {
+            let property = &game.properties[property_id as u64];
+            if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
+                property.owner != NO_OWNER &&
+                property.level > 0) {
+                temple_levels.push_back(property.level);
+            };
         };
 
         current_id = next_id;
@@ -3109,19 +3202,27 @@ public fun calculate_toll(
     template: &MapTemplate,
     game_data: &GameData
 ): u64 {
-    let tile = &game.tiles[landing_tile_id as u64];
+    // 获取tile和property信息
+    let tile_static = map::get_tile(template, landing_tile_id);
+    let property_id = map::tile_property_id(tile_static);
 
-    // 无主地块不收租
-    if (tile.owner == NO_OWNER) return 0;
+    // 非地产tile不收租
+    if (property_id == map::no_property()) return 0;
+
+    let property = &game.properties[property_id as u64];
+
+    // 无主地产不收租
+    if (property.owner == NO_OWNER) return 0;
 
     // 物价指数
     let price_index = calculate_price_index(game);
 
     // 检查连街（左右各查2格）
+    // 注意：连街判定仍然基于tile，但owner信息从property获取
     let (is_chained, chain_tiles) = check_chain_tiles(
         game,
         landing_tile_id,
-        tile.owner,
+        property.owner,
         template,
         2  // 左右各查2格
     );
@@ -3130,10 +3231,10 @@ public fun calculate_toll(
 
     if (!is_chained) {
         // 非连街：单地计算
-        let tile_static = map::get_tile(template, landing_tile_id);
+        let property_static = map::get_property(template, property_id);
         let base_rent = calculate_single_tile_rent(
-            map::tile_price(tile_static),
-            tile.level,
+            map::property_price(property_static),
+            property.level,
             price_index,
             game_data
         );
@@ -3149,11 +3250,20 @@ public fun calculate_toll(
         while (i < chain_tiles.length()) {
             let tile_id = chain_tiles[i];
             let t_static = map::get_tile(template, tile_id);
-            let t = &game.tiles[tile_id as u64];
+            let t_property_id = map::tile_property_id(t_static);
+
+            // 跳过非地产tile
+            if (t_property_id == map::no_property()) {
+                i = i + 1;
+                continue
+            };
+
+            let t_property = &game.properties[t_property_id as u64];
+            let t_property_static = map::get_property(template, t_property_id);
 
             let base_rent = calculate_single_tile_rent(
-                map::tile_price(t_static),
-                t.level,
+                map::property_price(t_property_static),
+                t_property.level,
                 price_index,
                 game_data
             );

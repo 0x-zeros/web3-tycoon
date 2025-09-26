@@ -20,6 +20,25 @@ const ETargetTileNotExist: u64 = 3013; // 目标地块不存在
 // ===== Constants =====
 const INVALID_TILE_ID: u16 = 65535;    // u16::MAX 作为无效/未设置的tile_id
 const MAX_TILE_ID: u16 = 65534;        // 实际可用的最大tile_id
+const NO_PROPERTY: u16 = 65535;        // u16::MAX 表示tile不属于任何property
+
+// ===== PropertyStatic 静态地产信息 =====
+//
+// 功能说明：
+// 定义地产的静态属性（价格、租金等）
+// 多个Tile可以指向同一个Property（如大地产、交叉口地产）
+//
+// 字段说明：
+// - kind: 地产类型（TILE_PROPERTY/TILE_TEMPLE/TILE_HOTEL等）
+// - size: 地产大小（SIZE_1X1/SIZE_2X2）
+// - price: 购买价格
+// - base_toll: 基础过路费
+public struct PropertyStatic has store, copy, drop {
+    kind: u8,       // 地产类型
+    size: u8,       // 地产大小
+    price: u64,     // 购买价格
+    base_toll: u64  // 基础租金
+}
 
 // ===== TileStatic 静态地块信息 =====
 //
@@ -30,13 +49,11 @@ const MAX_TILE_ID: u16 = 65534;        // 实际可用的最大tile_id
 // 字段说明：
 // - x, y: 地块在地图上的坐标位置
 // - kind: 地块类型（PROPERTY/HOSPITAL/PRISON/CHANCE等）
-// - size: 地块大小
-//   * 1: 1x1标准地块
-//   * 2: 2x2大型地块（如起点、重要建筑）
-// - price: 购买价格（仅对PROPERTY类型有效）
-// - base_toll: 基础过路费（等级升级后按倍数增加）
-// - special: 额外参数位，用于特殊功能扩展
-//   * 可用于存储地块颜色、组别、特殊效果等
+// - property_id: 关联的地产ID（NO_PROPERTY表示非地产地块）
+// - special: 额外参数位，用于非地产地块的特殊功能
+//   * 医院/监狱：停留回合数
+//   * 罚金/奖励：金额
+//   * 其他特殊效果
 // - cw_next: 顺时针下一个地块ID
 // - ccw_next: 逆时针下一个地块ID
 // - ring_id: 所属环路ID（支持多环路）
@@ -44,15 +61,13 @@ const MAX_TILE_ID: u16 = 65534;        // 实际可用的最大tile_id
 public struct TileStatic has store, copy, drop {
     x: u8,
     y: u8,
-    kind: u8,       // TileKind
-    size: u8,       // 1x1 or 2x2
-    price: u64,
-    base_toll: u64,
-    special: u64,   // 额外参数位
-    cw_next: u16,   // 顺时针下一个地块ID (最多65535个地块)
-    ccw_next: u16,  // 逆时针下一个地块ID
-    ring_id: u8,    // 所属环路ID (最多256个环路)
-    ring_idx: u16   // 在环路中的索引
+    kind: u8,           // TileKind（保留用于快速类型判断）
+    property_id: u16,   // 关联的地产ID（NO_PROPERTY表示非地产）
+    special: u64,       // 额外参数（非地产地块使用）
+    cw_next: u16,       // 顺时针下一个地块ID (最多65535个地块)
+    ccw_next: u16,      // 逆时针下一个地块ID
+    ring_id: u8,        // 所属环路ID (最多256个环路)
+    ring_idx: u16       // 在环路中的索引
 }
 
 // ===== MapTemplate 地图模板（静态，不随对局变化） =====
@@ -75,6 +90,7 @@ public struct TileStatic has store, copy, drop {
 //
 // 地块数据：
 // - tiles_static: 所有地块的静态信息
+// - properties_static: 所有地产的静态信息
 //
 // 导航系统：
 // - adj: 邻接表，记录每个地块的相邻地块
@@ -102,6 +118,7 @@ public struct MapTemplate has store {
     height: u8,
     tile_count: u64,
     tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
+    properties_static: vector<PropertyStatic>, // 地产静态信息，property_id 即为索引
     adj: Table<u16 /* tile_id */, vector<u16> /* neighbors */>,
     // 导航信息已集成到 TileStatic 中，不再需要独立的 Table
     hospital_ids: vector<u16>,
@@ -179,18 +196,14 @@ public fun new_tile_static(
     x: u8,
     y: u8,
     kind: u8,
-    size: u8,
-    price: u64,
-    base_toll: u64,
+    property_id: u16,  // NO_PROPERTY 表示非地产地块
     special: u64
 ): TileStatic {
     TileStatic {
         x,
         y,
         kind,
-        size,
-        price,
-        base_toll,
+        property_id,
         special,
         cw_next: INVALID_TILE_ID,     // 使用无效值作为未设置标记
         ccw_next: INVALID_TILE_ID,    // 使用无效值作为未设置标记
@@ -199,14 +212,27 @@ public fun new_tile_static(
     }
 }
 
+// 创建地产静态信息
+public fun new_property_static(
+    kind: u8,
+    size: u8,
+    price: u64,
+    base_toll: u64
+): PropertyStatic {
+    PropertyStatic {
+        kind,
+        size,
+        price,
+        base_toll
+    }
+}
+
 // 创建地块静态信息（带完整导航信息）
 public fun new_tile_static_with_nav(
     x: u8,
     y: u8,
     kind: u8,
-    size: u8,
-    price: u64,
-    base_toll: u64,
+    property_id: u16,  // NO_PROPERTY 表示非地产地块
     special: u64,
     cw_next: u16,
     ccw_next: u16,
@@ -227,9 +253,7 @@ public fun new_tile_static_with_nav(
         x,
         y,
         kind,
-        size,
-        price,
-        base_toll,
+        property_id,
         special,
         cw_next,
         ccw_next,
@@ -252,6 +276,7 @@ public fun new_map_template(
         height,
         tile_count: 0,
         tiles_static: vector[],  // 初始化为空 vector
+        properties_static: vector[],  // 初始化为空 vector
         adj: table::new(ctx),
         hospital_ids: vector[],
         prison_ids: vector[],
@@ -500,14 +525,42 @@ public fun get_template_status(registry: &MapRegistry, template_id: u16): u8 {
 public fun tile_x(tile: &TileStatic): u8 { tile.x }
 public fun tile_y(tile: &TileStatic): u8 { tile.y }
 public fun tile_kind(tile: &TileStatic): u8 { tile.kind }
-public fun tile_size(tile: &TileStatic): u8 { tile.size }
-public fun tile_price(tile: &TileStatic): u64 { tile.price }
-public fun tile_base_toll(tile: &TileStatic): u64 { tile.base_toll }
+public fun tile_property_id(tile: &TileStatic): u16 { tile.property_id }
 public fun tile_special(tile: &TileStatic): u64 { tile.special }
 public fun tile_cw_next(tile: &TileStatic): u16 { tile.cw_next }
 public fun tile_ccw_next(tile: &TileStatic): u16 { tile.ccw_next }
 public fun tile_ring_id(tile: &TileStatic): u8 { tile.ring_id }
 public fun tile_ring_idx(tile: &TileStatic): u16 { tile.ring_idx }
+
+// PropertyStatic 访问器函数
+public fun property_kind(property: &PropertyStatic): u8 { property.kind }
+public fun property_size(property: &PropertyStatic): u8 { property.size }
+public fun property_price(property: &PropertyStatic): u64 { property.price }
+public fun property_base_toll(property: &PropertyStatic): u64 { property.base_toll }
+
+// 添加地产到模板
+public fun add_property_to_template(
+    template: &mut MapTemplate,
+    property: PropertyStatic
+): u16 {
+    let property_id = template.properties_static.length() as u16;
+    template.properties_static.push_back(property);
+    property_id
+}
+
+// 获取地产信息
+public fun get_property(template: &MapTemplate, property_id: u16): &PropertyStatic {
+    assert!((property_id as u64) < template.properties_static.length(), 0);
+    &template.properties_static[property_id as u64]
+}
+
+// 检查tile是否有关联的property
+public fun tile_has_property(tile: &TileStatic): bool {
+    tile.property_id != NO_PROPERTY
+}
+
+// 导出常量供其他模块使用
+public fun no_property(): u16 { NO_PROPERTY }
 
 // ===== Test Helper Functions 测试辅助函数 =====
 

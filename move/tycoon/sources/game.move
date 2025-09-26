@@ -2191,27 +2191,6 @@ public fun get_property_level(game: &Game, tile_id: u16): u8 {
     }
 }
 
-// 额外的测试辅助函数
-#[test_only]
-public fun create_game_with_config(
-    name: vector<u8>,
-    template_id: u64,
-    _config: Option<u64>,  // 改为 Option<u64> 作为 max_rounds
-    game_data: &GameData,
-    ctx: &mut TxContext
-): ID {
-    // 忽略name，使用默认参数创建游戏
-    let params = if (option::is_some(&_config)) {
-        vector[*option::borrow(&_config)]
-    } else {
-        vector[]
-    };
-    create_game(game_data, template_id, params, ctx);
-
-    // 获取刚创建的游戏ID
-    // 注意：实际实现中需要返回正确的ID
-    object::id_from_address(@0x1234)
-}
 
 #[test_only]
 public fun join_with_coin(
@@ -2220,6 +2199,10 @@ public fun join_with_coin(
     coin: coin::Coin<sui::sui::SUI>,
     ctx: &mut TxContext
 ) {
+//该函数的作用： 在测试环境中，这个函数模拟了玩家需要支付费用才能加入游戏的真实场景：
+// 销毁测试币：coin::burn_for_testing(coin) 销毁传入的 SUI 币
+// 加入游戏：然后调用普通的 join 函数
+
     // 销毁测试币并加入游戏
     coin::burn_for_testing(coin);
     join(game, game_data, ctx)

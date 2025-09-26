@@ -163,7 +163,7 @@ public struct StepEffect has copy, drop, store {
     step_index: u8,
     from_tile: u16,
     to_tile: u16,
-    remaining_steps: u8, //todo 多余字段？
+    remaining_steps: u8, //服务端逻辑上不是必须字段，但对客户端展示，回放等有价值
     pass_draws: vector<CardDrawItem>,
     npc_event: option::Option<NpcStepEvent>,
     stop_effect: option::Option<StopEffect>

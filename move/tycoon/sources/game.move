@@ -2196,11 +2196,7 @@ fun refresh_at_round_end(
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
     let mut gen = random::new_generator(r, ctx);
-    let mut i = 0;
-    while (i < 2) {
-        spawn_random_npc(game, template, &mut gen);
-        i = i + 1;
-    };
+    spawn_random_npc(game, template, &mut gen);
 
     // TODO: 刷新地产指数
     // refresh_property_index(game);

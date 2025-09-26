@@ -503,6 +503,11 @@ public fun get_tile_count(template: &MapTemplate): u64 {
     template.tile_count
 }
 
+// 获取地产总数
+public fun get_property_count(template: &MapTemplate): u64 {
+    template.properties_static.length()
+}
+
 // 获取模板ID
 public fun get_template_id(template: &MapTemplate): u16 {
     template.id
@@ -568,38 +573,52 @@ public fun no_property(): u16 { NO_PROPERTY }
 public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
     let mut template = new_map_template(1, 3, 3, ctx);
 
+    // 先创建所有地产
+    let prop_0 = add_property_to_template(&mut template,
+        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1000, 100));
+    let prop_1 = add_property_to_template(&mut template,
+        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1200, 120));
+    let prop_3 = add_property_to_template(&mut template,
+        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1500, 150));
+    let prop_4 = add_property_to_template(&mut template,
+        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1800, 180));
+    let prop_6 = add_property_to_template(&mut template,
+        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2000, 200));
+    let prop_7 = add_property_to_template(&mut template,
+        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2200, 220));
+
     // 创建8个地块，形成环形
     // tile 0: 起点 (0,0) - PROPERTY
     add_tile_to_template(&mut template, 0,
-        new_tile_static(0, 0, types::TILE_PROPERTY(), types::SIZE_1X1(), 1000, 100, 0));
+        new_tile_static(0, 0, types::TILE_PROPERTY(), prop_0, 0));
 
     // tile 1: (1,0) - PROPERTY
     add_tile_to_template(&mut template, 1,
-        new_tile_static(1, 0, types::TILE_PROPERTY(), types::SIZE_1X1(), 1200, 120, 0));
+        new_tile_static(1, 0, types::TILE_PROPERTY(), prop_1, 0));
 
     // tile 2: (2,0) - CARD
     add_tile_to_template(&mut template, 2,
-        new_tile_static(2, 0, types::TILE_CARD(), types::SIZE_1X1(), 0, 0, 0));
+        new_tile_static(2, 0, types::TILE_CARD(), NO_PROPERTY, 0));
 
     // tile 3: (2,1) - PROPERTY
     add_tile_to_template(&mut template, 3,
-        new_tile_static(2, 1, types::TILE_PROPERTY(), types::SIZE_1X1(), 1500, 150, 0));
+        new_tile_static(2, 1, types::TILE_PROPERTY(), prop_3, 0));
 
     // tile 4: (2,2) - PROPERTY
     add_tile_to_template(&mut template, 4,
-        new_tile_static(2, 2, types::TILE_PROPERTY(), types::SIZE_1X1(), 1800, 180, 0));
+        new_tile_static(2, 2, types::TILE_PROPERTY(), prop_4, 0));
 
     // tile 5: (1,2) - HOSPITAL
     add_tile_to_template(&mut template, 5,
-        new_tile_static(1, 2, types::TILE_HOSPITAL(), types::SIZE_1X1(), 0, 0, 2)); // special=2表示停留2回合
+        new_tile_static(1, 2, types::TILE_HOSPITAL(), NO_PROPERTY, 2)); // special=2表示停留2回合
 
     // tile 6: (0,2) - PROPERTY
     add_tile_to_template(&mut template, 6,
-        new_tile_static(0, 2, types::TILE_PROPERTY(), types::SIZE_1X1(), 2000, 200, 0));
+        new_tile_static(0, 2, types::TILE_PROPERTY(), prop_6, 0));
 
     // tile 7: (0,1) - PROPERTY
     add_tile_to_template(&mut template, 7,
-        new_tile_static(0, 1, types::TILE_PROPERTY(), types::SIZE_1X1(), 2200, 220, 0));
+        new_tile_static(0, 1, types::TILE_PROPERTY(), prop_7, 0));
 
     // 设置顺时针路径
     let mut i = 0;

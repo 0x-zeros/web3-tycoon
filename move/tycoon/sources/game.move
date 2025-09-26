@@ -330,7 +330,7 @@ public entry fun create_game(
     };
 
     // 根据地图模板初始化properties vector
-    let property_count = template.properties_static.length();
+    let property_count = map::get_property_count(template);
     let mut properties = vector[];
     let mut j = 0;
     while (j < property_count) {
@@ -684,10 +684,16 @@ public entry fun decide_rent_payment(
     let tile_id = game.decision_tile;
     let toll = game.decision_amount;
 
-    // 获取地产所有者
-    let tile = &game.tiles[tile_id as u64];
-    assert!(tile.owner != NO_OWNER, EPropertyNotOwned);
-    let owner_index = tile.owner;
+    // 获取地产所有者（需要从tile找到property）
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+    let tile_static = map::get_tile(template, tile_id);
+    let property_id = map::tile_property_id(tile_static);
+    assert!(property_id != map::no_property(), ENotProperty);
+
+    let property = &game.properties[property_id as u64];
+    assert!(property.owner != NO_OWNER, EPropertyNotOwned);
+    let owner_index = property.owner;
 
     if (use_rent_free) {
         // 使用免租卡
@@ -890,9 +896,8 @@ public entry fun upgrade_property(
     // 获取地产静态信息
     let property_static = map::get_property(template, property_id);
 
-    // 计算升级费用
-    let price = map::property_price(property_static);
-    let upgrade_cost = calculate_upgrade_cost(price, current_level, game, game_data);
+    // 计算升级费用（从当前等级升到下一级）
+    let upgrade_cost = calculate_property_price(property_static, current_level, current_level + 1, game, game_data);
 
     // 验证现金
     assert!(player.cash >= upgrade_cost, EInsufficientCash);
@@ -1455,7 +1460,7 @@ fun handle_tile_stop_with_collector(
     let mut owner_opt = option::none<address>();
     let mut level_opt = option::none<u8>();
     let mut turns_opt = option::none<u8>();
-    let mut card_gains = vector[];
+    let mut card_gains = vector<events::CardDrawItem>[];
 
     // 检查是否是地产类型（包括小地产和大地产）
     if (types::is_property(tile_kind)) {
@@ -1550,7 +1555,7 @@ fun handle_tile_stop_with_collector(
                     // 检查破产
                     if (should_bankrupt) {
                         let owner_addr = (&game.players[owner_index as u64]).owner;
-                        handle_bankruptcy(game, player_addr, option::some(owner_addr));
+                        handle_bankruptcy(game, game_data, player_addr, option::some(owner_addr));
                     };
 
                     let owner_addr = (&game.players[owner_index as u64]).owner;
@@ -1565,8 +1570,8 @@ fun handle_tile_stop_with_collector(
                     stop_type = events::stop_none();  // 自己的地产，无特殊效果
                     game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
                     game.decision_tile = tile_id;
-                    let base_price = map::property_price(property_static);
-                    let upgrade_cost = calculate_upgrade_cost(base_price, level, game, game_data);
+                    // 计算从当前等级升到下一级的费用
+                    let upgrade_cost = calculate_property_price(property_static, level, level + 1, game, game_data);
                     game.decision_amount = upgrade_cost;
                 } else {
                     // 已达最高级
@@ -1656,7 +1661,7 @@ fun handle_tile_stop_with_collector(
 
         // 检查破产
         if (player.cash == 0 && fee > actual_payment) {
-            handle_bankruptcy(game, player_addr, option::none());
+            handle_bankruptcy(game, game_data, player_addr, option::none());
         }
     };
 
@@ -1731,7 +1736,7 @@ fun handle_property_stop(
             // 如果支付不足，处理破产
             if (actual_toll < toll) {
                 let owner_addr = owner_player.owner;
-                handle_bankruptcy(game, player_addr, option::some(owner_addr));
+                handle_bankruptcy(game, game_data, player_addr, option::some(owner_addr));
             };
         }
     }
@@ -1803,6 +1808,7 @@ fun send_to_hospital(game: &mut Game, player_index: u8, game_data: &GameData) {
 // - creditor: 导致破产的债权人（如收租的地产拥有者）
 fun handle_bankruptcy(
     game: &mut Game,
+    game_data: &GameData,
     player_addr: address,
     creditor: Option<address>
 ) {
@@ -1814,19 +1820,30 @@ fun handle_bankruptcy(
     };
 
     // 步骤2: 释放玩家拥有的所有地产
+    // 注意：owner_index记录的是tile_id，但我们需要通过tile找到对应的property_id
     if (table::contains(&game.owner_index, player_index)) {
         let owned_tiles = *table::borrow(&game.owner_index, player_index);
+
+        // 获取地图模板以查找property_id
+        let map_registry = tycoon::get_map_registry(game_data);
+        let template = map::get_template(map_registry, game.template_id);
+
         let mut i = 0;
         while (i < owned_tiles.length()) {
             let tile_id = owned_tiles[i];
 
-            // 从全局所有权表中移除该地产的所有权记录
-            if (game.tiles[tile_id as u64].owner != NO_OWNER) {
-                game.tiles[tile_id as u64].owner = NO_OWNER;
-            };
+            // 获取tile对应的property_id
+            let tile_static = map::get_tile(template, tile_id);
+            let property_id = map::tile_property_id(tile_static);
 
-            // 重置地产等级为0（变回无主地产）
-            game.tiles[tile_id as u64].level = 0;
+            if (property_id != map::no_property()) {
+                let property = &mut game.properties[property_id as u64];
+                // 重置地产所有权和等级
+                if (property.owner != NO_OWNER) {
+                    property.owner = NO_OWNER;
+                    property.level = 0;
+                };
+            };
 
             i = i + 1;
         };
@@ -2351,14 +2368,32 @@ public fun get_player_cash(game: &Game, player: address): u64 {
     game.players[player_index as u64].cash
 }
 
-public fun is_tile_owned(game: &Game, tile_id: u16): bool {
-    (game.tiles[tile_id as u64].owner != NO_OWNER)
+public fun is_tile_owned(game: &Game, game_data: &GameData, tile_id: u16): bool {
+    // 获取tile对应的property_id
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+    let tile_static = map::get_tile(template, tile_id);
+    let property_id = map::tile_property_id(tile_static);
+
+    if (property_id == map::no_property()) {
+        return false
+    };
+
+    (game.properties[property_id as u64].owner != NO_OWNER)
 }
 
-public fun get_tile_owner(game: &Game, tile_id: u16): address {
-    let tile = &game.tiles[tile_id as u64];
-    assert!(tile.owner != NO_OWNER, ENoSuchTile);
-    let owner_index = tile.owner;
+public fun get_tile_owner(game: &Game, game_data: &GameData, tile_id: u16): address {
+    // 获取tile对应的property_id
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+    let tile_static = map::get_tile(template, tile_id);
+    let property_id = map::tile_property_id(tile_static);
+
+    assert!(property_id != map::no_property(), ENoSuchTile);
+
+    let property = &game.properties[property_id as u64];
+    assert!(property.owner != NO_OWNER, ENoSuchTile);
+    let owner_index = property.owner;
     game.players[owner_index as u64].owner
 }
 
@@ -2701,11 +2736,12 @@ public fun test_set_player_cash(game: &mut Game, player: address, cash: u64) {
 #[test_only]
 public fun test_trigger_bankruptcy(
     game: &mut Game,
+    game_data: &GameData,
     player: address,
     debt: u64,
     creditor: option::Option<address>
 ) {
-    handle_bankruptcy(game, player, creditor);
+    handle_bankruptcy(game, game_data, player, creditor);
 }
 
 #[test_only]
@@ -3292,7 +3328,7 @@ fun calculate_price_factor(game: &Game): u64 {
 /// 小地产(1x1): 购地价公式：(P + 级别加价) × F / 100
 /// 大地产(2x2): 使用大地产价格表 × F / 100
 public fun calculate_property_price(
-    tile_static: &map::TileStatic,  // 地块静态信息
+    property_static: &map::PropertyStatic,  // 地产静态信息
     current_level: u8, // 当前等级
     target_level: u8,  // 目标等级
     game: &Game,
@@ -3302,11 +3338,12 @@ public fun calculate_property_price(
     if (target_level <= current_level) return 0;
 
     let price_factor = calculate_price_factor(game);  // F×100
+    let property_size = map::property_size(property_static);
 
-    // 根据地块大小选择不同的价格表
-    if (map::tile_size(tile_static) == types::SIZE_1X1()) {
+    // 根据地产大小选择不同的价格表
+    if (property_size == types::SIZE_1X1()) {
         // 小地产(1x1)价格计算
-        let base_price = map::tile_price(tile_static);
+        let base_price = map::property_price(property_static);
         let upgrade_costs = tycoon::get_property_upgrade_costs(game_data);
 
         // 获取当前等级的加价
@@ -3335,9 +3372,9 @@ public fun calculate_property_price(
         } else {
             0
         }
-    } else if (map::tile_size(tile_static) == types::SIZE_2X2()) {
+    } else if (property_size == types::SIZE_2X2()) {
         // 大地产(2x2)价格计算
-        let property_kind = map::tile_kind(tile_static);
+        let property_kind = map::property_kind(property_static);
 
         // 土地庙不能升级，只能建造
         if (property_kind == types::TILE_TEMPLE() && current_level > 0) {

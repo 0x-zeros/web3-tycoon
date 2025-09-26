@@ -1481,12 +1481,13 @@ fun handle_tile_stop_with_collector(
             } else {
                 let owner_index = property.owner;
                 if (owner_index != player_index) {
+                    // 他人的地产 - 需要支付过路费
                     let level = property.level;
                     let toll = calculate_toll(game, tile_id, template, game_data);
 
-                // 检查免租情况
-                let player = &game.players[player_index as u64];
-                let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
+                    // 检查免租情况
+                    let player = &game.players[player_index as u64];
+                    let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
                 let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
 
                 if (has_rent_free_buff) {
@@ -1562,23 +1563,27 @@ fun handle_tile_stop_with_collector(
                     owner_opt = option::some(owner_addr);
                     level_opt = option::some(level);
                 }
-            } else {
-                // 自己的地产 - 检查是否可以升级
-                let level = property.level;
-                if (level < types::LEVEL_4()) {
-                    // 可以升级 - 设置待决策状态
-                    stop_type = events::stop_none();  // 自己的地产，无特殊效果
-                    game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
-                    game.decision_tile = tile_id;
-                    // 计算从当前等级升到下一级的费用
-                    let upgrade_cost = calculate_property_price(property_static, level, level + 1, game, game_data);
-                    game.decision_amount = upgrade_cost;
                 } else {
-                    // 已达最高级
-                    stop_type = events::stop_none();  // 自己的地产，无特殊效果
-                };
-                owner_opt = option::some(player_addr);
-                level_opt = option::some(level);
+                    // 自己的地产 - 检查是否可以升级
+                    let level = property.level;
+                    let player_addr = (&game.players[player_index as u64]).owner;
+
+                    if (level < types::LEVEL_4()) {
+                        // 可以升级 - 设置待决策状态
+                        stop_type = events::stop_none();  // 自己的地产，无特殊效果
+                        game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
+                        game.decision_tile = tile_id;
+                        // 计算从当前等级升到下一级的费用
+                        let upgrade_cost = calculate_property_price(property_static, level, level + 1, game, game_data);
+                        game.decision_amount = upgrade_cost;
+                    } else {
+                        // 已达最高级
+                        stop_type = events::stop_none();  // 自己的地产，无特殊效果
+                    };
+
+                    owner_opt = option::some(player_addr);
+                    level_opt = option::some(level);
+                }
             }
         } else {
             // 非地产的tile（例如可能是大地产的一部分但没有property_id）
@@ -1609,6 +1614,18 @@ fun handle_tile_stop_with_collector(
             false  // not pass, but stop
         ));
         stop_type = events::stop_card_stop();
+    } else if (tile_kind == types::TILE_CHANCE()) {
+        // TODO: 实现机会事件
+        stop_type = events::stop_none();
+    } else if (tile_kind == types::TILE_NEWS()) {
+        // TODO: 实现新闻事件
+        stop_type = events::stop_none();
+    } else if (tile_kind == types::TILE_LOTTERY()) {
+        // TODO: 实现彩票事件
+        stop_type = events::stop_none();
+    } else if (tile_kind == types::TILE_SHOP()) {
+        // TODO: 实现商店功能
+        stop_type = events::stop_none();
     } else if (tile_kind == types::TILE_BONUS()) {
         // 奖励
         let base_bonus = map::tile_special(tile);
@@ -1663,6 +1680,9 @@ fun handle_tile_stop_with_collector(
         if (player.cash == 0 && fee > actual_payment) {
             handle_bankruptcy(game, game_data, player_addr, option::none());
         }
+    } else {
+        // 其他未处理的地块类型
+        stop_type = events::stop_none();
     };
 
     // 返回停留效果
@@ -2397,8 +2417,18 @@ public fun get_tile_owner(game: &Game, game_data: &GameData, tile_id: u16): addr
     game.players[owner_index as u64].owner
 }
 
-public fun get_tile_level(game: &Game, tile_id: u16): u8 {
-    game.tiles[tile_id as u64].level
+public fun get_tile_level(game: &Game, game_data: &GameData, tile_id: u16): u8 {
+    // 获取tile对应的property_id
+    let map_registry = tycoon::get_map_registry(game_data);
+    let template = map::get_template(map_registry, game.template_id);
+    let tile_static = map::get_tile(template, tile_id);
+    let property_id = map::tile_property_id(tile_static);
+
+    if (property_id == map::no_property()) {
+        return 0
+    };
+
+    game.properties[property_id as u64].level
 }
 
 public fun is_player_bankrupt(game: &Game, player: address): bool {

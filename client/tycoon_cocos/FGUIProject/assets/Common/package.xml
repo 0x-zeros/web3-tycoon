@@ -259,6 +259,7 @@
     <image id="ue83c" name="circle.png" path="/images/" exported="true"/>
     <image id="ue83d" name="rectangle.png" path="/images/" exported="true" scale9grid="119,112,238,224"/>
     <component id="105vold" name="selected1.xml" path="/components/" exported="true"/>
+    <component id="ez89ole" name="Button2.xml" path="/components/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

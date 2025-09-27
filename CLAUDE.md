@@ -334,3 +334,4 @@ web3-tycoon/
   - Option: 需要前缀 `option::some()`, `option::none()`
   - 复杂类型优先使用引用避免复制
 - **Random in Move**: 一个交易使用一个 RandomGenerator，避免多次创建
+- 生成代码时，没有我的指示，不要添加多余的fallback机制，让错误能够早点可见

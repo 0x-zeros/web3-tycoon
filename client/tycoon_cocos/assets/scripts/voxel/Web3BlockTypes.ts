@@ -14,7 +14,7 @@ export enum Web3TileType {
     NEWS = 7,          // 新闻
 }
 
-// NPC和路面物体枚举（100-255）
+// NPC和路面物体枚举（100-199）
 export enum Web3ObjectType {
     LAND_GOD = 100,        // 土地神
     WEALTH_GOD = 101,      // 财神
@@ -25,13 +25,24 @@ export enum Web3ObjectType {
     BOMB = 106,            // 炸弹
 }
 
+// Property（地产）枚举（200-255）
+export enum Web3PropertyType {
+    PROPERTY_1X1 = 200,    // 小型地产（1x1）
+    TEMPLE_2X2 = 201,      // 土地庙（2x2）
+    RESEARCH_2X2 = 202,    // 研究所（2x2）
+    OIL_2X2 = 203,         // 石油公司（2x2）
+    COMMERCIAL_2X2 = 204,  // 商业中心（2x2）
+    HOTEL_2X2 = 205,       // 大饭店（2x2）
+}
+
 // Web3方块信息接口
 export interface Web3BlockInfo {
     id: string;           // 方块ID，如 'web3:empty_land'
     name: string;         // 显示名称
-    category: 'tile' | 'object';  // 类别：地块或物体
+    category: 'tile' | 'object' | 'property';  // 类别：地块、物体或地产
     typeId: number;       // 类型ID（0-255）
     description?: string; // 描述
+    size?: 1 | 2;        // 尺寸（仅property使用）
 }
 
 // Web3方块定义
@@ -143,6 +154,56 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
         category: 'object',
         typeId: Web3ObjectType.BOMB,
         description: '爆炸伤害的路面物体'
+    },
+
+    // ========== Property地产类型 (200-255) ==========
+    {
+        id: 'web3:property_small',
+        name: '小型地产',
+        category: 'property',
+        typeId: Web3PropertyType.PROPERTY_1X1,
+        description: '1x1的可购买地产',
+        size: 1
+    },
+    {
+        id: 'web3:temple',
+        name: '土地庙',
+        category: 'property',
+        typeId: Web3PropertyType.TEMPLE_2X2,
+        description: '2x2的土地庙，影响周围地块租金',
+        size: 2
+    },
+    {
+        id: 'web3:research',
+        name: '研究所',
+        category: 'property',
+        typeId: Web3PropertyType.RESEARCH_2X2,
+        description: '2x2的研究所',
+        size: 2
+    },
+    {
+        id: 'web3:oil_company',
+        name: '石油公司',
+        category: 'property',
+        typeId: Web3PropertyType.OIL_2X2,
+        description: '2x2的石油公司',
+        size: 2
+    },
+    {
+        id: 'web3:commercial',
+        name: '商业中心',
+        category: 'property',
+        typeId: Web3PropertyType.COMMERCIAL_2X2,
+        description: '2x2的商业中心',
+        size: 2
+    },
+    {
+        id: 'web3:hotel',
+        name: '大饭店',
+        category: 'property',
+        typeId: Web3PropertyType.HOTEL_2X2,
+        description: '2x2的大饭店',
+        size: 2
     }
 ];
 
@@ -196,4 +257,26 @@ export function isWeb3Tile(blockIdOrTypeId: string | number): boolean {
         // typeId 0-99 是地块类型
         return blockIdOrTypeId >= 0 && blockIdOrTypeId <= 99;
     }
+}
+
+// 判断是否为Property类型（支持blockId字符串或typeId数字）
+export function isWeb3Property(blockIdOrTypeId: string | number): boolean {
+    if (typeof blockIdOrTypeId === 'string') {
+        const block = getWeb3BlockByBlockId(blockIdOrTypeId);
+        return block ? block.category === 'property' : false;
+    } else {
+        // typeId 200-255 是Property类型
+        return blockIdOrTypeId >= 200 && blockIdOrTypeId <= 255;
+    }
+}
+
+// 获取Property的尺寸
+export function getPropertySize(blockId: string): number {
+    const block = getWeb3BlockByBlockId(blockId);
+    return block?.size || 1;
+}
+
+// 获取Property类型方块
+export function getWeb3PropertyBlocks(): Web3BlockInfo[] {
+    return WEB3_BLOCKS.filter(block => block.category === 'property');
 }

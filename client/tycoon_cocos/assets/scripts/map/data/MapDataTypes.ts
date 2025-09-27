@@ -124,28 +124,68 @@ export interface MapMetadata {
 }
 
 /**
+ * Property数据
+ */
+export interface PropertyData {
+    /** 方块ID，如 "web3:property_small" */
+    blockId: string;
+    /** 类型ID (Web3PropertyType) */
+    typeId: number;
+    /** Property尺寸（1x1或2x2） */
+    size: 1 | 2;
+    /** 网格位置（左下角） */
+    position: {
+        x: number;
+        z: number;
+    };
+    /** 关联的property tiles */
+    associatedTiles?: Array<{ x: number; z: number }>;
+    /** 扩展数据 */
+    data?: {
+        /** 拥有者 */
+        owner?: string;
+        /** 建筑等级 */
+        level?: number;
+        /** 地产价格 */
+        price?: number;
+        /** 租金设置 */
+        rent?: number[];
+        /** 是否被抵押 */
+        mortgaged?: boolean;
+        /** 自定义数据 */
+        custom?: any;
+    };
+}
+
+/**
  * 完整的地图保存数据
  */
 export interface MapSaveData extends MapMetadata {
     /** 游戏模式 */
     gameMode: 'edit' | 'play';
-    
+
     /** 地图尺寸信息 */
     mapSize?: {
         width: number;
         height: number;
         gridSize?: number;
     };
-    
+
     /** 地块数据数组 (y=0层) */
     tiles: TileData[];
-    
+
     /** 物体数据数组 (y=1层) */
     objects: ObjectData[];
-    
+
+    /** Property数据数组 */
+    properties?: PropertyData[];
+
+    /** Property-Tile关联映射 */
+    propertyTileLinks?: { [tileKey: string]: string };
+
     /** 游戏规则（可选，用于游戏模式） */
     gameRules?: GameRules;
-    
+
     /** 扩展数据（预留） */
     extra?: {
         /** 摄像机默认位置 */

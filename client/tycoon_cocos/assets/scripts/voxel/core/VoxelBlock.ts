@@ -499,7 +499,7 @@ export class BlockRegistry {
         isDestructable: false,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3TileType.CHANCE,
             category: 'tile',
@@ -707,7 +707,7 @@ export class BlockRegistry {
         isDestructable: true,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3PropertyType.PROPERTY_1X1,
             category: 'property',
@@ -724,7 +724,7 @@ export class BlockRegistry {
         isDestructable: true,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3PropertyType.TEMPLE_2X2,
             category: 'property',
@@ -741,7 +741,7 @@ export class BlockRegistry {
         isDestructable: true,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3PropertyType.RESEARCH_2X2,
             category: 'property',
@@ -758,7 +758,7 @@ export class BlockRegistry {
         isDestructable: true,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3PropertyType.OIL_2X2,
             category: 'property',
@@ -775,7 +775,7 @@ export class BlockRegistry {
         isDestructable: true,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3PropertyType.COMMERCIAL_2X2,
             category: 'property',
@@ -792,7 +792,7 @@ export class BlockRegistry {
         isDestructable: true,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3PropertyType.HOTEL_2X2,
             category: 'property',

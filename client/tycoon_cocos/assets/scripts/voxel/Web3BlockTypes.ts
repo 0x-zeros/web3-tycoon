@@ -243,8 +243,8 @@ export function isWeb3Object(blockIdOrTypeId: string | number): boolean {
         const block = getWeb3BlockByBlockId(blockIdOrTypeId);
         return block ? block.category === 'object' : false;
     } else {
-        // typeId >= 100 是物体类型
-        return blockIdOrTypeId >= 100 && blockIdOrTypeId <= 255;
+        // typeId 100-199 是物体类型（避免与200-255的Property重叠）
+        return blockIdOrTypeId >= 100 && blockIdOrTypeId <= 199;
     }
 }
 

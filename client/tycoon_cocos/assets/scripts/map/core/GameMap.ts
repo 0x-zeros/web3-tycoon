@@ -70,6 +70,9 @@ export class GameMap extends Component {
     @property({ displayName: "启用调试模式", tooltip: "显示调试信息" })
     public debugMode: boolean = false;
     
+    @property({ displayName: "加载后重建2x2父容器", tooltip: "在加载地图数据后自动为2x2地产重建父容器" })
+    public rebuildPropertyContainersAfterLoad: boolean = true;
+    
     // ========================= 私有属性 =========================
     
     /** 地块数组 (y=0层) */
@@ -119,6 +122,8 @@ export class GameMap extends Component {
 
     /** Tile到Property的映射 (key: "tile_x_z", value: "property_x_z") */
     private _tileToPropertyMap: Map<string, string> = new Map();
+    
+    // 预留：邻接tile元数据可在此扩展
 
     // ========================= 生命周期方法 =========================
     
@@ -335,13 +340,13 @@ export class GameMap extends Component {
         if (isWeb3Tile(typeId)) {
             // 地块类型，放置在y=0
             await this.placeTileAt(this._currentSelectedBlockId, gridPos);
-        } else if (isWeb3Object(typeId)) {
-            // 物体类型，放置在y=1
-            await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
         } else if (isWeb3Property(typeId)) {
             // Property类型，放置在y=0，并处理相邻Tile
             const size = getPropertySize(this._currentSelectedBlockId);
             await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size);
+        } else if (isWeb3Object(typeId)) {
+            // 物体类型，放置在y=1
+            await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
         }
     }
     
@@ -379,6 +384,19 @@ export class GameMap extends Component {
         if (existingTile) {
             this.removeTile(existingTile);
         }
+
+        // 若该位置与某个Property共享边，则无论传入的blockId为何，强制使用property tile
+        let effectiveBlockId = blockId;
+        const adjPropertyKey = this.findAdjacentPropertyKey(gridPos);
+        if (adjPropertyKey) {
+            effectiveBlockId = 'web3:property';
+            // 确保建立映射与关联
+            this._tileToPropertyMap.set(key, adjPropertyKey);
+            const info = this._propertyRegistry.get(adjPropertyKey);
+            if (info && !info.associatedTiles.some(t => t.x === gridPos.x && t.z === gridPos.y)) {
+                info.associatedTiles.push({ x: gridPos.x, z: gridPos.y });
+            }
+        }
         
         // 创建新地块节点
         const tileNode = new Node(`Tile_${gridPos.x}_${gridPos.y}`);
@@ -386,7 +404,7 @@ export class GameMap extends Component {
         
         // 添加MapTile组件
         const tile = tileNode.addComponent(MapTile);
-        await tile.initialize(blockId, gridPos);
+        await tile.initialize(effectiveBlockId, gridPos);
         
         // 添加到管理数组和索引
         this._tiles.push(tile);
@@ -454,8 +472,36 @@ export class GameMap extends Component {
         // 然后检查并移除地块（y=0层）
         const tile = this._tileIndex.get(key);
         if (tile) {
-            this.removeTile(tile);
-            console.log(`[GameMap] Removed tile at (${gridPos.x}, ${gridPos.y})`);
+            // 如果该tile与某个Property相关联，则决定整体删除或仅删除该tile
+            const mappedPropertyKey = this._tileToPropertyMap.get(key);
+            const isPropertyType = isWeb3Property(tile.getTypeId());
+            if (mappedPropertyKey) {
+                const parts = mappedPropertyKey.split('_');
+                const pX = Number(parts[0]);
+                const pZ = Number(parts[1]);
+                const info = this._propertyRegistry.get(mappedPropertyKey);
+                if (info) {
+                    // 判断是否命中2x2主体格
+                    const inCoreX = gridPos.x >= info.position.x && gridPos.x <= info.position.x + (info.size - 1);
+                    const inCoreZ = gridPos.y >= info.position.z && gridPos.y <= info.position.z + (info.size - 1);
+                    const isCoreCell = inCoreX && inCoreZ;
+                    if (isCoreCell && isPropertyType) {
+                        this.removeProperty(new Vec2(pX, pZ));
+                    } else {
+                        // 边缘tile：仅删除该tile（或改回原始类型由removeTile处理/或手动还原则在removeProperty中执行）
+                        this.removeTile(tile);
+                        console.log(`[GameMap] Removed edge tile at (${gridPos.x}, ${gridPos.y})`);
+                    }
+                } else {
+                    // 映射丢失时，按普通tile处理
+                    this.removeTile(tile);
+                    console.log(`[GameMap] Removed tile at (${gridPos.x}, ${gridPos.y})`);
+                }
+            } else {
+                // 无映射，按普通tile删除
+                this.removeTile(tile);
+                console.log(`[GameMap] Removed tile at (${gridPos.x}, ${gridPos.y})`);
+            }
             // 编辑模式下触发自动保存
             if (this._isEditMode) {
                 this.scheduleAutoSave();
@@ -475,6 +521,17 @@ export class GameMap extends Component {
         
         // 从索引中移除
         this._tileIndex.delete(key);
+
+        // 如果该tile与某个Property相关联，则清理映射与注册信息
+        const mappedPropertyKey = this._tileToPropertyMap.get(key);
+        if (mappedPropertyKey) {
+            this._tileToPropertyMap.delete(key);
+            const info = this._propertyRegistry.get(mappedPropertyKey);
+            if (info) {
+                // 从associatedTiles移除
+                info.associatedTiles = info.associatedTiles.filter(t => !(t.x === gridPos.x && t.z === gridPos.y));
+            }
+        }
         
         // 从数组中移除
         const index = this._tiles.indexOf(tile);
@@ -813,7 +870,12 @@ export class GameMap extends Component {
             // 保存地图数据
             this._mapSaveData = mapData;
             this.mapId = mapData.mapId;
-            
+
+            // 加载完成后可选重建2x2父容器
+            if (this.rebuildPropertyContainersAfterLoad) {
+                this.rebuildPropertyContainers();
+            }
+
             console.log(`[GameMap] Map loaded successfully: ${loadedTiles} tiles, ${loadedObjects} objects`);
             return true;
             
@@ -1058,6 +1120,29 @@ export class GameMap extends Component {
     }
 
     /**
+     * 查找某网格位置是否与任一Property共享边，返回其propertyKey
+     */
+    private findAdjacentPropertyKey(pos: Vec2): string | null {
+        const tileKey = `${pos.x}_${pos.y}`;
+        const mapped = this._tileToPropertyMap.get(tileKey);
+        if (mapped) return mapped;
+
+        // 回退：遍历所有Property计算边缘位置
+        for (const [propertyKey, info] of this._propertyRegistry.entries()) {
+            const propPos = new Vec2(info.position.x, info.position.z);
+            const edgePositions = this.getEdgeAdjacentTilePositions(propPos, info.size);
+            for (const e of edgePositions) {
+                if (e.x === pos.x && e.y === pos.y) {
+                    // 记下映射，便于下次快速判断
+                    this._tileToPropertyMap.set(tileKey, propertyKey);
+                    return propertyKey;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 更新Property边缘的Tile为property tile类型
      * @param propertyPos Property位置
      * @param size Property尺寸
@@ -1077,19 +1162,17 @@ export class GameMap extends Component {
 
             // 检查该位置是否已有Tile
             const existingTile = this._tileIndex.get(tileKey);
-            if (!existingTile) {
-                // 如果没有Tile，创建一个property tile
-                this.placeTileAt('web3:property', pos);
-            } else {
-                // 如果已有Tile，更新为property类型
-                // TODO: 更新Tile的显示以表明它是property tile
-                console.log(`[GameMap] Converting tile at (${pos.x}, ${pos.y}) to property tile`);
+            if (existingTile) {
+                // 如果已有Tile，且不是property类型，则转换为property tile
+                if (!isWeb3Property(existingTile.getTypeId())) {
+                    // 用property tile替换
+                    this.placeTileAt('web3:property', pos);
+                    console.log(`[GameMap] Converted edge tile at (${pos.x}, ${pos.y}) to property tile`);
+                }
             }
 
-            // 建立Tile到Property的映射
+            // 无论是否存在tile，都记录映射与关联位置，便于后续放置或一致性
             this._tileToPropertyMap.set(tileKey, propertyKey);
-
-            // 记录关联的Tile
             propertyInfo.associatedTiles.push({ x: pos.x, z: pos.y });
         }
     }
@@ -1105,6 +1188,7 @@ export class GameMap extends Component {
         // 创建一个主节点作为2x2 Property的容器
         const propertyNode = new Node(`Property2x2_${gridPos.x}_${gridPos.y}`);
         propertyNode.setParent(this.tilesContainer!);
+        const propertyKey = `${gridPos.x}_${gridPos.y}`;
 
         // 为2x2 Property创建4个块，每个块占一个格子
         // 但它们都作为propertyNode的子节点，形成一个整体
@@ -1121,13 +1205,15 @@ export class GameMap extends Component {
                 const tile = tileNode.addComponent(MapTile);
                 await tile.initialize(blockId, pos);
 
-                // 对于2x2 Property，我们可以让每个块高度为2，看起来更大
-                // 通过缩放y轴实现
-                tileNode.setScale(1, 2, 1);  // 高度翻倍
+                // 2x2 Property默认缩放为1
+                tileNode.setScale(1, 1, 1);
 
                 // 添加到索引
                 this._tiles.push(tile);
                 this._tileIndex.set(key, tile);
+
+                // 建立2x2内部格子到Property左下角的映射，便于整体删除/查询
+                this._tileToPropertyMap.set(key, propertyKey);
             }
         }
 
@@ -1158,21 +1244,18 @@ export class GameMap extends Component {
             if (containerNode) {
                 // 删除整个容器节点（包括所有子节点）
                 containerNode.destroy();
-
-                // 从索引中移除所有占用的格子
-                for (let dx = 0; dx < 2; dx++) {
-                    for (let dz = 0; dz < 2; dz++) {
-                        const pos = new Vec2(propertyPos.x + dx, propertyPos.y + dz);
-                        const key = `${pos.x}_${pos.y}`;
-                        const tile = this._tileIndex.get(key);
-                        if (tile) {
-                            const index = this._tiles.indexOf(tile);
-                            if (index >= 0) {
-                                this._tiles.splice(index, 1);
-                            }
-                            this._tileIndex.delete(key);
-                        }
+            }
+            // 无论容器是否存在，都确保从索引与场景中移除4个格子
+            for (let dx = 0; dx < 2; dx++) {
+                for (let dz = 0; dz < 2; dz++) {
+                    const pos = new Vec2(propertyPos.x + dx, propertyPos.y + dz);
+                    const key = `${pos.x}_${pos.y}`;
+                    const tile = this._tileIndex.get(key);
+                    if (tile) {
+                        this.removeTile(tile);
                     }
+                    // 清理映射
+                    this._tileToPropertyMap.delete(key);
                 }
             }
         } else {
@@ -1185,12 +1268,10 @@ export class GameMap extends Component {
             }
         }
 
-        // 2. 清理关联的property tiles
+        // 2. 清理关联的property tiles 的映射（不做类型还原/删除）
         for (const tilePos of propertyInfo.associatedTiles) {
             const tileKey = `${tilePos.x}_${tilePos.z}`;
             this._tileToPropertyMap.delete(tileKey);
-
-            // TODO: 还原property tile为普通tile或删除
         }
 
         // 3. 从注册表中删除
@@ -1199,5 +1280,39 @@ export class GameMap extends Component {
         // 标记有未保存的修改
         this._hasUnsavedChanges = true;
         this.scheduleAutoSave();
+    }
+
+    /**
+     * 加载后重建2x2 Property的父容器，并恢复缩放
+     */
+    private rebuildPropertyContainers(): void {
+        this._propertyRegistry.forEach((info, propertyKey) => {
+            if (info.size !== 2) return;
+            const containerName = `Property2x2_${info.position.x}_${info.position.z}`;
+            let containerNode = this.tilesContainer?.getChildByName(containerName);
+            if (!containerNode) {
+                containerNode = new Node(containerName);
+                containerNode.setParent(this.tilesContainer!);
+            }
+            // 重新挂载四个子块并设置缩放
+            for (let dx = 0; dx < 2; dx++) {
+                for (let dz = 0; dz < 2; dz++) {
+                    const x = info.position.x + dx;
+                    const z = info.position.z + dz;
+                    const key = `${x}_${z}`;
+                    const tile = this._tileIndex.get(key);
+                    if (tile && tile.node && tile.node.isValid) {
+                        tile.node.setParent(containerNode);
+                        tile.node.setScale(1, 1, 1);
+                        // 确保映射存在
+                        this._tileToPropertyMap.set(key, propertyKey);
+                    }
+                }
+            }
+            // 标记容器属性
+            (containerNode as any)['isProperty2x2'] = true;
+            (containerNode as any)['propertyBlockId'] = info.blockId;
+            (containerNode as any)['propertyPosition'] = new Vec2(info.position.x, info.position.z);
+        });
     }
 }

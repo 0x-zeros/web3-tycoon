@@ -367,11 +367,11 @@ export class GameMap extends Component {
             const size = getPropertySize(this._currentSelectedBlockId);
             await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size);
         } else if (isWeb3Object(typeId)) {
-            // 物体类型，放置在y=1
+            // NPC/物体类型，使用PaperActor
             await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
         } else if (blockInfo.category === 'decoration') {
-            // 装饰类型，放置在y=1（和物体一样）
-            await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
+            // 装饰类型，保留体素渲染
+            await this.placeDecorationAt(this._currentSelectedBlockId, gridPos);
         }
     }
     
@@ -444,7 +444,28 @@ export class GameMap extends Component {
     }
     
     /**
-     * 在指定位置放置物体
+     * 在指定位置放置装饰（使用体素渲染）
+     */
+    private async placeDecorationAt(blockId: string, gridPos: Vec2): Promise<void> {
+        if (!this._voxelSystem) {
+            console.error('[GameMap] VoxelSystem not initialized');
+            return;
+        }
+
+        // 装饰使用体素渲染，放置在y=1层
+        const worldPos = new Vec3(gridPos.x, 1, gridPos.y);
+        await this._voxelSystem.placeBlock(blockId, worldPos);
+
+        console.log(`[GameMap] Placed decoration ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+
+        // 编辑模式下触发自动保存
+        if (this._isEditMode) {
+            this.scheduleAutoSave();
+        }
+    }
+
+    /**
+     * 在指定位置放置物体（NPC等，使用PaperActor）
      */
     private async placeObjectAt(blockId: string, gridPos: Vec2): Promise<void> {
         const key = `${gridPos.x}_${gridPos.y}`;
@@ -480,17 +501,34 @@ export class GameMap extends Component {
      */
     private removeElementAt(gridPos: Vec2): void {
         const key = `${gridPos.x}_${gridPos.y}`;
-        
-        // 优先检查并移除物体（y=1层）
-        const object = this._objectIndex.get(key);
-        if (object) {
-            this.removeObject(object);
-            console.log(`[GameMap] Removed object at (${gridPos.x}, ${gridPos.y})`);
-            // 编辑模式下触发自动保存
+
+        // 1. 首先检查是否有PaperActor（NPC/物体）
+        const actor = this._actors.get(key);
+        if (actor) {
+            actor.destroy();
+            this._actors.delete(key);
+            console.log(`[GameMap] Removed PaperActor at (${gridPos.x}, ${gridPos.y})`);
             if (this._isEditMode) {
                 this.scheduleAutoSave();
             }
             return;
+        }
+
+        // 2. 检查是否是装饰（体素y=1层）
+        if (this._voxelSystem) {
+            const worldPos = new Vec3(gridPos.x, 1, gridPos.y);
+            const blockId = this._voxelSystem.getBlockAt(worldPos);
+            if (blockId && blockId !== 'minecraft:air') {
+                const blockInfo = getWeb3BlockByBlockId(blockId);
+                if (blockInfo && blockInfo.category === 'decoration') {
+                    this._voxelSystem.removeBlock(worldPos);
+                    console.log(`[GameMap] Removed decoration at (${gridPos.x}, ${gridPos.y})`);
+                    if (this._isEditMode) {
+                        this.scheduleAutoSave();
+                    }
+                    return;
+                }
+            }
         }
         
         // 然后检查并移除地块（y=0层）
@@ -1081,7 +1119,7 @@ export class GameMap extends Component {
     private async placePropertyAt(blockId: string, gridPos: Vec2, size: 1 | 2): Promise<void> {
         console.log(`[GameMap] Placing property ${blockId} at (${gridPos.x}, ${gridPos.y}) with size ${size}`);
 
-        // 1. 检查所有占用格子是否可用（建筑会占用地面空间）
+        // 1. 检查所有占用格子是否可用
         const key = `${gridPos.x}_${gridPos.y}`;
         if (size === 2) {
             // 2x2建筑需要检查4个格子
@@ -1089,37 +1127,49 @@ export class GameMap extends Component {
                 for (let dz = 0; dz < size; dz++) {
                     const pos = new Vec2(gridPos.x + dx, gridPos.y + dz);
                     const checkKey = `${pos.x}_${pos.y}`;
-                    if (this._buildings.has(checkKey)) {
-                        console.warn(`[GameMap] Position (${pos.x}, ${pos.y}) is occupied by building`);
+                    if (this._tileIndex.has(checkKey)) {
+                        console.warn(`[GameMap] Position (${pos.x}, ${pos.y}) is occupied, cannot place 2x2 property`);
                         return;
                     }
                 }
             }
-        } else if (this._buildings.has(key)) {
-            console.warn(`[GameMap] Position already has a building`);
-            return;
         }
 
-        // 2. 清除已存在的建筑
+        // 2. 先使用体素系统放置建筑方块
+        if (size === 1) {
+            // 1x1建筑：直接放置
+            await this.placeTileAt(blockId, gridPos);
+        } else {
+            // 2x2建筑：使用体素系统放置
+            await this.place2x2Property(blockId, gridPos);
+        }
+
+        // 3. 在建筑中心添加PaperActor（用于显示建筑精灵/动画）
+        // 清除已存在的PaperActor
         const existingBuilding = this._buildings.get(key);
         if (existingBuilding) {
             existingBuilding.destroy();
             this._buildings.delete(key);
         }
 
-        // 3. 使用PaperActor创建建筑
-        const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
-        if (size === 2) {
-            // 2x2建筑位置需要调整到中心
-            worldPos.x += 0.5;
-            worldPos.z += 0.5;
+        // 计算PaperActor的位置（建筑中心）
+        const actorPos = new Vec3(gridPos.x, 0.1, gridPos.y);  // 稍微抬高避免Z-fighting
+        if (size === 1) {
+            // 1x1建筑：中心在格子中间
+            actorPos.x += 0.5;
+            actorPos.z += 0.5;
+        } else if (size === 2) {
+            // 2x2建筑：中心在4个格子的中间
+            actorPos.x += 1.0;
+            actorPos.z += 1.0;
         }
 
-        const buildingNode = PaperActorFactory.createBuilding(blockId, 0, worldPos);
+        // 创建PaperActor
+        const buildingNode = PaperActorFactory.createBuilding(blockId, 0, actorPos);
         if (buildingNode) {
             buildingNode.parent = this._buildingsRoot;
 
-            // 记录所有占用的格子
+            // 记录所有占用的格子都指向同一个PaperActor
             if (size === 2) {
                 for (let dx = 0; dx < size; dx++) {
                     for (let dz = 0; dz < size; dz++) {
@@ -1131,15 +1181,7 @@ export class GameMap extends Component {
                 this._buildings.set(key, buildingNode);
             }
 
-            console.log(`[GameMap] Placed building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
-        }
-
-        // 4. 地块仍然需要放置（用于游戏逻辑）
-        if (size === 1) {
-            await this.placeTileAt(blockId, gridPos);
-        } else {
-            // 2x2 Property特殊处理
-            await this.place2x2Property(blockId, gridPos);
+            console.log(`[GameMap] Added PaperActor for building ${blockId} at center (${actorPos.x}, ${actorPos.z})`);
         }
 
         // 3. 注册Property信息

@@ -214,11 +214,12 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         name: '小型地产',
         textures: {
             levels: [
-                'web3/buildings/property_small_lv0',  // 空地
+                'web3/buildings/lv0',  // 空地
                 'web3/buildings/property_small_lv1',  // 1级小屋
                 'web3/buildings/property_small_lv2',  // 2级房屋
                 'web3/buildings/property_small_lv3',  // 3级商铺
                 'web3/buildings/property_small_lv4',  // 4级大楼
+                'web3/buildings/property_small_lv5',  // 5级大楼
             ]
         },
         size: { width: 1, height: 1, scale: 1 },
@@ -237,10 +238,12 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         name: '土地庙',
         textures: {
             levels: [
-                'web3/buildings/temple_lv0',
+                'web3/buildings/lv0',
                 'web3/buildings/temple_lv1',
                 'web3/buildings/temple_lv2',
                 'web3/buildings/temple_lv3',
+                'web3/buildings/temple_lv4',
+                'web3/buildings/temple_lv5',
             ]
         },
         size: { width: 2, height: 2, scale: 2 },
@@ -259,10 +262,12 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         name: '研究所',
         textures: {
             levels: [
-                'web3/buildings/research_lv0',
+                'web3/buildings/lv0',
                 'web3/buildings/research_lv1',
                 'web3/buildings/research_lv2',
                 'web3/buildings/research_lv3',
+                'web3/buildings/research_lv4',
+                'web3/buildings/research_lv5',
             ]
         },
         size: { width: 2, height: 2, scale: 2 },
@@ -281,10 +286,12 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         name: '石油公司',
         textures: {
             levels: [
-                'web3/buildings/oil_company_lv0',
+                'web3/buildings/lv0',
                 'web3/buildings/oil_company_lv1',
                 'web3/buildings/oil_company_lv2',
                 'web3/buildings/oil_company_lv3',
+                'web3/buildings/oil_company_lv4',
+                'web3/buildings/oil_company_lv5',
             ]
         },
         size: { width: 2, height: 2, scale: 2 },
@@ -303,10 +310,12 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         name: '商业中心',
         textures: {
             levels: [
-                'web3/buildings/commercial_lv0',
+                'web3/buildings/lv0',
                 'web3/buildings/commercial_lv1',
                 'web3/buildings/commercial_lv2',
                 'web3/buildings/commercial_lv3',
+                'web3/buildings/commercial_lv4',
+                'web3/buildings/commercial_lv5',
             ]
         },
         size: { width: 2, height: 2, scale: 2 },
@@ -325,10 +334,12 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         name: '大饭店',
         textures: {
             levels: [
-                'web3/buildings/hotel_lv0',
+                'web3/buildings/lv0',
                 'web3/buildings/hotel_lv1',
                 'web3/buildings/hotel_lv2',
                 'web3/buildings/hotel_lv3',
+                'web3/buildings/hotel_lv4',
+                'web3/buildings/hotel_lv5',
             ]
         },
         size: { width: 2, height: 2, scale: 2 },
@@ -338,96 +349,6 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         },
         billboardMode: 'off',
         defaultLevel: 0
-    }
-];
-
-/**
- * 装饰物配置（从体素系统迁移过来）
- */
-const DECORATION_CONFIGS: ActorConfig[] = [
-    {
-        id: 'web3:deco_dandelion',
-        type: ActorType.OBJECT,
-        name: '蒲公英',
-        textures: {
-            default: 'web3/actors/deco_dandelion',
-        },
-        size: { width: 0.5, height: 0.5, scale: 0.6 },
-        animations: {
-            canFloat: true,
-            canShake: true
-        },
-        billboardMode: 'yAxis'
-    },
-    {
-        id: 'web3:deco_poppy',
-        type: ActorType.OBJECT,
-        name: '虞美人',
-        textures: {
-            default: 'web3/actors/deco_poppy',
-        },
-        size: { width: 0.5, height: 0.5, scale: 0.6 },
-        animations: {
-            canFloat: false,
-            canShake: true
-        },
-        billboardMode: 'yAxis'
-    },
-    {
-        id: 'web3:deco_short_grass',
-        type: ActorType.OBJECT,
-        name: '矮草',
-        textures: {
-            default: 'web3/actors/deco_short_grass',
-        },
-        size: { width: 0.4, height: 0.3, scale: 0.5 },
-        animations: {
-            canFloat: false,
-            canShake: true
-        },
-        billboardMode: 'yAxis'
-    },
-    {
-        id: 'web3:deco_fern',
-        type: ActorType.OBJECT,
-        name: '蕨类',
-        textures: {
-            default: 'web3/actors/deco_fern',
-        },
-        size: { width: 0.6, height: 0.6, scale: 0.7 },
-        animations: {
-            canFloat: false,
-            canShake: true
-        },
-        billboardMode: 'yAxis'
-    },
-    {
-        id: 'web3:deco_glow_lichen',
-        type: ActorType.OBJECT,
-        name: '荧光地衣',
-        textures: {
-            default: 'web3/actors/deco_glow_lichen',
-        },
-        size: { width: 0.5, height: 0.5, scale: 0.6 },
-        animations: {
-            canFloat: true,  // 荧光地衣可以有漂浮效果
-            canShake: true
-        },
-        billboardMode: 'yAxis'
-    },
-    {
-        id: 'web3:deco_glow_berries',
-        type: ActorType.OBJECT,
-        name: '发光浆果',
-        textures: {
-            default: 'web3/actors/deco_glow_berries',
-        },
-        size: { width: 0.5, height: 0.5, scale: 0.6 },
-        animations: {
-            canFloat: true,  // 发光浆果可以漂浮
-            canShake: true
-        },
-        billboardMode: 'yAxis'
     }
 ];
 

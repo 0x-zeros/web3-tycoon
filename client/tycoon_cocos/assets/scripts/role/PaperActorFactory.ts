@@ -77,12 +77,64 @@ export class PaperActorFactory {
     }
 
     /**
+     * 根据地产类型获取对应的建筑Actor ID
+     * @param propertyBlockId 地产方块ID
+     * @returns 对应的建筑Actor ID
+     */
+    private static getBuildingActorIdFromProperty(propertyBlockId: string): string {
+        // 映射表：从体素地产ID到PaperActor建筑ID
+        const propertyToBuildingMap: Record<string, string> = {
+            // 小型地产
+            'web3:property_small': 'web3:property_small',
+            'web3:property_small_1': 'web3:property_small',
+            'web3:property_small_2': 'web3:property_small',
+            'web3:property_small_3': 'web3:property_small',
+            'web3:property_small_4': 'web3:property_small',
+
+            // 中型地产
+            'web3:property_medium': 'web3:property_medium',
+            'web3:property_medium_1': 'web3:property_medium',
+            'web3:property_medium_2': 'web3:property_medium',
+            'web3:property_medium_3': 'web3:property_medium',
+            'web3:property_medium_4': 'web3:property_medium',
+
+            // 大型地产
+            'web3:property_large': 'web3:property_large',
+            'web3:property_large_1': 'web3:property_large',
+            'web3:property_large_2': 'web3:property_large',
+            'web3:property_large_3': 'web3:property_large',
+            'web3:property_large_4': 'web3:property_large',
+
+            // 特殊建筑
+            'web3:temple': 'web3:temple',
+            'web3:research': 'web3:research',
+            'web3:oil_company': 'web3:oil_company',
+            'web3:commercial': 'web3:commercial',
+            'web3:hotel': 'web3:hotel',
+            'web3:tech_company': 'web3:tech_company',
+            'web3:bank': 'web3:bank',
+            'web3:jail': 'web3:jail',
+            'web3:airport': 'web3:airport',
+            'web3:crypto_mine': 'web3:crypto_mine',
+            'web3:defi_center': 'web3:defi_center',
+            'web3:nft_gallery': 'web3:nft_gallery',
+        };
+
+        // 如果找到映射，使用映射的建筑ID
+        // 否则尝试直接使用propertyBlockId
+        return propertyToBuildingMap[propertyBlockId] || propertyBlockId;
+    }
+
+    /**
      * 创建建筑
      */
     public static createBuilding(buildingType: string, level: number, position: Vec3): Node | null {
-        const config = ActorConfigManager.getConfig(buildingType);
+        // 将地产ID转换为建筑Actor ID
+        const buildingActorId = this.getBuildingActorIdFromProperty(buildingType);
+
+        const config = ActorConfigManager.getConfig(buildingActorId);
         if (!config) {
-            console.error(`[PaperActorFactory] Building config not found: ${buildingType}`);
+            console.error(`[PaperActorFactory] Building config not found: ${buildingActorId} (from ${buildingType})`);
             return null;
         }
 
@@ -93,7 +145,7 @@ export class PaperActorFactory {
         const actor = node.addComponent(PaperActor);
 
         // 设置基本信息
-        actor.setActorInfo(buildingType, ActorType.BUILDING, level);
+        actor.setActorInfo(buildingActorId, ActorType.BUILDING, level);
 
         // 建筑通常不需要billboard
         actor.billboardMode = config.billboardMode || 'off';
@@ -111,7 +163,7 @@ export class PaperActorFactory {
         // 初始化
         actor.initialize();
 
-        console.log(`[PaperActorFactory] Created Building: ${buildingType} Lv${level} at`, position);
+        console.log(`[PaperActorFactory] Created Building: ${buildingActorId} (from ${buildingType}) Lv${level} at`, position);
         return node;
     }
 

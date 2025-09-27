@@ -1,4 +1,4 @@
-import { Web3TileType, Web3ObjectType } from '../Web3BlockTypes';
+import { Web3TileType, Web3ObjectType, Web3PropertyType } from '../Web3BlockTypes';
 
 // 保留兼容性的方块类型枚举（旧系统）
 export enum VoxelBlockType {
@@ -696,7 +696,111 @@ export class BlockRegistry {
         }
     });
     
-    console.log('[Web3BlockTypes] 成功注册 15 个 Web3 方块');
+    // ========== Property（地产）类型 (Properties) ==========
+
+    // 小型地产（1x1）
+    this.register({
+        id: 'web3:property_small',
+        displayName: '小型地产',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3PropertyType.PROPERTY_1X1,
+            category: 'property',
+            description: '1x1的可购买地产'
+        }
+    });
+
+    // 土地庙（2x2）
+    this.register({
+        id: 'web3:temple',
+        displayName: '土地庙',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3PropertyType.TEMPLE_2X2,
+            category: 'property',
+            description: '2x2的土地庙，影响周围地块租金'
+        }
+    });
+
+    // 研究所（2x2）
+    this.register({
+        id: 'web3:research',
+        displayName: '研究所',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3PropertyType.RESEARCH_2X2,
+            category: 'property',
+            description: '2x2的研究所'
+        }
+    });
+
+    // 石油公司（2x2）
+    this.register({
+        id: 'web3:oil_company',
+        displayName: '石油公司',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3PropertyType.OIL_2X2,
+            category: 'property',
+            description: '2x2的石油公司'
+        }
+    });
+
+    // 商业中心（2x2）
+    this.register({
+        id: 'web3:commercial',
+        displayName: '商业中心',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3PropertyType.COMMERCIAL_2X2,
+            category: 'property',
+            description: '2x2的商业中心'
+        }
+    });
+
+    // 大饭店（2x2）
+    this.register({
+        id: 'web3:hotel',
+        displayName: '大饭店',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3PropertyType.HOTEL_2X2,
+            category: 'property',
+            description: '2x2的大饭店'
+        }
+    });
+
+    console.log('[Web3BlockTypes] 成功注册 21 个 Web3 方块');
 }
 
 

@@ -182,9 +182,6 @@ export class PaperActor extends Component {
         resources.load('materials/paper-actor', Material, (err, material) => {
             if (err) {
                 console.warn('Failed to load paper-actor material, using default');
-                // 使用默认材质
-                this.material = new Material();
-                this.material.effectName = 'builtin-sprite';
             } else {
                 this.material = material;
             }
@@ -229,7 +226,8 @@ export class PaperActor extends Component {
         if (!texturePath) return;
 
         return new Promise<void>((resolve) => {
-            resources.load(texturePath, Texture2D, (err, texture) => {
+          // 加载纹理，需要添加 /texture 后缀
+            resources.load(texturePath + '/texture', Texture2D, (err, texture) => {
                 if (err) {
                     console.error(`Failed to load texture: ${texturePath}`, err);
                     resolve();

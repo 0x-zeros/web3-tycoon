@@ -404,15 +404,16 @@ export class GameInitializer extends Component {
     private setupGlobalAccessors(): void {
         // 设置window.game对象的新属性
         if (typeof window !== 'undefined') {
-            if (!window.game) {
-                window.game = {} as any;
+            const globalWindow = window as any;
+            if (!globalWindow.game) {
+                globalWindow.game = {};
             }
-            
-            window.game.roleManager = this.roleManager;
-            window.game.skillManager = this.skillManager;
-            window.game.configLoader = this.configLoader;
-            window.game.mapManager = this.mapManager;
-            window.game.initializer = this;
+
+            globalWindow.game.roleManager = this.roleManager;
+            globalWindow.game.skillManager = this.skillManager;
+            globalWindow.game.configLoader = this.configLoader;
+            globalWindow.game.mapManager = this.mapManager;
+            globalWindow.game.initializer = this;
         }
     }
 
@@ -422,8 +423,8 @@ export class GameInitializer extends Component {
     private registerEventListeners(): void {
         // 注册全局游戏事件监听器
         // 使用EventBus替代直接的addEventListener
-        EventBus.on(EventTypes.Role.Created, this.onPlayerCreated, this);
-        EventBus.on(EventTypes.NPC.Created, this.onNPCCreated, this);
+        EventBus.on(EventTypes.Role.Spawned, this.onPlayerCreated, this);
+        EventBus.on(EventTypes.NPC.Spawned, this.onNPCCreated, this);
 
         // 注册游戏开始事件监听器
         EventBus.on(EventTypes.Game.GameStart, this.onGameStart, this);

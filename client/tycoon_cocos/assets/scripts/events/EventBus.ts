@@ -142,7 +142,12 @@ class EventBusClass {
      * 清除所有事件监听器
      */
     public clear(): void {
-        this._eventTarget.clear();
+        // EventTarget没有clear方法，需要手动清除所有监听器
+        this._listenerMap.forEach((listeners, event) => {
+            listeners.forEach(listener => {
+                this._eventTarget.off(event, listener.listener, listener.target);
+            });
+        });
         this._listenerMap.clear();
 
         if (this._debug) {

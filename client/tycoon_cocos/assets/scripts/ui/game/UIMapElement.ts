@@ -3,9 +3,10 @@ import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
-import { _decorator, SpriteFrame, Rect, Size } from 'cc';
+import { _decorator, SpriteFrame, Rect, Size, resources, Texture2D } from 'cc';
 import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
+import { ActorConfigManager } from "../../role/ActorConfig";
 
 const { ccclass } = _decorator;
 
@@ -43,6 +44,9 @@ export class UIMapElement extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
+        // 初始化Actor配置管理器
+        ActorConfigManager.initialize();
+
         // 获取controller (FairyGUI中已通过radio按钮特性自动关联)
         if (!this.panel) {
             console.error("[UIMapElement] Panel not initialized!");
@@ -398,46 +402,63 @@ export class UIMapElement extends UIBase {
         // const texturePath = `texture/blocks/${blockId.replace('minecraft:', '')}`;
         // tileIcon.url = texturePath;
     
-        try {
-            // 使用 TextureManager 加载纹理
-            // 需要将 blockId 转换为纹理路径格式
-            const textureManager = VoxelSystem.getInstance().getTextureManager();
-            
-            // 获取方块数据以获取正确的纹理路径
-            VoxelSystem.getInstance().getBlockData(blockId).then(blockData => {
-                if (!blockData || blockData.textures.length === 0) {
-                    console.warn(`[UIMapElement] 无法获取方块纹理: ${blockId}`);
-                    return;
-                }
-                
-                // 使用第一个纹理（通常是主纹理）
-                const mainTexture = blockData.textures[0];
-                const texturePath = mainTexture.rel; // 使用纹理的相对路径
-                
-                return textureManager.loadTexture(texturePath);
-            }).then(textureInfo => {
-                if (textureInfo && textureInfo.texture) {
-                    const spriteFrame = new SpriteFrame();
-                    spriteFrame.texture = textureInfo.texture;
-                    
-                    // 设置 SpriteFrame 的原始尺寸，这样 GLoader 会正确缩放
-                    const texture = textureInfo.texture;
-                    spriteFrame.originalSize = new Size(texture.width, texture.height);
-                    
-                    // 设置完整的纹理区域
-                    spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
-                    
-                    tileIcon.texture = spriteFrame;
-                } else {
-                    // 使用默认图标
-                    tileIcon.url = "texture/icons/default_block";
-                }
-            });
-            
+        // 判断是否为NPC/Object类型，使用PaperActor贴图
+        if (type === 'object' && ActorConfigManager.getConfig(blockId)) {
+            // 使用PaperActor的贴图路径
+            const actorConfig = ActorConfigManager.getConfig(blockId);
+            if (actorConfig && actorConfig.textures.default) {
+                const texturePath = actorConfig.textures.default + '/texture';
+                console.log(`[UIMapElement] Loading PaperActor texture: ${texturePath}`);
 
-        } catch (error) {
-            console.warn(`[UIMapElement] 加载方块纹理失败: ${blockId}`, error);
-            tileIcon.url = "texture/icons/default_block";
+                resources.load(texturePath, Texture2D, (err, texture) => {
+                    if (!err && texture) {
+                        const spriteFrame = new SpriteFrame();
+                        spriteFrame.texture = texture;
+                        spriteFrame.originalSize = new Size(texture.width, texture.height);
+                        spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+                        tileIcon.texture = spriteFrame;
+                    } else {
+                        console.warn(`[UIMapElement] Failed to load PaperActor texture: ${texturePath}`, err);
+                        // 尝试加载默认贴图
+                        tileIcon.url = "texture/icons/default_block";
+                    }
+                });
+            } else {
+                tileIcon.url = "texture/icons/default_block";
+            }
+        } else {
+            // 原有的体素贴图加载逻辑（用于tiles、properties、decorations）
+            try {
+                const textureManager = VoxelSystem.getInstance().getTextureManager();
+
+                VoxelSystem.getInstance().getBlockData(blockId).then(blockData => {
+                    if (!blockData || blockData.textures.length === 0) {
+                        console.warn(`[UIMapElement] 无法获取方块纹理: ${blockId}`);
+                        return;
+                    }
+
+                    const mainTexture = blockData.textures[0];
+                    const texturePath = mainTexture.rel;
+
+                    return textureManager.loadTexture(texturePath);
+                }).then(textureInfo => {
+                    if (textureInfo && textureInfo.texture) {
+                        const spriteFrame = new SpriteFrame();
+                        spriteFrame.texture = textureInfo.texture;
+
+                        const texture = textureInfo.texture;
+                        spriteFrame.originalSize = new Size(texture.width, texture.height);
+                        spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+
+                        tileIcon.texture = spriteFrame;
+                    } else {
+                        tileIcon.url = "texture/icons/default_block";
+                    }
+                });
+            } catch (error) {
+                console.warn(`[UIMapElement] 加载方块纹理失败: ${blockId}`, error);
+                tileIcon.url = "texture/icons/default_block";
+            }
         }
 
         // 根据类型绑定不同的点击事件

@@ -366,7 +366,7 @@ export class GameMap extends Component {
         } else if (isWeb3Property(typeId)) {
             // Property类型，放置在y=0，并处理相邻Tile
             const size = getPropertySize(this._currentSelectedBlockId);
-            await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size);
+            await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size as 1 | 2);
         } else if (isWeb3Object(typeId)) {
             // NPC/物体类型，使用PaperActor
             await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
@@ -497,11 +497,9 @@ export class GameMap extends Component {
         // 使用PaperActor创建NPC/物体
         const worldPos = new Vec3(gridPos.x, 0.5, gridPos.y);
         const actorNode = PaperActorFactory.createFromBlockType(blockId, worldPos);
-
         if (actorNode) {
             actorNode.parent = this._actorsRoot;
             this._actors.set(key, actorNode);
-
             console.log(`[GameMap] Placed PaperActor ${blockId} at (${gridPos.x}, ${gridPos.y})`);
         } else {
             console.error(`[GameMap] Failed to create PaperActor for ${blockId}`);
@@ -968,9 +966,11 @@ export class GameMap extends Component {
 
             // 恢复Property-Tile关联
             if (mapData.propertyTileLinks) {
-                Object.entries(mapData.propertyTileLinks).forEach(([tileKey, propertyKey]) => {
-                    this._tileToPropertyMap.set(tileKey, propertyKey);
-                });
+                for (const tileKey in mapData.propertyTileLinks) {
+                    if (mapData.propertyTileLinks.hasOwnProperty(tileKey)) {
+                        this._tileToPropertyMap.set(tileKey, mapData.propertyTileLinks[tileKey] as string);
+                    }
+                }
             }
             
             // 保存地图数据

@@ -149,6 +149,8 @@ export const EventTypes = {
 
     /** 角色相关事件 */
     Role: {
+        /** 角色生成 */
+        Spawned: "role_spawned",
         /** 角色创建 */
         Created: "role_created",
         /** 角色销毁 */

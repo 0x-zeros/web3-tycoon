@@ -67,10 +67,10 @@ export class PaperActorFactory {
         this.setupCamera(actor);
 
         // 初始化（加载纹理等）
-        actor.initialize();
-
-        // 根据配置启动初始动画
-        this.startInitialAnimations(actor, config);
+        actor.initialize().then(() => {
+            // 根据配置启动初始动画
+            this.startInitialAnimations(actor, config);
+        });
 
         console.log(`[PaperActorFactory] Created NPC: ${npcType} at`, position);
         return node;

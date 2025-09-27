@@ -86,6 +86,9 @@ export class PaperActor extends Component {
     // ===== 生命周期 =====
 
     protected onLoad() {
+        // 先隐藏节点，等资源加载完成后再显示
+        this.node.active = false;
+
         // 如果没有指定card节点，使用自身
         if (!this.card) {
             this.card = this.node;
@@ -104,10 +107,7 @@ export class PaperActor extends Component {
     }
 
     protected start() {
-        // 加载初始纹理
-        if (this.actorId) {
-            this.loadTexture();
-        }
+        // 不在这里直接加载纹理，而是等待initialize调用
     }
 
     protected update(dt: number) {
@@ -130,15 +130,60 @@ export class PaperActor extends Component {
     // ===== 初始化 =====
 
     /**
-     * 初始化Actor
+     * 初始化Actor（异步加载资源）
      */
-    public async initialize() {
-        await this.loadTexture();
+    public async initialize(): Promise<boolean> {
+        try {
+            console.log(`[PaperActor] Initializing ${this.node.name}...`);
 
-        // 根据类型设置默认动画
-        if (this.actorType === ActorType.NPC || this.actorType === ActorType.PLAYER) {
-            this.playFrameAnimation('idle');
+            // 1. 先确保材质已创建并准备好
+            await this.ensureMaterialReady();
+
+            // 2. 加载纹理
+            if (this.actorId) {
+                await this.loadTexture();
+            }
+
+            // 3. 根据类型设置默认动画
+            if (this.actorType === ActorType.NPC || this.actorType === ActorType.PLAYER) {
+                this.playFrameAnimation('idle');
+            }
+
+            // 4. 资源加载完成，显示节点
+            this.node.active = true;
+            console.log(`[PaperActor] Initialized ${this.node.name} successfully`);
+            return true;
+        } catch (error) {
+            console.error(`[PaperActor] Failed to initialize ${this.node.name}:`, error);
+            // 加载失败也显示，避免完全看不见
+            this.node.active = true;
+            return false;
         }
+    }
+
+    /**
+     * 确保材质已准备好
+     */
+    private ensureMaterialReady(): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.material) {
+                resolve();
+                return;
+            }
+
+            // 等待材质创建完成
+            let checkCount = 0;
+            const checkInterval = setInterval(() => {
+                if (this.material) {
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (checkCount++ > 20) { // 最多等2秒
+                    clearInterval(checkInterval);
+                    console.warn('[PaperActor] Material not ready after timeout');
+                    resolve();
+                }
+            }, 100);
+        });
     }
 
     /**
@@ -163,10 +208,7 @@ export class PaperActor extends Component {
      */
     private createQuadMesh() {
         // 创建简单的Quad几何体
-        const quadInfo = primitives.quad({
-            width: 1,
-            height: 1
-        });
+        const quadInfo = primitives.quad();
 
         this.quadMesh = utils.MeshUtils.createMesh(quadInfo);
 
@@ -352,7 +394,7 @@ export class PaperActor extends Component {
         if (frameIndex >= 0 && frameIndex < this.frames.length) {
             const frame = this.frames[frameIndex];
             if (frame && frame.texture) {
-                this.applyTexture(frame.texture);
+                this.applyTexture(frame.texture as Texture2D);
             }
         }
     }

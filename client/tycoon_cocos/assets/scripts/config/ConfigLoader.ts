@@ -9,7 +9,17 @@
  */
 
 import { _decorator, Component, resources, JsonAsset } from 'cc';
-import { RoleData, NPCData, PlayerData } from '../role/RoleTypes';
+import { RoleData } from '../role/RoleTypes';
+
+// 定义NPC和玩家数据类型
+interface NPCData extends RoleData {
+    npcType?: string;
+    dialogues?: string[];
+}
+
+interface PlayerData extends RoleData {
+    controllable?: boolean;
+}
 import { SkillConfig } from '../skill/SkillTypes';
 
 const { ccclass } = _decorator;

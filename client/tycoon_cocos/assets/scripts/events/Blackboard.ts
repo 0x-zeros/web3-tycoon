@@ -299,8 +299,10 @@ export class Blackboard extends EventTarget {
      * 批量设置数据
      */
     public setBatch(data: Record<string, any>, persistent: boolean = false): void {
-        for (const [key, value] of Object.entries(data)) {
-            this.set(key, value, persistent);
+        for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+                this.set(key, data[key], persistent);
+            }
         }
     }
 
@@ -354,7 +356,7 @@ export class Blackboard extends EventTarget {
         this.clear(true);
         
         // 清理EventTarget
-        this.removeAllListeners();
+        this.removeAll();
         
         Blackboard._instance = null;
 

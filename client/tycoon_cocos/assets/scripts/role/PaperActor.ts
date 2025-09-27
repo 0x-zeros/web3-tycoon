@@ -1,23 +1,597 @@
-// PaperActor.ts（简化片段）
-import { _decorator, Component, Camera, Node, Vec3, Quat } from 'cc';
+/**
+ * PaperActor - 统一的纸片角色/建筑渲染组件
+ *
+ * 用于渲染所有非体素的游戏对象，包括：
+ * - NPC（各种神、狗等）
+ * - 玩家角色
+ * - 建筑物（各等级）
+ * - 特殊物体
+ *
+ * 特性：
+ * - Billboard效果（始终面向相机）
+ * - Tween动画（跳跃、缩放、移动等）
+ * - 帧动画系统
+ * - 动态纹理切换
+ */
+
+import {
+    _decorator, Component, Camera, Node, Vec3, MeshRenderer,
+    Material, Mesh, Texture2D, SpriteFrame, utils, primitives,
+    Quat, tween, Tween, resources, ImageAsset, UITransform,
+    Size, Sprite, find
+} from 'cc';
+
 const { ccclass, property } = _decorator;
+
+// Actor类型枚举
+export enum ActorType {
+    NPC = 0,
+    PLAYER = 1,
+    BUILDING = 2,
+    OBJECT = 3
+}
 
 @ccclass('PaperActor')
 export class PaperActor extends Component {
-  @property(Camera) cam: Camera|null = null;
-  @property(Node) card: Node|null = null;
-  private _tmp = new Vec3();
 
-  update() {
-    if (!this.cam || !this.card) return;
-    // 仅绕 Y 面向相机（等于水平朝向）
-    const camPos = this.cam.node.worldPosition;
-    const myPos = this.node.worldPosition;
-    Vec3.subtract(this._tmp, camPos, myPos);
-    this._tmp.y = 0; // 锁 Y
-    this._tmp.normalize();
-    // 计算目标 yaw
-    const yaw = Math.atan2(this._tmp.x, this._tmp.z); // 绕Y的弧度
-    this.card.setRotationFromEuler(0, yaw * 180 / Math.PI, 0);
-  }
+    // ===== 基础配置 =====
+    @property
+    actorId: string = '';  // 如 'web3:land_god', 'web3:property_small'
+
+    @property
+    level: number = 1;  // 等级（主要用于建筑）
+
+    @property({ type: ActorType })
+    actorType: ActorType = ActorType.NPC;
+
+    @property(Camera)
+    camera: Camera | null = null;
+
+    @property(Node)
+    card: Node | null = null;  // 纸片节点
+
+    @property
+    billboardMode: 'full' | 'yAxis' | 'off' = 'yAxis';
+
+    // ===== 渲染相关 =====
+    private meshRenderer: MeshRenderer | null = null;
+    private quadMesh: Mesh | null = null;
+    private material: Material | null = null;
+    private currentTexture: Texture2D | null = null;
+
+    // ===== 帧动画 =====
+    @property([SpriteFrame])
+    frames: SpriteFrame[] = [];  // 所有动画帧
+
+    private currentFrame: number = 0;
+    private frameTimer: number = 0;
+    private frameRange: [number, number] = [0, 0];  // 当前动画的帧范围
+    private isPlayingAnimation: boolean = false;
+
+    @property
+    frameRate: number = 10;  // 每秒帧数
+
+    // ===== 动画管理 =====
+    private tweens: Map<string, Tween<any>> = new Map();
+
+    // ===== 状态 =====
+    private state: 'idle' | 'moving' | 'jumping' | 'talking' | 'building' = 'idle';
+
+    // ===== UI元素 =====
+    private textBubble: Node | null = null;  // 对话气泡
+
+    // Billboard更新用的临时变量
+    private _tmp = new Vec3();
+
+    // ===== 生命周期 =====
+
+    protected onLoad() {
+        // 如果没有指定card节点，使用自身
+        if (!this.card) {
+            this.card = this.node;
+        }
+
+        // 自动查找相机
+        if (!this.camera) {
+            const cameraNode = find('Main Camera') || find('Camera');
+            if (cameraNode) {
+                this.camera = cameraNode.getComponent(Camera);
+            }
+        }
+
+        // 初始化渲染组件
+        this.setupRenderer();
+    }
+
+    protected start() {
+        // 加载初始纹理
+        if (this.actorId) {
+            this.loadTexture();
+        }
+    }
+
+    protected update(dt: number) {
+        // Billboard更新
+        if (this.billboardMode !== 'off') {
+            this.updateBillboard();
+        }
+
+        // 帧动画更新
+        if (this.isPlayingAnimation && this.frames.length > 0) {
+            this.updateFrameAnimation(dt);
+        }
+    }
+
+    protected onDestroy() {
+        // 清理所有动画
+        this.stopAllTweens();
+    }
+
+    // ===== 初始化 =====
+
+    /**
+     * 初始化Actor
+     */
+    public async initialize() {
+        await this.loadTexture();
+
+        // 根据类型设置默认动画
+        if (this.actorType === ActorType.NPC || this.actorType === ActorType.PLAYER) {
+            this.playFrameAnimation('idle');
+        }
+    }
+
+    /**
+     * 设置渲染组件
+     */
+    private setupRenderer() {
+        // 获取或创建MeshRenderer
+        this.meshRenderer = this.card.getComponent(MeshRenderer);
+        if (!this.meshRenderer) {
+            this.meshRenderer = this.card.addComponent(MeshRenderer);
+        }
+
+        // 创建Quad网格
+        this.createQuadMesh();
+
+        // 创建材质
+        this.createMaterial();
+    }
+
+    /**
+     * 创建Quad网格（两个三角形组成的平面）
+     */
+    private createQuadMesh() {
+        // 创建简单的Quad几何体
+        const quadInfo = primitives.quad({
+            width: 1,
+            height: 1
+        });
+
+        this.quadMesh = utils.MeshUtils.createMesh(quadInfo);
+
+        if (this.meshRenderer) {
+            this.meshRenderer.mesh = this.quadMesh;
+        }
+    }
+
+    /**
+     * 创建材质
+     */
+    private createMaterial() {
+        resources.load('materials/paper-actor', Material, (err, material) => {
+            if (err) {
+                console.warn('Failed to load paper-actor material, using default');
+                // 使用默认材质
+                this.material = new Material();
+                this.material.effectName = 'builtin-sprite';
+            } else {
+                this.material = material;
+            }
+
+            if (this.meshRenderer) {
+                this.meshRenderer.setMaterial(this.material, 0);
+            }
+        });
+    }
+
+    // ===== Billboard功能 =====
+
+    private updateBillboard() {
+        if (!this.camera || !this.card) return;
+
+        const camPos = this.camera.node.worldPosition;
+        const myPos = this.node.worldPosition;
+
+        if (this.billboardMode === 'full') {
+            // 完全面向相机
+            this.card.lookAt(camPos);
+        } else if (this.billboardMode === 'yAxis') {
+            // 仅Y轴旋转（纸片马里奥效果）
+            Vec3.subtract(this._tmp, camPos, myPos);
+            this._tmp.y = 0; // 锁定Y轴
+
+            if (this._tmp.lengthSqr() > 0.001) {
+                this._tmp.normalize();
+                const yaw = Math.atan2(this._tmp.x, this._tmp.z);
+                this.card.setRotationFromEuler(0, yaw * 180 / Math.PI, 0);
+            }
+        }
+    }
+
+    // ===== 纹理管理 =====
+
+    /**
+     * 加载纹理
+     */
+    public async loadTexture() {
+        const texturePath = this.getTexturePath();
+        if (!texturePath) return;
+
+        return new Promise<void>((resolve) => {
+            resources.load(texturePath, Texture2D, (err, texture) => {
+                if (err) {
+                    console.error(`Failed to load texture: ${texturePath}`, err);
+                    resolve();
+                    return;
+                }
+
+                this.currentTexture = texture;
+                this.applyTexture(texture);
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * 获取纹理路径
+     */
+    private getTexturePath(): string {
+        if (!this.actorId) return '';
+
+        const id = this.actorId.replace('web3:', '');
+
+        // 根据类型决定路径
+        if (this.actorType === ActorType.BUILDING) {
+            // 建筑：包含等级
+            return `web3/buildings/${id}_lv${this.level}`;
+        } else {
+            // NPC/物体/玩家
+            return `web3/actors/${id}`;
+        }
+    }
+
+    /**
+     * 应用纹理到材质
+     */
+    private applyTexture(texture: Texture2D) {
+        if (!this.material) return;
+
+        this.material.setProperty('mainTexture', texture);
+    }
+
+    /**
+     * 设置单帧纹理
+     */
+    public setFrame(frameIndex: number) {
+        if (frameIndex >= 0 && frameIndex < this.frames.length) {
+            const frame = this.frames[frameIndex];
+            if (frame && frame.texture) {
+                this.applyTexture(frame.texture);
+            }
+        }
+    }
+
+    // ===== 动画API =====
+
+    /**
+     * 跳跃动画
+     */
+    public jump(height: number = 0.5, duration: number = 0.5) {
+        this.stopTween('jump');
+
+        const startPos = this.node.position.clone();
+        const peakPos = startPos.clone();
+        peakPos.y += height;
+
+        const jumpTween = tween(this.node)
+            .to(duration * 0.4, { position: peakPos }, {
+                easing: 'quadOut'
+            })
+            .to(duration * 0.6, { position: startPos }, {
+                easing: 'bounceOut'
+            })
+            .call(() => {
+                this.tweens.delete('jump');
+                this.state = 'idle';
+            })
+            .start();
+
+        this.tweens.set('jump', jumpTween);
+        this.state = 'jumping';
+    }
+
+    /**
+     * 说话动画（替代bark）
+     */
+    public say(text: string, duration: number = 2) {
+        this.stopTween('say');
+
+        // 缩放弹跳效果
+        const sayTween = tween(this.card)
+            .to(0.1, { scale: new Vec3(1.1, 1.2, 1) }, {
+                easing: 'backOut'
+            })
+            .to(0.2, { scale: Vec3.ONE }, {
+                easing: 'elasticOut'
+            })
+            .call(() => {
+                this.tweens.delete('say');
+            })
+            .start();
+
+        this.tweens.set('say', sayTween);
+        this.state = 'talking';
+
+        // 显示文字气泡
+        if (text) {
+            this.showTextBubble(text, duration);
+        }
+    }
+
+    /**
+     * 移动到目标位置
+     */
+    public moveTo(target: Vec3, duration: number) {
+        this.stopTween('move');
+
+        // 开始移动动画
+        this.state = 'moving';
+        this.playFrameAnimation('walk');
+
+        const moveTween = tween(this.node)
+            .to(duration, { position: target }, {
+                easing: 'linear',
+                onUpdate: () => {
+                    // 可以在这里添加脚步声等效果
+                }
+            })
+            .call(() => {
+                this.state = 'idle';
+                this.playFrameAnimation('idle');
+                this.tweens.delete('move');
+            })
+            .start();
+
+        this.tweens.set('move', moveTween);
+    }
+
+    /**
+     * 建筑升级动画
+     */
+    public upgrade(newLevel: number) {
+        this.stopTween('upgrade');
+
+        // 缩小 -> 旋转 -> 放大
+        const upgradeTween = tween(this.card)
+            .to(0.3, { scale: new Vec3(0.8, 0.8, 0.8) }, {
+                easing: 'quadIn'
+            })
+            .call(() => {
+                // 切换到新等级纹理
+                this.level = newLevel;
+                this.loadTexture();
+            })
+            .to(0.5, {
+                scale: new Vec3(1.2, 1.2, 1.2),
+                eulerAngles: new Vec3(0, 360, 0)
+            }, {
+                easing: 'backOut'
+            })
+            .to(0.2, { scale: Vec3.ONE }, {
+                easing: 'quadOut'
+            })
+            .call(() => {
+                this.tweens.delete('upgrade');
+            })
+            .start();
+
+        this.tweens.set('upgrade', upgradeTween);
+    }
+
+    /**
+     * 震动效果
+     */
+    public shake(intensity: number = 0.1, duration: number = 0.3) {
+        this.stopTween('shake');
+
+        const originalPos = this.node.position.clone();
+        const shakeCount = Math.floor(duration / 0.05);
+        let shakeTween = tween(this.node);
+
+        for (let i = 0; i < shakeCount; i++) {
+            const offsetX = (Math.random() - 0.5) * intensity * 2;
+            const offsetZ = (Math.random() - 0.5) * intensity * 2;
+            const shakePos = originalPos.clone();
+            shakePos.x += offsetX;
+            shakePos.z += offsetZ;
+
+            shakeTween = shakeTween.to(0.05, { position: shakePos });
+        }
+
+        shakeTween
+            .to(0.05, { position: originalPos })
+            .call(() => {
+                this.tweens.delete('shake');
+            })
+            .start();
+
+        this.tweens.set('shake', shakeTween);
+    }
+
+    /**
+     * 消失动画
+     */
+    public disappear() {
+        this.stopAllTweens();
+
+        tween(this.card)
+            .to(0.3, {
+                scale: new Vec3(1.2, 0, 1.2),  // 压扁
+                eulerAngles: new Vec3(0, 720, 0)  // 旋转两圈
+            }, {
+                easing: 'quadIn'
+            })
+            .call(() => {
+                this.node.destroy();
+            })
+            .start();
+    }
+
+    /**
+     * 漂浮动画（用于道具等）
+     */
+    public float(amplitude: number = 0.2, period: number = 2) {
+        this.stopTween('float');
+
+        const startY = this.node.position.y;
+
+        const floatTween = tween(this.node)
+            .repeatForever(
+                tween()
+                    .to(period / 2, { position: new Vec3(
+                        this.node.position.x,
+                        startY + amplitude,
+                        this.node.position.z
+                    )}, { easing: 'sineInOut' })
+                    .to(period / 2, { position: new Vec3(
+                        this.node.position.x,
+                        startY,
+                        this.node.position.z
+                    )}, { easing: 'sineInOut' })
+            )
+            .start();
+
+        this.tweens.set('float', floatTween);
+    }
+
+    // ===== 帧动画系统 =====
+
+    /**
+     * 播放帧动画
+     */
+    public playFrameAnimation(animName: string) {
+        // 根据动画名设置帧范围
+        switch(animName) {
+            case 'idle':
+                this.frameRange = [0, Math.min(1, this.frames.length - 1)];
+                break;
+            case 'walk':
+                this.frameRange = [2, Math.min(5, this.frames.length - 1)];
+                break;
+            case 'jump':
+                this.frameRange = [6, Math.min(7, this.frames.length - 1)];
+                break;
+            default:
+                this.frameRange = [0, 0];
+        }
+
+        this.currentFrame = this.frameRange[0];
+        this.frameTimer = 0;
+        this.isPlayingAnimation = true;
+
+        // 设置第一帧
+        this.setFrame(this.currentFrame);
+    }
+
+    /**
+     * 停止帧动画
+     */
+    public stopFrameAnimation() {
+        this.isPlayingAnimation = false;
+    }
+
+    /**
+     * 更新帧动画
+     */
+    private updateFrameAnimation(dt: number) {
+        if (this.frames.length === 0) return;
+
+        this.frameTimer += dt;
+        const frameDuration = 1.0 / this.frameRate;
+
+        if (this.frameTimer >= frameDuration) {
+            this.frameTimer -= frameDuration;
+
+            // 切换到下一帧
+            this.currentFrame++;
+            if (this.currentFrame > this.frameRange[1]) {
+                this.currentFrame = this.frameRange[0];
+            }
+
+            this.setFrame(this.currentFrame);
+        }
+    }
+
+    // ===== UI相关 =====
+
+    /**
+     * 显示文字气泡
+     */
+    private showTextBubble(text: string, duration: number) {
+        // TODO: 实现文字气泡UI
+        // 这里可以创建一个UI节点显示文字
+        console.log(`[${this.actorId}]: ${text}`);
+
+        // 自动隐藏
+        this.scheduleOnce(() => {
+            this.hideTextBubble();
+        }, duration);
+    }
+
+    /**
+     * 隐藏文字气泡
+     */
+    private hideTextBubble() {
+        if (this.textBubble) {
+            this.textBubble.active = false;
+        }
+    }
+
+    // ===== 工具方法 =====
+
+    /**
+     * 停止指定动画
+     */
+    private stopTween(name: string) {
+        const tween = this.tweens.get(name);
+        if (tween) {
+            tween.stop();
+            this.tweens.delete(name);
+        }
+    }
+
+    /**
+     * 停止所有动画
+     */
+    private stopAllTweens() {
+        this.tweens.forEach(tween => tween.stop());
+        this.tweens.clear();
+    }
+
+    /**
+     * 设置Actor类型和ID
+     */
+    public setActorInfo(actorId: string, type: ActorType, level: number = 1) {
+        this.actorId = actorId;
+        this.actorType = type;
+        this.level = level;
+    }
+
+    /**
+     * 获取当前状态
+     */
+    public getState(): string {
+        return this.state;
+    }
 }

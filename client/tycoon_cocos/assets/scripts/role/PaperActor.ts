@@ -18,7 +18,7 @@ import {
     _decorator, Component, Camera, Node, Vec3, MeshRenderer,
     Material, Mesh, Texture2D, SpriteFrame, utils, primitives,
     Quat, tween, Tween, resources, ImageAsset, UITransform,
-    Size, Sprite, find
+    Size, Sprite, find, EffectAsset
 } from 'cc';
 
 const { ccclass, property } = _decorator;
@@ -179,17 +179,62 @@ export class PaperActor extends Component {
      * 创建材质
      */
     private createMaterial() {
-        resources.load('materials/paper-actor', Material, (err, material) => {
-            if (err) {
-                console.warn('Failed to load paper-actor material, using default');
-            } else {
-                this.material = material;
+        // 方法1: 尝试加载预制材质并创建新实例
+        resources.load('materials/paper-actor', Material, (err, templateMaterial) => {
+            if (!err && templateMaterial) {
+              this.material = new Material();
+              this.material.copy(templateMaterial);
             }
-
-            if (this.meshRenderer) {
-                this.meshRenderer.setMaterial(this.material, 0);
+            else {
+              console.error('[PaperActor] Failed to create material!');
             }
         });
+    }
+
+    /**
+     * 创建内置材质
+     */
+    private createBuiltinMaterial() {
+        // 使用内置的sprite effect
+        resources.load('effects/builtin-sprite', EffectAsset, (err, effect) => {
+            if (!err && effect) {
+                this.material = new Material();
+                this.material.initialize({
+                    effectAsset: effect,
+                    defines: { USE_TEXTURE: true }
+                });
+                console.log(`[PaperActor] Created builtin material for ${this.node.name}`);
+            } else {
+                // 最后的备用方案：直接使用EffectAsset.get
+                const builtinEffect = EffectAsset.get('builtin-sprite');
+                if (builtinEffect) {
+                    this.material = new Material();
+                    this.material.initialize({
+                        effectAsset: builtinEffect,
+                        defines: { USE_TEXTURE: true }
+                    });
+                    console.log(`[PaperActor] Created material with EffectAsset.get for ${this.node.name}`);
+                } else {
+                    console.error('[PaperActor] Failed to create any material!');
+                    return;
+                }
+            }
+
+            this.applyMaterialToRenderer();
+        });
+    }
+
+    /**
+     * 应用材质到渲染器
+     */
+    private applyMaterialToRenderer() {
+        if (this.meshRenderer && this.material) {
+            this.meshRenderer.setMaterial(this.material, 0);
+            // 如果已经有纹理，立即应用
+            if (this.currentTexture) {
+                this.applyTexture(this.currentTexture);
+            }
+        }
     }
 
     // ===== Billboard功能 =====
@@ -223,18 +268,24 @@ export class PaperActor extends Component {
      */
     public async loadTexture() {
         const texturePath = this.getTexturePath();
-        if (!texturePath) return;
+        if (!texturePath) {
+            console.warn(`[PaperActor] No texture path for ${this.node.name}`);
+            return;
+        }
 
         return new Promise<void>((resolve) => {
-          // 加载纹理，需要添加 /texture 后缀
-            resources.load(texturePath + '/texture', Texture2D, (err, texture) => {
+            // 加载纹理，需要添加 /texture 后缀
+            const fullPath = texturePath + '/texture';
+            console.log(`[PaperActor] Loading texture: ${fullPath} for ${this.node.name}`);
+
+            resources.load(fullPath, Texture2D, (err, texture) => {
                 if (err) {
-                    console.error(`Failed to load texture: ${texturePath}`, err);
+                    console.error(`[PaperActor] Failed to load texture: ${texturePath}`, err);
                     resolve();
                     return;
                 }
 
-                this.currentTexture = texture;
+                // 立即应用纹理
                 this.applyTexture(texture);
                 resolve();
             });
@@ -263,9 +314,35 @@ export class PaperActor extends Component {
      * 应用纹理到材质
      */
     private applyTexture(texture: Texture2D) {
-        if (!this.material) return;
+        if (!this.material) {
+            console.warn(`[PaperActor] Material not ready for ${this.node.name}`);
+            // 重试一次
+            this.scheduleOnce(() => {
+                if (this.material && texture) {
+                    this.applyTexture(texture);
+                }
+            }, 0.1);
+            return;
+        }
 
-        this.material.setProperty('mainTexture', texture);
+        // 设置纹理到材质
+        try {
+            // Cocos Creator 3.x 中 sprite 材质使用 mainTexture
+            this.material.setProperty('mainTexture', texture);
+
+            // 保存当前纹理引用
+            this.currentTexture = texture;
+
+            // 重要：每次设置纹理后都重新应用材质到渲染器
+            // 这确保了材质更改生效
+            if (this.meshRenderer) {
+                this.meshRenderer.setMaterial(this.material, 0);
+            }
+
+            console.log(`[PaperActor] Set texture for ${this.node.name}: ${texture.name || 'unnamed'}`);
+        } catch (e) {
+            console.warn(`[PaperActor] Failed to set texture for ${this.node.name}:`, e);
+        }
     }
 
     /**

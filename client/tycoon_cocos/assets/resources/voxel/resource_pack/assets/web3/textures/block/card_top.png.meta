@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a",
+  "uuid": "7f9dd66d-4753-44c9-95a4-4df543dceeff",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a@6c48a",
-      "displayName": "hotel",
+      "uuid": "7f9dd66d-4753-44c9-95a4-4df543dceeff@6c48a",
+      "displayName": "card_top",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a",
+        "imageUuidOrDatabaseUri": "7f9dd66d-4753-44c9-95a4-4df543dceeff",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": false,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a@6c48a"
+    "redirect": "7f9dd66d-4753-44c9-95a4-4df543dceeff@6c48a"
   }
 }

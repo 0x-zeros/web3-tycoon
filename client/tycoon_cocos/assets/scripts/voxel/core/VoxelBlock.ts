@@ -482,7 +482,7 @@ export class BlockRegistry {
         isDestructable: false,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3TileType.HOSPITAL,
             category: 'tile',
@@ -514,7 +514,7 @@ export class BlockRegistry {
         isPlant: false,
         isObstacle: true,
         isDestructable: false,
-        lightLevel: 0,
+        lightLevel: 15,
         hardness: 1.0,
         renderType: BlockRenderType.SOLID,
         properties: {
@@ -531,7 +531,7 @@ export class BlockRegistry {
         isPlant: false,
         isObstacle: true,
         isDestructable: false,
-        lightLevel: 0,
+        lightLevel: 15,
         hardness: 1.0,
         renderType: BlockRenderType.SOLID,
         properties: {

@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a",
+  "uuid": "abad00e6-4a0a-46da-8e90-6fbc360c67ac",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a@6c48a",
-      "displayName": "hotel",
+      "uuid": "abad00e6-4a0a-46da-8e90-6fbc360c67ac@6c48a",
+      "displayName": "hospital1",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a",
+        "imageUuidOrDatabaseUri": "abad00e6-4a0a-46da-8e90-6fbc360c67ac",
         "visible": false
       },
       "ver": "1.0.22",
@@ -35,8 +35,8 @@
   },
   "userData": {
     "type": "texture",
-    "hasAlpha": false,
+    "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "de9e5b24-53c6-463a-b2a0-dbb24ff82e6a@6c48a"
+    "redirect": "abad00e6-4a0a-46da-8e90-6fbc360c67ac@6c48a"
   }
 }

@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_column",
   "textures": {
-    "all": "web3:block/card"
+    "end": "web3:block/card_top",
+    "side": "web3:block/card"
   }
 }

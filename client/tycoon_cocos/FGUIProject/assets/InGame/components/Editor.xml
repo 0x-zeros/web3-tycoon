@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="512,512">
+<component size="280,512">
   <displayList>
     <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="14,331" size="256,82">
       <Button title="选择地块"/>

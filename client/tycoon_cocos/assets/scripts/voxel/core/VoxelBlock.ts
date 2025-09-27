@@ -838,7 +838,7 @@ export class BlockRegistry {
 
     // 矮草装饰
     this.register({
-        id: 'web3:deco_grass',
+        id: 'web3:deco_short_grass',
         displayName: '矮草',
         isPlant: true,
         isObstacle: false,

@@ -1,6 +1,6 @@
 {
   "parent": "web3:block/tinted_cross",
   "textures": {
-    "cross": "web3:block/deco_fern"
+    "cross": "web3:block/deco_short_grass"
   }
 }

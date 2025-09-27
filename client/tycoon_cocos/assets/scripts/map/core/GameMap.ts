@@ -347,6 +347,9 @@ export class GameMap extends Component {
         } else if (isWeb3Object(typeId)) {
             // 物体类型，放置在y=1
             await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
+        } else if (blockInfo.category === 'decoration') {
+            // 装饰类型，放置在y=1（和物体一样）
+            await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
         }
     }
     

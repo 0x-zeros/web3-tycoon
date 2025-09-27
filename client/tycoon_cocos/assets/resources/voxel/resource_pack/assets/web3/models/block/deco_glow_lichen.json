@@ -1,16 +1,6 @@
 {
-    "ambientocclusion": false,
-    "textures": {
-        "particle": "web3:block/deco_glow_lichen",
-        "glow_lichen": "web3:block/deco_glow_lichen"
-    },
-    "elements": [
-        {   "from": [ 0, 0, 0.1 ],
-            "to": [ 16, 16, 0.1 ],
-            "faces": {
-                "north": { "uv": [ 16, 0, 0, 16 ], "texture": "#glow_lichen" },
-                "south": { "uv": [ 0, 0, 16, 16 ], "texture": "#glow_lichen" }
-            }
-        }
-    ]
+  "parent": "web3:block/cross",
+  "textures": {
+    "cross": "web3:block/deco_glow_lichen"
+  }
 }

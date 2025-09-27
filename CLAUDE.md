@@ -328,6 +328,9 @@ web3-tycoon/
 - **Bug fixes**: 尽量使用KISS原则
 - **Refactoring**: 不需要向后兼容，以保持设计架构最优为优先
 - **Move contracts**: See move/tycoon/CLAUDE.md for contract-specific guidance
-- Move 2024：Vector 用新语法（索引`v[i]`、方法`.push_back()`），Table 保持函数式（`table::borrow()`）以示区分，Option
-  需前缀（`option::some()`），复杂类型优先引用避免复制。
-- 一个交易使用一个RandomGenerator
+- **Move 2024 Edition语法规范**:
+  - Vector: 使用新语法 `v[i]` 索引、`.push_back()` 方法
+  - Table: 保持函数式调用 `table::borrow()` 以示区分
+  - Option: 需要前缀 `option::some()`, `option::none()`
+  - 复杂类型优先使用引用避免复制
+- **Random in Move**: 一个交易使用一个 RandomGenerator，避免多次创建

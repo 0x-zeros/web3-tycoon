@@ -18,6 +18,7 @@ export class UIMapElement extends UIBase {
     private m_tiles:fgui.GList;      // 地块列表
     private m_objects:fgui.GList;    // 物体列表
     private m_properties:fgui.GList; // 地产列表
+    private m_decorations:fgui.GList; // 装饰列表
 
     private m_categoryController: fgui.Controller;  // category控制器
 
@@ -27,6 +28,8 @@ export class UIMapElement extends UIBase {
     private m_objectIds:string[];
     /** 地产ID列表 */
     private m_propertyIds:string[];
+    /** 装饰ID列表 */
+    private m_decorationIds:string[];
 
     /**
      * 初始化回调
@@ -57,6 +60,7 @@ export class UIMapElement extends UIBase {
         const tileBlocks = allBlocks.filter(b => b.category === 'tile');
         const objectBlocks = allBlocks.filter(b => b.category === 'object');
         const propertyBlocks = allBlocks.filter(b => b.category === 'property');
+        const decorationBlocks = allBlocks.filter(b => b.category === 'decoration');
 
         // 设置地块列表
         this.m_tileIds = tileBlocks.map(b => b.id);
@@ -84,6 +88,15 @@ export class UIMapElement extends UIBase {
             this.m_properties.numItems = this.m_propertyIds.length;
             console.log("MapElement properties count: ", this.m_propertyIds.length);
         }
+
+        // 设置装饰列表
+        this.m_decorationIds = decorationBlocks.map(b => b.id);
+        this.m_decorations = this.getList("decorations");
+        if (this.m_decorations) {
+            this.m_decorations.itemRenderer = this.renderDecorationItem.bind(this);
+            this.m_decorations.numItems = this.m_decorationIds.length;
+            console.log("MapElement decorations count: ", this.m_decorationIds.length);
+        }
     }
 
     /**
@@ -100,18 +113,21 @@ export class UIMapElement extends UIBase {
     private _selectFirstElement(): void {
         const currentCategory = this.getCurrentCategory();
         let defaultId: string | null = null;
-        let type: 'tile' | 'object' | 'property' = 'tile';
+        let type: 'tile' | 'object' | 'property' | 'decoration' = 'tile';
 
         if (currentCategory === 'tiles') {
             type = 'tile';
             // 地块默认选中 empty_land
-            defaultId = this.m_tileIds.includes('web3:empty_land') ? 'web3:empty_land' : this.m_tileIds[0];
+            defaultId = this.m_tileIds.indexOf('web3:empty_land') !== -1 ? 'web3:empty_land' : this.m_tileIds[0];
         } else if (currentCategory === 'objects') {
             type = 'object';
             defaultId = this.m_objectIds[0];
         } else if (currentCategory === 'properties') {
             type = 'property';
             defaultId = this.m_propertyIds[0];
+        } else if (currentCategory === 'decorations') {
+            type = 'decoration';
+            defaultId = this.m_decorationIds[0];
         }
 
         if (defaultId) {
@@ -127,10 +143,11 @@ export class UIMapElement extends UIBase {
      * @param blockId 方块ID
      * @param type 类型：'tile' 或 'object'
      */
-    private _selectElementById(blockId: string, type: 'tile' | 'object' | 'property' = 'tile'): void {
+    private _selectElementById(blockId: string, type: 'tile' | 'object' | 'property' | 'decoration' = 'tile'): void {
         const ids = type === 'tile' ? this.m_tileIds :
                    type === 'object' ? this.m_objectIds :
-                   this.m_propertyIds;
+                   type === 'property' ? this.m_propertyIds :
+                   this.m_decorationIds;
         const index = ids.indexOf(blockId);
         if (index === -1) {
             console.warn(`[UIMapElement] Block ID not found: ${blockId}, falling back to first element`);
@@ -147,13 +164,15 @@ export class UIMapElement extends UIBase {
      * @param index 元素索引
      * @param type 类型：'tile'、'object' 或 'property'
      */
-    private _selectElementByIndex(index: number, type: 'tile' | 'object' | 'property' = 'tile'): void {
+    private _selectElementByIndex(index: number, type: 'tile' | 'object' | 'property' | 'decoration' = 'tile'): void {
         const ids = type === 'tile' ? this.m_tileIds :
                    type === 'object' ? this.m_objectIds :
-                   this.m_propertyIds;
+                   type === 'property' ? this.m_propertyIds :
+                   this.m_decorationIds;
         const list = type === 'tile' ? this.m_tiles :
                    type === 'object' ? this.m_objects :
-                   this.m_properties;
+                   type === 'property' ? this.m_properties :
+                   this.m_decorations;
 
         if (!list) {
             console.error(`[UIMapElement] List not found for type: ${type}`);
@@ -212,7 +231,7 @@ export class UIMapElement extends UIBase {
      * 切换显示类别
      * @param category 要显示的类别 (使用FairyGUI的页面名称)
      */
-    public switchCategory(category: 'tiles' | 'objects' | 'properties'): void {
+    public switchCategory(category: 'tiles' | 'objects' | 'properties' | 'decorations'): void {
         console.log(`[UIMapElement] Switching to category: ${category}`);
 
         if (!this.m_categoryController) {
@@ -238,6 +257,36 @@ export class UIMapElement extends UIBase {
             return 'tiles';
         }
         return this.m_categoryController.selectedPage || 'tiles';
+    }
+
+    /**
+     * 切换到装饰类别（用于测试）
+     */
+    public switchToDecorations(): void {
+        console.log("[UIMapElement] Switching to decorations category");
+        if (this.m_categoryController) {
+            // 尝试通过页面索引切换（假设decorations是第4个页面，索引为3）
+            if (this.m_categoryController.pageCount > 3) {
+                this.m_categoryController.selectedIndex = 3;
+                console.log("[UIMapElement] Switched to decorations by index");
+            } else {
+                // 尝试通过页面名称切换
+                this.m_categoryController.selectedPage = 'decorations';
+                console.log("[UIMapElement] Switched to decorations by name");
+            }
+
+            // 刷新列表
+            this._selectFirstElement();
+        }
+
+        // 输出装饰列表信息
+        console.log("[UIMapElement] Decorations list info:");
+        console.log("  - IDs:", this.m_decorationIds);
+        console.log("  - List object:", this.m_decorations);
+        if (this.m_decorations) {
+            console.log("  - List visible:", this.m_decorations.visible);
+            console.log("  - List numItems:", this.m_decorations.numItems);
+        }
     }
 
     /**
@@ -268,13 +317,19 @@ export class UIMapElement extends UIBase {
 
         //ui onEnable 里调用的
 
-        // 测试：自动切换到property类别以查看是否有property
-        if (this.m_propertyIds && this.m_propertyIds.length > 0) {
-            console.log(`[UIMapElement] Found ${this.m_propertyIds.length} properties, auto-switching to property category for testing`);
-            // 延迟一帧执行，确保UI完全初始化
-            this.scheduleOnce(() => {
-                this.switchCategory('properties');
-            }, 0.1);
+        // 测试输出所有类别的信息
+        console.log(`[UIMapElement] Categories info:
+            - tiles: ${this.m_tileIds?.length || 0} items
+            - objects: ${this.m_objectIds?.length || 0} items
+            - properties: ${this.m_propertyIds?.length || 0} items
+            - decorations: ${this.m_decorationIds?.length || 0} items`);
+
+        // 测试：输出controller的页面信息
+        if (this.m_categoryController) {
+            console.log(`[UIMapElement] Controller pages:`, this.m_categoryController.pageCount);
+            for (let i = 0; i < this.m_categoryController.pageCount; i++) {
+                console.log(`  Page ${i}: ${this.m_categoryController.getPageName(i)}`);
+            }
         }
     }
 
@@ -308,8 +363,13 @@ export class UIMapElement extends UIBase {
         this.renderListItem(index, obj, this.m_propertyIds, 'property');
     }
 
+    // 渲染装饰项
+    private renderDecorationItem(index: number, obj: GObject): void {
+        this.renderListItem(index, obj, this.m_decorationIds, 'decoration');
+    }
+
     // 通用渲染方法
-    private renderListItem(index: number, obj: GObject, ids: string[], type: 'tile' | 'object' | 'property'): void {
+    private renderListItem(index: number, obj: GObject, ids: string[], type: 'tile' | 'object' | 'property' | 'decoration'): void {
     
         const tile = obj.asCom as GButton;
 
@@ -387,17 +447,21 @@ export class UIMapElement extends UIBase {
             tile.onClick((evt: fgui.Event) => this.onTileClick(evt, 'object'), this);
         } else if (type === 'property') {
             tile.onClick((evt: fgui.Event) => this.onTileClick(evt, 'property'), this);
+        } else if (type === 'decoration') {
+            tile.onClick((evt: fgui.Event) => this.onTileClick(evt, 'decoration'), this);
         }
     }
 
-    private onTileClick(evt: fgui.Event, type: 'tile' | 'object' | 'property'): void {
+    private onTileClick(evt: fgui.Event, type: 'tile' | 'object' | 'property' | 'decoration'): void {
         const tile = evt.sender as GButton;
         const list = type === 'tile' ? this.m_tiles :
                      type === 'object' ? this.m_objects :
-                     this.m_properties;
+                     type === 'property' ? this.m_properties :
+                     this.m_decorations;
         const ids = type === 'tile' ? this.m_tileIds :
                    type === 'object' ? this.m_objectIds :
-                   this.m_propertyIds;
+                   type === 'property' ? this.m_propertyIds :
+                   this.m_decorationIds;
 
         if (!list) {
             console.error(`[UIMapElement] List not found for type: ${type}`);

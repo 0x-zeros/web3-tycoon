@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1280,1280">
-  <controller name="category" pages="0,tiles,1,objects,2,properties" selected="0"/>
+  <controller name="category" pages="0,tiles,1,objects,2,properties,3,decorations" selected="3"/>
   <displayList>
     <graph id="n2_105vo" name="n2" xy="0,0" size="1278,869" type="rect" lineSize="2" lineColor="#ff6666cc" fillColor="#00ffffff"/>
     <list id="n0_105vo" name="tiles" xy="0,0" size="1280,868" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pim105voq">
@@ -47,14 +47,30 @@
       <item/>
       <item/>
     </list>
-    <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,6" size="126,246">
-      <Button checked="true" title="地块" controller="category" page="0"/>
+    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pim105voq">
+      <gearDisplay controller="category" pages="3"/>
+      <item title="decorations 1"/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+    </list>
+    <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1284,5" size="126,180">
+      <Button title="地块" controller="category" page="0"/>
     </component>
-    <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1281,259" size="126,246">
+    <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,188" size="126,180">
       <Button title="NPC" controller="category" page="1"/>
     </component>
-    <component id="n8_ez89" name="btn_properties" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1283,514" size="126,246">
+    <component id="n8_ez89" name="btn_properties" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1284,371" size="126,180">
       <Button title="地产" controller="category" page="2"/>
+    </component>
+    <component id="n9_w84m" name="btn_decorations" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,555" size="126,180">
+      <Button title="装饰" controller="category" page="3"/>
     </component>
   </displayList>
 </component>

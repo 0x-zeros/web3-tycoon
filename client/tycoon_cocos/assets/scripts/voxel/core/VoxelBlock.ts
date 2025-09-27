@@ -1,4 +1,4 @@
-import { Web3TileType, Web3ObjectType, Web3PropertyType } from '../Web3BlockTypes';
+import { Web3TileType, Web3ObjectType, Web3PropertyType, Web3DecorationType } from '../Web3BlockTypes';
 
 // 保留兼容性的方块类型枚举（旧系统）
 export enum VoxelBlockType {
@@ -800,7 +800,111 @@ export class BlockRegistry {
         }
     });
 
-    console.log('[Web3BlockTypes] 成功注册 21 个 Web3 方块');
+    // ========== 装饰类型 (仅客户端装饰用) ==========
+
+    // 蒲公英装饰
+    this.register({
+        id: 'web3:deco_dandelion',
+        displayName: '蒲公英',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3DecorationType.DANDELION,
+            category: 'decoration',
+            description: '装饰用蒲公英'
+        }
+    });
+
+    // 虞粟装饰
+    this.register({
+        id: 'web3:deco_poppy',
+        displayName: '虞粟',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3DecorationType.POPPY,
+            category: 'decoration',
+            description: '装饰用虞粟'
+        }
+    });
+
+    // 矮草装饰
+    this.register({
+        id: 'web3:deco_grass',
+        displayName: '矮草',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3DecorationType.SHORT_GRASS,
+            category: 'decoration',
+            description: '装饰用矮草'
+        }
+    });
+
+    // 蕨装饰
+    this.register({
+        id: 'web3:deco_fern',
+        displayName: '蕨',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 0,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3DecorationType.FERN,
+            category: 'decoration',
+            description: '装饰用蕨'
+        }
+    });
+
+    // 荧光地衣装饰
+    this.register({
+        id: 'web3:deco_glow_lichen',
+        displayName: '荧光地衣',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 7,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3DecorationType.GLOW_LICHEN,
+            category: 'decoration',
+            description: '装饰用荧光地衣，发光'
+        }
+    });
+
+    // 发光浆果装饰
+    this.register({
+        id: 'web3:deco_glow_berries',
+        displayName: '发光浆果',
+        isPlant: true,
+        isObstacle: false,
+        isDestructable: true,
+        lightLevel: 14,
+        hardness: 0,
+        renderType: BlockRenderType.CUTOUT,
+        properties: {
+            typeId: Web3DecorationType.GLOW_BERRIES,
+            category: 'decoration',
+            description: '装饰用发光浆果，发光'
+        }
+    });
+
+    console.log('[Web3BlockTypes] 成功注册 27 个 Web3 方块');
 }
 
 

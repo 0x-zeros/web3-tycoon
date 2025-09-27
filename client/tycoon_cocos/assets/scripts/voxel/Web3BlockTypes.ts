@@ -35,12 +35,22 @@ export enum Web3PropertyType {
     HOTEL_2X2 = 205,       // 大饭店（2x2）
 }
 
+// Decoration（装饰）枚举（300-399）
+export enum Web3DecorationType {
+    DANDELION = 300,       // 蒲公英
+    POPPY = 301,           // 虞粟
+    SHORT_GRASS = 302,     // 矮草
+    FERN = 303,            // 蕨
+    GLOW_LICHEN = 304,     // 荧光地衣
+    GLOW_BERRIES = 305,    // 发光浆果
+}
+
 // Web3方块信息接口
 export interface Web3BlockInfo {
     id: string;           // 方块ID，如 'web3:empty_land'
     name: string;         // 显示名称
-    category: 'tile' | 'object' | 'property';  // 类别：地块、物体或地产
-    typeId: number;       // 类型ID（0-255）
+    category: 'tile' | 'object' | 'property' | 'decoration';  // 类别：地块、物体、地产或装饰
+    typeId: number;       // 类型ID（0-399）
     description?: string; // 描述
     size?: 1 | 2;        // 尺寸（仅property使用）
 }
@@ -204,6 +214,50 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
         typeId: Web3PropertyType.HOTEL_2X2,
         description: '2x2的大饭店',
         size: 2
+    },
+
+    // ========== 装饰类型 (300-399) ==========
+    {
+        id: 'web3:deco_dandelion',
+        name: '蒲公英',
+        category: 'decoration',
+        typeId: Web3DecorationType.DANDELION,
+        description: '装饰用的蒲公英'
+    },
+    {
+        id: 'web3:deco_poppy',
+        name: '虞美人',
+        category: 'decoration',
+        typeId: Web3DecorationType.POPPY,
+        description: '装饰用的虞美人花'
+    },
+    {
+        id: 'web3:deco_short_grass',
+        name: '矮草',
+        category: 'decoration',
+        typeId: Web3DecorationType.SHORT_GRASS,
+        description: '装饰用的矮草'
+    },
+    {
+        id: 'web3:deco_fern',
+        name: '蕨类',
+        category: 'decoration',
+        typeId: Web3DecorationType.FERN,
+        description: '装饰用的蕨类植物'
+    },
+    {
+        id: 'web3:deco_glow_lichen',
+        name: '荧光地衣',
+        category: 'decoration',
+        typeId: Web3DecorationType.GLOW_LICHEN,
+        description: '装饰用的发光地衣'
+    },
+    {
+        id: 'web3:deco_glow_berries',
+        name: '发光浆果',
+        category: 'decoration',
+        typeId: Web3DecorationType.GLOW_BERRIES,
+        description: '装饰用的发光浆果'
     }
 ];
 
@@ -220,6 +274,16 @@ export function getWeb3TileBlocks(): Web3BlockInfo[] {
 // 获取物体类型方块
 export function getWeb3ObjectBlocks(): Web3BlockInfo[] {
     return WEB3_BLOCKS.filter(block => block.category === 'object');
+}
+
+// 获取Property类型方块
+export function getWeb3PropertyBlocks(): Web3BlockInfo[] {
+    return WEB3_BLOCKS.filter(block => block.category === 'property');
+}
+
+// 获取装饰类型方块
+export function getWeb3DecorationBlocks(): Web3BlockInfo[] {
+    return WEB3_BLOCKS.filter(block => block.category === 'decoration');
 }
 
 // 根据ID获取方块信息
@@ -274,9 +338,4 @@ export function isWeb3Property(blockIdOrTypeId: string | number): boolean {
 export function getPropertySize(blockId: string): number {
     const block = getWeb3BlockByBlockId(blockId);
     return block?.size || 1;
-}
-
-// 获取Property类型方块
-export function getWeb3PropertyBlocks(): Web3BlockInfo[] {
-    return WEB3_BLOCKS.filter(block => block.category === 'property');
 }

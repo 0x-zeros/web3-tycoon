@@ -366,7 +366,7 @@ export class ActorConfigManager {
         if (this.initialized) return;
 
         // 加载所有配置
-        [...NPC_CONFIGS, ...BUILDING_CONFIGS, ...DECORATION_CONFIGS].forEach(config => {
+        [...NPC_CONFIGS, ...BUILDING_CONFIGS].forEach(config => {
             this.configs.set(config.id, config);
         });
 

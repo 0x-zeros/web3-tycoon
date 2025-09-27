@@ -111,6 +111,7 @@ export class GameMap extends Component {
     /** PaperActor管理 */
     private _actors: Map<string, Node> = new Map();         // NPC和物体的PaperActor
     private _buildings: Map<string, Node> = new Map();      // 建筑的PaperActor
+    private _decorations: Map<string, Node> = new Map();    // 装饰物的体素节点
     private _actorsRoot: Node | null = null;                // Actor的根节点
     private _buildingsRoot: Node | null = null;             // 建筑的根节点
     
@@ -447,16 +448,32 @@ export class GameMap extends Component {
      * 在指定位置放置装饰（使用体素渲染）
      */
     private async placeDecorationAt(blockId: string, gridPos: Vec2): Promise<void> {
+        const key = `${gridPos.x}_${gridPos.y}`;
+
+        // 检查并移除已存在的装饰
+        if (this._decorations.has(key)) {
+            const existingDecoration = this._decorations.get(key);
+            if (existingDecoration) {
+                existingDecoration.destroy();
+            }
+            this._decorations.delete(key);
+        }
+
         if (!this._voxelSystem) {
             console.error('[GameMap] VoxelSystem not initialized');
             return;
         }
 
-        // 装饰使用体素渲染，放置在y=1层
+        // 装饰使用体素渲染，创建体素节点
         const worldPos = new Vec3(gridPos.x, 1, gridPos.y);
-        await this._voxelSystem.placeBlock(blockId, worldPos);
+        const decorationNode = await this._voxelSystem.createBlockNode(this.node, blockId, worldPos);
 
-        console.log(`[GameMap] Placed decoration ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        if (decorationNode) {
+            this._decorations.set(key, decorationNode);
+            console.log(`[GameMap] Placed decoration ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        } else {
+            console.error(`[GameMap] Failed to create decoration ${blockId}`);
+        }
 
         // 编辑模式下触发自动保存
         if (this._isEditMode) {
@@ -514,21 +531,16 @@ export class GameMap extends Component {
             return;
         }
 
-        // 2. 检查是否是装饰（体素y=1层）
-        if (this._voxelSystem) {
-            const worldPos = new Vec3(gridPos.x, 1, gridPos.y);
-            const blockId = this._voxelSystem.getBlockAt(worldPos);
-            if (blockId && blockId !== 'minecraft:air') {
-                const blockInfo = getWeb3BlockByBlockId(blockId);
-                if (blockInfo && blockInfo.category === 'decoration') {
-                    this._voxelSystem.removeBlock(worldPos);
-                    console.log(`[GameMap] Removed decoration at (${gridPos.x}, ${gridPos.y})`);
-                    if (this._isEditMode) {
-                        this.scheduleAutoSave();
-                    }
-                    return;
-                }
+        // 2. 检查是否是装饰（体素节点）
+        const decoration = this._decorations.get(key);
+        if (decoration) {
+            decoration.destroy();
+            this._decorations.delete(key);
+            console.log(`[GameMap] Removed decoration at (${gridPos.x}, ${gridPos.y})`);
+            if (this._isEditMode) {
+                this.scheduleAutoSave();
             }
+            return;
         }
         
         // 然后检查并移除地块（y=0层）

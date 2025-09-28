@@ -8,6 +8,7 @@ import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIEditor } from "./UIEditor";
 import { MapManager } from "../../map/MapManager";
+import { DiceController } from "../../game/DiceController";
 
 const { ccclass } = _decorator;
 
@@ -312,9 +313,21 @@ export class UIInGame extends UIBase {
     private _onRollDiceClick(): void {
         console.log("[UIInGame] Roll dice clicked");
 
-        if (!this._rollDiceBtn || !this._rollDiceBtn.enabled) {
-            return;
-        }
+        // 生成随机骰子值 (1-6)
+        const diceValue = Math.floor(Math.random() * 6) + 1;
+        console.log(`[UIInGame] 骰子点数: ${diceValue}`);
+
+        // 使用DiceController播放骰子动画
+        DiceController.instance.roll(diceValue, () => {
+            console.log(`[UIInGame] 骰子动画完成，最终点数: ${diceValue}`);
+
+            // 发送骰子投掷完成事件
+            EventBus.emit(EventTypes.Dice.RollComplete, {
+                value: diceValue,
+                playerId: Blackboard.instance.get("currentPlayerId"),
+                source: "in_game_ui"
+            });
+        });
 
         // 发送投掷骰子事件
         EventBus.emit(EventTypes.Dice.StartRoll, {

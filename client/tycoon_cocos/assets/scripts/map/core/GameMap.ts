@@ -1184,6 +1184,7 @@ export class GameMap extends Component {
         console.log('[GameMap] Applying generated map (v2.0)...');
         console.log(`[GameMap] Tiles: ${result.tiles.length}`);
         console.log(`[GameMap] Special tiles: ${result.specialTiles.length}`);
+        console.log(`[GameMap] Properties: ${result.properties?.length || 0}`);
         console.log(`[GameMap] Start position:`, result.startPosition);
 
         // 清空现有地图
@@ -1199,8 +1200,9 @@ export class GameMap extends Component {
                 case 0: // Empty
                     blockId = 'web3:empty_land';
                     break;
-                case 1: // Property
-                    blockId = tile.group >= 0 ? `web3:property_${tile.group % 8}` : 'web3:property_0';
+                case 1: // Property（被转换的路径tile）
+                    // 使用不同颜色的property tile来表示不同组
+                    blockId = `web3:property_${tile.group % 8}`;
                     break;
                 case 2: // Start
                     blockId = 'web3:start';
@@ -1236,6 +1238,19 @@ export class GameMap extends Component {
             // 放置tile
             if (blockId) {
                 await this.placeTileAt(blockId, gridPos);
+            }
+        }
+
+        // 放置地产建筑
+        if (result.properties && result.properties.length > 0) {
+            console.log(`[GameMap] Placing ${result.properties.length} properties...`);
+            for (const property of result.properties) {
+                // 确定地产的blockId
+                const blockId = property.size === '2x2' ? 'web3:property_2x2' : 'web3:property_1x1';
+                const size = property.size === '2x2' ? 2 : 1;
+
+                // 放置地产建筑
+                await this.placePropertyAt(blockId, property.position, size);
             }
         }
 

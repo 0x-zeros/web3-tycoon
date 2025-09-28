@@ -188,7 +188,8 @@ export class MapGenerator {
             sideRoads: pathResult.sidePaths.flat(),
             intersections: pathResult.intersections,
             startPosition: this.findStartPosition(mapData.tiles),
-            statistics: stats
+            statistics: stats,
+            properties: propertyResult.properties  // 添加地产数据
         };
     }
 

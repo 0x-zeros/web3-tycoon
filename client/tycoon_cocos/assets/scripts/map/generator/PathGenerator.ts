@@ -517,7 +517,7 @@ export class PathGenerator {
   }
 
   /**
-   * Bresenham直线算法
+   * Manhattan路径算法（只允许4方向移动）
    */
   private bresenhamLine(start: Vec2, end: Vec2): Vec2[] {
     const points: Vec2[] = [];
@@ -526,42 +526,42 @@ export class PathGenerator {
     const x1 = Math.round(end.x);
     const y1 = Math.round(end.y);
 
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx - dy;
+    // 使用Manhattan路径：先横向移动，再纵向移动
+    // 这确保了路径上的每个tile都与前一个tile共享一条边
 
-    while (true) {
-      points.push(new Vec2(x0, y0));
+    // 横向移动
+    const dx = x1 - x0;
+    const stepX = dx > 0 ? 1 : -1;
+    let currentX = x0;
 
-      if (x0 === x1 && y0 === y1) break;
-
-      const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        x0 += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y0 += sy;
-      }
+    while (currentX !== x1) {
+      points.push(new Vec2(currentX, y0));
+      currentX += stepX;
     }
+
+    // 纵向移动
+    const dy = y1 - y0;
+    const stepY = dy > 0 ? 1 : -1;
+    let currentY = y0;
+
+    while (currentY !== y1) {
+      points.push(new Vec2(x1, currentY));
+      currentY += stepY;
+    }
+
+    // 添加终点
+    points.push(new Vec2(x1, y1));
 
     return points;
   }
 
   /**
-   * 应用抖动
+   * 应用抖动（限制为4方向）
    */
   private applyJitter(pos: Vec2, amount: number = 1): Vec2 {
-    const jitterX = Math.floor((this.random() - 0.5) * 2 * amount);
-    const jitterY = Math.floor((this.random() - 0.5) * 2 * amount);
-
-    return new Vec2(
-      Math.max(2, Math.min(this.width - 2, pos.x + jitterX)),
-      Math.max(2, Math.min(this.height - 2, pos.y + jitterY))
-    );
+    // 暂时禁用抖动，避免产生对角线连接
+    // 如果需要抖动，应该只在一个方向上进行
+    return pos.clone();
   }
 
   /**

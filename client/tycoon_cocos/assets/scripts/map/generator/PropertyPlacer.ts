@@ -568,12 +568,21 @@ export class PropertyPlacer {
 
       // 检查是否被转换为property
       if (convertedSet.has(key)) {
+        // 找到对应的地产组
+        let groupId = 0;
+        for (const prop of properties) {
+          if (prop.adjacentTiles && prop.adjacentTiles.some(t => t.x === pos.x && t.y === pos.y)) {
+            groupId = prop.group;
+            break;
+          }
+        }
+
         tiles.push({
           x: pos.x,
           y: pos.y,
           type: Web3TileType.Property,
-          value: 1000,
-          group: 0
+          value: 1000 + groupId * 200,
+          group: groupId
         });
       } else if (!propertyMap.has(key)) {
         // 普通路径tile
@@ -587,24 +596,8 @@ export class PropertyPlacer {
       }
     }
 
-    // 生成地产tiles
-    for (const prop of properties) {
-      const size = prop.size === '2x2' ? 2 : 1;
-      for (let x = 0; x < size; x++) {
-        for (let y = 0; y < size; y++) {
-          const pos = new Vec2(prop.position.x + x, prop.position.y + y);
-          tiles.push({
-            x: pos.x,
-            y: pos.y,
-            type: Web3TileType.Property,
-            value: prop.size === '2x2' ? 2000 : 1000,
-            group: prop.group,
-            buildingType: prop.size === '2x2' ? 'web3:property_2x2' : 'web3:property_1x1',
-            buildingLevel: prop.level
-          });
-        }
-      }
-    }
+    // 注意：不生成地产建筑的tiles，因为地产是建筑物，不是tile
+    // 地产建筑将由GameMap.applyGeneratedMap处理properties字段来放置
 
     return tiles;
   }

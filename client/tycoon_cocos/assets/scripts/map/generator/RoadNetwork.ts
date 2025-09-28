@@ -57,11 +57,15 @@ export class RoadNetwork {
         this.sideRoadSet.clear();
         this.intersectionSet.clear();
 
+        console.log(`[RoadNetwork] 开始生成 ${this.params.mode} 模式道路网络`);
+
         if (this.params.mode === MapGenerationMode.CLASSIC) {
             this.generateClassicRoads();
         } else {
             this.generateBrawlRoads();
         }
+
+        console.log(`[RoadNetwork] 道路生成完成，共 ${this.roadSet.size} 个道路格子`);
 
         // 确保道路连通性
         this.ensureConnectivity();
@@ -71,6 +75,13 @@ export class RoadNetwork {
 
         // 构建连通性图
         const connectivity = this.buildConnectivityGraph();
+
+        // 验证连通性
+        const components = this.findConnectedComponents();
+        console.log(`[RoadNetwork] 道路网络连通性检查：发现 ${components.length} 个连通分量`);
+        if (components.length > 1) {
+            console.warn(`[RoadNetwork] 警告：道路网络不完全连通！最大分量包含 ${Math.max(...components.map(c => c.length))} 个节点`);
+        }
 
         return {
             roads: Array.from(this.roadSet).map(k => CoordUtils.keyToPos(k)),
@@ -106,22 +117,43 @@ export class RoadNetwork {
         const { mapWidth, mapHeight } = this.params;
         const ringRadius = Math.min(mapWidth, mapHeight) * 0.35;
 
-        // 使用参数化方程生成环形道路
-        const steps = 60;
+        // 根据周长计算采样点数量，确保足够密集
+        const circumference = 2 * Math.PI * ringRadius;
+        const steps = Math.max(Math.floor(circumference * 2), 120); // 至少120个点，或周长的2倍
+
+        const ringPoints: Vec2[] = [];
+        const uniquePoints = new Set<string>();
+
+        // 收集环形上的所有采样点，避免重复
         for (let i = 0; i < steps; i++) {
             const angle = (i / steps) * Math.PI * 2;
             const x = Math.floor(centerX + Math.cos(angle) * ringRadius);
             const y = Math.floor(centerY + Math.sin(angle) * ringRadius);
 
             if (this.isValidPosition(x, y)) {
-                const key = CoordUtils.posToKey(new Vec2(x, y));
-                this.roadSet.add(key);
-                this.mainRoadSet.add(key);
-
-                // 增加道路宽度
-                if (this.params.mainRoadWidth && this.params.mainRoadWidth > 1) {
-                    this.widenRoad(x, y, this.params.mainRoadWidth, true);
+                const key = `${x},${y}`;
+                if (!uniquePoints.has(key)) {
+                    uniquePoints.add(key);
+                    ringPoints.push(new Vec2(x, y));
                 }
+            }
+        }
+
+        console.log(`[RoadNetwork] 环形道路采样点数：${ringPoints.length}`);
+
+        // 连接相邻的点形成完整的环形
+        if (ringPoints.length > 2) {
+            for (let i = 0; i < ringPoints.length; i++) {
+                const currentPoint = ringPoints[i];
+                const nextPoint = ringPoints[(i + 1) % ringPoints.length]; // 使用模运算确保环形闭合
+
+                // 连接当前点和下一个点
+                this.drawLine(currentPoint, nextPoint, true);
+            }
+
+            // 确保最后一个点连接到第一个点，形成闭合环
+            if (ringPoints.length > 0) {
+                this.drawLine(ringPoints[ringPoints.length - 1], ringPoints[0], true);
             }
         }
     }
@@ -132,29 +164,29 @@ export class RoadNetwork {
     private generateRadialRoads(centerX: number, centerY: number): void {
         const { mapWidth, mapHeight } = this.params;
         const numRadialRoads = 8; // 8个方向
+        const maxLength = Math.min(mapWidth, mapHeight) * 0.45;
 
         for (let i = 0; i < numRadialRoads; i++) {
             const angle = (i / numRadialRoads) * Math.PI * 2;
-            const dx = Math.cos(angle);
-            const dy = Math.sin(angle);
 
-            // 从中心向外延伸
-            const maxLength = Math.min(mapWidth, mapHeight) * 0.45;
-            for (let dist = 0; dist < maxLength; dist++) {
-                const x = Math.floor(centerX + dx * dist);
-                const y = Math.floor(centerY + dy * dist);
+            // 计算终点坐标
+            const endX = Math.floor(centerX + Math.cos(angle) * maxLength);
+            const endY = Math.floor(centerY + Math.sin(angle) * maxLength);
 
-                if (this.isValidPosition(x, y)) {
-                    const key = CoordUtils.posToKey(new Vec2(x, y));
-                    this.roadSet.add(key);
-                    // 靠近中心的为主干道
-                    if (dist < maxLength * 0.6) {
-                        this.mainRoadSet.add(key);
-                    } else {
-                        this.sideRoadSet.add(key);
-                    }
-                }
-            }
+            // 使用drawLine从中心连接到边缘，确保连续性
+            const startPos = new Vec2(centerX, centerY);
+            const endPos = new Vec2(endX, endY);
+
+            // 前60%为主干道
+            const mainRoadLength = maxLength * 0.6;
+            const midX = Math.floor(centerX + Math.cos(angle) * mainRoadLength);
+            const midY = Math.floor(centerY + Math.sin(angle) * mainRoadLength);
+            const midPos = new Vec2(midX, midY);
+
+            // 画主干道部分
+            this.drawLine(startPos, midPos, true);
+            // 画支路部分
+            this.drawLine(midPos, endPos, false);
         }
     }
 
@@ -372,6 +404,60 @@ export class RoadNetwork {
                 current.x += current.x < pos2.x ? 1 : -1;
             } else if (current.y !== pos2.y) {
                 current.y += current.y < pos2.y ? 1 : -1;
+            }
+        }
+    }
+
+    /**
+     * 使用Bresenham算法画线连接两点
+     * @param pos1 起始点
+     * @param pos2 结束点
+     * @param isMainRoad 是否为主干道
+     */
+    private drawLine(pos1: Vec2, pos2: Vec2, isMainRoad: boolean = false): void {
+        const x0 = Math.floor(pos1.x);
+        const y0 = Math.floor(pos1.y);
+        const x1 = Math.floor(pos2.x);
+        const y1 = Math.floor(pos2.y);
+
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+
+        let x = x0;
+        let y = y0;
+
+        while (true) {
+            // 添加当前点到道路
+            if (this.isValidPosition(x, y)) {
+                const key = CoordUtils.posToKey(new Vec2(x, y));
+                this.roadSet.add(key);
+
+                if (isMainRoad) {
+                    this.mainRoadSet.add(key);
+                } else {
+                    this.sideRoadSet.add(key);
+                }
+
+                // 增加道路宽度
+                if (isMainRoad && this.params.mainRoadWidth && this.params.mainRoadWidth > 1) {
+                    this.widenRoad(x, y, this.params.mainRoadWidth, true);
+                }
+            }
+
+            // 到达终点
+            if (x === x1 && y === y1) break;
+
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y += sy;
             }
         }
     }

@@ -249,6 +249,7 @@
     },
     "autoFindCamera": true,
     "followTarget": null,
+    "enableRightDragRotate": false,
     "_id": "e3hmVMoyJGGaKR8NlXc7VE"
   },
   {
@@ -578,7 +579,7 @@
     "_priority": 1,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 540,
+    "_orthoHeight": 546.2943396226416,
     "_near": 1,
     "_far": 1000,
     "_color": {
@@ -1936,7 +1937,7 @@
         "__id__": 64
       }
     ],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 67
@@ -2182,12 +2183,16 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "cam": {
-      "__id__": 3
-    },
+    "actorId": "",
+    "level": 1,
+    "actorType": 0,
+    "camera": null,
     "card": {
       "__id__": 61
     },
+    "billboardMode": "yAxis",
+    "frames": [],
+    "frameRate": 10,
     "_id": "79nHDUYoxMm5kEkH6ZQP9f"
   },
   {

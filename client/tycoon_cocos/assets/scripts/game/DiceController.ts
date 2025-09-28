@@ -13,30 +13,33 @@ import {
     Vec3,
     Quat,
     tween,
+    Tween,
     Camera,
     director,
-    game
 } from 'cc';
 
 const { ccclass, property } = _decorator;
 
 /**
- * 骰子面对应的旋转角度
- * 每个数字对应的面朝上时的旋转四元数
+ * 骰子面对应的旋转角度（使目标点数朝上）
+ * 贴图布局参照 Horizontal Cross：
+ *   上(py)=2， 下(ny)=5， 前(pz)=1， 后(nz)=6， 左(nx)=3， 右(px)=4
+ * 我们计算将对应朝向转到 +Y 朝上的旋转。
  */
 const DICE_FACE_ROTATIONS: { [key: number]: Quat } = {
-    // 1点朝上
-    1: Quat.fromEuler(new Quat(), 0, 0, 0),
-    // 2点朝上  
-    2: Quat.fromEuler(new Quat(), 0, 90, 0),
-    // 3点朝上
-    3: Quat.fromEuler(new Quat(), 90, 0, 0),
-    // 4点朝上
-    4: Quat.fromEuler(new Quat(), -90, 0, 0),
-    // 5点朝上
-    5: Quat.fromEuler(new Quat(), 0, -90, 0),
-    // 6点朝上
-    6: Quat.fromEuler(new Quat(), 180, 0, 0)
+
+        // +Z(前) -> 旋转 -90° 绕X 使前面朝上
+        3: Quat.fromEuler(new Quat(), -90, 0, 0),
+        // +Y(上) -> 无旋转
+        5: Quat.fromEuler(new Quat(), 0, 0, 0),
+        // -X(左) -> 旋转 -90° 绕Z 使左面朝上
+        6: Quat.fromEuler(new Quat(), 0, 0, -90),
+        // +X(右) -> 旋转 +90° 绕Z 使右面朝上
+        1: Quat.fromEuler(new Quat(), 0, 0, 90),
+        // -Y(下) -> 旋转 180° 绕X 使下面朝上
+        2: Quat.fromEuler(new Quat(), 180, 0, 0),
+        // -Z(后) -> 旋转 +90° 绕X 使后面朝上
+        4: Quat.fromEuler(new Quat(), 90, 0, 0),
 };
 
 @ccclass('DiceController')
@@ -47,6 +50,7 @@ export class DiceController {
     private dicePrefab: Prefab | null = null;
     private isRolling: boolean = false;
     private currentValue: number = 1;
+    private hideTimer: number | null = null;
     
     /**
      * 获取单例实例
@@ -135,16 +139,24 @@ export class DiceController {
         this.isRolling = true;
         this.currentValue = value;
         
+        // 清理上一次的隐藏计时，避免在新一轮滚动时被旧计时隐藏
+        if (this.hideTimer !== null) {
+            clearTimeout(this.hideTimer);
+            this.hideTimer = null;
+        }
+
         // 创建或显示骰子
         if (!this.diceNode) {
             this.diceNode = instantiate(this.dicePrefab);
             director.getScene()?.addChild(this.diceNode);
         }
-        
+
         // 设置初始位置和显示
         const startPos = this.getCameraFocusPosition();
         this.diceNode.setPosition(startPos);
         this.diceNode.active = true;
+        // 停止可能残留的补间动画
+        Tween.stopAllByTarget(this.diceNode);
         
         // 播放滚动动画
         this.playRollAnimation(value, () => {
@@ -174,9 +186,9 @@ export class DiceController {
         );
         this.diceNode.setRotation(initialRotation);
         
-        // 创建滚动动画
-        const rollDuration = 1.5; // 滚动持续时间
-        const bounceDuration = 0.5; // 弹跳持续时间
+        // 创建滚动动画（时间缩短一半）
+        const rollDuration = 0.75; // 滚动持续时间
+        const bounceDuration = 0.25; // 弹跳持续时间
         
         // 滚动阶段 - 快速旋转
         tween(this.diceNode)
@@ -222,9 +234,9 @@ export class DiceController {
             .call(() => {
                 if (this.diceNode) {
                     const targetRotation = DICE_FACE_ROTATIONS[finalValue];
-                    // 平滑过渡到目标旋转
+                    // 平滑过渡到目标旋转（时间缩短一半）
                     tween(this.diceNode)
-                        .to(0.3, { rotation: targetRotation }, { easing: 'quadInOut' })
+                        .to(0.15, { rotation: targetRotation }, { easing: 'quadInOut' })
                         .call(onComplete)
                         .start();
                 }
@@ -236,10 +248,15 @@ export class DiceController {
      * 计划隐藏骰子
      */
     private scheduleHide(): void {
-        // 使用 setTimeout 替代 schedule
-        setTimeout(() => {
+        if (this.hideTimer !== null) {
+            clearTimeout(this.hideTimer);
+            this.hideTimer = null;
+        }
+        // 使用 setTimeout，并记录句柄，避免与下一次roll冲突
+        this.hideTimer = setTimeout(() => {
             this.hide();
-        }, 3000);
+            this.hideTimer = null;
+        }, 3000) as unknown as number;
     }
     
     /**
@@ -279,10 +296,15 @@ export class DiceController {
      */
     public cleanup(): void {
         if (this.diceNode) {
+            Tween.stopAllByTarget(this.diceNode);
             this.diceNode.destroy();
             this.diceNode = null;
         }
         this.dicePrefab = null;
         this.isRolling = false;
+        if (this.hideTimer !== null) {
+            clearTimeout(this.hideTimer);
+            this.hideTimer = null;
+        }
     }
 }

@@ -313,6 +313,11 @@ export class UIInGame extends UIBase {
     private _onRollDiceClick(): void {
         console.log("[UIInGame] Roll dice clicked");
 
+        // 禁用骰子按钮，防止重复点击
+        if (this.m_btn_dice) {
+            this.m_btn_dice.enabled = false;
+        }
+
         // 生成随机骰子值 (1-6)
         const diceValue = Math.floor(Math.random() * 6) + 1;
         console.log(`[UIInGame] 骰子点数: ${diceValue}`);
@@ -320,6 +325,11 @@ export class UIInGame extends UIBase {
         // 使用DiceController播放骰子动画
         DiceController.instance.roll(diceValue, () => {
             console.log(`[UIInGame] 骰子动画完成，最终点数: ${diceValue}`);
+
+            // 动画完成后重新启用骰子按钮
+            if (this.m_btn_dice) {
+                this.m_btn_dice.enabled = true;
+            }
 
             // 发送骰子投掷完成事件
             EventBus.emit(EventTypes.Dice.RollComplete, {

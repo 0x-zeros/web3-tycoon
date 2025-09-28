@@ -93,102 +93,199 @@ export class RoadNetwork {
     }
 
     /**
-     * 生成Classic模式道路（环形主干道 + 放射状支路）
+     * 生成Classic模式道路（单一闭环路径，适配大富翁）
+     *
+     * 在地图边界内按给定边距生成一个矩形闭环路径，确保100%连通，
+     * 便于在环路外侧或内侧布置地产。
      */
     private generateClassicRoads(): void {
         const { mapWidth, mapHeight } = this.params;
-        const centerX = Math.floor(mapWidth / 2);
-        const centerY = Math.floor(mapHeight / 2);
 
-        // 生成环形主干道
-        this.generateRingRoad(centerX, centerY);
+        // 边距（避免贴边，留出一圈给地产/装饰），最小为1
+        const margin = Math.max(2, Math.floor(Math.min(mapWidth, mapHeight) * 0.08));
 
-        // 生成放射状支路
-        this.generateRadialRoads(centerX, centerY);
+        // 1) 先构建基础矩形闭环
+        this.generatePerimeterLoop(margin);
 
-        // 生成额外的连接道路
-        this.generateAdditionalRoads();
-    }
+        // 2) 在四条边上添加随机“凸起/凹陷”模块，营造大富翁风格的折线与弯折
+        this.addVarietyBulges(margin);
 
-    /**
-     * 生成环形主干道
-     */
-    private generateRingRoad(centerX: number, centerY: number): void {
-        const { mapWidth, mapHeight } = this.params;
-        const ringRadius = Math.min(mapWidth, mapHeight) * 0.35;
-
-        // 根据周长计算采样点数量，确保足够密集
-        const circumference = 2 * Math.PI * ringRadius;
-        const steps = Math.max(Math.floor(circumference * 2), 120); // 至少120个点，或周长的2倍
-
-        const ringPoints: Vec2[] = [];
-        const uniquePoints = new Set<string>();
-
-        // 收集环形上的所有采样点，避免重复
-        for (let i = 0; i < steps; i++) {
-            const angle = (i / steps) * Math.PI * 2;
-            const x = Math.floor(centerX + Math.cos(angle) * ringRadius);
-            const y = Math.floor(centerY + Math.sin(angle) * ringRadius);
-
-            if (this.isValidPosition(x, y)) {
-                const key = `${x},${y}`;
-                if (!uniquePoints.has(key)) {
-                    uniquePoints.add(key);
-                    ringPoints.push(new Vec2(x, y));
-                }
-            }
-        }
-
-        console.log(`[RoadNetwork] 环形道路采样点数：${ringPoints.length}`);
-
-        // 连接相邻的点形成完整的环形
-        if (ringPoints.length > 2) {
-            for (let i = 0; i < ringPoints.length; i++) {
-                const currentPoint = ringPoints[i];
-                const nextPoint = ringPoints[(i + 1) % ringPoints.length]; // 使用模运算确保环形闭合
-
-                // 连接当前点和下一个点
-                this.drawLine(currentPoint, nextPoint, true);
-            }
-
-            // 确保最后一个点连接到第一个点，形成闭合环
-            if (ringPoints.length > 0) {
-                this.drawLine(ringPoints[ringPoints.length - 1], ringPoints[0], true);
-            }
+        // 3) 可选：添加1-2条跨越连接，形成捷径与多环结构（仍保持整体连通）
+        const addShortcutProb = 0.6;
+        if (this.random() < addShortcutProb) {
+            this.addShortcuts(1 + (this.random() < 0.4 ? 1 : 0));
         }
     }
 
     /**
-     * 生成放射状支路
+     * 生成矩形外沿闭环（顺时针围一圈）
      */
-    private generateRadialRoads(centerX: number, centerY: number): void {
+    private generatePerimeterLoop(margin: number): void {
         const { mapWidth, mapHeight } = this.params;
-        const numRadialRoads = 8; // 8个方向
-        const maxLength = Math.min(mapWidth, mapHeight) * 0.45;
+        const left = margin;
+        const right = mapWidth - 1 - margin;
+        const top = margin;
+        const bottom = mapHeight - 1 - margin;
 
-        for (let i = 0; i < numRadialRoads; i++) {
-            const angle = (i / numRadialRoads) * Math.PI * 2;
+        if (right - left < 2 || bottom - top < 2) {
+            // 地图太小，退化为全边框
+            for (let x = 0; x < mapWidth; x++) {
+                this.addRoad(new Vec2(x, 0), true);
+                this.addRoad(new Vec2(x, mapHeight - 1), true);
+            }
+            for (let y = 0; y < mapHeight; y++) {
+                this.addRoad(new Vec2(0, y), true);
+                this.addRoad(new Vec2(mapWidth - 1, y), true);
+            }
+            return;
+        }
 
-            // 计算终点坐标
-            const endX = Math.floor(centerX + Math.cos(angle) * maxLength);
-            const endY = Math.floor(centerY + Math.sin(angle) * maxLength);
-
-            // 使用drawLine从中心连接到边缘，确保连续性
-            const startPos = new Vec2(centerX, centerY);
-            const endPos = new Vec2(endX, endY);
-
-            // 前60%为主干道
-            const mainRoadLength = maxLength * 0.6;
-            const midX = Math.floor(centerX + Math.cos(angle) * mainRoadLength);
-            const midY = Math.floor(centerY + Math.sin(angle) * mainRoadLength);
-            const midPos = new Vec2(midX, midY);
-
-            // 画主干道部分
-            this.drawLine(startPos, midPos, true);
-            // 画支路部分
-            this.drawLine(midPos, endPos, false);
+        // 上边（left -> right, y=top）
+        for (let x = left; x <= right; x++) {
+            this.addRoad(new Vec2(x, top), true);
+        }
+        // 右边（top+1 -> bottom-1, x=right）
+        for (let y = top + 1; y <= bottom - 1; y++) {
+            this.addRoad(new Vec2(right, y), true);
+        }
+        // 下边（right -> left, y=bottom）
+        for (let x = right; x >= left; x--) {
+            this.addRoad(new Vec2(x, bottom), true);
+        }
+        // 左边（bottom-1 -> top+1, x=left）
+        for (let y = bottom - 1; y >= top + 1; y--) {
+            this.addRoad(new Vec2(left, y), true);
         }
     }
+
+    /** 在集合中添加一格道路 */
+    private addRoad(pos: Vec2, isMain: boolean): void {
+        const key = CoordUtils.posToKey(pos);
+        this.roadSet.add(key);
+        if (isMain) this.mainRoadSet.add(key);
+        else this.sideRoadSet.add(key);
+    }
+
+    /**
+     * 在四条边上添加随机“凸起/凹陷”
+     * 不破坏连通性，只在原有闭环上做局部矩形绕行
+     */
+    private addVarietyBulges(margin: number): void {
+        const { mapWidth, mapHeight } = this.params;
+        const left = margin;
+        const right = mapWidth - 1 - margin;
+        const top = margin;
+        const bottom = mapHeight - 1 - margin;
+
+        // 定义四条边的走向与法线（优先从矩形内外随机偏移）
+        const edges: Array<{ start: Vec2; end: Vec2; axis: Vec2; normals: Vec2[] }>= [
+            // 顶边：从左到右，法线朝上/下
+            { start: new Vec2(left, top), end: new Vec2(right, top), axis: new Vec2(1, 0), normals: [new Vec2(0, -1), new Vec2(0, 1)] },
+            // 右边：从上到下，法线朝右/左
+            { start: new Vec2(right, top), end: new Vec2(right, bottom), axis: new Vec2(0, 1), normals: [new Vec2(1, 0), new Vec2(-1, 0)] },
+            // 底边：从右到左，法线朝下/上
+            { start: new Vec2(right, bottom), end: new Vec2(left, bottom), axis: new Vec2(-1, 0), normals: [new Vec2(0, 1), new Vec2(0, -1)] },
+            // 左边：从下到上，法线朝左/右
+            { start: new Vec2(left, bottom), end: new Vec2(left, top), axis: new Vec2(0, -1), normals: [new Vec2(-1, 0), new Vec2(1, 0)] },
+        ];
+
+        for (const edge of edges) {
+            this.addBulgesAlong(edge.start, edge.end, edge.axis, edge.normals);
+        }
+    }
+
+    /**
+     * 沿着一条边按随机间距添加凸起矩形绕行
+     */
+    private addBulgesAlong(start: Vec2, end: Vec2, axis: Vec2, normals: Vec2[]): void {
+        // 基础参数可调：最大凸起数量、长度与深度范围、最小间距
+        const maxBulges = 3 + Math.floor(this.random() * 3); // 3~5 个
+        const minLen = 3, maxLen = 6;
+        const minDepth = 1, maxDepth = Math.max(1, Math.min(3, Math.floor(Math.min(this.params.mapWidth, this.params.mapHeight) * 0.06)));
+        const minGap = 4; // 凸起之间最小间距
+
+        const axisLength = Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
+        if (axisLength < 8) return;
+
+        // 在 [1, axisLength-2] 中采样锚点（避免贴近拐角）
+        const anchors: number[] = [];
+        let tries = 0;
+        while (anchors.length < maxBulges && tries < 20) {
+            const a = 1 + Math.floor(this.random() * (axisLength - 2));
+            const ok = anchors.every(other => Math.abs(other - a) >= minGap);
+            if (ok) anchors.push(a);
+            tries++;
+        }
+
+        // 对每个锚点添加一个 L 形绕行：出轴 -> 沿轴 -> 回轴
+        for (const a of anchors) {
+            const len = minLen + Math.floor(this.random() * (maxLen - minLen + 1));
+            const depth = minDepth + Math.floor(this.random() * (maxDepth - minDepth + 1));
+            const normal = normals[Math.floor(this.random() * normals.length)];
+
+            const anchor = this.advance(start, axis, a);
+            const p1 = this.advance(anchor, normal, depth);          // 出轴
+            const p2 = this.advance(p1, axis, len);                  // 沿轴
+            const p3 = this.advance(p2, new Vec2(-normal.x, -normal.y), depth); // 回轴
+
+            // 边界校验后绘制三段
+            if (this.segmentValid(anchor, p1) && this.segmentValid(p1, p2) && this.segmentValid(p2, p3)) {
+                this.drawLine(anchor, p1, false);
+                this.drawLine(p1, p2, false);
+                this.drawLine(p2, p3, false);
+            }
+        }
+    }
+
+    /** 沿方向前进 n 步 */
+    private advance(from: Vec2, dir: Vec2, steps: number): Vec2 {
+        return new Vec2(from.x + dir.x * steps, from.y + dir.y * steps);
+    }
+
+    /** 检查线段上所有格是否在边界内 */
+    private segmentValid(a: Vec2, b: Vec2): boolean {
+        const dx = Math.sign(b.x - a.x);
+        const dy = Math.sign(b.y - a.y);
+        let x = a.x, y = a.y;
+        while (true) {
+            if (!this.isValidPosition(x, y)) return false;
+            if (x === b.x && y === b.y) break;
+            if (dx !== 0) x += dx; else y += dy;
+        }
+        return true;
+    }
+
+    /**
+     * 添加若干条跨越连接，将环路的远端点用曼哈顿路径连接，形成“捷径/桥”。
+     */
+    private addShortcuts(count: number): void {
+        const roadKeys = Array.from(this.roadSet);
+        if (roadKeys.length < 12) return;
+
+        for (let i = 0; i < count; i++) {
+            const k1 = roadKeys[Math.floor(this.random() * roadKeys.length)];
+            const p1 = CoordUtils.keyToPos(k1);
+
+            // 寻找与 p1 距离较远的另一个点
+            let bestKey = k1;
+            let bestDist = 0;
+            for (let j = 0; j < 30; j++) {
+                const k2 = roadKeys[Math.floor(this.random() * roadKeys.length)];
+                if (k2 === k1) continue;
+                const p2 = CoordUtils.keyToPos(k2);
+                const d = CoordUtils.manhattanDistance(p1, p2);
+                if (d > bestDist) { bestDist = d; bestKey = k2; }
+            }
+
+            if (bestKey !== k1 && bestDist > 6) {
+                const p2 = CoordUtils.keyToPos(bestKey);
+                this.connectPoints(p1, p2);
+            }
+        }
+    }
+
+    // Classic模式不再生成放射状支路，保留方法以兼容历史调用但不执行
+    private generateRadialRoads(_centerX: number, _centerY: number): void { /* noop for classic loop */ }
 
     /**
      * 生成Brawl模式道路（随机网络）

@@ -21,6 +21,10 @@ import { PropertyPlacer } from './PropertyPlacer';
 import { TrafficAnalyzer } from './TrafficAnalyzer';
 import { StreetSegmenter } from './StreetSegmenter';
 import { Web3TileType } from '../../voxel/Web3BlockTypes';
+import { getDefaultClassicTemplate } from './templates/TemplateLibrary';
+import { TemplateBuilder } from './templates/TemplateBuilder';
+import { RuleBasedPropertyPlacer } from './templates/RuleBasedPropertyPlacer';
+import { MapGenerationMode } from './MapGeneratorTypes';
 
 /**
  * 地图生成器
@@ -63,15 +67,57 @@ export class MapGenerator {
         console.log('[MapGenerator] 开始生成地图...');
         console.log(this.config.getDebugInfo());
 
-        // 1. 生成道路网络
+        // 1. 生成道路网络（Classic 走模板，Brawl 走旧随机）
         console.log('[MapGenerator] 生成道路网络...');
-        const roadNetwork = new RoadNetwork(this.params).generate();
+        let roadNetwork: any;
+        let templateBuilt: any = null;
+        if (this.params.mode === MapGenerationMode.CLASSIC) {
+            const builder = new TemplateBuilder(this.params.mapWidth, this.params.mapHeight, this.random);
+            templateBuilt = builder.build(getDefaultClassicTemplate());
+
+            // 将模板构建结果转为 RoadNetworkData（重用已有分析流程）
+            const connectivity = new Map<string, Vec2[]>();
+            const roadSet = new Set(templateBuilt.roads.map((r: Vec2) => CoordUtils.posToKey(r)));
+            for (const p of templateBuilt.roads as Vec2[]) {
+                const neigh = CoordUtils.getNeighbors(p).filter(n => roadSet.has(CoordUtils.posToKey(n)));
+                connectivity.set(CoordUtils.posToKey(p), neigh);
+            }
+            const intersections: Vec2[] = [];
+            for (const [key, neigh] of connectivity.entries()) if (neigh.length >= 3) intersections.push(CoordUtils.keyToPos(key));
+            roadNetwork = {
+                roads: templateBuilt.roads,
+                mainRoads: templateBuilt.roads, // 简化：全部视作主路
+                sideRoads: [],
+                intersections,
+                connectivity
+            };
+        } else {
+            roadNetwork = new RoadNetwork(this.params).generate();
+        }
         console.log(`[MapGenerator] 生成了 ${roadNetwork.roads.length} 个道路地块`);
 
-        // 2. 放置地产
+        // 2. 放置地产（Classic 使用规则包，否则用旧版）
         console.log('[MapGenerator] 放置地产...');
-        const propertyPlacer = new PropertyPlacer(this.params);
-        const properties = propertyPlacer.placeProperties(roadNetwork);
+        let properties: any[] = [];
+        let legacyPlacer: PropertyPlacer | null = null;
+        if (this.params.mode === MapGenerationMode.CLASSIC && templateBuilt) {
+            const quotas = getDefaultClassicTemplate().quotas || {};
+            const bigCfg = quotas.big2x2 || { count: [3, 5], minStraight: 7, minSpacing: 6 };
+            const stride = (quotas.smallLand?.stride as [number, number]) || [2, 3];
+            const bigCount = Math.max(3, Math.min(8, this.randomCount(bigCfg.count || [3, 5])));
+            const placer = new RuleBasedPropertyPlacer(this.random, roadNetwork.roads);
+            properties = placer.place(templateBuilt.rings, {
+                mapWidth: this.params.mapWidth,
+                mapHeight: this.params.mapHeight,
+                stride,
+                minStraight: bigCfg.minStraight || 7,
+                big2x2Count: bigCount,
+                minBigSpacing: bigCfg.minSpacing || 6
+            });
+        } else {
+            legacyPlacer = new PropertyPlacer(this.params);
+            properties = legacyPlacer.placeProperties(roadNetwork);
+        }
         console.log(`[MapGenerator] 放置了 ${properties.length} 个地产`);
 
         // 3. 交通分析
@@ -80,7 +126,11 @@ export class MapGenerator {
         const trafficAnalysis = trafficAnalyzer.analyze(roadNetwork);
 
         // 更新地产价格系数
-        propertyPlacer.updatePriceCoefficients(trafficAnalysis.hotnessMap);
+        if (this.params.mode === MapGenerationMode.CLASSIC && properties) {
+            this.updatePropertyCoefficients(properties, trafficAnalysis.hotnessMap);
+        } else {
+            legacyPlacer?.updatePriceCoefficients(trafficAnalysis.hotnessMap);
+        }
         console.log(`[MapGenerator] 识别了 ${trafficAnalysis.hotSpots.length} 个热点区域`);
 
         // 4. 街区分割
@@ -122,66 +172,42 @@ export class MapGenerator {
         return result;
     }
 
-    /**
-     * 生成地块数据
-     */
-    private generateTiles(roadNetwork: any, properties: any[]): TileData[] {
-        const tiles: TileData[] = [];
-        const roadSet = new Set(roadNetwork.roads.map((r: Vec2) => CoordUtils.posToKey(r)));
-        const propertySet = new Set<string>();
-
-        // 标记地产占用的位置
+    private updatePropertyCoefficients(properties: any[], hotnessMap: Map<string, number>) {
         for (const property of properties) {
+            let totalHotness = 0; let count = 0;
             for (let dx = 0; dx < property.size; dx++) {
                 for (let dy = 0; dy < property.size; dy++) {
-                    const pos = new Vec2(property.gridPos.x + dx, property.gridPos.y + dy);
-                    propertySet.add(CoordUtils.posToKey(pos));
+                    const checkPos = new Vec2(property.gridPos.x + dx, property.gridPos.y + dy);
+                    const key = CoordUtils.posToKey(checkPos);
+                    const hot = hotnessMap.get(key) || 0;
+                    totalHotness += hot; count++;
                 }
             }
+            const avg = count > 0 ? totalHotness / count : 0;
+            property.priceCoefficient = 0.5 + avg * 1.5; // 与旧逻辑保持一致区间
         }
+    }
 
-        // 生成所有地块
-        for (let x = 0; x < this.params.mapWidth; x++) {
-            for (let y = 0; y < this.params.mapHeight; y++) {
-                const pos = new Vec2(x, y);
-                const key = CoordUtils.posToKey(pos);
+    private randomCount(range: [number, number]): number {
+        const [a, b] = range; return Math.floor(this.random() * (b - a + 1)) + a;
+    }
 
-                let tile: TileData;
+    /**
+     * 生成地块数据
+     * 仅输出可行走路径（道路）上的tile，避免铺满整张地图。
+     */
+    private generateTiles(roadNetwork: any, _properties: any[]): TileData[] {
+        const tiles: TileData[] = [];
 
-                if (roadSet.has(key)) {
-                    // 道路地块
-                    tile = {
-                        gridPos: pos,
-                        blockId: 'web3:empty_land',
-                        typeId: Web3TileType.EMPTY_LAND,
-                        isRoad: true
-                    };
-                } else if (propertySet.has(key)) {
-                    // 地产占用的地块（不再使用单独的property tile，而是空地）
-                    tile = {
-                        gridPos: pos,
-                        blockId: 'web3:empty_land',
-                        typeId: Web3TileType.EMPTY_LAND,
-                        isRoad: false
-                    };
-                } else {
-                    // 空地
-                    tile = {
-                        gridPos: pos,
-                        blockId: 'web3:empty_land',
-                        typeId: Web3TileType.EMPTY_LAND,
-                        isRoad: false
-                    };
-                }
-
-                // 添加交通热度信息
-                const trafficKey = CoordUtils.posToKey(pos);
-                tile.trafficHotness = this.params.trafficSimulationRounds > 0
-                    ? (roadNetwork.roads.findIndex((r: Vec2) => r.equals(pos)) >= 0 ? 0.5 : 0)
-                    : 0;
-
-                tiles.push(tile);
-            }
+        for (const pos of roadNetwork.roads as Vec2[]) {
+            const tile: TileData = {
+                gridPos: pos,
+                blockId: 'web3:empty_land', // 行走路径默认显示为空地/路面
+                typeId: Web3TileType.EMPTY_LAND,
+                isRoad: true,
+                trafficHotness: 0
+            };
+            tiles.push(tile);
         }
 
         return tiles;
@@ -190,28 +216,20 @@ export class MapGenerator {
     /**
      * 放置特殊地块
      */
-    private placeSpecialTiles(roadNetwork: any, properties: any[]): SpecialTileData[] {
+    private placeSpecialTiles(roadNetwork: any, _properties: any[]): SpecialTileData[] {
         const specialTiles: SpecialTileData[] = [];
-        const occupiedSet = new Set<string>();
 
-        // 标记道路和地产占用的位置
-        for (const road of roadNetwork.roads) {
-            occupiedSet.add(CoordUtils.posToKey(road));
-        }
-        for (const property of properties) {
-            for (let dx = 0; dx < property.size; dx++) {
-                for (let dy = 0; dy < property.size; dy++) {
-                    const pos = new Vec2(property.gridPos.x + dx, property.gridPos.y + dy);
-                    occupiedSet.add(CoordUtils.posToKey(pos));
-                }
-            }
-        }
+        // 将特殊地块直接放置在行走路径上（大富翁风格）
+        const roadPositions: Vec2[] = roadNetwork.roads as Vec2[];
 
-        // 计算目标特殊地块数量
-        const totalTiles = this.params.mapWidth * this.params.mapHeight;
-        const targetSpecialCount = Math.floor(totalTiles * this.params.specialTileRatio);
+        // 目标数量：按路径长度的比例计算
+        const totalPath = roadPositions.length;
+        const targetSpecialCount = Math.min(
+            Math.max(2, Math.floor(totalPath * this.params.specialTileRatio)),
+            totalPath
+        );
 
-        // 特殊地块类型映射
+        // 可用的特殊类型
         const specialTypeMap: { [key: string]: number } = {
             'web3:bonus': Web3TileType.BONUS,
             'web3:hospital': Web3TileType.HOSPITAL,
@@ -220,53 +238,41 @@ export class MapGenerator {
             'web3:fee': Web3TileType.FEE,
             'web3:news': Web3TileType.NEWS
         };
-
-        // 找到所有可放置位置（邻近道路的空地）
-        const availablePositions: Vec2[] = [];
-        for (let x = 0; x < this.params.mapWidth; x++) {
-            for (let y = 0; y < this.params.mapHeight; y++) {
-                const pos = new Vec2(x, y);
-                const key = CoordUtils.posToKey(pos);
-
-                if (occupiedSet.has(key)) continue;
-
-                // 检查是否邻近道路
-                const neighbors = CoordUtils.getNeighbors(pos);
-                const hasRoadNeighbor = neighbors.some(n =>
-                    roadNetwork.roads.some((r: Vec2) => r.equals(n))
-                );
-
-                if (hasRoadNeighbor) {
-                    availablePositions.push(pos);
-                }
-            }
-        }
-
-        // 随机打乱位置
-        for (let i = availablePositions.length - 1; i > 0; i--) {
-            const j = Math.floor(this.random() * (i + 1));
-            [availablePositions[i], availablePositions[j]] = [availablePositions[j], availablePositions[i]];
-        }
-
-        // 放置特殊地块
         const specialTypes = this.params.specialTileTypes.filter(t => t in specialTypeMap);
-        let placedCount = 0;
+        if (specialTypes.length === 0) return specialTiles;
 
-        for (const pos of availablePositions) {
-            if (placedCount >= targetSpecialCount) break;
+        // 打乱路径上的候选点，避免集中
+        const candidates = [...roadPositions];
+        for (let i = candidates.length - 1; i > 0; i--) {
+            const j = Math.floor(this.random() * (i + 1));
+            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
 
-            // 随机选择特殊地块类型
+        // 简单的最小间隔规则：避免相邻格就放特殊格
+        const chosen = new Set<string>();
+        const minNeighborGap = 2;
+
+        const isFarEnough = (pos: Vec2): boolean => {
+            for (const cKey of chosen.values()) {
+                const cPos = CoordUtils.keyToPos(cKey);
+                if (CoordUtils.manhattanDistance(pos, cPos) < minNeighborGap) return false;
+            }
+            return true;
+        };
+
+        for (const pos of candidates) {
+            if (specialTiles.length >= targetSpecialCount) break;
+            if (!isFarEnough(pos)) continue;
+
             const typeIndex = Math.floor(this.random() * specialTypes.length);
             const blockId = specialTypes[typeIndex];
 
             specialTiles.push({
                 gridPos: pos,
-                blockId: blockId,
+                blockId,
                 typeId: specialTypeMap[blockId]
             });
-
-            occupiedSet.add(CoordUtils.posToKey(pos));
-            placedCount++;
+            chosen.add(CoordUtils.posToKey(pos));
         }
 
         return specialTiles;

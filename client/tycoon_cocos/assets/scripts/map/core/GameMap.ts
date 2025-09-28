@@ -1132,9 +1132,9 @@ export class GameMap extends Component {
         // 清空现有地图
         this.clearMap();
 
-        // 加载地块
+        // 加载地块（包括 empty_land，作为可行走路径）
         for (const tile of generatedMap.tiles) {
-            if (tile.blockId && tile.blockId !== 'web3:empty_land') {
+            if (tile.blockId) {
                 await this.placeTileAt(tile.blockId, tile.gridPos);
             }
         }

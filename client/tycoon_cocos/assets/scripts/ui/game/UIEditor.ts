@@ -4,7 +4,9 @@ import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
 import { UIMapElement } from "./UIMapElement";
 import * as fgui from "fairygui-cc";
-import { _decorator } from 'cc';
+import { _decorator, find } from 'cc';
+import { GameMap } from "../../map/core/GameMap";
+import { MapGenerationMode } from "../../map/generator/MapGeneratorTypes";
 
 const { ccclass } = _decorator;
 
@@ -19,7 +21,16 @@ export class UIEditor extends UIBase {
     
     /** 清除所有地块按钮 */
     private m_btn_clearAll: fgui.GButton;
-    
+
+    /** 生成地图按钮 */
+    private m_btn_generateMap: fgui.GButton;
+
+    /** 生成Classic地图按钮 */
+    private m_btn_generateClassic: fgui.GButton;
+
+    /** 生成Brawl地图按钮 */
+    private m_btn_generateBrawl: fgui.GButton;
+
     /** 当前选中的tile显示 */
     private m_tile: fgui.GComponent;
     
@@ -46,10 +57,20 @@ export class UIEditor extends UIBase {
     private _setupComponents(): void {
         // 获取地图元素按钮
         this.m_btn_mapElement = this.getChild('btn_mapElement') as fgui.GButton;
-        
+
         // 获取清除所有地块按钮
         this.m_btn_clearAll = this.getChild('btn_clearAll') as fgui.GButton;
-        
+
+        // 尝试获取生成地图相关按钮（如果UI中有的话）
+        this.m_btn_generateMap = this.getChild('btn_generateMap') as fgui.GButton;
+        this.m_btn_generateClassic = this.getChild('btn_generateClassic') as fgui.GButton;
+        this.m_btn_generateBrawl = this.getChild('btn_generateBrawl') as fgui.GButton;
+
+        // 如果没有专门的按钮，可以创建临时的测试按钮
+        if (!this.m_btn_generateMap && !this.m_btn_generateClassic && !this.m_btn_generateBrawl) {
+            console.log('[UIEditor] 生成地图按钮未找到，使用键盘快捷键：G-生成Classic地图，B-生成Brawl地图');
+        }
+
         // 获取tile组件及其子组件
         this.m_tile = this.getChild('tile').asCom;
         if (this.m_tile) {
@@ -78,19 +99,33 @@ export class UIEditor extends UIBase {
         if (this.m_btn_mapElement) {
             this.m_btn_mapElement.onClick(this._onMapElementClick, this);
         }
-        
+
         // 绑定清除所有地块按钮点击事件
         if (this.m_btn_clearAll) {
             this.m_btn_clearAll.onClick(this._onClearAllClick, this);
         }
-        
+
+        // 绑定生成地图按钮点击事件
+        if (this.m_btn_generateMap) {
+            this.m_btn_generateMap.onClick(this._onGenerateMapClick, this);
+        }
+        if (this.m_btn_generateClassic) {
+            this.m_btn_generateClassic.onClick(this._onGenerateClassicClick, this);
+        }
+        if (this.m_btn_generateBrawl) {
+            this.m_btn_generateBrawl.onClick(this._onGenerateBrawlClick, this);
+        }
+
         // 绑定tile点击事件
         if (this.m_tile) {
             this.m_tile.onClick(this._onTileClick, this);
         }
-        
+
         // 监听地图元素选中事件
         EventBus.on(EventTypes.UI.MapElementSelected, this._onMapElementSelected, this);
+
+        // 添加键盘快捷键支持
+        this._setupKeyboardShortcuts();
     }
     
     /**
@@ -260,23 +295,102 @@ export class UIEditor extends UIBase {
      */
     private _onClearAllClick(): void {
         console.log("[UIEditor] Clear all button clicked");
-        
+
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
                 // 调用GameMap的清除所有地块方法
                 mapInfo.component.clearAllPlacedBlocks();
-                
+
                 // 清除当前选中的地块
                 this.clearSelectedBlock();
-                
+
                 // 发送清除完成事件
                 EventBus.emit(EventTypes.Map.AllBlocksCleared);
-                
+
                 console.log("[UIEditor] All blocks cleared");
             }
         }
     }
-    
+
+    /**
+     * 生成地图按钮点击事件（通用）
+     */
+    private _onGenerateMapClick(): void {
+        console.log("[UIEditor] Generate map button clicked");
+        this._generateMap(MapGenerationMode.CLASSIC);
+    }
+
+    /**
+     * 生成Classic地图按钮点击事件
+     */
+    private _onGenerateClassicClick(): void {
+        console.log("[UIEditor] Generate Classic map button clicked");
+        this._generateMap(MapGenerationMode.CLASSIC);
+    }
+
+    /**
+     * 生成Brawl地图按钮点击事件
+     */
+    private _onGenerateBrawlClick(): void {
+        console.log("[UIEditor] Generate Brawl map button clicked");
+        this._generateMap(MapGenerationMode.BRAWL);
+    }
+
+    /**
+     * 生成地图
+     * @param mode 生成模式
+     */
+    private async _generateMap(mode: MapGenerationMode): Promise<void> {
+        console.log(`[UIEditor] Generating ${mode} map...`);
+
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                const gameMap = mapInfo.component;
+
+                // 生成地图
+                try {
+                    await gameMap.generateNewMap(mode, {
+                        seed: Date.now(),
+                        trafficSimulationRounds: 500  // 减少模拟轮数以加快生成速度
+                    });
+                    console.log(`[UIEditor] ${mode} map generated successfully`);
+                } catch (error) {
+                    console.error('[UIEditor] Failed to generate map:', error);
+                }
+            }
+        }
+    }
+
+    /**
+     * 设置键盘快捷键
+     */
+    private _setupKeyboardShortcuts(): void {
+        // 监听键盘事件
+        document.addEventListener('keydown', (event) => {
+            // 只在编辑模式下响应
+            if (!MapManager.getInstance()?.getCurrentMapEditMode()) {
+                return;
+            }
+
+            switch(event.key.toLowerCase()) {
+                case 'g':
+                    // G键 - 生成Classic地图
+                    if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                        this._generateMap(MapGenerationMode.CLASSIC);
+                    }
+                    break;
+                case 'b':
+                    // B键 - 生成Brawl地图
+                    if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                        this._generateMap(MapGenerationMode.BRAWL);
+                    }
+                    break;
+            }
+        });
+    }
+
 }

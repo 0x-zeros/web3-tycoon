@@ -25,6 +25,8 @@ import { sys } from 'cc';
 import { PaperActorFactory } from '../../role/PaperActorFactory';
 import { PaperActor } from '../../role/PaperActor';
 import { ActorConfigManager } from '../../role/ActorConfig';
+import { MapGenerator } from '../generator/MapGenerator';
+import { MapGenerationResult, MapGenerationMode } from '../generator/MapGeneratorTypes';
 
 // Property信息接口
 interface PropertyInfo {
@@ -1193,6 +1195,65 @@ export class GameMap extends Component {
      */
     public get currentMapId(): string {
         return this.mapId;
+    }
+
+    // ========================= 地图生成器集成 =========================
+
+    /**
+     * 加载生成的地图数据
+     * @param generatedMap 生成的地图数据
+     */
+    public async loadGeneratedMap(generatedMap: MapGenerationResult): Promise<void> {
+        console.log('[GameMap] Loading generated map...');
+        console.log(`[GameMap] Map size: ${generatedMap.width}x${generatedMap.height}`);
+        console.log(`[GameMap] Mode: ${generatedMap.mode}`);
+        console.log(`[GameMap] Seed: ${generatedMap.seed}`);
+
+        // 清空现有地图
+        this.clearMap();
+
+        // 加载地块
+        for (const tile of generatedMap.tiles) {
+            if (tile.blockId && tile.blockId !== 'web3:empty_land') {
+                await this.placeTileAt(tile.blockId, tile.gridPos);
+            }
+        }
+
+        // 加载地产
+        for (const property of generatedMap.properties) {
+            await this.placePropertyAt(property.blockId, property.gridPos, property.size);
+        }
+
+        // 加载特殊地块
+        for (const specialTile of generatedMap.specialTiles) {
+            await this.placeTileAt(specialTile.blockId, specialTile.gridPos);
+        }
+
+        console.log('[GameMap] Generated map loaded successfully');
+        console.log(`[GameMap] Statistics:`, generatedMap.statistics);
+    }
+
+    /**
+     * 生成新地图
+     * @param mode 生成模式
+     * @param params 生成参数
+     */
+    public async generateNewMap(mode: MapGenerationMode = MapGenerationMode.CLASSIC, params?: any): Promise<void> {
+        console.log(`[GameMap] Generating new ${mode} map...`);
+
+        // 创建地图生成器
+        const generator = new MapGenerator({
+            mode,
+            mapWidth: 40,
+            mapHeight: 40,
+            ...params
+        });
+
+        // 生成地图
+        const generatedMap = await generator.generateMap();
+
+        // 加载生成的地图
+        await this.loadGeneratedMap(generatedMap);
     }
 
     // ========================= Property相关方法 =========================

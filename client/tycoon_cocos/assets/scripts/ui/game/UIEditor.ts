@@ -347,10 +347,6 @@ export class UIEditor extends UIBase {
     /**
      * 生成Brawl地图按钮点击事件
      */
-    private _onGenerateBrawlClick(): void {
-        console.log("[UIEditor] Generate Brawl map button clicked");
-        this._generateMap(MapGenerationMode.BRAWL);
-    }
 
     /**
      * 生成地图
@@ -386,7 +382,7 @@ export class UIEditor extends UIBase {
         // 使用Cocos的输入系统监听键盘事件
         input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
 
-        console.log('[UIEditor] Keyboard shortcuts setup: G - Classic map, B - Brawl map');
+        console.log('[UIEditor] Keyboard shortcuts setup: G - Generate new Classic map');
     }
 
     /**
@@ -403,11 +399,6 @@ export class UIEditor extends UIBase {
                 // G键 - 生成Classic地图
                 console.log('[UIEditor] Key G pressed - generating Classic map');
                 this._generateMap(MapGenerationMode.CLASSIC);
-                break;
-            case KeyCode.KEY_B:
-                // B键 - 生成Brawl地图
-                console.log('[UIEditor] Key B pressed - generating Brawl map');
-                this._generateMap(MapGenerationMode.BRAWL);
                 break;
         }
     }

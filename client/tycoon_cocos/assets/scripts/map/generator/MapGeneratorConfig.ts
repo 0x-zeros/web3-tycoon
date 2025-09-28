@@ -12,7 +12,6 @@ import {
     MapGeneratorParams,
     MapGenerationMode,
     CLASSIC_MODE_PARAMS,
-    BRAWL_MODE_PARAMS,
     DEFAULT_GENERATOR_PARAMS
 } from './MapGeneratorTypes';
 
@@ -36,11 +35,8 @@ export class MapGeneratorConfig {
      */
     private applyParams(params: Partial<MapGeneratorParams>): void {
         // 根据模式应用预设
-        if (params.mode) {
-            const presets = params.mode === MapGenerationMode.CLASSIC
-                ? CLASSIC_MODE_PARAMS
-                : BRAWL_MODE_PARAMS;
-            Object.assign(this.params, presets);
+        if (params.mode === MapGenerationMode.CLASSIC) {
+            Object.assign(this.params, CLASSIC_MODE_PARAMS);
         }
 
         // 应用自定义参数
@@ -133,7 +129,7 @@ export class MapGeneratorConfig {
     /**
      * 获取预设配置
      */
-    static getPresetConfig(preset: 'small' | 'medium' | 'large' | 'classic' | 'brawl'): MapGeneratorConfig {
+    static getPresetConfig(preset: 'small' | 'medium' | 'large' | 'classic'): MapGeneratorConfig {
         switch (preset) {
             case 'small':
                 return new MapGeneratorConfig({
@@ -162,13 +158,6 @@ export class MapGeneratorConfig {
             case 'classic':
                 return new MapGeneratorConfig({
                     mode: MapGenerationMode.CLASSIC,
-                    mapWidth: 40,
-                    mapHeight: 40
-                });
-
-            case 'brawl':
-                return new MapGeneratorConfig({
-                    mode: MapGenerationMode.BRAWL,
                     mapWidth: 40,
                     mapHeight: 40
                 });

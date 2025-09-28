@@ -121,8 +121,8 @@ export class TemplateBuilder {
 
   // ====== Anti-parallelization ======
   private breakLongParallels(rings: BuiltRing[], roadSet: Set<string>) {
-    const minLen = 7; // 连续长度阈值
-    const bumpLen = () => this.randInt(2, 3);
+    const minLen = 5; // 连续长度阈值，降低到5以处理更多情况
+    const bumpLen = () => this.randInt(2, 4); // 增加bump长度的随机性
 
     const segments = (r: BuiltRing) => this.segmentize(r.path);
     const segsByRing = rings.map(r => segments(r));
@@ -134,32 +134,40 @@ export class TemplateBuilder {
     const outerSegs = segsByRing[outerIdx];
     const innerSegs = segsByRing[innerIdx];
 
-    // 检测水平/垂直平行且间距=1（即中心距2格）
+    // 检测水平/垂直平行且间距<=2（即中心距<=3格）
     for (const a of outerSegs) {
       for (const b of innerSegs) {
         // 水平
         if (a.dir.y === 0 && b.dir.y === 0) {
-          const dy = b.pts[0].y - a.pts[0].y; // 可能不等，但若平行应近似常数
-          if (Math.abs(dy) === 2) {
+          const dy = b.pts[0].y - a.pts[0].y;
+          const absDy = Math.abs(dy);
+          // 间距1或2都需要处理（中心距2或3）
+          if (absDy === 2 || absDy === 3) {
             const ov = this.overlapRange(a.pts.map(p => p.x), b.pts.map(p => p.x));
             if (ov && ov.len >= minLen) {
               const midX = ov.start + Math.floor(ov.len / 2);
               const base = new Vec2(midX, b.pts[0].y);
               const away = dy > 0 ? 1 : -1; // 朝远离outer方向
-              this.applyBump(roadSet, base, new Vec2(1, 0), new Vec2(0, away), bumpLen());
+              // 对于间距1（中心距2）的情况，需要更大的调整
+              const extraBump = absDy === 2 ? 1 : 0;
+              this.applyBump(roadSet, base, new Vec2(1, 0), new Vec2(0, away), bumpLen() + extraBump);
             }
           }
         }
         // 垂直
         if (a.dir.x === 0 && b.dir.x === 0) {
           const dx = b.pts[0].x - a.pts[0].x;
-          if (Math.abs(dx) === 2) {
+          const absDx = Math.abs(dx);
+          // 间距1或2都需要处理（中心距2或3）
+          if (absDx === 2 || absDx === 3) {
             const ov = this.overlapRange(a.pts.map(p => p.y), b.pts.map(p => p.y));
             if (ov && ov.len >= minLen) {
               const midY = ov.start + Math.floor(ov.len / 2);
               const base = new Vec2(b.pts[0].x, midY);
               const away = dx > 0 ? 1 : -1;
-              this.applyBump(roadSet, base, new Vec2(0, 1), new Vec2(away, 0), bumpLen());
+              // 对于间距1（中心距2）的情况，需要更大的调整
+              const extraBump = absDx === 2 ? 1 : 0;
+              this.applyBump(roadSet, base, new Vec2(0, 1), new Vec2(away, 0), bumpLen() + extraBump);
             }
           }
         }

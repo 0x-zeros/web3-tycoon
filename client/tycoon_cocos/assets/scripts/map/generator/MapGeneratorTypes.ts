@@ -13,8 +13,7 @@ import { Vec2 } from 'cc';
  * 地图生成模式
  */
 export enum MapGenerationMode {
-    CLASSIC = 'classic',  // 经典模式：环形主干道 + 放射状支路
-    BRAWL = 'brawl'      // 大乱斗模式：随机道路网络
+    CLASSIC = 'classic'  // 经典模式：环形主干道 + 放射状支路
 }
 
 /**
@@ -172,16 +171,6 @@ export const CLASSIC_MODE_PARAMS: Partial<MapGeneratorParams> = {
     minPropertySpacing: 2
 };
 
-/**
- * Brawl模式参数
- */
-export const BRAWL_MODE_PARAMS: Partial<MapGeneratorParams> = {
-    mode: MapGenerationMode.BRAWL,
-    roadDensity: 0.15,
-    propertyRatio: 0.25,
-    property2x2Ratio: 0.1,
-    minPropertySpacing: 1
-};
 
 /**
  * 坐标转换工具

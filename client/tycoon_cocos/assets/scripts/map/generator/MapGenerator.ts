@@ -16,15 +16,12 @@ import {
     CoordUtils
 } from './MapGeneratorTypes';
 import { MapGeneratorConfig } from './MapGeneratorConfig';
-import { RoadNetwork } from './RoadNetwork';
-import { PropertyPlacer } from './PropertyPlacer';
 import { TrafficAnalyzer } from './TrafficAnalyzer';
 import { StreetSegmenter } from './StreetSegmenter';
 import { Web3TileType } from '../../voxel/Web3BlockTypes';
 import { getDefaultClassicTemplate } from './templates/TemplateLibrary';
 import { TemplateBuilder } from './templates/TemplateBuilder';
 import { RuleBasedPropertyPlacer } from './templates/RuleBasedPropertyPlacer';
-import { MapGenerationMode } from './MapGeneratorTypes';
 
 /**
  * 地图生成器
@@ -67,66 +64,58 @@ export class MapGenerator {
         console.log('[MapGenerator] 开始生成地图...');
         console.log(this.config.getDebugInfo());
 
-        // 1. 生成道路网络（Classic 走模板，Brawl 走旧随机）
+        // 1. 生成道路网络（使用模板系统）
         console.log('[MapGenerator] 生成道路网络...');
-        let roadNetwork: any;
-        let templateBuilt: any = null;
-        if (this.params.mode === MapGenerationMode.CLASSIC) {
-            const builder = new TemplateBuilder(this.params.mapWidth, this.params.mapHeight, this.random);
-            templateBuilt = builder.build(getDefaultClassicTemplate());
 
-            // 将模板构建结果转为 RoadNetworkData（重用已有分析流程）
-            const connectivity = new Map<string, Vec2[]>();
-            const roadSet = new Set(templateBuilt.roads.map((r: Vec2) => CoordUtils.posToKey(r)));
-            for (const p of templateBuilt.roads as Vec2[]) {
-                const neigh = CoordUtils.getNeighbors(p).filter(n => roadSet.has(CoordUtils.posToKey(n)));
-                connectivity.set(CoordUtils.posToKey(p), neigh);
-            }
-            const intersections: Vec2[] = [];
-            for (const [key, neigh] of connectivity.entries()) if (neigh.length >= 3) intersections.push(CoordUtils.keyToPos(key));
-            roadNetwork = {
-                roads: templateBuilt.roads,
-                mainRoads: templateBuilt.roads, // 简化：全部视作主路
-                sideRoads: [],
-                intersections,
-                connectivity
-            };
-        } else {
-            roadNetwork = new RoadNetwork(this.params).generate();
+        const builder = new TemplateBuilder(this.params.mapWidth, this.params.mapHeight, this.random);
+        // 使用 MapGenerator 的 random 函数来选择模板
+        const templateIndex = Math.floor(this.random() * 5);
+        const selectedTemplate = getDefaultClassicTemplate(templateIndex);
+        console.log(`[MapGenerator] 使用模板: ${selectedTemplate.id}`);
+        const templateBuilt = builder.build(selectedTemplate);
+
+        // 将模板构建结果转为 RoadNetworkData（重用已有分析流程）
+        const connectivity = new Map<string, Vec2[]>();
+        const roadSet = new Set(templateBuilt.roads.map((r: Vec2) => CoordUtils.posToKey(r)));
+        for (const p of templateBuilt.roads as Vec2[]) {
+            const neigh = CoordUtils.getNeighbors(p).filter(n => roadSet.has(CoordUtils.posToKey(n)));
+            connectivity.set(CoordUtils.posToKey(p), neigh);
         }
+        const intersections: Vec2[] = [];
+        for (const [key, neigh] of connectivity.entries()) if (neigh.length >= 3) intersections.push(CoordUtils.keyToPos(key));
+        const roadNetwork = {
+            roads: templateBuilt.roads,
+            mainRoads: templateBuilt.roads, // 简化：全部视作主路
+            sideRoads: [],
+            intersections,
+            connectivity
+        };
         console.log(`[MapGenerator] 生成了 ${roadNetwork.roads.length} 个道路地块`);
 
-        // 2. 放置地产（Classic 使用规则包，否则用旧版）
+        // 2. 放置地产（使用规则系统）
         console.log('[MapGenerator] 放置地产...');
-        let properties: any[] = [];
-        let legacyPlacer: PropertyPlacer | null = null;
-        if (this.params.mode === MapGenerationMode.CLASSIC && templateBuilt) {
-            const quotas = getDefaultClassicTemplate().quotas || {};
-            const bigCfg = quotas.big2x2 || { count: [3, 5], minStraight: 7, minSpacing: 6 };
-            const stride = (quotas.smallLand?.stride as [number, number]) || [2, 3];
-            const bigCount = Math.max(3, Math.min(8, this.randomCount(bigCfg.count || [3, 5])));
-            const placer = new RuleBasedPropertyPlacer(this.random, roadNetwork.roads);
-            const outerRing = templateBuilt.rings.find((r: any) => r.kind === 'outer');
-            const ringLen = outerRing ? outerRing.path.length : this.params.mapWidth + this.params.mapHeight;
-            const smallRatio = quotas.smallLand?.ratio as [number, number] | undefined;
-            // 估计一个目标下限：环长的 ~30%（结合 stride≈2.5 的经验密度）或配置下限的0.5倍
-            const targetMin = Math.max(
-                Math.floor(ringLen * 0.30),
-                smallRatio ? Math.floor(ringLen * smallRatio[0] * 0.5) : 0
-            );
-            properties = placer.place(templateBuilt.rings, {
-                mapWidth: this.params.mapWidth,
-                mapHeight: this.params.mapHeight,
-                stride,
-                minStraight: bigCfg.minStraight || 7,
-                big2x2Count: bigCount,
-                minBigSpacing: bigCfg.minSpacing || 6,
-                smallTargetMin: targetMin
-            });
-        } else {
-            legacyPlacer = new PropertyPlacer(this.params);
-            properties = legacyPlacer.placeProperties(roadNetwork);
-        }
+        const quotas = selectedTemplate.quotas || {};
+        const bigCfg = quotas.big2x2 || { count: [3, 5], minStraight: 7, minSpacing: 6 };
+        const stride = (quotas.smallLand?.stride as [number, number]) || [2, 3];
+        const bigCount = Math.max(3, Math.min(8, this.randomCount(bigCfg.count || [3, 5])));
+        const placer = new RuleBasedPropertyPlacer(this.random, roadNetwork.roads);
+        const outerRing = templateBuilt.rings.find((r: any) => r.kind === 'outer');
+        const ringLen = outerRing ? outerRing.path.length : this.params.mapWidth + this.params.mapHeight;
+        const smallRatio = quotas.smallLand?.ratio as [number, number] | undefined;
+        // 估计一个目标下限：环长的 ~30%（结合 stride≈2.5 的经验密度）或配置下限的0.5倍
+        const targetMin = Math.max(
+            Math.floor(ringLen * 0.30),
+            smallRatio ? Math.floor(ringLen * smallRatio[0] * 0.5) : 0
+        );
+        const properties = placer.place(templateBuilt.rings, {
+            mapWidth: this.params.mapWidth,
+            mapHeight: this.params.mapHeight,
+            stride,
+            minStraight: bigCfg.minStraight || 7,
+            big2x2Count: bigCount,
+            minBigSpacing: bigCfg.minSpacing || 6,
+            smallTargetMin: targetMin
+        });
         console.log(`[MapGenerator] 放置了 ${properties.length} 个地产`);
 
         // 3. 交通分析
@@ -135,11 +124,7 @@ export class MapGenerator {
         const trafficAnalysis = trafficAnalyzer.analyze(roadNetwork);
 
         // 更新地产价格系数
-        if (this.params.mode === MapGenerationMode.CLASSIC && properties) {
-            this.updatePropertyCoefficients(properties, trafficAnalysis.hotnessMap);
-        } else {
-            legacyPlacer?.updatePriceCoefficients(trafficAnalysis.hotnessMap);
-        }
+        this.updatePropertyCoefficients(properties, trafficAnalysis.hotnessMap);
         console.log(`[MapGenerator] 识别了 ${trafficAnalysis.hotSpots.length} 个热点区域`);
 
         // 4. 街区分割
@@ -331,7 +316,7 @@ export class MapGenerator {
     /**
      * 获取预设配置生成器
      */
-    static createWithPreset(preset: 'small' | 'medium' | 'large' | 'classic' | 'brawl'): MapGenerator {
+    static createWithPreset(preset: 'small' | 'medium' | 'large' | 'classic'): MapGenerator {
         const config = MapGeneratorConfig.getPresetConfig(preset);
         return new MapGenerator(config);
     }

@@ -1120,7 +1120,7 @@ export class GameMap extends Component {
     // ========================= 地图生成器集成 =========================
 
     /**
-     * 加载生成的地图数据
+     * 加载生成的地图数据（兼容旧版本）
      * @param generatedMap 生成的地图数据
      */
     public async loadGeneratedMap(generatedMap: MapGenerationResult): Promise<void> {
@@ -1154,7 +1154,7 @@ export class GameMap extends Component {
     }
 
     /**
-     * 生成新地图
+     * 生成新地图（保留兼容性）
      * @param mode 生成模式
      * @param params 生成参数
      */
@@ -1172,8 +1172,80 @@ export class GameMap extends Component {
         // 生成地图
         const generatedMap = await generator.generateMap();
 
-        // 加载生成的地图
-        await this.loadGeneratedMap(generatedMap);
+        // 应用生成的地图
+        await this.applyGeneratedMap(generatedMap);
+    }
+
+    /**
+     * 应用生成的地图数据（新版本）
+     * @param result 生成的地图结果
+     */
+    public async applyGeneratedMap(result: MapGenerationResult): Promise<void> {
+        console.log('[GameMap] Applying generated map (v2.0)...');
+        console.log(`[GameMap] Tiles: ${result.tiles.length}`);
+        console.log(`[GameMap] Special tiles: ${result.specialTiles.length}`);
+        console.log(`[GameMap] Start position:`, result.startPosition);
+
+        // 清空现有地图
+        this.clearMap();
+
+        // 加载所有tiles
+        for (const tile of result.tiles) {
+            const gridPos = new Vec2(tile.x, tile.y);
+
+            // 根据类型确定blockId
+            let blockId = '';
+            switch(tile.type) {
+                case 0: // Empty
+                    blockId = 'web3:empty_land';
+                    break;
+                case 1: // Property
+                    blockId = tile.group >= 0 ? `web3:property_${tile.group % 8}` : 'web3:property_0';
+                    break;
+                case 2: // Start
+                    blockId = 'web3:start';
+                    break;
+                case 3: // Hospital
+                    blockId = 'web3:hospital';
+                    break;
+                case 4: // Shop
+                    blockId = 'web3:shop';
+                    break;
+                case 5: // Bank
+                    blockId = 'web3:bank';
+                    break;
+                case 6: // Chance
+                    blockId = 'web3:chance';
+                    break;
+                case 7: // News
+                    blockId = 'web3:news';
+                    break;
+                case 8: // Bonus
+                    blockId = 'web3:bonus';
+                    break;
+                case 9: // Tax
+                    blockId = 'web3:tax';
+                    break;
+                case 10: // Card
+                    blockId = 'web3:card';
+                    break;
+                default:
+                    blockId = 'web3:empty_land';
+            }
+
+            // 放置tile
+            if (blockId) {
+                await this.placeTileAt(blockId, gridPos);
+            }
+        }
+
+        // 设置起始位置
+        if (result.startPosition) {
+            this._startPosition = result.startPosition.clone();
+            console.log(`[GameMap] Start position set to (${this._startPosition.x}, ${this._startPosition.y})`);
+        }
+
+        console.log('[GameMap] Generated map applied successfully');
     }
 
     // ========================= Property相关方法 =========================

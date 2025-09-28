@@ -1,10 +1,12 @@
 /**
- * 地图生成器主类
+ * 地图生成器主类 - 基于3阶段生成系统
  *
- * 协调各个子系统，生成完整的Web3大富翁地图
+ * Phase 1: 路径生成 (PathGenerator)
+ * Phase 2: 地产放置 (PropertyPlacer)
+ * Phase 3: 特殊格子 (SpecialTilePlacer)
  *
  * @author Web3 Tycoon Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import { Vec2 } from 'cc';
@@ -12,16 +14,23 @@ import {
     MapGeneratorParams,
     MapGenerationResult,
     TileData,
-    SpecialTileData,
     CoordUtils
 } from './MapGeneratorTypes';
 import { MapGeneratorConfig } from './MapGeneratorConfig';
-import { TrafficAnalyzer } from './TrafficAnalyzer';
-import { StreetSegmenter } from './StreetSegmenter';
 import { Web3TileType } from '../../voxel/Web3BlockTypes';
-import { getDefaultClassicTemplate } from './templates/TemplateLibrary';
-import { TemplateBuilder } from './templates/TemplateBuilder';
-import { RuleBasedPropertyPlacer } from './templates/RuleBasedPropertyPlacer';
+
+// 新的生成器
+import { PathGenerator, PathGenerationResult } from './PathGenerator';
+import { PropertyPlacer, PropertyPlacementResult, PropertyData } from './PropertyPlacer';
+import { SpecialTilePlacer, SpecialTilePlacementResult } from './SpecialTilePlacer';
+
+// 模板系统
+import {
+    MapTemplateSpec,
+    getTemplateById,
+    getRandomTemplate,
+    MONOPOLY_TEMPLATES
+} from './templates/TemplateLibrary';
 
 /**
  * 地图生成器
@@ -31,6 +40,11 @@ export class MapGenerator {
     private params: MapGeneratorParams;
     private random: () => number;
 
+    // 3阶段生成器
+    private pathGenerator: PathGenerator;
+    private propertyPlacer: PropertyPlacer;
+    private specialTilePlacer: SpecialTilePlacer;
+
     constructor(config?: MapGeneratorConfig | Partial<MapGeneratorParams>) {
         if (config instanceof MapGeneratorConfig) {
             this.config = config;
@@ -39,6 +53,25 @@ export class MapGenerator {
         }
         this.params = this.config.getParams();
         this.random = this.createRandomGenerator(this.params.seed);
+
+        // 初始化生成器
+        this.pathGenerator = new PathGenerator(
+            this.params.mapWidth,
+            this.params.mapHeight,
+            this.random
+        );
+
+        this.propertyPlacer = new PropertyPlacer(
+            this.params.mapWidth,
+            this.params.mapHeight,
+            this.random
+        );
+
+        this.specialTilePlacer = new SpecialTilePlacer(
+            this.params.mapWidth,
+            this.params.mapHeight,
+            this.random
+        );
     }
 
     /**
@@ -61,263 +94,322 @@ export class MapGenerator {
      * 生成地图
      */
     async generateMap(): Promise<MapGenerationResult> {
-        console.log('[MapGenerator] 开始生成地图...');
+        console.log('[MapGenerator] 开始生成地图 (v2.0 - 3阶段系统)...');
         console.log(this.config.getDebugInfo());
 
-        // 1. 生成道路网络（使用模板系统）
-        console.log('[MapGenerator] 生成道路网络...');
+        // 选择或获取模板
+        const template = this.selectTemplate();
+        console.log(`[MapGenerator] 使用模板: ${template.name} (${template.id})`);
 
-        const builder = new TemplateBuilder(this.params.mapWidth, this.params.mapHeight, this.random);
-        // 使用 MapGenerator 的 random 函数来选择模板
-        const templateIndex = Math.floor(this.random() * 5);
-        const selectedTemplate = getDefaultClassicTemplate(templateIndex);
-        console.log(`[MapGenerator] 使用模板: ${selectedTemplate.id}`);
-        const templateBuilt = builder.build(selectedTemplate);
+        // ==================== Phase 1: 路径生成 ====================
+        console.log('[MapGenerator] Phase 1: 生成路径网络...');
+        const pathResult = this.pathGenerator.generateFromTemplate(template);
 
-        // 将模板构建结果转为 RoadNetworkData（重用已有分析流程）
-        const connectivity = new Map<string, Vec2[]>();
-        const roadSet = new Set(templateBuilt.roads.map((r: Vec2) => CoordUtils.posToKey(r)));
-        for (const p of templateBuilt.roads as Vec2[]) {
-            const neigh = CoordUtils.getNeighbors(p).filter(n => roadSet.has(CoordUtils.posToKey(n)));
-            connectivity.set(CoordUtils.posToKey(p), neigh);
+        // 验证路径间距
+        if (!this.pathGenerator.validateSpacing(pathResult.paths, 2)) {
+            console.warn('[MapGenerator] 路径间距验证失败，尝试修复...');
+            // 可以在这里添加修复逻辑
         }
-        const intersections: Vec2[] = [];
-        for (const [key, neigh] of connectivity.entries()) if (neigh.length >= 3) intersections.push(CoordUtils.keyToPos(key));
-        const roadNetwork = {
-            roads: templateBuilt.roads,
-            mainRoads: templateBuilt.roads, // 简化：全部视作主路
-            sideRoads: [],
-            intersections,
-            connectivity
-        };
-        console.log(`[MapGenerator] 生成了 ${roadNetwork.roads.length} 个道路地块`);
 
-        // 2. 放置地产（使用规则系统）
-        console.log('[MapGenerator] 放置地产...');
-        const quotas = selectedTemplate.quotas || {};
-        const bigCfg = quotas.big2x2 || { count: [3, 5], minStraight: 7, minSpacing: 6 };
-        const stride = (quotas.smallLand?.stride as [number, number]) || [2, 3];
-        const bigCount = Math.max(3, Math.min(8, this.randomCount(bigCfg.count || [3, 5])));
-        const placer = new RuleBasedPropertyPlacer(this.random, roadNetwork.roads);
-        const outerRing = templateBuilt.rings.find((r: any) => r.kind === 'outer');
-        const ringLen = outerRing ? outerRing.path.length : this.params.mapWidth + this.params.mapHeight;
-        const smallRatio = quotas.smallLand?.ratio as [number, number] | undefined;
-        // 估计一个目标下限：环长的 ~30%（结合 stride≈2.5 的经验密度）或配置下限的0.5倍
-        const targetMin = Math.max(
-            Math.floor(ringLen * 0.30),
-            smallRatio ? Math.floor(ringLen * smallRatio[0] * 0.5) : 0
+        console.log(`[MapGenerator] 生成了 ${pathResult.paths.length} 个路径格子`);
+        console.log(`[MapGenerator] - 主路径: ${pathResult.mainPath.length} 格`);
+        console.log(`[MapGenerator] - 拐角: ${pathResult.corners.length} 个`);
+        console.log(`[MapGenerator] - 交叉点: ${pathResult.intersections.length} 个`);
+
+        // ==================== Phase 2: 地产放置 ====================
+        console.log('[MapGenerator] Phase 2: 放置地产...');
+        const propertyResult = this.propertyPlacer.placeProperties(
+            pathResult.paths,
+            template,
+            pathResult.corners,
+            pathResult.intersections
         );
-        const properties = placer.place(templateBuilt.rings, {
-            mapWidth: this.params.mapWidth,
-            mapHeight: this.params.mapHeight,
-            stride,
-            minStraight: bigCfg.minStraight || 7,
-            big2x2Count: bigCount,
-            minBigSpacing: bigCfg.minSpacing || 6,
-            smallTargetMin: targetMin
+
+        console.log(`[MapGenerator] 放置了 ${propertyResult.properties.length} 个地产`);
+        console.log(`[MapGenerator] - 地产组: ${propertyResult.propertyGroups.length} 组`);
+        console.log(`[MapGenerator] - 转换tiles: ${propertyResult.convertedTiles.length} 个`);
+
+        // ==================== Phase 3: 特殊格子 ====================
+        console.log('[MapGenerator] Phase 3: 放置特殊格子...');
+
+        // 收集所有已占用的位置
+        const occupiedPositions: Vec2[] = [
+            ...propertyResult.properties.map(p => p.position),
+            ...propertyResult.convertedTiles
+        ];
+
+        // 找出空闲的路径tiles（未被地产占用）
+        const emptyPathTiles = pathResult.paths.filter(path => {
+            const key = CoordUtils.posToKey(path);
+            const isOccupied = occupiedPositions.some(
+                pos => CoordUtils.posToKey(pos) === key
+            );
+            return !isOccupied;
         });
-        console.log(`[MapGenerator] 放置了 ${properties.length} 个地产`);
 
-        // 3. 交通分析
-        console.log('[MapGenerator] 分析交通流量...');
-        const trafficAnalyzer = new TrafficAnalyzer(this.params);
-        const trafficAnalysis = trafficAnalyzer.analyze(roadNetwork);
-
-        // 更新地产价格系数
-        this.updatePropertyCoefficients(properties, trafficAnalysis.hotnessMap);
-        console.log(`[MapGenerator] 识别了 ${trafficAnalysis.hotSpots.length} 个热点区域`);
-
-        // 4. 街区分割
-        console.log('[MapGenerator] 分割街区...');
-        const streetSegmenter = new StreetSegmenter(this.params.mapWidth, this.params.mapHeight);
-        const streets = streetSegmenter.segment(roadNetwork, properties);
-        console.log(`[MapGenerator] 分割为 ${streets.length} 个街区`);
-
-        // 5. 生成地块数据
-        console.log('[MapGenerator] 生成地块数据...');
-        const tiles = this.generateTiles(roadNetwork, properties);
-
-        // 6. 放置特殊地块
-        console.log('[MapGenerator] 放置特殊地块...');
-        const specialTiles = this.placeSpecialTiles(roadNetwork, properties);
-        console.log(`[MapGenerator] 放置了 ${specialTiles.length} 个特殊地块`);
-
-        // 7. 计算统计信息
-        const statistics = this.calculateStatistics(tiles, properties, specialTiles, trafficAnalysis);
-
-        // 构建最终结果
-        const result: MapGenerationResult = {
-            width: this.params.mapWidth,
-            height: this.params.mapHeight,
-            seed: this.params.seed!,
-            mode: this.params.mode,
-            tiles,
-            properties,
-            specialTiles,
-            roadNetwork,
-            streets,
-            trafficAnalysis,
-            statistics
-        };
-
-        console.log('[MapGenerator] 地图生成完成！');
-        this.logStatistics(statistics);
-
-        return result;
-    }
-
-    private updatePropertyCoefficients(properties: any[], hotnessMap: Map<string, number>) {
-        for (const property of properties) {
-            let totalHotness = 0; let count = 0;
-            for (let dx = 0; dx < property.size; dx++) {
-                for (let dy = 0; dy < property.size; dy++) {
-                    const checkPos = new Vec2(property.gridPos.x + dx, property.gridPos.y + dy);
-                    const key = CoordUtils.posToKey(checkPos);
-                    const hot = hotnessMap.get(key) || 0;
-                    totalHotness += hot; count++;
-                }
-            }
-            const avg = count > 0 ? totalHotness / count : 0;
-            property.priceCoefficient = 0.5 + avg * 1.5; // 与旧逻辑保持一致区间
-        }
-    }
-
-    private randomCount(range: [number, number]): number {
-        const [a, b] = range; return Math.floor(this.random() * (b - a + 1)) + a;
-    }
-
-    /**
-     * 生成地块数据
-     * 仅输出可行走路径（道路）上的tile，避免铺满整张地图。
-     */
-    private generateTiles(roadNetwork: any, _properties: any[]): TileData[] {
-        const tiles: TileData[] = [];
-
-        for (const pos of roadNetwork.roads as Vec2[]) {
-            const tile: TileData = {
-                gridPos: pos,
-                blockId: 'web3:empty_land', // 行走路径默认显示为空地/路面
-                typeId: Web3TileType.EMPTY_LAND,
-                isRoad: true,
-                trafficHotness: 0
-            };
-            tiles.push(tile);
-        }
-
-        return tiles;
-    }
-
-    /**
-     * 放置特殊地块
-     */
-    private placeSpecialTiles(roadNetwork: any, _properties: any[]): SpecialTileData[] {
-        const specialTiles: SpecialTileData[] = [];
-
-        // 将特殊地块直接放置在行走路径上（大富翁风格）
-        const roadPositions: Vec2[] = roadNetwork.roads as Vec2[];
-
-        // 目标数量：按路径长度的比例计算
-        const totalPath = roadPositions.length;
-        const targetSpecialCount = Math.min(
-            Math.max(2, Math.floor(totalPath * this.params.specialTileRatio)),
-            totalPath
+        const specialResult = this.specialTilePlacer.placeSpecialTiles(
+            emptyPathTiles,
+            template,
+            occupiedPositions
         );
 
-        // 可用的特殊类型
-        const specialTypeMap: { [key: string]: number } = {
-            'web3:bonus': Web3TileType.BONUS,
-            'web3:hospital': Web3TileType.HOSPITAL,
-            'web3:chance': Web3TileType.CHANCE,
-            'web3:card': Web3TileType.CARD,
-            'web3:fee': Web3TileType.FEE,
-            'web3:news': Web3TileType.NEWS
-        };
-        const specialTypes = this.params.specialTileTypes.filter(t => t in specialTypeMap);
-        if (specialTypes.length === 0) return specialTiles;
+        console.log(`[MapGenerator] 放置了 ${specialResult.totalPlaced} 个特殊格子`);
+        specialResult.distribution.forEach((count, type) => {
+            console.log(`[MapGenerator] - ${type}: ${count} 个`);
+        });
 
-        // 打乱路径上的候选点，避免集中
-        const candidates = [...roadPositions];
-        for (let i = candidates.length - 1; i > 0; i--) {
-            const j = Math.floor(this.random() * (i + 1));
-            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        // 验证分布平衡性
+        if (!this.specialTilePlacer.validateDistribution(specialResult.specialTiles)) {
+            console.warn('[MapGenerator] 特殊格子分布不均衡');
         }
 
-        // 简单的最小间隔规则：避免相邻格就放特殊格
-        const chosen = new Set<string>();
-        const minNeighborGap = 2;
+        // ==================== 生成最终地图数据 ====================
+        console.log('[MapGenerator] 生成最终地图数据...');
+        const mapData = this.generateMapData(
+            pathResult,
+            propertyResult,
+            specialResult,
+            template
+        );
 
-        const isFarEnough = (pos: Vec2): boolean => {
-            for (const cKey of chosen.values()) {
-                const cPos = CoordUtils.keyToPos(cKey);
-                if (CoordUtils.manhattanDistance(pos, cPos) < minNeighborGap) return false;
-            }
-            return true;
-        };
-
-        for (const pos of candidates) {
-            if (specialTiles.length >= targetSpecialCount) break;
-            if (!isFarEnough(pos)) continue;
-
-            const typeIndex = Math.floor(this.random() * specialTypes.length);
-            const blockId = specialTypes[typeIndex];
-
-            specialTiles.push({
-                gridPos: pos,
-                blockId,
-                typeId: specialTypeMap[blockId]
-            });
-            chosen.add(CoordUtils.posToKey(pos));
-        }
-
-        return specialTiles;
-    }
-
-    /**
-     * 计算统计信息
-     */
-    private calculateStatistics(tiles: TileData[], properties: any[], specialTiles: SpecialTileData[], trafficAnalysis: any): any {
-        const property1x1Count = properties.filter((p: any) => p.size === 1).length;
-        const property2x2Count = properties.filter((p: any) => p.size === 2).length;
-
-        // 计算平均交通热度
-        let totalHotness = 0;
-        let hotnessCount = 0;
-        for (const hotness of trafficAnalysis.hotnessMap.values()) {
-            totalHotness += hotness;
-            hotnessCount++;
-        }
+        // 生成统计信息
+        const stats = this.generateStatistics(mapData);
+        console.log('[MapGenerator] 地图生成完成！');
+        console.log(`[MapGenerator] 总tiles: ${mapData.tiles.length}`);
+        console.log(`[MapGenerator] - 空地: ${stats.emptyCount}`);
+        console.log(`[MapGenerator] - 地产: ${stats.propertyCount}`);
+        console.log(`[MapGenerator] - 特殊: ${stats.specialCount}`);
 
         return {
-            totalTiles: tiles.length,
-            roadCount: tiles.filter(t => t.isRoad).length,
-            propertyCount: properties.length,
-            property1x1Count,
-            property2x2Count,
-            specialTileCount: specialTiles.length,
-            averageTrafficHotness: hotnessCount > 0 ? totalHotness / hotnessCount : 0
+            tiles: mapData.tiles,
+            specialTiles: mapData.specialTiles,
+            roads: pathResult.paths,
+            mainRoads: pathResult.mainPath,
+            sideRoads: pathResult.sidePaths.flat(),
+            intersections: pathResult.intersections,
+            startPosition: this.findStartPosition(mapData.tiles),
+            statistics: stats
         };
     }
 
     /**
-     * 输出统计信息
+     * 选择模板
      */
-    private logStatistics(stats: any): void {
-        console.log('========== 地图生成统计 ==========');
-        console.log(`总地块数: ${stats.totalTiles}`);
-        console.log(`道路地块: ${stats.roadCount} (${(stats.roadCount / stats.totalTiles * 100).toFixed(1)}%)`);
-        console.log(`地产总数: ${stats.propertyCount}`);
-        console.log(`  - 1x1地产: ${stats.property1x1Count}`);
-        console.log(`  - 2x2地产: ${stats.property2x2Count}`);
-        console.log(`特殊地块: ${stats.specialTileCount}`);
-        console.log(`平均交通热度: ${stats.averageTrafficHotness.toFixed(3)}`);
-        console.log('==================================');
+    private selectTemplate(): MapTemplateSpec {
+        // 如果指定了模板ID
+        if (this.params.templateId) {
+            const template = getTemplateById(this.params.templateId);
+            if (template) {
+                return template;
+            }
+            console.warn(`[MapGenerator] 找不到模板 ${this.params.templateId}，使用随机模板`);
+        }
+
+        // 使用随机模板
+        const index = Math.floor(this.random() * MONOPOLY_TEMPLATES.length);
+        return MONOPOLY_TEMPLATES[index];
     }
 
     /**
-     * 获取预设配置生成器
+     * 生成地图数据
      */
-    static createWithPreset(preset: 'small' | 'medium' | 'large' | 'classic'): MapGenerator {
-        const config = MapGeneratorConfig.getPresetConfig(preset);
-        return new MapGenerator(config);
+    private generateMapData(
+        pathResult: PathGenerationResult,
+        propertyResult: PropertyPlacementResult,
+        specialResult: SpecialTilePlacementResult,
+        template: MapTemplateSpec
+    ): {
+        tiles: TileData[];
+        specialTiles: TileData[];
+    } {
+        const allTiles: TileData[] = [];
+        const specialTiles: TileData[] = [];
+        const processedKeys = new Set<string>();
+
+        // 1. 处理地产tiles
+        const propertyTiles = this.propertyPlacer.generateTileData(
+            pathResult.paths,
+            propertyResult.properties,
+            propertyResult.convertedTiles
+        );
+
+        for (const tile of propertyTiles) {
+            const key = CoordUtils.posToKey(new Vec2(tile.x, tile.y));
+            if (!processedKeys.has(key)) {
+                allTiles.push(tile);
+                processedKeys.add(key);
+            }
+        }
+
+        // 2. 处理特殊格子
+        for (const special of specialResult.specialTiles) {
+            const key = CoordUtils.posToKey(new Vec2(special.x, special.y));
+            if (!processedKeys.has(key)) {
+                const tile: TileData = {
+                    x: special.x,
+                    y: special.y,
+                    type: special.type,
+                    specialType: special.specialType,
+                    value: special.value,
+                    group: -1
+                };
+                allTiles.push(tile);
+                specialTiles.push(tile);
+                processedKeys.add(key);
+            }
+        }
+
+        // 3. 处理剩余的空路径tiles
+        for (const path of pathResult.paths) {
+            const key = CoordUtils.posToKey(path);
+            if (!processedKeys.has(key)) {
+                const tile: TileData = {
+                    x: path.x,
+                    y: path.y,
+                    type: Web3TileType.Empty,
+                    value: 0,
+                    group: -1
+                };
+                allTiles.push(tile);
+                processedKeys.add(key);
+            }
+        }
+
+        // 4. 设置起点（第一个空地tile）
+        if (allTiles.length > 0) {
+            const startTile = allTiles.find(t => t.type === Web3TileType.Empty);
+            if (startTile) {
+                startTile.type = Web3TileType.Start;
+            }
+        }
+
+        return { tiles: allTiles, specialTiles };
+    }
+
+    /**
+     * 生成统计信息
+     */
+    private generateStatistics(mapData: { tiles: TileData[] }): any {
+        const stats = {
+            totalTiles: mapData.tiles.length,
+            emptyCount: 0,
+            propertyCount: 0,
+            specialCount: 0,
+            startCount: 0,
+            propertyGroups: new Map<number, number>(),
+            specialTypes: new Map<string, number>()
+        };
+
+        for (const tile of mapData.tiles) {
+            switch (tile.type) {
+                case Web3TileType.Empty:
+                    stats.emptyCount++;
+                    break;
+                case Web3TileType.Property:
+                    stats.propertyCount++;
+                    if (tile.group !== undefined && tile.group >= 0) {
+                        const count = stats.propertyGroups.get(tile.group) || 0;
+                        stats.propertyGroups.set(tile.group, count + 1);
+                    }
+                    break;
+                case Web3TileType.Start:
+                    stats.startCount++;
+                    break;
+                case Web3TileType.Hospital:
+                case Web3TileType.Shop:
+                case Web3TileType.Bank:
+                case Web3TileType.Chance:
+                case Web3TileType.News:
+                case Web3TileType.Bonus:
+                case Web3TileType.Tax:
+                case Web3TileType.Card:
+                    stats.specialCount++;
+                    if (tile.specialType) {
+                        const count = stats.specialTypes.get(tile.specialType) || 0;
+                        stats.specialTypes.set(tile.specialType, count + 1);
+                    }
+                    break;
+            }
+        }
+
+        // 计算多样性指数
+        const totalSpecial = stats.specialCount;
+        let diversity = 0;
+        if (totalSpecial > 0) {
+            stats.specialTypes.forEach(count => {
+                const p = count / totalSpecial;
+                if (p > 0) {
+                    diversity -= p * Math.log(p);
+                }
+            });
+        }
+        stats['diversityIndex'] = diversity;
+
+        // 计算密度
+        const totalArea = this.params.mapWidth * this.params.mapHeight;
+        stats['density'] = stats.totalTiles / totalArea;
+        stats['propertyDensity'] = stats.propertyCount / stats.totalTiles;
+        stats['specialDensity'] = stats.specialCount / stats.totalTiles;
+
+        return stats;
+    }
+
+    /**
+     * 查找起始位置
+     */
+    private findStartPosition(tiles: TileData[]): Vec2 | null {
+        const startTile = tiles.find(t => t.type === Web3TileType.Start);
+        if (startTile) {
+            return new Vec2(startTile.x, startTile.y);
+        }
+
+        // 如果没有起点，返回第一个空地
+        const emptyTile = tiles.find(t => t.type === Web3TileType.Empty);
+        if (emptyTile) {
+            return new Vec2(emptyTile.x, emptyTile.y);
+        }
+
+        return null;
+    }
+
+    /**
+     * 获取可用模板列表
+     */
+    static getAvailableTemplates(): Array<{ id: string; name: string; tileCount: number }> {
+        return MONOPOLY_TEMPLATES.map(t => ({
+            id: t.id,
+            name: t.name,
+            tileCount: t.tileCount
+        }));
+    }
+
+    /**
+     * 根据模板ID生成地图
+     */
+    async generateFromTemplate(templateId: string): Promise<MapGenerationResult> {
+        this.params.templateId = templateId;
+        return this.generateMap();
+    }
+
+    /**
+     * 导出地图数据为JSON
+     */
+    exportToJSON(result: MapGenerationResult): string {
+        const exportData = {
+            version: '2.0',
+            generator: 'MapGenerator-3Phase',
+            timestamp: new Date().toISOString(),
+            seed: this.params.seed,
+            template: this.params.templateId || 'random',
+            dimensions: {
+                width: this.params.mapWidth,
+                height: this.params.mapHeight
+            },
+            tiles: result.tiles,
+            specialTiles: result.specialTiles,
+            statistics: result.statistics
+        };
+
+        return JSON.stringify(exportData, null, 2);
     }
 }

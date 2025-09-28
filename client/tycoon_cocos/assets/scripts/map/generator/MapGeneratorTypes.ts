@@ -25,6 +25,7 @@ export interface MapGeneratorParams {
     mapWidth: number;                  // 地图宽度（格子数）
     mapHeight: number;                 // 地图高度（格子数）
     seed?: number;                     // 随机种子（可选）
+    templateId?: string;               // 模板ID（可选，不指定则随机选择）
 
     // 道路参数
     roadDensity: number;               // 道路密度 (0.1-0.3)
@@ -48,9 +49,17 @@ export interface MapGeneratorParams {
  * 地块数据
  */
 export interface TileData {
-    gridPos: Vec2;                     // 网格坐标
-    blockId: string;                   // 方块ID (如 "web3:empty_land")
-    typeId: number;                    // 类型ID
+    x: number;                         // X坐标
+    y: number;                         // Y坐标
+    type: number;                      // Web3TileType枚举值
+    value: number;                     // 价值/费用
+    group: number;                     // 分组ID（地产组）
+    specialType?: string;              // 特殊类型（hospital, shop等）
+    buildingType?: string;             // 建筑类型（地产用）
+    buildingLevel?: number;            // 建筑等级
+    gridPos?: Vec2;                    // 网格坐标（兼容旧接口）
+    blockId?: string;                  // 方块ID（兼容旧接口）
+    typeId?: number;                   // 类型ID（兼容旧接口）
     isRoad?: boolean;                  // 是否为道路
     trafficHotness?: number;           // 交通热度值 (0-1)
 }
@@ -70,10 +79,10 @@ export interface PropertyData {
 /**
  * 特殊地块数据
  */
-export interface SpecialTileData {
-    gridPos: Vec2;                     // 网格坐标
-    blockId: string;                   // 方块ID (如 "web3:bonus")
-    typeId: number;                    // 类型ID
+export interface SpecialTileData extends TileData {
+    gridPos?: Vec2;                    // 网格坐标（兼容）
+    blockId?: string;                  // 方块ID（兼容）
+    typeId?: number;                   // 类型ID（兼容）
 }
 
 /**
@@ -113,32 +122,31 @@ export interface TrafficAnalysisResult {
  * 地图生成结果
  */
 export interface MapGenerationResult {
-    // 基础数据
-    width: number;
-    height: number;
-    seed: number;
-    mode: MapGenerationMode;
-
     // 地块数据
     tiles: TileData[];                 // 所有地块
-    properties: PropertyData[];         // 地产列表
-    specialTiles: SpecialTileData[];   // 特殊地块
+    specialTiles: TileData[];          // 特殊地块
 
-    // 分析数据
-    roadNetwork: RoadNetworkData;      // 道路网络
-    streets: StreetData[];              // 街区划分
-    trafficAnalysis: TrafficAnalysisResult; // 交通分析
+    // 路径数据
+    roads: Vec2[];                     // 所有路径
+    mainRoads: Vec2[];                 // 主路径
+    sideRoads: Vec2[];                 // 支路
+    intersections: Vec2[];             // 交叉点
+
+    // 起始位置
+    startPosition: Vec2 | null;        // 起始点位置
 
     // 统计信息
-    statistics: {
-        totalTiles: number;
-        roadCount: number;
-        propertyCount: number;
-        property1x1Count: number;
-        property2x2Count: number;
-        specialTileCount: number;
-        averageTrafficHotness: number;
-    };
+    statistics: any;                   // 统计数据
+
+    // 兼容旧接口
+    width?: number;
+    height?: number;
+    seed?: number;
+    mode?: MapGenerationMode;
+    properties?: PropertyData[];
+    roadNetwork?: RoadNetworkData;
+    streets?: StreetData[];
+    trafficAnalysis?: TrafficAnalysisResult;
 }
 
 /**

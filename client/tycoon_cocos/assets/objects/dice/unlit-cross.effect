@@ -1,0 +1,74 @@
+// 横十字立方体无光照着色器
+// Unlit shader for horizontal cross cube texture mapping
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: unlit-cross-vs
+      frag: unlit-cross-fs
+      rasterizerState:
+        cullMode: back
+      properties:
+        mainTexture: { value: white }
+
+  - name: transparent
+    passes:
+    - vert: unlit-cross-vs
+      frag: unlit-cross-fs
+      rasterizerState:
+        cullMode: back
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties:
+        mainTexture: { value: white }
+}%
+
+CCProgram unlit-cross-vs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+
+  in vec3 a_position;
+  in vec3 a_normal;
+  in vec2 a_texCoord;
+
+  out vec2 v_uv;
+  out vec3 v_normal;
+
+  void main () {
+    v_uv = a_texCoord;
+    v_normal = normalize((cc_matWorld * vec4(a_normal, 0.0)).xyz);
+
+    gl_Position = cc_matProj * cc_matView * cc_matWorld * vec4(a_position, 1.0);
+  }
+}%
+
+CCProgram unlit-cross-fs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+
+  in vec2 v_uv;
+  in vec3 v_normal;
+
+  uniform sampler2D mainTexture;
+
+  layout(location = 0) out vec4 fragColor;
+
+  void main () {
+    // 直接采样纹理
+    vec4 texColor = texture(mainTexture, v_uv);
+
+    // 简单的alpha测试（可选）
+    if (texColor.a < 0.01) {
+      discard;
+    }
+
+    // 输出颜色（无光照计算）
+    fragColor = texColor;
+  }
+}%

@@ -127,6 +127,9 @@ export class GameMap extends Component {
     /** 是否有未保存的修改 */
     private _hasUnsavedChanges: boolean = false;
 
+    /** tile类别中用于表示“邻接地产”的特殊blockId */
+    private static readonly TILE_PROPERTY_BLOCK_ID = 'web3:property';
+
     /** Property信息注册表 (key: "x_z") */
     private _propertyRegistry: Map<string, PropertyInfo> = new Map();
 
@@ -402,7 +405,7 @@ export class GameMap extends Component {
     /**
      * 在指定位置放置地块
      */
-    private async placeTileAt(blockId: string, gridPos: Vec2): Promise<void> {
+    private async placeTileAt(blockId: string, gridPos: Vec2, suppressAutoPropertyEdge: boolean = false): Promise<void> {
         const key = `${gridPos.x}_${gridPos.y}`;
         
         // 如果该位置已有地块，先移除
@@ -413,14 +416,16 @@ export class GameMap extends Component {
 
         // 若该位置与某个Property共享边，则无论传入的blockId为何，强制使用property tile
         let effectiveBlockId = blockId;
-        const adjPropertyKey = this.findAdjacentPropertyKey(gridPos);
-        if (adjPropertyKey) {
-            effectiveBlockId = 'web3:property';
-            // 确保建立映射与关联
-            this._tileToPropertyMap.set(key, adjPropertyKey);
-            const info = this._propertyRegistry.get(adjPropertyKey);
-            if (info && !info.associatedTiles.some(t => t.x === gridPos.x && t.z === gridPos.y)) {
-                info.associatedTiles.push({ x: gridPos.x, z: gridPos.y });
+        if (!suppressAutoPropertyEdge) {
+            const adjPropertyKey = this.findAdjacentPropertyKey(gridPos);
+            if (adjPropertyKey) {
+                effectiveBlockId = GameMap.TILE_PROPERTY_BLOCK_ID;
+                // 确保建立映射与关联
+                this._tileToPropertyMap.set(key, adjPropertyKey);
+                const info = this._propertyRegistry.get(adjPropertyKey);
+                if (info && !info.associatedTiles.some(t => t.x === gridPos.x && t.z === gridPos.y)) {
+                    info.associatedTiles.push({ x: gridPos.x, z: gridPos.y });
+                }
             }
         }
         
@@ -655,10 +660,49 @@ export class GameMap extends Component {
         for (const object of objectsToRemove) {
             this.removeObject(object);
         }
+
+        // 清除所有装饰
+        this._decorations.forEach((node) => {
+            if (node && node.isValid) {
+                node.destroy();
+            }
+        });
+        this._decorations.clear();
+
+        // 清除所有PaperActor（NPC/物体层）
+        this._actors.forEach((node) => {
+            if (node && node.isValid) {
+                node.destroy();
+            }
+        });
+        this._actors.clear();
+
+        // 清除所有建筑PaperActor（去重后销毁）
+        const uniqueBuildings = new Set(this._buildings.values());
+        uniqueBuildings.forEach((node) => {
+            if (node && node.isValid) {
+                node.destroy();
+            }
+        });
+        this._buildings.clear();
+
+        // 清除Property容器残留（例如 2x2 父节点）
+        if (this.tilesContainer) {
+            const children = [...this.tilesContainer.children];
+            for (const child of children) {
+                if (child.name.startsWith('Property2x2_')) {
+                    child.destroy();
+                }
+            }
+        }
         
         // 清空索引
         this._tileIndex.clear();
         this._objectIndex.clear();
+
+        // 清空Property注册及映射
+        this._propertyRegistry.clear();
+        this._tileToPropertyMap.clear();
         
         // 标记需要保存
         if (this._isEditMode) {
@@ -1010,6 +1054,37 @@ export class GameMap extends Component {
         }
         this._objects = [];
         this._objectIndex.clear();
+
+        // 清空装饰
+        this._decorations.forEach((node) => {
+            if (node && node.isValid) node.destroy();
+        });
+        this._decorations.clear();
+
+        // 清空PaperActor（NPC）
+        this._actors.forEach((node) => {
+            if (node && node.isValid) node.destroy();
+        });
+        this._actors.clear();
+
+        // 清空建筑PaperActor
+        const uniq = new Set(this._buildings.values());
+        uniq.forEach((node) => {
+            if (node && node.isValid) node.destroy();
+        });
+        this._buildings.clear();
+
+        // 清空Property容器与注册
+        if (this.tilesContainer) {
+            const children = [...this.tilesContainer.children];
+            for (const child of children) {
+                if (child.name.startsWith('Property2x2_')) {
+                    child.destroy();
+                }
+            }
+        }
+        this._propertyRegistry.clear();
+        this._tileToPropertyMap.clear();
         
         console.log('[GameMap] Map cleared');
     }
@@ -1149,8 +1224,8 @@ export class GameMap extends Component {
 
         // 2. 先使用体素系统放置建筑方块
         if (size === 1) {
-            // 1x1建筑：直接放置
-            await this.placeTileAt(blockId, gridPos);
+            // 1x1建筑：直接放置，但不要被“邻近地产自动改为property tile”的逻辑覆盖
+            await this.placeTileAt(blockId, gridPos, true);
         } else {
             // 2x2建筑：使用体素系统放置
             await this.place2x2Property(blockId, gridPos);
@@ -1315,14 +1390,16 @@ export class GameMap extends Component {
                 // 如果已有Tile，且不是property类型，则转换为property tile
                 if (!isWeb3Property(existingTile.getTypeId())) {
                     // 用property tile替换
-                    this.placeTileAt('web3:property', pos);
+                    this.placeTileAt(GameMap.TILE_PROPERTY_BLOCK_ID, pos);
                     console.log(`[GameMap] Converted edge tile at (${pos.x}, ${pos.y}) to property tile`);
                 }
             }
 
             // 无论是否存在tile，都记录映射与关联位置，便于后续放置或一致性
             this._tileToPropertyMap.set(tileKey, propertyKey);
-            propertyInfo.associatedTiles.push({ x: pos.x, z: pos.y });
+            if (!propertyInfo.associatedTiles.some(t => t.x === pos.x && t.z === pos.y)) {
+                propertyInfo.associatedTiles.push({ x: pos.x, z: pos.y });
+            }
         }
     }
 
@@ -1384,6 +1461,24 @@ export class GameMap extends Component {
 
         if (!propertyInfo) {
             return;
+        }
+
+        // 0. 先移除与该Property关联的建筑PaperActor（包括2x2情况下的重复键）
+        const buildingNode = this._buildings.get(propertyKey);
+        if (buildingNode && buildingNode.isValid) {
+            // 删除一次节点
+            buildingNode.destroy();
+        }
+        // 无论是否存在节点，都清理所有占用格子的_buildings映射
+        if (propertyInfo.size === 2) {
+            for (let dx = 0; dx < 2; dx++) {
+                for (let dz = 0; dz < 2; dz++) {
+                    const occupiedKey = `${propertyPos.x + dx}_${propertyPos.y + dz}`;
+                    this._buildings.delete(occupiedKey);
+                }
+            }
+        } else {
+            this._buildings.delete(propertyKey);
         }
 
         // 1. 对于2x2 Property，先找到父容器节点

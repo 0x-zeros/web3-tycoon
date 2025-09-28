@@ -4,7 +4,7 @@ import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
 import { UIMapElement } from "./UIMapElement";
 import * as fgui from "fairygui-cc";
-import { _decorator, find } from 'cc';
+import { _decorator, find, input, Input, KeyCode } from 'cc';
 import { GameMap } from "../../map/core/GameMap";
 import { MapGenerationMode } from "../../map/generator/MapGeneratorTypes";
 
@@ -136,20 +136,34 @@ export class UIEditor extends UIBase {
         if (this.m_btn_mapElement) {
             this.m_btn_mapElement.offClick(this._onMapElementClick, this);
         }
-        
+
         // 解绑清除所有地块按钮事件
         if (this.m_btn_clearAll) {
             this.m_btn_clearAll.offClick(this._onClearAllClick, this);
         }
-        
+
+        // 解绑生成地图按钮事件
+        if (this.m_btn_generateMap) {
+            this.m_btn_generateMap.offClick(this._onGenerateMapClick, this);
+        }
+        if (this.m_btn_generateClassic) {
+            this.m_btn_generateClassic.offClick(this._onGenerateClassicClick, this);
+        }
+        if (this.m_btn_generateBrawl) {
+            this.m_btn_generateBrawl.offClick(this._onGenerateBrawlClick, this);
+        }
+
         // 解绑tile点击事件
         if (this.m_tile) {
             this.m_tile.offClick(this._onTileClick, this);
         }
-        
+
         // 解绑地图元素选中事件
         EventBus.off(EventTypes.UI.MapElementSelected, this._onMapElementSelected, this);
-        
+
+        // 解绑键盘事件
+        input.off(Input.EventType.KEY_DOWN, this._onKeyDown, this);
+
         // 调用父类解绑
         super.unbindEvents();
     }
@@ -369,28 +383,33 @@ export class UIEditor extends UIBase {
      * 设置键盘快捷键
      */
     private _setupKeyboardShortcuts(): void {
-        // 监听键盘事件
-        document.addEventListener('keydown', (event) => {
-            // 只在编辑模式下响应
-            if (!MapManager.getInstance()?.getCurrentMapEditMode()) {
-                return;
-            }
+        // 使用Cocos的输入系统监听键盘事件
+        input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
 
-            switch(event.key.toLowerCase()) {
-                case 'g':
-                    // G键 - 生成Classic地图
-                    if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                        this._generateMap(MapGenerationMode.CLASSIC);
-                    }
-                    break;
-                case 'b':
-                    // B键 - 生成Brawl地图
-                    if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                        this._generateMap(MapGenerationMode.BRAWL);
-                    }
-                    break;
-            }
-        });
+        console.log('[UIEditor] Keyboard shortcuts setup: G - Classic map, B - Brawl map');
+    }
+
+    /**
+     * 键盘按下事件处理
+     */
+    private _onKeyDown(event: any): void {
+        // 只在编辑模式下响应
+        if (!MapManager.getInstance()?.getCurrentMapEditMode()) {
+            return;
+        }
+
+        switch(event.keyCode) {
+            case KeyCode.KEY_G:
+                // G键 - 生成Classic地图
+                console.log('[UIEditor] Key G pressed - generating Classic map');
+                this._generateMap(MapGenerationMode.CLASSIC);
+                break;
+            case KeyCode.KEY_B:
+                // B键 - 生成Brawl地图
+                console.log('[UIEditor] Key B pressed - generating Brawl map');
+                this._generateMap(MapGenerationMode.BRAWL);
+                break;
+        }
     }
 
 }

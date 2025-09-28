@@ -27,12 +27,17 @@ export enum Web3ObjectType {
 
 // Property（地产）枚举（200-255）
 export enum Web3PropertyType {
-    PROPERTY_1X1 = 200,    // 小型地产（1x1）
-    TEMPLE_2X2 = 201,      // 土地庙（2x2）
-    RESEARCH_2X2 = 202,    // 研究所（2x2）
-    OIL_2X2 = 203,         // 石油公司（2x2）
-    COMMERCIAL_2X2 = 204,  // 商业中心（2x2）
-    HOTEL_2X2 = 205,       // 大饭店（2x2）
+    PROPERTY_1X1 = 200,    // 基础小型地产（1x1）
+    PROPERTY_2X2 = 201,    // 基础大型地产（2x2）
+}
+
+// 建筑功能类型（购买后选择，不影响地图生成）
+export enum BuildingFunctionType {
+    TEMPLE = 301,          // 土地庙
+    RESEARCH = 302,        // 研究所
+    OIL_COMPANY = 303,     // 石油公司
+    COMMERCIAL = 304,      // 商业中心
+    HOTEL = 305,           // 大饭店
 }
 
 // Decoration（装饰）枚举（300-399）
@@ -168,51 +173,19 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
 
     // ========== Property地产类型 (200-255) ==========
     {
-        id: 'web3:property_small',
+        id: 'web3:property_1x1',
         name: '小型地产',
         category: 'property',
         typeId: Web3PropertyType.PROPERTY_1X1,
-        description: '1x1的可购买地产',
+        description: '1x1的基础地产（lv0）',
         size: 1
     },
     {
-        id: 'web3:temple',
-        name: '土地庙',
+        id: 'web3:property_2x2',
+        name: '大型地产',
         category: 'property',
-        typeId: Web3PropertyType.TEMPLE_2X2,
-        description: '2x2的土地庙，影响周围地块租金',
-        size: 2
-    },
-    {
-        id: 'web3:research',
-        name: '研究所',
-        category: 'property',
-        typeId: Web3PropertyType.RESEARCH_2X2,
-        description: '2x2的研究所',
-        size: 2
-    },
-    {
-        id: 'web3:oil_company',
-        name: '石油公司',
-        category: 'property',
-        typeId: Web3PropertyType.OIL_2X2,
-        description: '2x2的石油公司',
-        size: 2
-    },
-    {
-        id: 'web3:commercial',
-        name: '商业中心',
-        category: 'property',
-        typeId: Web3PropertyType.COMMERCIAL_2X2,
-        description: '2x2的商业中心',
-        size: 2
-    },
-    {
-        id: 'web3:hotel',
-        name: '大饭店',
-        category: 'property',
-        typeId: Web3PropertyType.HOTEL_2X2,
-        description: '2x2的大饭店',
+        typeId: Web3PropertyType.PROPERTY_2X2,
+        description: '2x2的基础地产（lv0）',
         size: 2
     },
 

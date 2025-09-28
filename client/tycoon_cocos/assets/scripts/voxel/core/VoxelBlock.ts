@@ -455,7 +455,7 @@ export class BlockRegistry {
             description: '空地块，无法购买'
         }
     });
-    
+
     // 地产
     this.register({
         id: 'web3:property',
@@ -472,7 +472,7 @@ export class BlockRegistry {
             description: '可购买并升级的地产'
         }
     });
-    
+
     // 医院
     this.register({
         id: 'web3:hospital',
@@ -698,9 +698,11 @@ export class BlockRegistry {
     
     // ========== Property（地产）类型 (Properties) ==========
 
+    // ========== Property地产类型 ==========
+
     // 小型地产（1x1）
     this.register({
-        id: 'web3:property_small',
+        id: 'web3:property_1x1',
         displayName: '小型地产',
         isPlant: false,
         isObstacle: true,
@@ -711,14 +713,15 @@ export class BlockRegistry {
         properties: {
             typeId: Web3PropertyType.PROPERTY_1X1,
             category: 'property',
-            description: '1x1的可购买地产'
+            description: '1x1的基础地产（lv0）',
+            size: 1
         }
     });
 
-    // 土地庙（2x2）
+    // 大型地产（2x2）
     this.register({
-        id: 'web3:temple',
-        displayName: '土地庙',
+        id: 'web3:property_2x2',
+        displayName: '大型地产',
         isPlant: false,
         isObstacle: true,
         isDestructable: true,
@@ -726,77 +729,10 @@ export class BlockRegistry {
         hardness: 1.0,
         renderType: BlockRenderType.TRANSLUCENT,
         properties: {
-            typeId: Web3PropertyType.TEMPLE_2X2,
+            typeId: Web3PropertyType.PROPERTY_2X2,
             category: 'property',
-            description: '2x2的土地庙，影响周围地块租金'
-        }
-    });
-
-    // 研究所（2x2）
-    this.register({
-        id: 'web3:research',
-        displayName: '研究所',
-        isPlant: false,
-        isObstacle: true,
-        isDestructable: true,
-        lightLevel: 0,
-        hardness: 1.0,
-        renderType: BlockRenderType.TRANSLUCENT,
-        properties: {
-            typeId: Web3PropertyType.RESEARCH_2X2,
-            category: 'property',
-            description: '2x2的研究所'
-        }
-    });
-
-    // 石油公司（2x2）
-    this.register({
-        id: 'web3:oil_company',
-        displayName: '石油公司',
-        isPlant: false,
-        isObstacle: true,
-        isDestructable: true,
-        lightLevel: 0,
-        hardness: 1.0,
-        renderType: BlockRenderType.TRANSLUCENT,
-        properties: {
-            typeId: Web3PropertyType.OIL_2X2,
-            category: 'property',
-            description: '2x2的石油公司'
-        }
-    });
-
-    // 商业中心（2x2）
-    this.register({
-        id: 'web3:commercial',
-        displayName: '商业中心',
-        isPlant: false,
-        isObstacle: true,
-        isDestructable: true,
-        lightLevel: 0,
-        hardness: 1.0,
-        renderType: BlockRenderType.TRANSLUCENT,
-        properties: {
-            typeId: Web3PropertyType.COMMERCIAL_2X2,
-            category: 'property',
-            description: '2x2的商业中心'
-        }
-    });
-
-    // 大饭店（2x2）
-    this.register({
-        id: 'web3:hotel',
-        displayName: '大饭店',
-        isPlant: false,
-        isObstacle: true,
-        isDestructable: true,
-        lightLevel: 0,
-        hardness: 1.0,
-        renderType: BlockRenderType.TRANSLUCENT,
-        properties: {
-            typeId: Web3PropertyType.HOTEL_2X2,
-            category: 'property',
-            description: '2x2的大饭店'
+            description: '2x2的基础地产（lv0）',
+            size: 2
         }
     });
 

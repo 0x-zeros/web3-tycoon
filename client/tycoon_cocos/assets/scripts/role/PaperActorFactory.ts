@@ -84,40 +84,17 @@ export class PaperActorFactory {
     private static getBuildingActorIdFromProperty(propertyBlockId: string): string {
         // 映射表：从体素地产ID到PaperActor建筑ID
         const propertyToBuildingMap: Record<string, string> = {
-            // 小型地产
-            'web3:property_small': 'web3:property_small',
-            'web3:property_small_1': 'web3:property_small',
-            'web3:property_small_2': 'web3:property_small',
-            'web3:property_small_3': 'web3:property_small',
-            'web3:property_small_4': 'web3:property_small',
+            // 基础地产类型（空地状态）
+            'web3:property_1x1': 'web3:property_1x1',
+            'web3:property_2x2': 'web3:property_2x2',
 
-            // 中型地产
-            'web3:property_medium': 'web3:property_medium',
-            'web3:property_medium_1': 'web3:property_medium',
-            'web3:property_medium_2': 'web3:property_medium',
-            'web3:property_medium_3': 'web3:property_medium',
-            'web3:property_medium_4': 'web3:property_medium',
-
-            // 大型地产
-            'web3:property_large': 'web3:property_large',
-            'web3:property_large_1': 'web3:property_large',
-            'web3:property_large_2': 'web3:property_large',
-            'web3:property_large_3': 'web3:property_large',
-            'web3:property_large_4': 'web3:property_large',
-
-            // 特殊建筑
+            // 升级后的具体建筑类型（保留供未来使用）
             'web3:temple': 'web3:temple',
             'web3:research': 'web3:research',
             'web3:oil_company': 'web3:oil_company',
             'web3:commercial': 'web3:commercial',
             'web3:hotel': 'web3:hotel',
-            'web3:tech_company': 'web3:tech_company',
-            'web3:bank': 'web3:bank',
-            'web3:jail': 'web3:jail',
-            'web3:airport': 'web3:airport',
-            'web3:crypto_mine': 'web3:crypto_mine',
-            'web3:defi_center': 'web3:defi_center',
-            'web3:nft_gallery': 'web3:nft_gallery',
+            'web3:property_small': 'web3:property_small',  // 升级后的小型房屋
         };
 
         // 如果找到映射，使用映射的建筑ID

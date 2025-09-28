@@ -112,26 +112,15 @@ export class PropertyPlacer {
      */
     private place2x2Properties(availablePositions: Vec2[], targetCount: number): void {
         let placedCount = 0;
-        const property2x2Types = [
-            { blockId: 'web3:temple', typeId: Web3PropertyType.TEMPLE_2X2 },
-            { blockId: 'web3:research', typeId: Web3PropertyType.RESEARCH_2X2 },
-            { blockId: 'web3:oil_company', typeId: Web3PropertyType.OIL_2X2 },
-            { blockId: 'web3:commercial', typeId: Web3PropertyType.COMMERCIAL_2X2 },
-            { blockId: 'web3:hotel', typeId: Web3PropertyType.HOTEL_2X2 }
-        ];
 
         for (const pos of availablePositions) {
             if (placedCount >= targetCount) break;
 
             // 检查是否可以放置2x2地产
             if (this.canPlace2x2Property(pos)) {
-                // 随机选择一种2x2地产类型
-                const typeIndex = Math.floor(this.random() * property2x2Types.length);
-                const propertyType = property2x2Types[typeIndex];
-
                 const property: PropertyData = {
                     gridPos: pos.clone(),
-                    blockId: propertyType.blockId,
+                    blockId: 'web3:property_2x2',  // 使用通用的2x2地产类型
                     size: 2,
                     priceCoefficient: 1.0, // 稍后由交通分析计算
                     streetId: 0, // 稍后由街区分割分配
@@ -164,7 +153,7 @@ export class PropertyPlacer {
 
             const property: PropertyData = {
                 gridPos: pos.clone(),
-                blockId: 'web3:property_small',
+                blockId: 'web3:property_1x1',  // 使用新的1x1地产名称
                 size: 1,
                 priceCoefficient: 1.0, // 稍后由交通分析计算
                 streetId: 0, // 稍后由街区分割分配

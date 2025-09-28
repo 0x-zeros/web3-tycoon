@@ -157,11 +157,11 @@ export class MapGenerator {
                         isRoad: true
                     };
                 } else if (propertySet.has(key)) {
-                    // 地产占用的地块（使用property tile）
+                    // 地产占用的地块（不再使用单独的property tile，而是空地）
                     tile = {
                         gridPos: pos,
-                        blockId: 'web3:property',
-                        typeId: Web3TileType.PROPERTY,
+                        blockId: 'web3:empty_land',
+                        typeId: Web3TileType.EMPTY_LAND,
                         isRoad: false
                     };
                 } else {

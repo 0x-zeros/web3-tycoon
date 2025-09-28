@@ -209,17 +209,12 @@ const NPC_CONFIGS: ActorConfig[] = [
 const BUILDING_CONFIGS: ActorConfig[] = [
     // 小型地产（1x1）
     {
-        id: 'web3:property_small',
+        id: 'web3:property_1x1',
         type: ActorType.BUILDING,
         name: '小型地产',
         textures: {
             levels: [
-                'web3/buildings/lv0',  // 空地
-                'web3/buildings/property_small_lv1',  // 1级小屋
-                'web3/buildings/property_small_lv2',  // 2级房屋
-                'web3/buildings/property_small_lv3',  // 3级商铺
-                'web3/buildings/property_small_lv4',  // 4级大楼
-                'web3/buildings/property_small_lv5',  // 5级大楼
+                'web3/buildings/lv0',  // 空地 - 只有lv0表示空地
             ]
         },
         size: { width: 1, height: 1, scale: 1 },
@@ -231,14 +226,33 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         defaultLevel: 0
     },
 
-    // 土地庙（2x2）
+    // 大型地产（2x2）
+    {
+        id: 'web3:property_2x2',
+        type: ActorType.BUILDING,
+        name: '大型地产',
+        textures: {
+            levels: [
+                'web3/buildings/lv0',  // 空地 - 只有lv0表示空地
+            ]
+        },
+        size: { width: 2, height: 2, scale: 2 },
+        animations: {
+            canUpgrade: true,
+            canShake: true
+        },
+        billboardMode: 'off',
+        defaultLevel: 0
+    },
+
+    // 保留具体建筑类型的配置，供升级后使用
+    // 土地庙（2x2） - 升级后的建筑类型之一
     {
         id: 'web3:temple',
         type: ActorType.BUILDING,
         name: '土地庙',
         textures: {
             levels: [
-                'web3/buildings/lv0',
                 'web3/buildings/temple_lv1',
                 'web3/buildings/temple_lv2',
                 'web3/buildings/temple_lv3',
@@ -252,17 +266,16 @@ const BUILDING_CONFIGS: ActorConfig[] = [
             canShake: true
         },
         billboardMode: 'off',
-        defaultLevel: 0
+        defaultLevel: 1
     },
 
-    // 研究所（2x2）
+    // 研究所（2x2） - 升级后的建筑类型之一
     {
         id: 'web3:research',
         type: ActorType.BUILDING,
         name: '研究所',
         textures: {
             levels: [
-                'web3/buildings/lv0',
                 'web3/buildings/research_lv1',
                 'web3/buildings/research_lv2',
                 'web3/buildings/research_lv3',
@@ -276,17 +289,16 @@ const BUILDING_CONFIGS: ActorConfig[] = [
             canShake: true
         },
         billboardMode: 'off',
-        defaultLevel: 0
+        defaultLevel: 1
     },
 
-    // 石油公司（2x2）
+    // 石油公司（2x2） - 升级后的建筑类型之一
     {
         id: 'web3:oil_company',
         type: ActorType.BUILDING,
         name: '石油公司',
         textures: {
             levels: [
-                'web3/buildings/lv0',
                 'web3/buildings/oil_company_lv1',
                 'web3/buildings/oil_company_lv2',
                 'web3/buildings/oil_company_lv3',
@@ -300,17 +312,16 @@ const BUILDING_CONFIGS: ActorConfig[] = [
             canShake: true
         },
         billboardMode: 'off',
-        defaultLevel: 0
+        defaultLevel: 1
     },
 
-    // 商业中心（2x2）
+    // 商业中心（2x2） - 升级后的建筑类型之一
     {
         id: 'web3:commercial',
         type: ActorType.BUILDING,
         name: '商业中心',
         textures: {
             levels: [
-                'web3/buildings/lv0',
                 'web3/buildings/commercial_lv1',
                 'web3/buildings/commercial_lv2',
                 'web3/buildings/commercial_lv3',
@@ -324,17 +335,16 @@ const BUILDING_CONFIGS: ActorConfig[] = [
             canShake: true
         },
         billboardMode: 'off',
-        defaultLevel: 0
+        defaultLevel: 1
     },
 
-    // 大饭店（2x2）
+    // 大饭店（2x2） - 升级后的建筑类型之一
     {
         id: 'web3:hotel',
         type: ActorType.BUILDING,
         name: '大饭店',
         textures: {
             levels: [
-                'web3/buildings/lv0',
                 'web3/buildings/hotel_lv1',
                 'web3/buildings/hotel_lv2',
                 'web3/buildings/hotel_lv3',
@@ -348,7 +358,31 @@ const BUILDING_CONFIGS: ActorConfig[] = [
             canShake: true
         },
         billboardMode: 'off',
-        defaultLevel: 0
+        defaultLevel: 1
+    },
+
+    // 1x1建筑升级后的类型
+    // 小型房屋（1x1） - 升级后的建筑类型
+    {
+        id: 'web3:property_small',
+        type: ActorType.BUILDING,
+        name: '小型房屋',
+        textures: {
+            levels: [
+                'web3/buildings/property_small_lv1',  // 1级小屋
+                'web3/buildings/property_small_lv2',  // 2级房屋
+                'web3/buildings/property_small_lv3',  // 3级商铺
+                'web3/buildings/property_small_lv4',  // 4级大楼
+                'web3/buildings/property_small_lv5',  // 5级大楼
+            ]
+        },
+        size: { width: 1, height: 1, scale: 1 },
+        animations: {
+            canUpgrade: true,
+            canShake: true
+        },
+        billboardMode: 'off',
+        defaultLevel: 1
     }
 ];
 

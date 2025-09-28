@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "ba2fe913-4e58-4cef-ae87-f2732899d9d2",
+  "uuid": "796635a0-f687-494e-a07b-5733043ebec0",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "ba2fe913-4e58-4cef-ae87-f2732899d9d2@6c48a",
-      "displayName": "oil_company",
+      "uuid": "796635a0-f687-494e-a07b-5733043ebec0@6c48a",
+      "displayName": "property_2x2",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "ba2fe913-4e58-4cef-ae87-f2732899d9d2",
+        "imageUuidOrDatabaseUri": "796635a0-f687-494e-a07b-5733043ebec0",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": false,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "ba2fe913-4e58-4cef-ae87-f2732899d9d2@6c48a"
+    "redirect": "796635a0-f687-494e-a07b-5733043ebec0@6c48a"
   }
 }

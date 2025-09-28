@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "web3:block/research"
+    "all": "web3:block/property_2x2"
   }
 }

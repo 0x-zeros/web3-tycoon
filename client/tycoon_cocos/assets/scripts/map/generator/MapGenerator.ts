@@ -106,13 +106,22 @@ export class MapGenerator {
             const stride = (quotas.smallLand?.stride as [number, number]) || [2, 3];
             const bigCount = Math.max(3, Math.min(8, this.randomCount(bigCfg.count || [3, 5])));
             const placer = new RuleBasedPropertyPlacer(this.random, roadNetwork.roads);
+            const outerRing = templateBuilt.rings.find((r: any) => r.kind === 'outer');
+            const ringLen = outerRing ? outerRing.path.length : this.params.mapWidth + this.params.mapHeight;
+            const smallRatio = quotas.smallLand?.ratio as [number, number] | undefined;
+            // 估计一个目标下限：环长的 ~30%（结合 stride≈2.5 的经验密度）或配置下限的0.5倍
+            const targetMin = Math.max(
+                Math.floor(ringLen * 0.30),
+                smallRatio ? Math.floor(ringLen * smallRatio[0] * 0.5) : 0
+            );
             properties = placer.place(templateBuilt.rings, {
                 mapWidth: this.params.mapWidth,
                 mapHeight: this.params.mapHeight,
                 stride,
                 minStraight: bigCfg.minStraight || 7,
                 big2x2Count: bigCount,
-                minBigSpacing: bigCfg.minSpacing || 6
+                minBigSpacing: bigCfg.minSpacing || 6,
+                smallTargetMin: targetMin
             });
         } else {
             legacyPlacer = new PropertyPlacer(this.params);

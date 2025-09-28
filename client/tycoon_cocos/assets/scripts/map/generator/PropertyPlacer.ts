@@ -402,15 +402,16 @@ export class PropertyPlacer {
   }
 
   /**
-   * 获取有效的邻居位置
+   * 获取有效的邻居位置（只考虑4方向，确保地产邻接路径）
    */
   private getValidNeighbors(pos: Vec2, size: number): Vec2[] {
     const neighbors: Vec2[] = [];
+    // 只考虑上下左右4个方向，不考虑对角线
     const offsets = [
-      new Vec2(-size, 0), new Vec2(size, 0),
-      new Vec2(0, -size), new Vec2(0, size),
-      new Vec2(-size, -size), new Vec2(size, -size),
-      new Vec2(-size, size), new Vec2(size, size)
+      new Vec2(-size, 0),  // 左
+      new Vec2(size, 0),   // 右
+      new Vec2(0, -size),  // 下
+      new Vec2(0, size)    // 上
     ];
 
     for (const offset of offsets) {
@@ -459,11 +460,12 @@ export class PropertyPlacer {
   }
 
   /**
-   * 检查是否可以放置
+   * 检查是否可以放置（确保至少有一边邻接路径）
    */
   private canPlace(pos: Vec2, size: number): boolean {
     if (!this.isInBounds(pos, size)) return false;
 
+    // 检查占用
     for (let x = 0; x < size; x++) {
       for (let y = 0; y < size; y++) {
         const checkPos = new Vec2(pos.x + x, pos.y + y);
@@ -474,7 +476,41 @@ export class PropertyPlacer {
       }
     }
 
-    return true;
+    // 检查是否至少有一边邻接路径
+    let hasAdjacentPath = false;
+
+    // 检查四条边
+    for (let i = 0; i < size; i++) {
+      // 左边
+      const leftPos = new Vec2(pos.x - 1, pos.y + i);
+      if (this.pathSet.has(CoordUtils.posToKey(leftPos))) {
+        hasAdjacentPath = true;
+        break;
+      }
+
+      // 右边
+      const rightPos = new Vec2(pos.x + size, pos.y + i);
+      if (this.pathSet.has(CoordUtils.posToKey(rightPos))) {
+        hasAdjacentPath = true;
+        break;
+      }
+
+      // 下边
+      const bottomPos = new Vec2(pos.x + i, pos.y - 1);
+      if (this.pathSet.has(CoordUtils.posToKey(bottomPos))) {
+        hasAdjacentPath = true;
+        break;
+      }
+
+      // 上边
+      const topPos = new Vec2(pos.x + i, pos.y + size);
+      if (this.pathSet.has(CoordUtils.posToKey(topPos))) {
+        hasAdjacentPath = true;
+        break;
+      }
+    }
+
+    return hasAdjacentPath;
   }
 
   /**

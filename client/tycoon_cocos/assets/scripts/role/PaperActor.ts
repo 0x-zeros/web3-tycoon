@@ -345,6 +345,9 @@ export class PaperActor extends Component {
         // 根据类型决定路径
         if (this.actorType === ActorType.BUILDING) {
             // 建筑：包含等级
+            if (this.level === 0) {
+                return `web3/buildings/lv${this.level}`;
+            }
             return `web3/buildings/${id}_lv${this.level}`;
         } else {
             // NPC/物体/玩家

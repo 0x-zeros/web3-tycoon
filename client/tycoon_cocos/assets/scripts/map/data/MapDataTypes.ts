@@ -138,6 +138,8 @@ export interface PropertyData {
         x: number;
         z: number;
     };
+    /** 朝向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270° */
+    direction?: number;
     /** 关联的property tiles */
     associatedTiles?: Array<{ x: number; z: number }>;
     /** 扩展数据 */

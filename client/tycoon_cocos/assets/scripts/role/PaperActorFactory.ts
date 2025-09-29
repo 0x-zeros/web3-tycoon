@@ -131,7 +131,7 @@ export class PaperActorFactory {
         node.setPosition(position);
 
         // 设置缩放（2x2建筑需要更大的缩放）
-        const scale = config.size.scale || 1;
+        const scale = 1;//config.size.scale || 1;
         node.setScale(scale, scale, scale);
 
         // 查找并设置相机

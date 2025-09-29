@@ -33,6 +33,7 @@ interface PropertyInfo {
     blockId: string;
     position: { x: number; z: number };  // 左下角位置
     size: 1 | 2;
+    direction?: number;  // 方向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270°
     data?: {
         owner?: string;
         level?: number;
@@ -815,6 +816,7 @@ export class GameMap extends Component {
                     typeId: propertyTypeId,
                     size: info.size,
                     position: info.position,
+                    direction: info.direction,  // 保存朝向
                     data: info.data
                 } as PropertyData);
             });
@@ -973,16 +975,24 @@ export class GameMap extends Component {
                         blockId: propertyData.blockId,
                         position: propertyData.position,
                         size: propertyData.size,
+                        direction: propertyData.direction || 0,  // 保存朝向
                         data: propertyData.data
                     };
                     this._propertyRegistry.set(propertyKey, propertyInfo);
 
                     // 重新创建Property的建筑PaperActor
-                    const actorPos = new Vec3(
-                        propertyData.position.x + (propertyData.size - 1) * 0.5,
-                        0.1,
-                        propertyData.position.z + (propertyData.size - 1) * 0.5
-                    );
+                    let actorPos: Vec3;
+                    if (propertyData.size === 1) {
+                        // 1x1地产：xz与该地产的xz一样，y为1.1
+                        actorPos = new Vec3(propertyData.position.x + 0.5, 1.1, propertyData.position.z + 0.5);
+                    } else {
+                        // 2x2地产：xz为4个block的中间位置，y为1.1
+                        actorPos = new Vec3(
+                            propertyData.position.x + 1,
+                            1.1,
+                            propertyData.position.z + 1
+                        );
+                    }
 
                     const buildingNode = PaperActorFactory.createBuilding(
                         propertyData.blockId,
@@ -992,6 +1002,12 @@ export class GameMap extends Component {
 
                     if (buildingNode) {
                         buildingNode.parent = this._buildingsRoot;
+
+                        // 恢复建筑朝向
+                        const actor = buildingNode.getComponent(PaperActor);
+                        if (actor && propertyInfo.direction !== undefined) {
+                            actor.setDirection(propertyInfo.direction);
+                        }
 
                         // 记录所有占用的格子都指向同一个PaperActor
                         if (propertyData.size === 2) {
@@ -1316,6 +1332,79 @@ export class GameMap extends Component {
     // ========================= Property相关方法 =========================
 
     /**
+     * 找到最佳朝向（朝向有路径tile的方向）
+     * @param gridPos 地产位置
+     * @param size 地产大小
+     * @returns 朝向（0-3），-1表示没找到
+     */
+    private findBestDirection(gridPos: Vec2, size: 1 | 2): number {
+        // 四个方向：0=下(+Y), 1=右(+X), 2=上(-Y), 3=左(-X)
+        const directions = [
+            { dx: 0, dy: -1, dir: 0 },  // 下
+            { dx: 1, dy: 0, dir: 1 },   // 右
+            { dx: 0, dy: 1, dir: 2 },   // 上
+            { dx: -1, dy: 0, dir: 3 }   // 左
+        ];
+
+        // 检查每个方向是否有路径tile
+        for (const { dx, dy, dir } of directions) {
+            let hasPath = false;
+
+            if (size === 1) {
+                // 1x1地产：检查相邻的一个格子
+                const checkPos = new Vec2(gridPos.x + dx, gridPos.y + dy);
+                const key = `${checkPos.x}_${checkPos.y}`;
+                const tile = this._tileIndex.get(key);
+                if (tile && this.isPathTile(tile)) {
+                    hasPath = true;
+                }
+            } else {
+                // 2x2地产：检查该方向的两个格子
+                for (let i = 0; i < 2; i++) {
+                    let checkX = gridPos.x;
+                    let checkY = gridPos.y;
+
+                    if (dx !== 0) {
+                        // 左右方向：检查两个纵向格子
+                        checkX = gridPos.x + (dx > 0 ? 2 : -1);
+                        checkY = gridPos.y + i;
+                    } else {
+                        // 上下方向：检查两个横向格子
+                        checkX = gridPos.x + i;
+                        checkY = gridPos.y + (dy > 0 ? 2 : -1);
+                    }
+
+                    const key = `${checkX}_${checkY}`;
+                    const tile = this._tileIndex.get(key);
+                    if (tile && this.isPathTile(tile)) {
+                        hasPath = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasPath) {
+                return dir;
+            }
+        }
+
+        return 0; // 默认朝向下
+    }
+
+    /**
+     * 检查tile是否是路径类型
+     */
+    private isPathTile(tile: MapTile): boolean {
+        const blockId = tile.getBlockId();
+        const blockInfo = getWeb3BlockByBlockId(blockId);
+        if (!blockInfo) return false;
+
+        const typeId = blockInfo.typeId as number;
+        // 检查是否是普通的tile类型（非地产）
+        return isWeb3Tile(typeId) && !isWeb3Property(typeId);
+    }
+
+    /**
      * 放置Property
      * @param blockId Property的blockId
      * @param gridPos 网格位置（左下角）
@@ -1357,22 +1446,33 @@ export class GameMap extends Component {
             this._buildings.delete(key);
         }
 
-        // 计算PaperActor的位置（建筑中心）
-        const actorPos = new Vec3(gridPos.x, 0.1, gridPos.y);  // 稍微抬高避免Z-fighting
+        // 计算PaperActor的位置
+        let actorPos: Vec3;
         if (size === 1) {
-            // 1x1建筑：中心在格子中间
-            actorPos.x += 0.5;
-            actorPos.z += 0.5;
-        } else if (size === 2) {
-            // 2x2建筑：中心在4个格子的中间
-            actorPos.x += 1.0;
-            actorPos.z += 1.0;
+            // 1x1地产：xz与该地产的xz一样，y为1.1
+            actorPos = new Vec3(gridPos.x, 1.1, gridPos.y);
+        } else {
+            // 2x2地产：xz为4个block的中间位置，y为1.1
+            actorPos = new Vec3(
+                gridPos.x + 0.5,  // 中心是+0.5
+                1.1,
+                gridPos.y + 0.5
+            );
         }
+
+        // 找到最佳朝向
+        const direction = this.findBestDirection(gridPos, size);
 
         // 创建PaperActor
         const buildingNode = PaperActorFactory.createBuilding(blockId, 0, actorPos);
         if (buildingNode) {
             buildingNode.parent = this._buildingsRoot;
+
+            // 设置建筑朝向
+            const actor = buildingNode.getComponent(PaperActor);
+            if (actor) {
+                actor.setDirection(direction);
+            }
 
             // 记录所有占用的格子都指向同一个PaperActor
             if (size === 2) {
@@ -1394,7 +1494,8 @@ export class GameMap extends Component {
         const propertyInfo: PropertyInfo = {
             blockId,
             position: { x: gridPos.x, z: gridPos.y },
-            size
+            size,
+            direction
         };
         this._propertyRegistry.set(propertyKey, propertyInfo);
 

@@ -53,6 +53,9 @@ export class PaperActor extends Component {
     @property
     billboardMode: 'full' | 'yAxis' | 'off' = 'yAxis';
 
+    @property
+    direction: number = 0;  // 方向（0-3），对应Y轴旋转 0°, 90°, 180°, 270°
+
     // ===== 渲染相关 =====
     private meshRenderer: MeshRenderer | null = null;
     private quadMesh: Mesh | null = null;
@@ -144,12 +147,17 @@ export class PaperActor extends Component {
                 await this.loadTexture();
             }
 
-            // 3. 根据类型设置默认动画
+            // 3. 应用方向旋转（仅对建筑生效，因为其他类型需要Billboard）
+            if (this.actorType === ActorType.BUILDING && this.billboardMode === 'off') {
+                this.applyDirection();
+            }
+
+            // 4. 根据类型设置默认动画
             if (this.actorType === ActorType.NPC || this.actorType === ActorType.PLAYER) {
                 this.playFrameAnimation('idle');
             }
 
-            // 4. 资源加载完成，显示节点
+            // 5. 资源加载完成，显示节点
             this.node.active = true;
             console.log(`[PaperActor] Initialized ${this.node.name} successfully`);
             return true;
@@ -706,6 +714,28 @@ export class PaperActor extends Component {
         this.actorId = actorId;
         this.actorType = type;
         this.level = level;
+    }
+
+    /**
+     * 设置方向（0-3），对应Y轴旋转 0°, 90°, 180°, 270°
+     */
+    public setDirection(direction: number): void {
+        this.direction = Math.floor(direction) % 4;
+        if (this.direction < 0) this.direction += 4;
+
+        // 如果是建筑且Billboard关闭，立即应用旋转
+        if (this.actorType === ActorType.BUILDING && this.billboardMode === 'off') {
+            this.applyDirection();
+        }
+    }
+
+    /**
+     * 应用方向旋转
+     */
+    private applyDirection(): void {
+        const rotationY = this.direction * 90;
+        const euler = this.node.eulerAngles;
+        this.node.setRotationFromEuler(euler.x, rotationY, euler.z);
     }
 
     /**

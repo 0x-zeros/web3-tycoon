@@ -77,16 +77,19 @@ export class PaperActorFactory {
     }
 
     /**
-     * 根据地产类型获取对应的建筑Actor ID
-     * @param propertyBlockId 地产方块ID
+     * 根据建筑类型获取对应的建筑Actor ID
+     * @param buildingBlockId 建筑方块ID
      * @returns 对应的建筑Actor ID
      */
-    private static getBuildingActorIdFromProperty(propertyBlockId: string): string {
-        // 映射表：从体素地产ID到PaperActor建筑ID
-        const propertyToBuildingMap: Record<string, string> = {
-            // 基础地产类型（空地状态）
-            'web3:property_1x1': 'web3:property_1x1',
-            'web3:property_2x2': 'web3:property_2x2',
+    private static getBuildingActorIdFromBuilding(buildingBlockId: string): string {
+        // 映射表：从体素建筑ID到PaperActor建筑ID
+        const buildingToActorMap: Record<string, string> = {
+            // 基础建筑类型（空地状态）
+            'web3:building_1x1': 'web3:building_1x1',
+            'web3:building_2x2': 'web3:building_2x2',
+            // 向后兼容
+            'web3:property_1x1': 'web3:building_1x1',
+            'web3:property_2x2': 'web3:building_2x2',
 
             // 升级后的具体建筑类型（保留供未来使用）
             'web3:temple': 'web3:temple',
@@ -97,9 +100,8 @@ export class PaperActorFactory {
             'web3:property_small': 'web3:property_small',  // 升级后的小型房屋
         };
 
-        // 如果找到映射，使用映射的建筑ID
-        // 否则尝试直接使用propertyBlockId
-        return propertyToBuildingMap[propertyBlockId] || propertyBlockId;
+        // 如果找到映射，使用映射的建筑ID；否则回退到传入的buildingBlockId
+        return buildingToActorMap[buildingBlockId] || buildingBlockId;
     }
 
     /**
@@ -107,7 +109,7 @@ export class PaperActorFactory {
      */
     public static createBuilding(buildingType: string, level: number, position: Vec3): Node | null {
         // 将地产ID转换为建筑Actor ID
-        const buildingActorId = this.getBuildingActorIdFromProperty(buildingType);
+        const buildingActorId = this.getBuildingActorIdFromBuilding(buildingType);
 
         const config = ActorConfigManager.getConfig(buildingActorId);
         if (!config) {

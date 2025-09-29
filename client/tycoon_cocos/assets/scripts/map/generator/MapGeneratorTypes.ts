@@ -65,9 +65,9 @@ export interface TileData {
 }
 
 /**
- * 地产数据
+ * 生成的地产数据
  */
-export interface PropertyData {
+export interface GeneratedPropertyData {
     gridPos: Vec2;                     // 网格坐标（左下角）
     blockId: string;                   // 方块ID (如 "web3:property_small")
     size: 1 | 2;                       // 地产尺寸
@@ -91,7 +91,7 @@ export interface SpecialTileData extends TileData {
 export interface StreetData {
     id: number;                        // 街区ID
     tiles: Vec2[];                     // 街区内的地块坐标
-    properties: PropertyData[];        // 街区内的地产
+    properties: GeneratedPropertyData[];        // 街区内的地产
     colorGroup: string;                // 颜色组
     centerPos: Vec2;                   // 街区中心位置
 }
@@ -143,7 +143,7 @@ export interface MapGenerationResult {
     height?: number;
     seed?: number;
     mode?: MapGenerationMode;
-    properties?: PropertyData[];
+    properties?: GeneratedPropertyData[];
     roadNetwork?: RoadNetworkData;
     streets?: StreetData[];
     trafficAnalysis?: TrafficAnalysisResult;

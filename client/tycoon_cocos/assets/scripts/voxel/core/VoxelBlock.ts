@@ -1,4 +1,4 @@
-import { Web3TileType, Web3ObjectType, Web3PropertyType, Web3DecorationType } from '../Web3BlockTypes';
+import { Web3TileType, Web3ObjectType, Web3BuildingType, Web3DecorationType } from '../Web3BlockTypes';
 
 // 保留兼容性的方块类型枚举（旧系统）
 export enum VoxelBlockType {
@@ -458,7 +458,7 @@ export class BlockRegistry {
 
     // 地产
     this.register({
-        id: 'web3:property',
+        id: 'web3:property_tile',
         displayName: '地产',
         isPlant: false,
         isObstacle: true,
@@ -467,7 +467,7 @@ export class BlockRegistry {
         hardness: 1.0,
         renderType: BlockRenderType.SOLID,
         properties: {
-            typeId: Web3TileType.PROPERTY,
+            typeId: Web3TileType.PROPERTY_TILE,
             category: 'tile',
             description: '可购买并升级的地产'
         }
@@ -711,8 +711,8 @@ export class BlockRegistry {
         hardness: 1.0,
         renderType: BlockRenderType.TRANSLUCENT,
         properties: {
-            typeId: Web3PropertyType.PROPERTY_1X1,
-            category: 'property',
+            typeId: Web3BuildingType.BUILDING_1X1,
+            category: 'building',
             description: '1x1的基础地产（lv0）',
             size: 1
         }
@@ -729,8 +729,8 @@ export class BlockRegistry {
         hardness: 1.0,
         renderType: BlockRenderType.TRANSLUCENT,
         properties: {
-            typeId: Web3PropertyType.PROPERTY_2X2,
-            category: 'property',
+            typeId: Web3BuildingType.BUILDING_2X2,
+            category: 'building',
             description: '2x2的基础地产（lv0）',
             size: 2
         }

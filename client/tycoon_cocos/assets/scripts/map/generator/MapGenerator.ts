@@ -23,7 +23,7 @@ import { Web3TileType } from '../../voxel/Web3BlockTypes';
 
 // 新的生成器
 import { PathGenerator, PathGenerationResult } from './PathGenerator';
-import { PropertyPlacer, PropertyPlacementResult, PropertyData } from './PropertyPlacer';
+import { PropertyPlacer, PropertyPlacementResult, PlacedPropertyData } from './PropertyPlacer';
 import { SpecialTilePlacer, SpecialTilePlacementResult } from './SpecialTilePlacer';
 
 /**
@@ -264,7 +264,7 @@ export class MapGenerator {
                 case Web3TileType.EMPTY_LAND:
                     stats.emptyCount++;
                     break;
-                case Web3TileType.PROPERTY:
+                case Web3TileType.PROPERTY_TILE:
                     stats.propertyCount++;
                     if (tile.group !== undefined && tile.group >= 0) {
                         const count = stats.propertyGroups.get(tile.group) || 0;

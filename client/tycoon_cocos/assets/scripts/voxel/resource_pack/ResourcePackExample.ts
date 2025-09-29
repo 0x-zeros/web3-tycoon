@@ -44,7 +44,7 @@ export class ResourcePackExample extends Component {
         // console.log('Poppy Block 方块数据:', poppyData);
         
         // // 解析 Web3 方块
-        // const propertyData = await parseBlock('web3:property');
+        // const propertyData = await parseBlock('web3:property_tile');
         // console.log('Web3 Property 方块数据:', propertyData);
     }
     

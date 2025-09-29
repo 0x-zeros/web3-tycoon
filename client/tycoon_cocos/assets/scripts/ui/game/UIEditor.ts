@@ -325,8 +325,8 @@ export class UIEditor extends UIBase {
                 // 添加ID信息
                 if (data.tileId !== undefined && data.tileId !== 65535) {
                     title += ` [T${data.tileId}]`;
-                } else if (data.propertyId !== undefined && data.propertyId !== 65535) {
-                    title += ` [P${data.propertyId}]`;
+                } else if (data.buildingId !== undefined && data.buildingId !== 65535) {
+                    title += ` [B${data.buildingId}]`;
                 }
 
                 this.m_tileTitle.text = title;

@@ -8,13 +8,13 @@
  * @version 1.0.0
  */
 
-import { Web3TileType, Web3ObjectType } from '../../voxel/Web3BlockTypes';
+import { Web3TileType, Web3ObjectType, Web3BuildingType } from '../../voxel/Web3BlockTypes';
 
 /**
  * 地块数据
  */
 export interface TileData {
-    /** 方块ID，如 "web3:property" */
+    /** 方块ID，如 "web3:property_tile" */
     blockId: string;
     /** 类型ID (Web3TileType) */
     typeId: number;
@@ -25,6 +25,8 @@ export interface TileData {
     };
     /** 扩展数据 */
     data?: {
+        /** Tile编号（u16最大值65535表示无效） */
+        tileId?: number;
         /** 拥有者 */
         owner?: string;
         /** 建筑等级 (0-4: 空地,小屋,洋房,大楼,地标) */
@@ -124,14 +126,14 @@ export interface MapMetadata {
 }
 
 /**
- * Property数据
+ * 建筑数据（原Property数据）
  */
-export interface PropertyData {
-    /** 方块ID，如 "web3:property_small" */
+export interface BuildingData {
+    /** 方块ID，如 "web3:building_1x1" */
     blockId: string;
-    /** 类型ID (Web3PropertyType) */
+    /** 类型ID (Web3BuildingType) */
     typeId: number;
-    /** Property尺寸（1x1或2x2） */
+    /** 建筑尺寸（1x1或2x2） */
     size: 1 | 2;
     /** 网格位置（左下角） */
     position: {
@@ -140,24 +142,25 @@ export interface PropertyData {
     };
     /** 朝向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270° */
     direction?: number;
-    /** 关联的property tiles */
-    associatedTiles?: Array<{ x: number; z: number }>;
-    /** 扩展数据 */
-    data?: {
-        /** 拥有者 */
-        owner?: string;
-        /** 建筑等级 */
-        level?: number;
-        /** 地产价格 */
-        price?: number;
-        /** 租金设置 */
-        rent?: number[];
-        /** 是否被抵押 */
-        mortgaged?: boolean;
-        /** 自定义数据 */
-        custom?: any;
-    };
+    /** 建筑ID */
+    buildingId?: number;
+    /** 拥有者 */
+    owner?: string;
+    /** 建筑等级 */
+    level?: number;
+    /** 建筑价格 */
+    price?: number;
+    /** 租金设置 */
+    rent?: number[];
+    /** 是否被抵押 */
+    mortgaged?: boolean;
 }
+
+/**
+ * Property数据（向后兼容，实际是BuildingData）
+ * @deprecated 请使用 BuildingData
+ */
+export type PropertyData = BuildingData;
 
 /**
  * 完整的地图保存数据
@@ -179,8 +182,10 @@ export interface MapSaveData extends MapMetadata {
     /** 物体数据数组 (y=1层) */
     objects: ObjectData[];
 
-    /** Property数据数组 */
-    properties?: PropertyData[];
+    /** 建筑数据数组 */
+    buildings?: BuildingData[];
+    /** Property数据数组（向后兼容） */
+    properties?: BuildingData[];
 
     /** Property-Tile关联映射 */
     propertyTileLinks?: { [tileKey: string]: string };
@@ -303,7 +308,7 @@ export function validateMapData(data: MapSaveData): MapValidationResult {
     }
     
     // 统计信息
-    const propertyCount = data.tiles.filter(t => t.typeId === Web3TileType.PROPERTY).length;
+    const propertyCount = data.tiles.filter(t => t.typeId === Web3TileType.PROPERTY_TILE).length;
     const npcCount = data.objects.filter(o => 
         o.typeId >= Web3ObjectType.LAND_GOD && 
         o.typeId <= Web3ObjectType.POVERTY_GOD

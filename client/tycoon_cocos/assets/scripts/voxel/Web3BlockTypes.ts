@@ -4,14 +4,14 @@
 
 // 地块类型枚举（0-99）
 export enum Web3TileType {
-    EMPTY_LAND = 0,    // 空地
-    PROPERTY = 1,      // 地产
-    HOSPITAL = 2,      // 医院
-    CHANCE = 3,        // 机会
-    BONUS = 4,         // 奖励
-    FEE = 5,           // 费用
-    CARD = 6,          // 卡片
-    NEWS = 7,          // 新闻
+    EMPTY_LAND = 0,      // 空地/路径
+    PROPERTY_TILE = 1,   // 可购买地块（不是建筑！）
+    HOSPITAL = 2,        // 医院
+    CHANCE = 3,          // 机会
+    BONUS = 4,           // 奖励
+    FEE = 5,             // 费用
+    CARD = 6,            // 卡片
+    NEWS = 7,            // 新闻
 }
 
 // NPC和路面物体枚举（100-199）
@@ -25,10 +25,10 @@ export enum Web3ObjectType {
     BOMB = 106,            // 炸弹
 }
 
-// Property（地产）枚举（200-255）
-export enum Web3PropertyType {
-    PROPERTY_1X1 = 200,    // 基础小型地产（1x1）
-    PROPERTY_2X2 = 201,    // 基础大型地产（2x2）
+// Building（建筑）枚举（200-255）
+export enum Web3BuildingType {
+    BUILDING_1X1 = 200,    // 小型建筑（1x1）
+    BUILDING_2X2 = 201,    // 大型建筑（2x2）
 }
 
 // 建筑功能类型（购买后选择，不影响地图生成）
@@ -54,10 +54,10 @@ export enum Web3DecorationType {
 export interface Web3BlockInfo {
     id: string;           // 方块ID，如 'web3:empty_land'
     name: string;         // 显示名称
-    category: 'tile' | 'object' | 'property' | 'decoration';  // 类别：地块、物体、地产或装饰
+    category: 'tile' | 'object' | 'building' | 'decoration';  // 类别：地块、物体、建筑或装饰
     typeId: number;       // 类型ID（0-399）
     description?: string; // 描述
-    size?: 1 | 2;        // 尺寸（仅property使用）
+    size?: 1 | 2;        // 尺寸（仅building使用）
 }
 
 // Web3方块定义
@@ -71,11 +71,11 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
         description: '空地块，无法购买'
     },
     {
-        id: 'web3:property',
-        name: '地产',
+        id: 'web3:property_tile',
+        name: '可购买地块',
         category: 'tile',
-        typeId: Web3TileType.PROPERTY,
-        description: '可购买并升级的地产'
+        typeId: Web3TileType.PROPERTY_TILE,
+        description: '可购买的地块，用于放置建筑'
     },
     {
         id: 'web3:hospital',
@@ -171,21 +171,21 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
         description: '爆炸伤害的路面物体'
     },
 
-    // ========== Property地产类型 (200-255) ==========
+    // ========== Building建筑类型 (200-255) ==========
     {
-        id: 'web3:property_1x1',
-        name: '小型地产',
-        category: 'property',
-        typeId: Web3PropertyType.PROPERTY_1X1,
-        description: '1x1的基础地产（lv0）',
+        id: 'web3:building_1x1',
+        name: '小型建筑',
+        category: 'building',
+        typeId: Web3BuildingType.BUILDING_1X1,
+        description: '1x1的基础建筑（lv0）',
         size: 1
     },
     {
-        id: 'web3:property_2x2',
-        name: '大型地产',
-        category: 'property',
-        typeId: Web3PropertyType.PROPERTY_2X2,
-        description: '2x2的基础地产（lv0）',
+        id: 'web3:building_2x2',
+        name: '大型建筑',
+        category: 'building',
+        typeId: Web3BuildingType.BUILDING_2X2,
+        description: '2x2的基础建筑（lv0）',
         size: 2
     },
 
@@ -249,9 +249,15 @@ export function getWeb3ObjectBlocks(): Web3BlockInfo[] {
     return WEB3_BLOCKS.filter(block => block.category === 'object');
 }
 
-// 获取Property类型方块
+// 获取Building类型方块
+export function getWeb3BuildingBlocks(): Web3BlockInfo[] {
+    return WEB3_BLOCKS.filter(block => block.category === 'building');
+}
+
+// 获取Property类型方块（向后兼容）
+// @deprecated 请使用 getWeb3BuildingBlocks
 export function getWeb3PropertyBlocks(): Web3BlockInfo[] {
-    return WEB3_BLOCKS.filter(block => block.category === 'property');
+    return getWeb3BuildingBlocks();
 }
 
 // 获取装饰类型方块
@@ -296,19 +302,31 @@ export function isWeb3Tile(blockIdOrTypeId: string | number): boolean {
     }
 }
 
-// 判断是否为Property类型（支持blockId字符串或typeId数字）
-export function isWeb3Property(blockIdOrTypeId: string | number): boolean {
+// 判断是否为Building类型（支持blockId字符串或typeId数字）
+export function isWeb3Building(blockIdOrTypeId: string | number): boolean {
     if (typeof blockIdOrTypeId === 'string') {
         const block = getWeb3BlockByBlockId(blockIdOrTypeId);
-        return block ? block.category === 'property' : false;
+        return block ? block.category === 'building' : false;
     } else {
-        // typeId 200-255 是Property类型
+        // typeId 200-255 是Building类型
         return blockIdOrTypeId >= 200 && blockIdOrTypeId <= 255;
     }
 }
 
-// 获取Property的尺寸
-export function getPropertySize(blockId: string): number {
+// 判断是否为Property类型（向后兼容）
+// @deprecated 请使用 isWeb3Building
+export function isWeb3Property(blockIdOrTypeId: string | number): boolean {
+    return isWeb3Building(blockIdOrTypeId);
+}
+
+// 获取Building的尺寸
+export function getBuildingSize(blockId: string): number {
     const block = getWeb3BlockByBlockId(blockId);
     return block?.size || 1;
+}
+
+// 获取Property的尺寸（向后兼容）
+// @deprecated 请使用 getBuildingSize
+export function getPropertySize(blockId: string): number {
+    return getBuildingSize(blockId);
 }

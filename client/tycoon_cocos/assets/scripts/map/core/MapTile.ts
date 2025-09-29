@@ -49,7 +49,7 @@ export class MapTile extends MapElement {
     
     /**
      * 初始化地块
-     * @param blockId 方块ID (如 "web3:property")
+     * @param blockId 方块ID (如 "web3:property_tile")
      * @param gridPos 网格坐标
      */
     public async initialize(blockId: string, gridPos: Vec2): Promise<void> {
@@ -91,7 +91,7 @@ export class MapTile extends MapElement {
     private initializeTileProperties(): void {
         // 根据类型设置默认属性
         switch (this._typeId) {
-            case Web3TileType.PROPERTY:
+            case Web3TileType.PROPERTY_TILE:
                 this._canBuild = true;
                 this._price = 1000; // 默认价格
                 this._rent = [50, 200, 600, 1400, 1700, 2000]; // 默认租金
@@ -128,7 +128,7 @@ export class MapTile extends MapElement {
         await this.createVoxelRender(this._blockId, Vec3.ZERO);
         
         // 如果是地产，可能需要创建建筑物的额外渲染
-        if (this._typeId === Web3TileType.PROPERTY && this._buildingLevel > 0) {
+        if (this._typeId === Web3TileType.PROPERTY_TILE && this._buildingLevel > 0) {
             await this.updateBuildingVisual();
         }
     }
@@ -147,7 +147,7 @@ export class MapTile extends MapElement {
         };
         
         // 添加地产特有数据
-        if (this._typeId === Web3TileType.PROPERTY) {
+        if (this._typeId === Web3TileType.PROPERTY_TILE) {
             data.data = {
                 tileId: this._tileId !== 65535 ? this._tileId : undefined,
                 owner: this._owner || undefined,
@@ -199,7 +199,7 @@ export class MapTile extends MapElement {
      */
     public canBuild(): boolean {
         // 必须是地产类型
-        if (this._typeId !== Web3TileType.PROPERTY) {
+        if (this._typeId !== Web3TileType.PROPERTY_TILE) {
             return false;
         }
         
@@ -408,7 +408,7 @@ export class MapTile extends MapElement {
         };
         
         // 添加地产特有信息
-        if (this._typeId === Web3TileType.PROPERTY) {
+        if (this._typeId === Web3TileType.PROPERTY_TILE) {
             info.property = {
                 owner: this._owner,
                 level: this._buildingLevel,
@@ -430,7 +430,7 @@ export class MapTile extends MapElement {
     private getTypeName(): string {
         switch (this._typeId) {
             case Web3TileType.EMPTY_LAND: return '空地';
-            case Web3TileType.PROPERTY: return '地产';
+            case Web3TileType.PROPERTY_TILE: return '可购买地块';
             case Web3TileType.HOSPITAL: return '医院';
             case Web3TileType.CHANCE: return '机会';
             case Web3TileType.BONUS: return '奖励';
@@ -463,7 +463,7 @@ export class MapTile extends MapElement {
         
         // 根据地块类型处理不同的逻辑
         switch (this._typeId) {
-            case Web3TileType.PROPERTY:
+            case Web3TileType.PROPERTY_TILE:
                 this.handlePropertyLand(playerId);
                 break;
             case Web3TileType.CHANCE:

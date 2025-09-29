@@ -87,7 +87,7 @@ export async function preloadCommonBlocks(options?: ParseOptions): Promise<void>
         
         // Web3 方块
         'web3:empty_land',
-        'web3:property',
+        'web3:property_tile',
         'web3:hospital',
         'web3:chance',
         'web3:bonus',

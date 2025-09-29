@@ -38,7 +38,7 @@ const stoneData = await parseBlock('stone');
 const grassData = await parseBlock('minecraft:grass_block');
 
 // 解析 Web3 方块
-const propertyData = await parseBlock('web3:property');
+const propertyData = await parseBlock('web3:property_tile');
 ```
 
 ### 批量解析

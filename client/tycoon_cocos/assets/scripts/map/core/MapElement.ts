@@ -18,7 +18,7 @@ const { ccclass, property } = _decorator;
  */
 @ccclass('MapElement')
 export abstract class MapElement extends Component {
-    /** 方块ID (如 "web3:property") */
+    /** 方块ID (如 "web3:property_tile") */
     protected _blockId: string = '';
     
     /** 类型ID (Web3TileType 或 Web3ObjectType) */

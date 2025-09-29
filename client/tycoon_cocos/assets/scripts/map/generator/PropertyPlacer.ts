@@ -9,12 +9,12 @@ import { CoordUtils, TileData } from './MapGeneratorTypes';
 import { Web3TileType } from '../../voxel/Web3BlockTypes';
 
 export interface PropertyPlacementResult {
-  properties: PropertyData[];     // 所有地产
+  properties: PlacedPropertyData[];     // 所有地产
   convertedTiles: Vec2[];        // 被转换为property的tile（不再使用）
   propertyGroups: PropertyGroup[]; // 地产分组信息（保留接口兼容）
 }
 
-export interface PropertyData {
+export interface PlacedPropertyData {
   position: Vec2;
   size: '1x1' | '2x2';
   color?: string;  // 保留字段兼容性
@@ -28,7 +28,7 @@ export interface PropertyData {
 export interface PropertyGroup {
   id: number;
   color: string;
-  properties: PropertyData[];
+  properties: PlacedPropertyData[];
   centerPosition: Vec2;
 }
 
@@ -38,7 +38,7 @@ export class PropertyPlacer {
   private random: () => number;
   private pathSet: Set<string>;
   private occupiedSet: Set<string>;
-  private placedProperties: PropertyData[];
+  private placedProperties: PlacedPropertyData[];
 
   constructor(width: number, height: number, randomFn?: () => number) {
     this.width = width;
@@ -91,7 +91,7 @@ export class PropertyPlacer {
       }
 
       // 创建地产数据
-      const property: PropertyData = {
+      const property: PlacedPropertyData = {
         position: pos,
         size: size,
         level: 0,
@@ -223,7 +223,7 @@ export class PropertyPlacer {
    */
   generateTileData(
     paths: Vec2[],
-    properties: PropertyData[],
+    properties: PlacedPropertyData[],
     convertedTiles: Vec2[]
   ): TileData[] {
     const tiles: TileData[] = [];
@@ -245,7 +245,7 @@ export class PropertyPlacer {
   /**
    * 验证分布（保留接口兼容）
    */
-  validateDistribution(properties: PropertyData[]): boolean {
+  validateDistribution(properties: PlacedPropertyData[]): boolean {
     return true; // 不再验证，纯随机即可
   }
 }

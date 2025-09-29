@@ -11,7 +11,7 @@
 import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director } from 'cc';
 import { MapTile } from './MapTile';
 import { MapObject } from './MapObject';
-import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData } from '../data/MapDataTypes';
+import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData, BuildingData } from '../data/MapDataTypes';
 import { CameraController } from '../../camera/CameraController';
 import { MapConfig } from '../MapManager';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
@@ -19,7 +19,7 @@ import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { GridGround } from '../GridGround';
 import { MapInteractionManager, MapInteractionData, MapInteractionEvent } from '../interaction/MapInteractionManager';
-import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile, isWeb3Property, getPropertySize } from '../../voxel/Web3BlockTypes';
+import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile, isWeb3Building, getBuildingSize, Web3TileType } from '../../voxel/Web3BlockTypes';
 import { Vec2 } from 'cc';
 import { sys } from 'cc';
 import { PaperActorFactory } from '../../role/PaperActorFactory';
@@ -28,20 +28,18 @@ import { ActorConfigManager } from '../../role/ActorConfig';
 import { MapGenerator } from '../generator/MapGenerator';
 import { MapGenerationResult, MapGenerationMode } from '../generator/MapGeneratorTypes';
 
-// Property信息接口
-interface PropertyInfo {
+// Building信息接口
+interface BuildingInfo {
     blockId: string;
     position: { x: number; z: number };  // 左下角位置
     size: 1 | 2;
     direction?: number;  // 方向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270°
-    propertyId?: number;  // Property编号（u16最大值65535表示无效）
-    data?: {
-        owner?: string;
-        level?: number;
-        price?: number;
-        rent?: number[];
-        functionType?: string; // 建筑功能类型（购买后选择）
-    };
+    buildingId?: number;  // Building编号（u16最大值65535表示无效）
+    owner?: string;
+    level?: number;
+    price?: number;
+    rent?: number[];
+    mortgaged?: boolean;
 }
 
 const { ccclass, property } = _decorator;
@@ -141,8 +139,8 @@ export class GameMap extends Component {
     /** 是否有未保存的修改 */
     private _hasUnsavedChanges: boolean = false;
 
-    /** Property信息注册表 (key: "x_z") */
-    private _propertyRegistry: Map<string, PropertyInfo> = new Map();
+    /** Building信息注册表 (key: "x_z") */
+    private _buildingRegistry: Map<string, BuildingInfo> = new Map();
 
     // ========================= 生命周期方法 =========================
     
@@ -369,10 +367,10 @@ export class GameMap extends Component {
         }
 
         const typeId = blockInfo.typeId as number;
-        const isProperty = isWeb3Property(typeId);
+        const isProperty = isWeb3Building(typeId);
 
         // 检查当前位置是否有地产或tile
-        const existingProperty = this.findProperty2x2Info(gridPos);
+        const existingProperty = this.findBuilding2x2Info(gridPos);
         const existingTileKey = `${gridPos.x}_${gridPos.y}`;
         const existingTile = this._tileIndex.get(existingTileKey);
 
@@ -382,13 +380,13 @@ export class GameMap extends Component {
             if (existingProperty && existingProperty.blockId === this._currentSelectedBlockId) {
                 // 相同类型的地产，循环切换朝向
                 const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
-                this.cyclePropertyDirection(propertyPos);
+                this.cycleBuildingDirection(propertyPos);
                 return;  // 不需要重新放置，只切换朝向
             }
 
             // 不同类型的地产或没有地产，执行替换逻辑
             if (existingProperty && existingProperty.size === 2) {
-                const newSize = getPropertySize(this._currentSelectedBlockId);
+                const newSize = getBuildingSize(this._currentSelectedBlockId);
                 if (newSize === 2) {
                     // 如果新地产的左下角与现有地产相同，可以替换
                     if (gridPos.x === existingProperty.position.x && gridPos.y === existingProperty.position.z) {
@@ -397,14 +395,14 @@ export class GameMap extends Component {
                         // 否则需要先删除现有的2x2地产
                         console.log(`[GameMap] Removing existing 2x2 property to place new one`);
                         const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
-                        this.removeProperty(propertyPos);
+                        this.removeBuilding(propertyPos);
                     }
                 }
             }
 
             // Property类型，放置在y=0，并处理相邻Tile
-            const size = getPropertySize(this._currentSelectedBlockId);
-            await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size as 1 | 2);
+            const size = getBuildingSize(this._currentSelectedBlockId);
+            await this.placeBuildingAt(this._currentSelectedBlockId, gridPos, size as 1 | 2);
         }
         // 如果要放置的是普通tile
         else if (isWeb3Tile(typeId)) {
@@ -422,7 +420,7 @@ export class GameMap extends Component {
             if (existingProperty && existingProperty.size === 2) {
                 console.log(`[GameMap] Removing existing 2x2 property to place new tile`);
                 const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
-                this.removeProperty(propertyPos);
+                this.removeBuilding(propertyPos);
             }
 
             // 地块类型，放置在y=0
@@ -434,7 +432,7 @@ export class GameMap extends Component {
             if (existingProperty && existingProperty.size === 2) {
                 console.log(`[GameMap] Removing existing 2x2 property to place new element`);
                 const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
-                this.removeProperty(propertyPos);
+                this.removeBuilding(propertyPos);
             }
 
             if (isWeb3Object(typeId)) {
@@ -472,7 +470,7 @@ export class GameMap extends Component {
 
         // 获取点击位置的tile和property信息
         const tile = this._tileIndex.get(key);
-        const propertyInfo = this.findProperty2x2Info(gridPos);
+        const buildingInfo = this.findBuilding2x2Info(gridPos);
 
         let eventData: any = {
             gridPos: { x: gridPos.x, y: gridPos.y }
@@ -490,16 +488,16 @@ export class GameMap extends Component {
         }
 
         // 添加property ID信息
-        if (propertyInfo) {
-            eventData.propertyId = propertyInfo.propertyId;
-            eventData.propertyBlockId = propertyInfo.blockId;
-            const propertyBlockInfo = getWeb3BlockByBlockId(propertyInfo.blockId);
-            eventData.blockName = propertyBlockInfo?.name || propertyInfo.blockId;
-            eventData.blockId = propertyInfo.blockId;
+        if (buildingInfo) {
+            eventData.buildingId = buildingInfo.buildingId;
+            eventData.buildingBlockId = buildingInfo.blockId;
+            const propertyBlockInfo = getWeb3BlockByBlockId(buildingInfo.blockId);
+            eventData.blockName = propertyBlockInfo?.name || buildingInfo.blockId;
+            eventData.blockId = buildingInfo.blockId;
         }
 
         // 发送事件以更新UI
-        if (tile || propertyInfo) {
+        if (tile || buildingInfo) {
             EventBus.emit(EventTypes.UI.MapElementSelected, eventData);
         }
     }
@@ -634,12 +632,12 @@ export class GameMap extends Component {
         }
 
         // 3. 检查是否是Property（包括2x2）
-        const propertyInfo = this.findProperty2x2Info(gridPos);
-        if (propertyInfo) {
+        const buildingInfo = this.findBuilding2x2Info(gridPos);
+        if (buildingInfo) {
             // 使用Property的左下角位置进行删除
-            const propertyPos = new Vec2(propertyInfo.position.x, propertyInfo.position.z);
-            this.removeProperty(propertyPos);
-            console.log(`[GameMap] Removed ${propertyInfo.size}x${propertyInfo.size} property at base position (${propertyPos.x}, ${propertyPos.y})`);
+            const propertyPos = new Vec2(buildingInfo.position.x, buildingInfo.position.z);
+            this.removeBuilding(propertyPos);
+            console.log(`[GameMap] Removed ${buildingInfo.size}x${buildingInfo.size} property at base position (${propertyPos.x}, ${propertyPos.y})`);
             if (this._isEditMode) {
                 this.scheduleAutoSave();
             }
@@ -712,65 +710,14 @@ export class GameMap extends Component {
     public clearAllPlacedBlocks(): void {
         console.log('[GameMap] Clearing all placed blocks...');
         
-        // 清除所有地块
-        const tilesToRemove = [...this._tiles];
-        for (const tile of tilesToRemove) {
-            this.removeTile(tile);
-        }
-        
-        // 清除所有物体
-        const objectsToRemove = [...this._objects];
-        for (const object of objectsToRemove) {
-            this.removeObject(object);
-        }
+        // 复用 clearMap 的清理逻辑，避免重复代码
+        this.clearMap();
 
-        // 清除所有装饰
-        this._decorations.forEach((node) => {
-            if (node && node.isValid) {
-                node.destroy();
-            }
-        });
-        this._decorations.clear();
-
-        // 清除所有PaperActor（NPC/物体层）
-        this._actors.forEach((node) => {
-            if (node && node.isValid) {
-                node.destroy();
-            }
-        });
-        this._actors.clear();
-
-        // 清除所有建筑PaperActor（去重后销毁）
-        const uniqueBuildings = new Set(this._buildings.values());
-        uniqueBuildings.forEach((node) => {
-            if (node && node.isValid) {
-                node.destroy();
-            }
-        });
-        this._buildings.clear();
-
-        // 清除Property容器残留（例如 2x2 父节点）
-        if (this.tilesContainer) {
-            const children = [...this.tilesContainer.children];
-            for (const child of children) {
-                if (child.name.startsWith('Property2x2_')) {
-                    child.destroy();
-                }
-            }
-        }
-        
-        // 清空索引
-        this._tileIndex.clear();
-        this._objectIndex.clear();
-
-        // 清空Property注册
-        this._propertyRegistry.clear();
-
-        // 标记需要保存
+        // 编辑模式下触发自动保存
         if (this._isEditMode) {
             this.scheduleAutoSave();
         }
-        
+
         console.log('[GameMap] All blocks cleared');
     }
     
@@ -792,9 +739,9 @@ export class GameMap extends Component {
 
             // 更新Property注册信息
             const propertyKey = `${gridPos.x}_${gridPos.y}`;
-            const propertyInfo = this._propertyRegistry.get(propertyKey);
-            if (propertyInfo && propertyInfo.data) {
-                propertyInfo.data.level = newLevel;
+            const buildingInfo = this._buildingRegistry.get(propertyKey);
+            if (buildingInfo) {
+                buildingInfo.level = newLevel;
             }
 
             // 触发自动保存
@@ -887,19 +834,24 @@ export class GameMap extends Component {
             // 收集物体数据
             const objectsData: ObjectData[] = this._objects.map(obj => obj.getData());
 
-            // 收集Property数据
-            const propertiesData: PropertyData[] = [];
+            // 收集Building数据
+            const buildingsData: BuildingData[] = [];
 
-            this._propertyRegistry.forEach((info, key) => {
-                const propertyTypeId = getWeb3BlockByBlockId(info.blockId)?.typeId || 0;
-                propertiesData.push({
+            this._buildingRegistry.forEach((info, key) => {
+                const buildingTypeId = getWeb3BlockByBlockId(info.blockId)?.typeId || 0;
+                buildingsData.push({
                     blockId: info.blockId,
-                    typeId: propertyTypeId,
+                    typeId: buildingTypeId,
                     size: info.size,
                     position: info.position,
                     direction: info.direction,  // 保存朝向
-                    data: info.data
-                } as PropertyData);
+                    buildingId: info.buildingId,
+                    owner: info.owner,
+                    level: info.level,
+                    price: info.price,
+                    rent: info.rent,
+                    mortgaged: info.mortgaged
+                } as BuildingData);
             });
 
             // 构建保存数据
@@ -912,7 +864,8 @@ export class GameMap extends Component {
                 gameMode: this._isEditMode ? 'edit' : 'play',
                 tiles: tilesData,
                 objects: objectsData,
-                properties: propertiesData.length > 0 ? propertiesData : undefined
+                buildings: buildingsData.length > 0 ? buildingsData : undefined,
+                properties: buildingsData.length > 0 ? buildingsData : undefined  // 向后兼容
             };
             
             // 添加游戏规则（如果需要）
@@ -1048,31 +1001,38 @@ export class GameMap extends Component {
                 }
             }
 
-            // 加载Property数据并重建建筑PaperActor
-            if (mapData.properties) {
-                for (const propertyData of mapData.properties) {
-                    const propertyKey = `${propertyData.position.x}_${propertyData.position.z}`;
-                    const propertyInfo: PropertyInfo = {
-                        blockId: propertyData.blockId,
-                        position: propertyData.position,
-                        size: propertyData.size,
-                        direction: propertyData.direction || 0,  // 保存朝向
-                        data: propertyData.data
+            // 加载Building数据并重建建筑PaperActor
+            // 优先使用新的buildings字段，如果没有则使用旧的properties字段（向后兼容）
+            const buildingsToLoad = mapData.buildings || mapData.properties;
+            if (buildingsToLoad) {
+                for (const buildingData of buildingsToLoad) {
+                    const buildingKey = `${buildingData.position.x}_${buildingData.position.z}`;
+                    const buildingInfo: BuildingInfo = {
+                        blockId: buildingData.blockId,
+                        position: buildingData.position,
+                        size: buildingData.size,
+                        direction: buildingData.direction || 0,  // 保存朝向
+                        buildingId: buildingData.buildingId,
+                        owner: buildingData.owner,
+                        level: buildingData.level,
+                        price: buildingData.price,
+                        rent: buildingData.rent,
+                        mortgaged: buildingData.mortgaged
                     };
-                    this._propertyRegistry.set(propertyKey, propertyInfo);
+                    this._buildingRegistry.set(buildingKey, buildingInfo);
 
-                    // 使用统一的方法重新创建Property的建筑PaperActor
-                    const gridPos = new Vec2(propertyData.position.x, propertyData.position.z);
-                    const buildingNode = this.createPropertyPaperActor(
-                        propertyData.blockId,
+                    // 使用统一的方法重新创建Building的PaperActor
+                    const gridPos = new Vec2(buildingData.position.x, buildingData.position.z);
+                    const buildingNode = this.createBuildingPaperActor(
+                        buildingData.blockId,
                         gridPos,
-                        propertyData.size,
-                        propertyData.data?.level || 0,
-                        propertyInfo.direction
+                        buildingData.size,
+                        buildingData.level || 0,
+                        buildingInfo.direction
                     );
 
                     if (!buildingNode) {
-                        console.warn(`[GameMap] Failed to recreate building ${propertyData.blockId}`);
+                        console.warn(`[GameMap] Failed to recreate building ${buildingData.blockId}`);
                     }
                 }
             }
@@ -1143,7 +1103,7 @@ export class GameMap extends Component {
                 }
             }
         }
-        this._propertyRegistry.clear();
+        this._buildingRegistry.clear();
 
         console.log('[GameMap] Map cleared');
     }
@@ -1278,7 +1238,7 @@ export class GameMap extends Component {
 
         // 加载地产
         for (const property of generatedMap.properties) {
-            await this.placePropertyAt(property.blockId, property.gridPos, property.size);
+            await this.placeBuildingAt(property.blockId, property.gridPos, property.size);
         }
 
         // 加载特殊地块
@@ -1349,8 +1309,8 @@ export class GameMap extends Component {
             } else {
                 // 非特殊格子，根据类型判断
                 // 仅使用现有类型（见 Web3BlockTypes.ts）
-                if (tile.type === 1 /* Web3TileType.PROPERTY */) {
-                    blockId = 'web3:property';
+                if (tile.type === Web3TileType.PROPERTY_TILE) {
+                    blockId = 'web3:property_tile';
                 } else {
                     blockId = 'web3:empty_land';
                 }
@@ -1364,11 +1324,11 @@ export class GameMap extends Component {
             console.log(`[GameMap] Placing ${result.properties.length} properties...`);
             for (const property of result.properties) {
                 // 确定地产的blockId
-                const blockId = property.size === '2x2' ? 'web3:property_2x2' : 'web3:property_1x1';
+                const blockId = property.size === '2x2' ? 'web3:building_2x2' : 'web3:building_1x1';
                 const size = property.size === '2x2' ? 2 : 1;
 
                 // 放置地产建筑
-                await this.placePropertyAt(blockId, property.position, size);
+                await this.placeBuildingAt(blockId, property.position, size);
             }
         }
 
@@ -1450,8 +1410,8 @@ export class GameMap extends Component {
 
         const blockId = tile.getBlockId();
 
-        // 排除地产block（property_1x1 和 property_2x2）
-        if (blockId === 'web3:property_1x1' || blockId === 'web3:property_2x2') {
+        // 排除建筑block（building_1x1 和 building_2x2）
+        if (blockId === 'web3:building_1x1' || blockId === 'web3:building_2x2') {
             return false;
         }
 
@@ -1465,8 +1425,8 @@ export class GameMap extends Component {
      * @param gridPos 网格位置（左下角）
      * @param size Property尺寸（1或2）
      */
-    private async placePropertyAt(blockId: string, gridPos: Vec2, size: 1 | 2): Promise<void> {
-        console.log(`[GameMap] Placing property ${blockId} at (${gridPos.x}, ${gridPos.y}) with size ${size}`);
+    private async placeBuildingAt(blockId: string, gridPos: Vec2, size: 1 | 2): Promise<void> {
+        console.log(`[GameMap] Placing building ${blockId} at (${gridPos.x}, ${gridPos.y}) with size ${size}`);
 
         // 1. 检查所有占用格子是否可用
         const key = `${gridPos.x}_${gridPos.y}`;
@@ -1490,7 +1450,7 @@ export class GameMap extends Component {
             await this.placeTileAt(blockId, gridPos);
         } else {
             // 2x2建筑：使用体素系统放置
-            await this.place2x2Property(blockId, gridPos);
+            await this.place2x2Building(blockId, gridPos);
         }
 
         // 3. 在建筑中心添加PaperActor（用于显示建筑精灵/动画）
@@ -1503,20 +1463,20 @@ export class GameMap extends Component {
 
         // 使用统一的方法创建PaperActor
         const direction = this.findBestDirection(gridPos, size);
-        const buildingNode = this.createPropertyPaperActor(blockId, gridPos, size, 0, direction);
+        const buildingNode = this.createBuildingPaperActor(blockId, gridPos, size, 0, direction);
         if (!buildingNode) {
             console.warn(`[GameMap] Failed to create PaperActor for ${blockId}`);
         }
 
         // 4. 注册Property信息
         const propertyKey = `${gridPos.x}_${gridPos.y}`;
-        const propertyInfo: PropertyInfo = {
+        const buildingInfo: BuildingInfo = {
             blockId,
             position: { x: gridPos.x, z: gridPos.y },
             size,
             direction
         };
-        this._propertyRegistry.set(propertyKey, propertyInfo);
+        this._buildingRegistry.set(propertyKey, buildingInfo);
 
         // 标记有未保存的修改
         this._hasUnsavedChanges = true;
@@ -1527,18 +1487,18 @@ export class GameMap extends Component {
      * 循环切换地产朝向
      * @param gridPos 网格位置
      */
-    private cyclePropertyDirection(gridPos: Vec2): void {
+    private cycleBuildingDirection(gridPos: Vec2): void {
         const key = `${gridPos.x}_${gridPos.y}`;
-        const propertyInfo = this._propertyRegistry.get(key);
+        const buildingInfo = this._buildingRegistry.get(key);
 
-        if (!propertyInfo) {
+        if (!buildingInfo) {
             console.warn(`[GameMap] No property found at (${gridPos.x}, ${gridPos.y})`);
             return;
         }
 
         // 循环切换朝向: 0 -> 1 -> 2 -> 3 -> 0
-        const newDirection = ((propertyInfo.direction || 0) + 1) % 4;
-        propertyInfo.direction = newDirection;
+        const newDirection = ((buildingInfo.direction || 0) + 1) % 4;
+        buildingInfo.direction = newDirection;
 
         // 更新PaperActor的朝向
         const buildingNode = this._buildings.get(key);
@@ -1564,7 +1524,7 @@ export class GameMap extends Component {
      * @param direction 建筑朝向（可选，不提供则自动计算）
      * @returns 创建的建筑节点
      */
-    private createPropertyPaperActor(
+    private createBuildingPaperActor(
         blockId: string,
         gridPos: Vec2,
         size: 1 | 2,
@@ -1635,55 +1595,45 @@ export class GameMap extends Component {
      * @param blockId Property的blockId
      * @param gridPos 网格位置（左下角）
      */
-    private async place2x2Property(blockId: string, gridPos: Vec2): Promise<void> {
-        console.log(`[GameMap] Placing 2x2 property ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+    private async place2x2Building(blockId: string, gridPos: Vec2): Promise<void> {
+        console.log(`[GameMap] Placing 2x2 building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
 
-        // 创建一个主节点作为2x2 Property的容器
-        const propertyNode = new Node(`Property2x2_${gridPos.x}_${gridPos.y}`);
-        propertyNode.setParent(this.tilesContainer!);
-        const propertyKey = `${gridPos.x}_${gridPos.y}`;
+        // 2x2建筑不创建MapTile，只创建PaperActor
+        // 建筑是独立的实体，不是地块
 
-        // 为2x2 Property创建4个块，每个块占一个格子
-        // 但它们都作为propertyNode的子节点，形成一个整体
+        // 删除占用位置上的任何现有tiles
         for (let dx = 0; dx < 2; dx++) {
             for (let dz = 0; dz < 2; dz++) {
                 const pos = new Vec2(gridPos.x + dx, gridPos.y + dz);
                 const key = `${pos.x}_${pos.y}`;
 
-                // 创建tile节点
-                const tileNode = new Node(`PropertyTile_${pos.x}_${pos.y}`);
-                tileNode.setParent(propertyNode);  // 作为property容器的子节点
+                // 如果该位置有tile，删除它
+                const existingTile = this._tileIndex.get(key);
+                if (existingTile && existingTile.node && existingTile.node.isValid) {
+                    existingTile.node.destroy();
+                    this._tileIndex.delete(key);
 
-                // 添加MapTile组件
-                const tile = tileNode.addComponent(MapTile);
-                await tile.initialize(blockId, pos);
-
-                // 2x2 Property默认缩放为1
-                tileNode.setScale(1, 1, 1);
-
-                // 添加到索引
-                this._tiles.push(tile);
-                this._tileIndex.set(key, tile);
+                    // 从tiles数组中移除
+                    const index = this._tiles.indexOf(existingTile);
+                    if (index !== -1) {
+                        this._tiles.splice(index, 1);
+                    }
+                }
             }
         }
 
-        // 可选：给2x2 Property添加一个特殊标记，以便后续识别
-        propertyNode['isProperty2x2'] = true;
-        propertyNode['propertyBlockId'] = blockId;
-        propertyNode['propertyPosition'] = gridPos;
-
-        console.log(`[GameMap] Successfully placed 2x2 property at (${gridPos.x}, ${gridPos.y})`);
+        console.log(`[GameMap] Successfully prepared 2x2 area for building at (${gridPos.x}, ${gridPos.y})`);
     }
 
     /**
      * 删除Property
      * @param propertyPos Property位置
      */
-    private removeProperty(propertyPos: Vec2): void {
+    private removeBuilding(propertyPos: Vec2): void {
         const propertyKey = `${propertyPos.x}_${propertyPos.y}`;
-        const propertyInfo = this._propertyRegistry.get(propertyKey);
+        const buildingInfo = this._buildingRegistry.get(propertyKey);
 
-        if (!propertyInfo) {
+        if (!buildingInfo) {
             return;
         }
 
@@ -1694,7 +1644,7 @@ export class GameMap extends Component {
             buildingNode.destroy();
         }
         // 无论是否存在节点，都清理所有占用格子的_buildings映射
-        if (propertyInfo.size === 2) {
+        if (buildingInfo.size === 2) {
             for (let dx = 0; dx < 2; dx++) {
                 for (let dz = 0; dz < 2; dz++) {
                     const occupiedKey = `${propertyPos.x + dx}_${propertyPos.y + dz}`;
@@ -1706,7 +1656,7 @@ export class GameMap extends Component {
         }
 
         // 1. 对于2x2 Property，先找到父容器节点
-        if (propertyInfo.size === 2) {
+        if (buildingInfo.size === 2) {
             const containerName = `Property2x2_${propertyPos.x}_${propertyPos.y}`;
             const containerNode = this.tilesContainer?.getChildByName(containerName);
             if (containerNode) {
@@ -1735,7 +1685,7 @@ export class GameMap extends Component {
         }
 
         // 2. 从注册表中删除
-        this._propertyRegistry.delete(propertyKey);
+        this._buildingRegistry.delete(propertyKey);
 
         // 标记有未保存的修改
         this._hasUnsavedChanges = true;
@@ -1746,7 +1696,7 @@ export class GameMap extends Component {
      * 加载后重建2x2 Property的父容器，并恢复缩放
      */
     private rebuildPropertyContainers(): void {
-        this._propertyRegistry.forEach((info, propertyKey) => {
+        this._buildingRegistry.forEach((info, propertyKey) => {
             if (info.size !== 2) return;
             const containerName = `Property2x2_${info.position.x}_${info.position.z}`;
             let containerNode = this.tilesContainer?.getChildByName(containerName);
@@ -1779,9 +1729,9 @@ export class GameMap extends Component {
      * @param gridPos 网格位置
      * @returns Property信息，如果不是Property则返回null
      */
-    private findProperty2x2Info(gridPos: Vec2): PropertyInfo | null {
+    private findBuilding2x2Info(gridPos: Vec2): BuildingInfo | null {
         // 先检查是否是2x2地产的一部分
-        for (const [key, info] of this._propertyRegistry) {
+        for (const [key, info] of this._buildingRegistry) {
             if (info.size === 2) {
                 const basePos = info.position;
                 // 检查是否在2x2范围内
@@ -1794,7 +1744,7 @@ export class GameMap extends Component {
 
         // 如果不是2x2的一部分，检查是否是1x1地产
         const key = `${gridPos.x}_${gridPos.y}`;
-        return this._propertyRegistry.get(key) || null;
+        return this._buildingRegistry.get(key) || null;
     }
 
     /**
@@ -1802,9 +1752,9 @@ export class GameMap extends Component {
      * @param gridPos 网格位置
      * @returns 是否属于2x2地产
      */
-    private isPartOfProperty2x2(gridPos: Vec2): boolean {
-        const propertyInfo = this.findProperty2x2Info(gridPos);
-        return propertyInfo !== null && propertyInfo.size === 2;
+    private isPartOfBuilding2x2(gridPos: Vec2): boolean {
+        const buildingInfo = this.findBuilding2x2Info(gridPos);
+        return buildingInfo !== null && buildingInfo.size === 2;
     }
 
     // ========================= 编号分配功能 =========================
@@ -1821,8 +1771,8 @@ export class GameMap extends Component {
         // 分配tile编号
         this.assignTileIds();
 
-        // 分配property编号
-        this.assignPropertyIds();
+        // 分配building编号
+        this.assignBuildingIds();
 
         console.log('[GameMap] ID assignment completed');
     }
@@ -1837,8 +1787,8 @@ export class GameMap extends Component {
         }
 
         // 清除property编号
-        for (const propertyInfo of this._propertyRegistry.values()) {
-            propertyInfo.propertyId = 65535;
+        for (const buildingInfo of this._buildingRegistry.values()) {
+            buildingInfo.buildingId = 65535;
         }
 
         console.log('[GameMap] All IDs cleared');
@@ -1898,10 +1848,10 @@ export class GameMap extends Component {
             return currentId;
         }
 
-        // 检查是否为地产block，地产不应该有tile_id
+        // 检查是否为建筑block，建筑不应该有tile_id
         const blockId = tile.getBlockId();
-        if (blockId === 'web3:property_1x1' || blockId === 'web3:property_2x2') {
-            // 地产不分配tile_id，但仍标记为已访问避免重复遍历
+        if (blockId === 'web3:building_1x1' || blockId === 'web3:building_2x2') {
+            // 建筑不分配tile_id，但仍标记为已访问避免重复遍历
             visited.add(key);
             // 清除可能已经错误设置的tile_id
             tile.setTileId(65535);
@@ -1927,12 +1877,12 @@ export class GameMap extends Component {
             const neighborTile = this._tileIndex.get(neighborKey);
 
             if (neighborTile && !visited.has(neighborKey)) {
-                // 只对非地产的tile进行递归
+                // 只对非建筑的tile进行递归
                 const neighborBlockId = neighborTile.getBlockId();
-                if (neighborBlockId !== 'web3:property_1x1' && neighborBlockId !== 'web3:property_2x2') {
+                if (neighborBlockId !== 'web3:building_1x1' && neighborBlockId !== 'web3:building_2x2') {
                     currentId = this.dfsAssignTileId(neighborTile, currentId, visited);
                 } else {
-                    // 地产标记为已访问但不分配编号
+                    // 建筑标记为已访问但不分配编号
                     visited.add(neighborKey);
                     neighborTile.setTileId(65535);
                 }
@@ -1943,26 +1893,26 @@ export class GameMap extends Component {
     }
 
     /**
-     * 为property分酌编号
+     * 为building分配编号
      */
-    private assignPropertyIds(): void {
-        // 获取所有property并按坐标排序
-        const properties = Array.from(this._propertyRegistry.values());
+    private assignBuildingIds(): void {
+        // 获取所有building并按坐标排序
+        const buildings = Array.from(this._buildingRegistry.values());
 
         // 按z坐标优先，x坐标次之排序（先行后列）
-        properties.sort((a, b) => {
+        buildings.sort((a, b) => {
             if (a.position.z !== b.position.z) {
                 return a.position.z - b.position.z;
             }
             return a.position.x - b.position.x;
         });
 
-        // 分酌编号
-        for (let i = 0; i < properties.length; i++) {
-            properties[i].propertyId = i;
+        // 分配编号
+        for (let i = 0; i < buildings.length; i++) {
+            buildings[i].buildingId = i;
         }
 
-        console.log(`[GameMap] Assigned IDs to ${properties.length} properties`);
+        console.log(`[GameMap] Assigned IDs to ${buildings.length} buildings`);
     }
 
     /**
@@ -1982,8 +1932,8 @@ export class GameMap extends Component {
         // 为tile创建标签（排除地产）
         for (const tile of this._tiles) {
             const blockId = tile.getBlockId();
-            // 跳过地产block
-            if (blockId === 'web3:property_1x1' || blockId === 'web3:property_2x2') {
+            // 跳过建筑block
+            if (blockId === 'web3:building_1x1' || blockId === 'web3:building_2x2') {
                 continue;
             }
 
@@ -1999,13 +1949,13 @@ export class GameMap extends Component {
             }
         }
 
-        // 为property创建标签
-        for (const propertyInfo of this._propertyRegistry.values()) {
-            if (propertyInfo.propertyId !== undefined && propertyInfo.propertyId !== 65535) {
+        // 为building创建标签
+        for (const buildingInfo of this._buildingRegistry.values()) {
+            if (buildingInfo.buildingId !== undefined && buildingInfo.buildingId !== 65535) {
                 // 计算中心位置
-                let centerX = propertyInfo.position.x;
-                let centerZ = propertyInfo.position.z;
-                if (propertyInfo.size === 2) {
+                let centerX = buildingInfo.position.x;
+                let centerZ = buildingInfo.position.z;
+                if (buildingInfo.size === 2) {
                     // 2x2中心应加1
                     centerX += 1;
                     centerZ += 1;
@@ -2016,8 +1966,8 @@ export class GameMap extends Component {
                 }
 
                 const worldPos = new Vec3(centerX, 2, centerZ);  // Y抬高2，比tile更高
-                const key = `property_${propertyInfo.position.x}_${propertyInfo.position.z}`;
-                const label = this.createIdLabel(`P${propertyInfo.propertyId}`, worldPos, new Color(255, 255, 0), key);  // 黄色
+                const key = `building_${buildingInfo.position.x}_${buildingInfo.position.z}`;
+                const label = this.createIdLabel(`B${buildingInfo.buildingId}`, worldPos, new Color(255, 255, 0), key);  // 黄色
                 this._idLabels.set(key, label);
                 this._idLabelWorldPos.set(key, worldPos);
             }

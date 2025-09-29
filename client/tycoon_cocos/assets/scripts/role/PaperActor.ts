@@ -254,52 +254,6 @@ export class PaperActor extends Component {
         });
     }
 
-    /**
-     * 创建内置材质
-     */
-    private createBuiltinMaterial() {
-        // 使用内置的sprite effect
-        resources.load('effects/builtin-sprite', EffectAsset, (err, effect) => {
-            if (!err && effect) {
-                this.material = new Material();
-                this.material.initialize({
-                    effectAsset: effect,
-                    defines: { USE_TEXTURE: true }
-                });
-                console.log(`[PaperActor] Created builtin material for ${this.node.name}`);
-            } else {
-                // 最后的备用方案：直接使用EffectAsset.get
-                const builtinEffect = EffectAsset.get('builtin-sprite');
-                if (builtinEffect) {
-                    this.material = new Material();
-                    this.material.initialize({
-                        effectAsset: builtinEffect,
-                        defines: { USE_TEXTURE: true }
-                    });
-                    console.log(`[PaperActor] Created material with EffectAsset.get for ${this.node.name}`);
-                } else {
-                    console.error('[PaperActor] Failed to create any material!');
-                    return;
-                }
-            }
-
-            this.applyMaterialToRenderer();
-        });
-    }
-
-    /**
-     * 应用材质到渲染器
-     */
-    private applyMaterialToRenderer() {
-        if (this.meshRenderer && this.material) {
-            this.meshRenderer.setMaterial(this.material, 0);
-            // 如果已经有纹理，立即应用
-            if (this.currentTexture) {
-                this.applyTexture(this.currentTexture);
-            }
-        }
-    }
-
     // ===== Billboard功能 =====
 
     private updateBillboard() {

@@ -61,7 +61,7 @@ public struct PropertyStatic has store, copy, drop {
 public struct TileStatic has store, copy, drop {
     x: u8,
     y: u8,
-    kind: u8,           // TileKind（保留用于快速类型判断）
+    kind: u8,           // TileKind //todo 只有 TILE_PROPERTY 类型的property_id才有意义, 其他类型tile无关联地产
     property_id: u16,   // 关联的地产ID（NO_PROPERTY表示非地产）
     special: u64,       // 额外参数（非地产地块使用）
     cw_next: u16,       // 顺时针下一个地块ID (最多65535个地块)

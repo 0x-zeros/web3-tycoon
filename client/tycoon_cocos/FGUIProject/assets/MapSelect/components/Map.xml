@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="512,256" extention="Button">
-  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="1"/>
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
   <displayList>
     <image id="n0_105vo" name="n0" src="mumqir" fileName="images/kenney_ui-pack-pixel-adventure/LargeTiles/tile_0003.png" pkg="82r0pzop" xy="0,0" size="512,256">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
+    <loader id="n5_w84m" name="mapPreview" xy="0,0" size="512,256" align="center" vAlign="middle" fill="scaleFree"/>
     <text id="n1_105vo" name="mapName" xy="76,37" size="367,59" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="地图名称">
       <relation target="" sidePair="center-center,middle-middle"/>
     </text>

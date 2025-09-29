@@ -25,22 +25,12 @@ export interface MapConfig {
     id: string;
     /** 地图名称 */
     name: string;
-    /** 地图描述 */
-    description: string;
     /** 预制体路径 */
     prefabPath: string;
-    /** 地图数据路径 */
-    mapDataPath?: string;
     /** 预览图路径 */
-    previewImagePath?: string;
-    /** 支持的玩家数量 */
-    playerCount: { min: number; max: number };
+    previewImagePath: string;
     /** 地图类型 */
-    type: 'standard' | 'custom' | 'special';
-    /** 是否已解锁 */
-    unlocked: boolean;
-    /** 地图标签 */
-    tags: string[];
+    type: 'classic' | 'brawl';
 }
 
 /**
@@ -169,25 +159,10 @@ export class MapManager extends Component {
     }
 
     /**
-     * 获取已解锁的地图列表
-     */
-    public getUnlockedMaps(): MapConfig[] {
-        return this.getAvailableMaps().filter(map => map.unlocked);
-    }
-
-    /**
      * 根据ID获取地图配置
      */
     public getMapConfig(mapId: string): MapConfig | null {
         return this._mapConfigs.get(mapId) || null;
-    }
-
-    /**
-     * 检查地图是否已解锁
-     */
-    public isMapUnlocked(mapId: string): boolean {
-        const config = this.getMapConfig(mapId);
-        return config ? config.unlocked : false;
     }
 
     /**
@@ -232,26 +207,27 @@ export class MapManager extends Component {
             return { success: false, error: '地图配置不存在' };
         }
 
-        if (!isEdit && !config.unlocked) {
-            return { success: false, error: '地图未解锁' };
-        }
-
         try {
             // 卸载当前地图
             this.unloadCurrentMap();
 
             // 获取预制体（优先使用预加载的）
             let prefab = this._preloadedMaps.get(mapId);
-            if (!prefab) {
-                // 动态加载
+            let mapInstance: Node;
+
+            if (!prefab && config.prefabPath) {
+                // 尝试动态加载
                 prefab = await this.loadMapPrefab(config.prefabPath);
-                if (!prefab) {
-                    return { success: false, error: '地图预制体加载失败' };
-                }
             }
 
-            // 实例化地图
-            const mapInstance = instantiate(prefab);
+            if (prefab) {
+                // 使用预制体实例化地图
+                mapInstance = instantiate(prefab);
+            } else {
+                // 如果没有预制体，创建一个空节点
+                mapInstance = new Node(config.id);
+                this.log(`地图 ${mapId} 没有预制体，创建空节点`);
+            }
             
             // 添加 GameMap 组件
             const mapComponent = mapInstance.addComponent(GameMap);

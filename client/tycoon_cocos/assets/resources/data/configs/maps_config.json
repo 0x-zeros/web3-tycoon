@@ -1,112 +1,46 @@
 {
-  "version": "1.0.0",
-  "description": "Web3 Tycoon 游戏地图配置",
   "maps": [
     {
       "id": "test_map",
       "name": "测试地图",
-      "description": "用于开发测试的基础地图，包含20个标准地块",
       "prefabPath": "scene/test_map",
-      "previewImagePath": "images/maps/test_map_preview",
-      "playerCount": {
-        "min": 2,
-        "max": 4
-      },
-      "type": "standard",
-      "unlocked": true,
-      "tags": ["测试", "基础", "标准"]
+      "previewImagePath": "images/maps/default_preview",
+      "type": "classic"
     },
     {
       "id": "classic_board",
       "name": "经典棋盘",
-      "description": "经典大富翁风格的方形棋盘地图",
       "prefabPath": "scene/classic_board",
-      "previewImagePath": "images/maps/classic_board_preview",
-      "playerCount": {
-        "min": 2,
-        "max": 6
-      },
-      "type": "standard",
-      "unlocked": true,
-      "tags": ["经典", "标准", "多人"]
+      "previewImagePath": "images/maps/classic_board",
+      "type": "classic"
     },
     {
       "id": "web3_city",
       "name": "Web3 城市",
-      "description": "充满区块链元素的现代城市地图，包含DeFi主题地块",
       "prefabPath": "scene/web3_city",
-      "previewImagePath": "images/maps/web3_city_preview",
-      "playerCount": {
-        "min": 2,
-        "max": 4
-      },
-      "type": "custom",
-      "unlocked": false,
-      "tags": ["Web3", "DeFi", "城市", "高级"]
+      "previewImagePath": "images/maps/web3_city",
+      "type": "classic"
     },
     {
       "id": "crypto_island",
       "name": "加密岛屿",
-      "description": "神秘的岛屿地图，隐藏着加密货币宝藏",
       "prefabPath": "scene/crypto_island",
-      "previewImagePath": "images/maps/crypto_island_preview", 
-      "playerCount": {
-        "min": 2,
-        "max": 4
-      },
-      "type": "special",
-      "unlocked": false,
-      "tags": ["神秘", "宝藏", "加密货币", "特殊"]
+      "previewImagePath": "images/maps/crypto_island",
+      "type": "brawl"
     },
     {
       "id": "defi_plaza",
       "name": "DeFi 广场",
-      "description": "专注于DeFi协议交互的商业广场地图",
       "prefabPath": "scene/defi_plaza",
-      "previewImagePath": "images/maps/defi_plaza_preview",
-      "playerCount": {
-        "min": 3,
-        "max": 6
-      },
-      "type": "custom",
-      "unlocked": false,
-      "tags": ["DeFi", "商业", "协议", "高级"]
+      "previewImagePath": "images/maps/default_preview",
+      "type": "classic"
     },
     {
       "id": "nft_gallery",
       "name": "NFT 画廊",
-      "description": "以NFT收藏和交易为主题的艺术画廊地图",
       "prefabPath": "scene/nft_gallery",
-      "previewImagePath": "images/maps/nft_gallery_preview",
-      "playerCount": {
-        "min": 2,
-        "max": 4
-      },
-      "type": "special",
-      "unlocked": false,
-      "tags": ["NFT", "艺术", "收藏", "特殊"]
+      "previewImagePath": "images/maps/nft_gallery",
+      "type": "brawl"
     }
-  ],
-  "unlockConditions": {
-    "web3_city": {
-      "type": "level",
-      "value": 5,
-      "description": "达到5级后解锁"
-    },
-    "crypto_island": {
-      "type": "achievement",
-      "value": "first_million",
-      "description": "获得第一个百万资产成就后解锁"
-    },
-    "defi_plaza": {
-      "type": "level",
-      "value": 10,
-      "description": "达到10级后解锁"
-    },
-    "nft_gallery": {
-      "type": "achievement",
-      "value": "nft_collector",
-      "description": "收集10个NFT后解锁"
-    }
-  }
+  ]
 }

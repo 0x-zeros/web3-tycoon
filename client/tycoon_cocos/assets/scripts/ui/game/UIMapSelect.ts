@@ -4,7 +4,7 @@ import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import { MapConfig, mapManager } from "../../map/MapManager";
 import * as fgui from "fairygui-cc";
-import { _decorator } from 'cc';
+import { _decorator, Rect, resources, Size, SpriteFrame, Texture2D } from 'cc';
 
 const { ccclass } = _decorator;
 
@@ -19,10 +19,6 @@ export class UIMapSelect extends UIBase {
     private _previewImage: fgui.GLoader | null = null;
     /** 地图名称文本 */
     private _mapNameText: fgui.GTextField | null = null;
-    /** 地图描述文本 */
-    private _mapDescText: fgui.GTextField | null = null;
-    /** 玩家数量文本 */
-    private _playerCountText: fgui.GTextField | null = null;
     /** 开始游戏按钮 */
     private _startButton: fgui.GButton | null = null;
     /** 返回按钮 */
@@ -73,8 +69,8 @@ export class UIMapSelect extends UIBase {
             return;
         }
 
-        // 获取已解锁的地图
-        this._availableMaps = mapManager.instance.getUnlockedMaps();
+        // 获取所有可用地图
+        this._availableMaps = mapManager.instance.getAvailableMaps();
         
         // 更新列表数据
         if (this._mapList && this._availableMaps.length > 0) {
@@ -103,24 +99,17 @@ export class UIMapSelect extends UIBase {
         // 获取列表项组件
         const nameText = mapItem.getChild("mapName") as fgui.GTextField;
         const typeText = mapItem.getChild("mapType") as fgui.GTextField;
-        const statusIcon = mapItem.getChild("statusIcon") as fgui.GLoader;
-        const lockIcon = mapItem.getChild("lockIcon") as fgui.GLoader;
+        const previewImage = mapItem.getChild("mapPreview") as fgui.GLoader;
 
         // 设置地图信息
         if (nameText) nameText.text = mapConfig.name;
         if (typeText) typeText.text = this._getMapTypeText(mapConfig.type);
-        
-        // 设置状态图标
-        if (statusIcon) {
-            statusIcon.url = mapConfig.unlocked ? "ui://Common/icon_unlocked" : "ui://Common/icon_locked";
-        }
-        
-        if (lockIcon) {
-            lockIcon.visible = !mapConfig.unlocked;
-        }
 
         // 设置选择状态
         mapItem.selected = (this._selectedMapId === mapConfig.id);
+
+        // 立即加载并显示预览图
+        this._loadMapPreviewImage(mapConfig, previewImage);
 
         mapItem.onClick(this._onMapItemClick, this);
     }
@@ -130,9 +119,8 @@ export class UIMapSelect extends UIBase {
      */
     private _getMapTypeText(type: string): string {
         switch (type) {
-            case 'standard': return '标准地图';
-            case 'custom': return '自定义';
-            case 'special': return '特殊地图';
+            case 'classic': return '经典模式';
+            case 'brawl': return '乱斗模式';
             default: return '未知';
         }
     }
@@ -159,12 +147,38 @@ export class UIMapSelect extends UIBase {
     }
 
     /**
-     * 更新地图预览信息
+     * 加载地图预览图片（用于列表项）
+     */
+    private _loadMapPreviewImage(mapConfig: MapConfig, previewImage: fgui.GLoader): void {
+        if (!previewImage || !mapConfig.previewImagePath) {
+            return;
+        }
+
+        const texturePath = mapConfig.previewImagePath + '/texture';
+        console.log(`[UIMapSelect] Loading map preview texture for list item: ${mapConfig.previewImagePath}`);
+        
+        resources.load(texturePath, Texture2D, (err, texture) => {
+            if (!err && texture) {
+                const spriteFrame = new SpriteFrame();
+                spriteFrame.texture = texture;
+                spriteFrame.originalSize = new Size(texture.width, texture.height);
+                spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+                previewImage.texture = spriteFrame;
+            } else {
+                // 尝试加载默认贴图
+                console.warn(`[UIMapSelect] Failed to load map preview texture: ${mapConfig.previewImagePath}`, err);
+                previewImage.url = mapConfig.previewImagePath;
+            }
+        });
+    }
+
+    /**
+     * 更新地图预览信息（用于右侧预览区域）
      */
     private _updateMapPreview(mapConfig: MapConfig): void {
         // 设置预览图
         if (this._previewImage && mapConfig.previewImagePath) {
-            this._previewImage.url = mapConfig.previewImagePath;
+            this._loadMapPreviewImage(mapConfig, this._previewImage);
         }
 
         // 设置地图信息
@@ -172,18 +186,10 @@ export class UIMapSelect extends UIBase {
             this._mapNameText.text = mapConfig.name;
         }
 
-        if (this._mapDescText) {
-            this._mapDescText.text = mapConfig.description;
-        }
-
-        if (this._playerCountText) {
-            this._playerCountText.text = `${mapConfig.playerCount.min}-${mapConfig.playerCount.max} 人`;
-        }
-
-        // 设置开始按钮状态
+        // 开始按钮始终可用
         if (this._startButton) {
-            this._startButton.enabled = mapConfig.unlocked;
-            this._startButton.grayed = !mapConfig.unlocked;
+            this._startButton.enabled = true;
+            this._startButton.grayed = false;
         }
     }
 
@@ -285,12 +291,6 @@ export class UIMapSelect extends UIBase {
     private doStartMap(isEdit: boolean): void {
         if (!this._selectedMapId || !this._selectedMapConfig) {
             console.warn('[UIMapSelect] No map selected');
-            return;
-        }
-
-        if (!isEdit && !this._selectedMapConfig.unlocked) {
-            console.warn('[UIMapSelect] Selected map is locked');
-            // 这里可以显示解锁提示
             return;
         }
 

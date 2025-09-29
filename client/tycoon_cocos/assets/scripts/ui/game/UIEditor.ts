@@ -39,6 +39,15 @@ export class UIEditor extends UIBase {
     /** 下载按钮 */
     private m_btn_download: fgui.GButton;
 
+    /** 分配ID按钮 */
+    private m_btn_assignId: fgui.GButton;
+
+    /** 显示ID按钮 */
+    private m_btn_showIds: fgui.GButton;
+
+    /** ID显示状态 */
+    private _isShowingIds: boolean = false;
+
     // 模板功能已移除
 
     /** 当前选中的tile显示 */
@@ -79,6 +88,8 @@ export class UIEditor extends UIBase {
         // 获取随机生成和下载按钮
         this.m_btn_randomGen = this.getChild('btn_randomGen') as fgui.GButton;
         this.m_btn_download = this.getChild('btn_download') as fgui.GButton;
+        this.m_btn_assignId = this.getChild('btn_assignId') as fgui.GButton;
+        this.m_btn_showIds = this.getChild('btn_showIds') as fgui.GButton;
 
         // 如果没有专门的按钮，可以创建临时的测试按钮
         if (!this.m_btn_generateMap && !this.m_btn_generateClassic && !this.m_btn_generateBrawl && !this.m_btn_randomGen) {
@@ -139,6 +150,12 @@ export class UIEditor extends UIBase {
         if (this.m_btn_download) {
             this.m_btn_download.onClick(this._onDownloadClick, this);
         }
+        if (this.m_btn_assignId) {
+            this.m_btn_assignId.onClick(this._onAssignIdClick, this);
+        }
+        if (this.m_btn_showIds) {
+            this.m_btn_showIds.onClick(this._onShowIdsClick, this);
+        }
 
         // 模板相关事件已移除
 
@@ -185,6 +202,12 @@ export class UIEditor extends UIBase {
         }
         if (this.m_btn_download) {
             this.m_btn_download.offClick(this._onDownloadClick, this);
+        }
+        if (this.m_btn_assignId) {
+            this.m_btn_assignId.offClick(this._onAssignIdClick, this);
+        }
+        if (this.m_btn_showIds) {
+            this.m_btn_showIds.offClick(this._onShowIdsClick, this);
         }
 
         // 模板相关事件已移除
@@ -291,21 +314,30 @@ export class UIEditor extends UIBase {
         if (this.m_tile) {
             // 显示tile（有选中地块时）
             this.m_tile.visible = true;
-            
+
             // 保存blockId到data属性
             this.m_tile.data = data.blockId;
-            
-            // 更新tile的标题
+
+            // 更新tile的标题，包含ID信息
             if (this.m_tileTitle) {
-                this.m_tileTitle.text = data.blockName || "";
+                let title = data.blockName || "";
+
+                // 添加ID信息
+                if (data.tileId !== undefined && data.tileId !== 65535) {
+                    title += ` [T${data.tileId}]`;
+                } else if (data.propertyId !== undefined && data.propertyId !== 65535) {
+                    title += ` [P${data.propertyId}]`;
+                }
+
+                this.m_tileTitle.text = title;
             }
-            
+
             // 更新tile的图标
             if (this.m_tileIcon && data.spriteFrame) {
                 // 使用传递过来的spriteFrame设置图标
                 this.m_tileIcon.texture = data.spriteFrame;
             }
-            
+
             console.log(`[UIEditor] Tile selected: ${data.blockName}`);
         }
     }
@@ -404,6 +436,52 @@ export class UIEditor extends UIBase {
     private _onDownloadClick(): void {
         console.log("[UIEditor] Download button clicked");
         this._downloadCurrentMap();
+    }
+
+    /**
+     * 分配ID按钮点击事件
+     */
+    private _onAssignIdClick(): void {
+        console.log("[UIEditor] Assign ID button clicked");
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                // 调用GameMap的分配ID方法
+                mapInfo.component.assignIds();
+                console.log("[UIEditor] IDs assigned to tiles and properties");
+            }
+        }
+    }
+
+    /**
+     * 显示/隐藏ID按钮点击事件
+     */
+    private _onShowIdsClick(): void {
+        console.log("[UIEditor] Show IDs button clicked");
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                this._isShowingIds = !this._isShowingIds;
+
+                if (this._isShowingIds) {
+                    mapInfo.component.showIds();
+                    // 更新按钮文本
+                    if (this.m_btn_showIds) {
+                        this.m_btn_showIds.title = "隐藏ID";
+                    }
+                } else {
+                    mapInfo.component.hideIds();
+                    // 更新按钮文本
+                    if (this.m_btn_showIds) {
+                        this.m_btn_showIds.title = "显示ID";
+                    }
+                }
+
+                console.log(`[UIEditor] IDs ${this._isShowingIds ? 'shown' : 'hidden'}`);
+            }
+        }
     }
 
     /**

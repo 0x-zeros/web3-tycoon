@@ -15,14 +15,17 @@
     <component id="n5_w84m" name="btn_download" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,338" size="230,50">
       <Button title="下载地图"/>
     </component>
-    <component id="n6_w84m" name="btn_clearAll" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,666" size="230,50" visible="false">
+    <component id="n6_w84m" name="btn_clearAll" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,747" size="230,50" visible="false">
       <Button title="清除地图(!!!)"/>
     </component>
-    <component id="n7_w84m" name="btn_randomGen" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,605" size="230,50" visible="false">
+    <component id="n7_w84m" name="btn_randomGen" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,686" size="230,50" visible="false">
       <Button title="随机生成(!!!)"/>
     </component>
     <component id="n8_w84m" name="btn_assignId" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,532" size="230,50">
       <Button title="编号"/>
+    </component>
+    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,597" size="230,50">
+      <Button title="显示编号"/>
     </component>
   </displayList>
 </component>

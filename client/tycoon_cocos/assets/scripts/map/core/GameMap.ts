@@ -8,7 +8,7 @@
  * @version 2.0.0
  */
 
-import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3 } from 'cc';
+import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director } from 'cc';
 import { MapTile } from './MapTile';
 import { MapObject } from './MapObject';
 import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData } from '../data/MapDataTypes';
@@ -34,6 +34,7 @@ interface PropertyInfo {
     position: { x: number; z: number };  // 左下角位置
     size: 1 | 2;
     direction?: number;  // 方向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270°
+    propertyId?: number;  // Property编号（u16最大值65535表示无效）
     data?: {
         owner?: string;
         level?: number;
@@ -126,6 +127,16 @@ export class GameMap extends Component {
     
     /** 自动保存定时器 */
     private _autoSaveTimer: any = null;
+
+    /** ID标签节点容器 */
+    private _idLabelsRoot: Node | null = null; // 旧3D方式的占位（不再使用）
+    private _idLabelsRootUI: Node | null = null; // 新的UI容器
+    private _uiCanvas: Canvas | null = null; // Canvas引用
+
+    /** ID标签映射（key -> UI Label节点） */
+    private _idLabels: Map<string, Node> = new Map();
+    /** 每个Label的世界坐标（用于投射到UI） */
+    private _idLabelWorldPos: Map<string, Vec3> = new Map();
     
     /** 是否有未保存的修改 */
     private _hasUnsavedChanges: boolean = false;
@@ -453,10 +464,44 @@ export class GameMap extends Component {
      */
     private onElementClicked(data: MapInteractionData): void {
         if (!this._isEditMode) return;
-        
+
         console.log(`[GameMap] Element clicked: ${data.hitNode?.name} at grid (${data.gridPosition.x}, ${data.gridPosition.y})`);
-        
-        // TODO: 可以添加选中高亮等效果
+
+        const gridPos = data.gridPosition;
+        const key = `${gridPos.x}_${gridPos.y}`;
+
+        // 获取点击位置的tile和property信息
+        const tile = this._tileIndex.get(key);
+        const propertyInfo = this.findProperty2x2Info(gridPos);
+
+        let eventData: any = {
+            gridPos: { x: gridPos.x, y: gridPos.y }
+        };
+
+        // 添加tile ID信息
+        if (tile) {
+            const tileId = tile.getTileId();
+            const blockId = tile.getBlockId();
+            const blockInfo = getWeb3BlockByBlockId(blockId);
+
+            eventData.tileId = tileId;
+            eventData.blockId = blockId;
+            eventData.blockName = blockInfo?.name || blockId;
+        }
+
+        // 添加property ID信息
+        if (propertyInfo) {
+            eventData.propertyId = propertyInfo.propertyId;
+            eventData.propertyBlockId = propertyInfo.blockId;
+            const propertyBlockInfo = getWeb3BlockByBlockId(propertyInfo.blockId);
+            eventData.blockName = propertyBlockInfo?.name || propertyInfo.blockId;
+            eventData.blockId = propertyInfo.blockId;
+        }
+
+        // 发送事件以更新UI
+        if (tile || propertyInfo) {
+            EventBus.emit(EventTypes.UI.MapElementSelected, eventData);
+        }
     }
     
     /**
@@ -1760,5 +1805,342 @@ export class GameMap extends Component {
     private isPartOfProperty2x2(gridPos: Vec2): boolean {
         const propertyInfo = this.findProperty2x2Info(gridPos);
         return propertyInfo !== null && propertyInfo.size === 2;
+    }
+
+    // ========================= 编号分配功能 =========================
+
+    /**
+     * 为tile和property分配编号
+     */
+    public assignIds(): void {
+        console.log('[GameMap] Starting ID assignment...');
+
+        // 清除旧的编号
+        this.clearAllIds();
+
+        // 分配tile编号
+        this.assignTileIds();
+
+        // 分配property编号
+        this.assignPropertyIds();
+
+        console.log('[GameMap] ID assignment completed');
+    }
+
+    /**
+     * 清除所有编号
+     */
+    private clearAllIds(): void {
+        // 清除tile编号
+        for (const tile of this._tiles) {
+            tile.setTileId(65535);  // u16最大值表示无效
+        }
+
+        // 清除property编号
+        for (const propertyInfo of this._propertyRegistry.values()) {
+            propertyInfo.propertyId = 65535;
+        }
+
+        console.log('[GameMap] All IDs cleared');
+    }
+
+    /**
+     * 为tile分配编号（使用DFS算法）
+     */
+    private assignTileIds(): void {
+        // 找到所有医院tile
+        const hospitalTiles = this.findHospitalTiles();
+        if (hospitalTiles.length === 0) {
+            console.warn('[GameMap] No hospital tiles found');
+            return;
+        }
+
+        // 选择最左边的医院tile作为起点
+        let startTile = hospitalTiles[0];
+        for (const tile of hospitalTiles) {
+            const pos = tile.getGridPosition();
+            const startPos = startTile.getGridPosition();
+            if (pos.x < startPos.x) {
+                startTile = tile;
+            }
+        }
+
+        // 使用DFS分配编号
+        let currentId = 0;
+        const visited = new Set<string>();
+        this.dfsAssignTileId(startTile, currentId, visited);
+
+        console.log(`[GameMap] Assigned IDs to ${visited.size} tiles`);
+    }
+
+    /**
+     * 查找所有医院tile
+     */
+    private findHospitalTiles(): MapTile[] {
+        const hospitalTiles: MapTile[] = [];
+        for (const tile of this._tiles) {
+            if (tile.getBlockId() === 'web3:hospital') {
+                hospitalTiles.push(tile);
+            }
+        }
+        return hospitalTiles;
+    }
+
+    /**
+     * DFS递归分配tile编号
+     */
+    private dfsAssignTileId(tile: MapTile, currentId: number, visited: Set<string>): number {
+        const pos = tile.getGridPosition();
+        const key = `${pos.x}_${pos.y}`;
+
+        // 已访问过，跳过
+        if (visited.has(key)) {
+            return currentId;
+        }
+
+        // 标记为已访问并分酌编号
+        visited.add(key);
+        tile.setTileId(currentId);
+        currentId++;
+
+        // 获取四个方向的相邻 tile
+        const directions = [
+            { x: 0, y: 1 },   // 北
+            { x: 1, y: 0 },   // 东
+            { x: 0, y: -1 },  // 南
+            { x: -1, y: 0 }   // 西
+        ];
+
+        for (const dir of directions) {
+            const neighborPos = new Vec2(pos.x + dir.x, pos.y + dir.y);
+            const neighborKey = `${neighborPos.x}_${neighborPos.y}`;
+            const neighborTile = this._tileIndex.get(neighborKey);
+
+            if (neighborTile && !visited.has(neighborKey)) {
+                currentId = this.dfsAssignTileId(neighborTile, currentId, visited);
+            }
+        }
+
+        return currentId;
+    }
+
+    /**
+     * 为property分酌编号
+     */
+    private assignPropertyIds(): void {
+        // 获取所有property并按坐标排序
+        const properties = Array.from(this._propertyRegistry.values());
+
+        // 按z坐标优先，x坐标次之排序（先行后列）
+        properties.sort((a, b) => {
+            if (a.position.z !== b.position.z) {
+                return a.position.z - b.position.z;
+            }
+            return a.position.x - b.position.x;
+        });
+
+        // 分酌编号
+        for (let i = 0; i < properties.length; i++) {
+            properties[i].propertyId = i;
+        }
+
+        console.log(`[GameMap] Assigned IDs to ${properties.length} properties`);
+    }
+
+    /**
+     * 显示ID标签
+     */
+    public showIds(): void {
+        console.log('[GameMap] Showing ID labels...');
+        // 确保UI容器存在
+        if (!this.ensureIdLabelUIRoot()) {
+            console.warn('[GameMap] Canvas not found, cannot show ID labels');
+            return;
+        }
+
+        // 清除旧的标签与位置缓存
+        this.clearIdLabels();
+
+        // 为tile创建标签
+        for (const tile of this._tiles) {
+            const tileId = tile.getTileId();
+            if (tileId !== 65535) {  // 有效ID
+                const pos = tile.getGridPosition();
+                // 放在格子中心稍微抬高
+                const worldPos = new Vec3(pos.x + 0.5, 1.5, pos.y + 0.5);
+                const key = `tile_${pos.x}_${pos.y}`;
+                const label = this.createIdLabel(`T${tileId}`, worldPos, new Color(255, 255, 255), key);  // 白色
+                this._idLabels.set(key, label);
+                this._idLabelWorldPos.set(key, worldPos);
+            }
+        }
+
+        // 为property创建标签
+        for (const propertyInfo of this._propertyRegistry.values()) {
+            if (propertyInfo.propertyId !== undefined && propertyInfo.propertyId !== 65535) {
+                // 计算中心位置
+                let centerX = propertyInfo.position.x;
+                let centerZ = propertyInfo.position.z;
+                if (propertyInfo.size === 2) {
+                    // 2x2中心应加1
+                    centerX += 1;
+                    centerZ += 1;
+                } else {
+                    // 1x1中心应加0.5
+                    centerX += 0.5;
+                    centerZ += 0.5;
+                }
+
+                const worldPos = new Vec3(centerX, 2, centerZ);  // Y抬高2，比tile更高
+                const key = `property_${propertyInfo.position.x}_${propertyInfo.position.z}`;
+                const label = this.createIdLabel(`P${propertyInfo.propertyId}`, worldPos, new Color(255, 255, 0), key);  // 黄色
+                this._idLabels.set(key, label);
+                this._idLabelWorldPos.set(key, worldPos);
+            }
+        }
+
+        console.log(`[GameMap] Created ${this._idLabels.size} ID labels`);
+    }
+
+    /**
+     * 隐藏ID标签
+     */
+    public hideIds(): void {
+        console.log('[GameMap] Hiding ID labels...');
+        this.clearIdLabels();
+
+        // 清理旧3D容器（兼容）
+        if (this._idLabelsRoot) {
+            this._idLabelsRoot.destroy();
+            this._idLabelsRoot = null;
+        }
+        // 清理UI容器
+        if (this._idLabelsRootUI) {
+            this._idLabelsRootUI.destroy();
+            this._idLabelsRootUI = null;
+        }
+    }
+
+    /**
+     * 创建ID标签
+     */
+    private createIdLabel(text: string, worldPos: Vec3, color: Color, key: string): Node {
+        // 确保UI容器存在
+        if (!this._idLabelsRootUI || !this._uiCanvas) {
+            this.ensureIdLabelUIRoot();
+        }
+
+        const labelNode = new Node('IDLabel_' + text);
+        labelNode.addComponent(UITransform);
+        labelNode.parent = this._idLabelsRootUI!;
+        labelNode.layer = this._idLabelsRootUI!.layer;
+
+        // 添加Label组件（UI）
+        const label = labelNode.addComponent(Label);
+        label.string = text;
+        label.fontSize = 18;
+        label.lineHeight = 20;
+        label.color = color;
+        label.useSystemFont = true;
+        label.fontFamily = 'Arial';
+        label.overflow = Label.Overflow.NONE;
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+
+        // 记录世界坐标，便于每帧更新投影到UI
+        (labelNode as any)['worldPos'] = worldPos.clone();
+        this._idLabelWorldPos.set(key, worldPos.clone());
+
+        // 初始化一次位置
+        this.updateSingleIdLabelPosition(key, labelNode);
+
+        return labelNode;
+    }
+
+    /**
+     * 清除所有ID标签
+     */
+    private clearIdLabels(): void {
+        for (const label of this._idLabels.values()) {
+            if (label && label.isValid) {
+                label.destroy();
+            }
+        }
+        this._idLabels.clear();
+        this._idLabelWorldPos.clear();
+        if (this._idLabelsRootUI && this._idLabelsRootUI.isValid) {
+            this._idLabelsRootUI.removeAllChildren();
+        }
+    }
+
+    /**
+     * 确保ID标签的UI根节点存在
+     */
+    private ensureIdLabelUIRoot(): boolean {
+        if (this._uiCanvas && this._idLabelsRootUI && this._idLabelsRootUI.isValid) {
+            return true;
+        }
+
+        const scene = director.getScene();
+        if (!scene) return false;
+
+        const canvasNode = scene.getChildByName('Canvas');
+        if (!canvasNode) {
+            console.warn('[GameMap] Canvas node not found in scene');
+            return false;
+        }
+
+        const canvas = canvasNode.getComponent(Canvas);
+        if (!canvas) {
+            console.warn('[GameMap] Canvas component not found on Canvas node');
+            return false;
+        }
+
+        this._uiCanvas = canvas;
+
+        // 创建/复用UI容器
+        let root = canvasNode.getChildByName('IDLabelsRootUI');
+        if (!root) {
+            root = new Node('IDLabelsRootUI');
+            root.addComponent(UITransform);
+            canvasNode.addChild(root);
+        }
+        root.layer = canvasNode.layer;
+        this._idLabelsRootUI = root;
+        return true;
+    }
+
+    /**
+     * 更新所有ID标签的UI位置（每帧调用）
+     */
+    protected update(deltaTime: number): void {
+        if (!this._uiCanvas || !this._idLabelsRootUI || this._idLabels.size === 0) {
+            return;
+        }
+        this._idLabels.forEach((node, key) => {
+            this.updateSingleIdLabelPosition(key, node);
+        });
+    }
+
+    /**
+     * 更新单个ID标签位置
+     */
+    private updateSingleIdLabelPosition(key: string, node: Node): void {
+        if (!this._uiCanvas || !this.mainCamera) return;
+
+        const worldPos = this._idLabelWorldPos.get(key) || (node as any)['worldPos'];
+        if (!worldPos) return;
+
+        // 如果在相机背后，可以选择隐藏
+        const screenPos = this.mainCamera.worldToScreen(worldPos);
+        const isBehind = screenPos.z <= 0;
+        node.active = !isBehind;
+        if (isBehind) return;
+
+        // 投影到UI空间：使用主3D相机做世界->屏幕，再将屏幕->UI
+        const uiTransform = this._uiCanvas.node.getComponent(UITransform);
+        if (!uiTransform) return;
+        const uiPos = uiTransform.convertToNodeSpaceAR(new Vec3(screenPos.x, screenPos.y, 0));
+        node.setPosition(uiPos);
     }
 }

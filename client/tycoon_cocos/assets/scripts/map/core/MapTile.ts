@@ -23,7 +23,10 @@ const { ccclass } = _decorator;
 export class MapTile extends MapElement {
     
     // ========================= 地块特有属性 =========================
-    
+
+    /** Tile编号（u16最大值65535表示无效） */
+    private _tileId: number = 65535;
+
     /** 地产拥有者 (仅地产类型有效) */
     private _owner: string | null = null;
     
@@ -146,6 +149,7 @@ export class MapTile extends MapElement {
         // 添加地产特有数据
         if (this._typeId === Web3TileType.PROPERTY) {
             data.data = {
+                tileId: this._tileId !== 65535 ? this._tileId : undefined,
                 owner: this._owner || undefined,
                 level: this._buildingLevel,
                 price: this._price,
@@ -217,6 +221,20 @@ export class MapTile extends MapElement {
         return this._canBuild;
     }
     
+    /**
+     * 获取Tile ID
+     */
+    public getTileId(): number {
+        return this._tileId;
+    }
+
+    /**
+     * 设置Tile ID
+     */
+    public setTileId(id: number): void {
+        this._tileId = id;
+    }
+
     /**
      * 获取拥有者
      */

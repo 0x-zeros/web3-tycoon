@@ -8,34 +8,14 @@
     "__uuid__": "6adc9bad-5fa2-471a-83e9-618ebad35495",
     "__expectedType__": "cc.EffectAsset"
   },
-  "_techIdx": 1,
+  "_techIdx": 0,
   "_defines": [
     {
       "USE_TEXTURE": true,
       "SAMPLE_FROM_RT": true
-    },
-    {},
-    {}
+    }
   ],
   "_states": [
-    {
-      "rasterizerState": {},
-      "depthStencilState": {},
-      "blendState": {
-        "targets": [
-          {}
-        ]
-      }
-    },
-    {
-      "rasterizerState": {},
-      "depthStencilState": {},
-      "blendState": {
-        "targets": [
-          {}
-        ]
-      }
-    },
     {
       "rasterizerState": {},
       "depthStencilState": {},
@@ -47,8 +27,6 @@
     }
   ],
   "_props": [
-    {},
-    {},
     {}
   ]
 }

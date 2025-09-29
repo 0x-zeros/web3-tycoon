@@ -18,7 +18,7 @@ import {
     _decorator, Component, Camera, Node, Vec3, MeshRenderer,
     Material, Mesh, Texture2D, SpriteFrame, utils, primitives,
     Quat, tween, Tween, resources, ImageAsset, UITransform,
-    Size, Sprite, find, EffectAsset
+    Size, Sprite, find, EffectAsset, Prefab, instantiate
 } from 'cc';
 
 const { ccclass, property } = _decorator;
@@ -82,6 +82,7 @@ export class PaperActor extends Component {
 
     // ===== UI元素 =====
     private textBubble: Node | null = null;  // 对话气泡
+    private arrowNode: Node | null = null;   // 方向指示箭头（仅建筑类型使用）
 
     // Billboard更新用的临时变量
     private _tmp = new Vec3();
@@ -128,6 +129,12 @@ export class PaperActor extends Component {
     protected onDestroy() {
         // 清理所有动画
         this.stopAllTweens();
+
+        // 清理箭头节点
+        if (this.arrowNode) {
+            this.arrowNode.destroy();
+            this.arrowNode = null;
+        }
     }
 
     // ===== 初始化 =====
@@ -150,6 +157,8 @@ export class PaperActor extends Component {
             // 3. 应用方向旋转（仅对建筑生效，因为其他类型需要Billboard）
             if (this.actorType === ActorType.BUILDING && this.billboardMode === 'off') {
                 this.applyDirection();
+                // 为建筑加载方向指示箭头
+                await this.loadArrowIndicator();
             }
 
             // 4. 根据类型设置默认动画
@@ -703,6 +712,36 @@ export class PaperActor extends Component {
         const rotationY = this.direction * 90;
         const euler = this.node.eulerAngles;
         this.node.setRotationFromEuler(euler.x, rotationY, euler.z);
+    }
+
+    /**
+     * 加载方向指示箭头（仅建筑类型使用）
+     */
+    private async loadArrowIndicator(): Promise<void> {
+        if (this.actorType !== ActorType.BUILDING) return;
+
+        return new Promise<void>((resolve) => {
+            resources.load('prefabs/arrow', Prefab, (err, prefab) => {
+                if (err) {
+                    console.warn('[PaperActor] Failed to load arrow prefab:', err);
+                    resolve();
+                    return;
+                }
+
+                // 实例化箭头
+                this.arrowNode = instantiate(prefab);
+                this.arrowNode.parent = this.node;
+
+                // 设置位置（作为子节点，位置为0）
+                this.arrowNode.setPosition(0, 0, 0);
+
+                // 缩放调整（箭头稍微小一点）
+                this.arrowNode.setScale(0.4, 0.4, 0.4);
+
+                console.log(`[PaperActor] Arrow indicator loaded for building ${this.actorId}`);
+                resolve();
+            });
+        });
     }
 
     /**

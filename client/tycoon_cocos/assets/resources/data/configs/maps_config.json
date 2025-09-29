@@ -1,9 +1,9 @@
 {
   "maps": [
     {
-      "id": "test_map",
-      "name": "测试地图",
-      "prefabPath": "scene/test_map",
+      "id": "map",
+      "name": "经典地图",
+      "prefabPath": "scene/classic_map",
       "previewImagePath": "images/maps/default_preview",
       "type": "classic"
     },

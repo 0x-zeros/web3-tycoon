@@ -315,7 +315,7 @@ export class MapManager extends Component {
         return new Promise<Prefab | null>((resolve) => {
             resources.load(prefabPath, Prefab, (err, prefab) => {
                 if (err) {
-                    console.error('[MapManager] 加载地图预制体失败:', err);
+                    console.warn('[MapManager] 加载地图预制体失败:', err);
                     resolve(null);
                     return;
                 }

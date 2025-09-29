@@ -1,0 +1,2488 @@
+{
+  "mapId": "defi_plaza",
+  "mapName": "DeFi 广场",
+  "version": "1.0.0",
+  "createTime": 1759109964713,
+  "updateTime": 1759109977453,
+  "gameMode": "edit",
+  "tiles": [
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 21,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 22,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 23,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 24,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 25,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 26,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 27,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 28,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 29,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 30,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 31,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 33,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 34,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 35,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 36,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 37,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 2
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 3
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 4
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 5
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 6
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 7
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 9
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 10
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 11
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 12
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 13
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 14
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 15
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 16
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 17
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 18
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 38,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 37,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 36,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 35,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 34,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 33,
+        "z": 20
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 32,
+        "z": 20
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 31,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 30,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 29,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 28,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 27,
+        "z": 20
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 26,
+        "z": 20
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 25,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 24,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 23,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 22,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 21,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 22
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 23
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 24
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 25
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 26
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 27
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 28
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 29
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 30
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 31
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 32
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 33
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 34
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 35
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 36
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 37
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 19,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 18,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 17,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 16,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 15,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 14,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 13,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 12,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 11,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 10,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 9,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 7,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 6,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 5,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 4,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 3,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 38
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 37
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 36
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 35
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 34
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 33
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 31
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 30
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 29
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 28
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 27
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 26
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 25
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 24
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 23
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 22
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 2,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 3,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 4,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 5,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 6,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 7,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 9,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 10,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 11,
+        "z": 20
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 12,
+        "z": 20
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 13,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 14,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 15,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 16,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 17,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 18,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 19,
+        "z": 20
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 18
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 17
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 16
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 15
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 14
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 13
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 12
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 11
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 10
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 9
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 8
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 20,
+        "z": 7
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 6
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 5
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 4
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 20,
+        "z": 3
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 21,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 22,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 23,
+        "z": 8
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 24,
+        "z": 8
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 25,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 26,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 27,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 28,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 29,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 30,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 31,
+        "z": 8
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 32,
+        "z": 8
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 9
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 10
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 32,
+        "z": 11
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 32,
+        "z": 12
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 13
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 14
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 15
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 16
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 17
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 18
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 32,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 19,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 18,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 17,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 16,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 15,
+        "z": 32
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 14,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 13,
+        "z": 32
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 12,
+        "z": 32
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 11,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 10,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 9,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 8,
+        "z": 32
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 31
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 30
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 29
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 28
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 27
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 8,
+        "z": 26
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 8,
+        "z": 25
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 8,
+        "z": 24
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:property",
+      "typeId": 1,
+      "position": {
+        "x": 8,
+        "z": 23
+      },
+      "data": {
+        "level": 0,
+        "price": 1000,
+        "rent": [
+          50,
+          200,
+          600,
+          1400,
+          1700,
+          2000
+        ],
+        "mortgaged": false
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 22
+      }
+    },
+    {
+      "blockId": "web3:empty_land",
+      "typeId": 0,
+      "position": {
+        "x": 8,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 33,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 32,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 33,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 32,
+        "z": 7
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 7,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 27,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 27,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 19,
+        "z": 24
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 12,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 12,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 19,
+        "z": 15
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 21,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 21,
+        "z": 33
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 22,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 22,
+        "z": 33
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 18,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 18,
+        "z": 9
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 19,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 19,
+        "z": 9
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 24,
+        "z": 6
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 24,
+        "z": 7
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 25,
+        "z": 6
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 25,
+        "z": 7
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 31,
+        "z": 12
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 33,
+        "z": 12
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "position": {
+        "x": 15,
+        "z": 31
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 6,
+        "z": 26
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 6,
+        "z": 27
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 7,
+        "z": 26
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 7,
+        "z": 27
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 6,
+        "z": 24
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 6,
+        "z": 25
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 7,
+        "z": 24
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 7,
+        "z": 25
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 18,
+        "z": 25
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 18,
+        "z": 26
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 19,
+        "z": 25
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 19,
+        "z": 26
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 18,
+        "z": 13
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 18,
+        "z": 14
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 19,
+        "z": 13
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 19,
+        "z": 14
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 13,
+        "z": 30
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 13,
+        "z": 31
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 14,
+        "z": 30
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "position": {
+        "x": 14,
+        "z": 31
+      }
+    }
+  ],
+  "objects": [],
+  "properties": [
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 33,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 32,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 33,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 32,
+        "z": 7
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 7,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 27,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 27,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 19,
+        "z": 24
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 12,
+        "z": 19
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 12,
+        "z": 21
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 19,
+        "z": 15
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 21,
+        "z": 32
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 18,
+        "z": 8
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 24,
+        "z": 6
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 31,
+        "z": 12
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 33,
+        "z": 12
+      }
+    },
+    {
+      "blockId": "web3:property_1x1",
+      "typeId": 200,
+      "size": 1,
+      "position": {
+        "x": 15,
+        "z": 31
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 6,
+        "z": 26
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 6,
+        "z": 24
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 18,
+        "z": 25
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 18,
+        "z": 13
+      }
+    },
+    {
+      "blockId": "web3:property_2x2",
+      "typeId": 201,
+      "size": 2,
+      "position": {
+        "x": 13,
+        "z": 30
+      }
+    }
+  ],
+  "gameRules": {
+    "startingMoney": 10000,
+    "passingBonus": 200,
+    "landingBonus": 400,
+    "maxPlayers": 4,
+    "minPlayers": 2
+  }
+}

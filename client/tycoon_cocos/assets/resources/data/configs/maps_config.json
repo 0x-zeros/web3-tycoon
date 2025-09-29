@@ -8,10 +8,10 @@
       "type": "classic"
     },
     {
-      "id": "classic_board",
-      "name": "经典棋盘",
-      "prefabPath": "scene/classic_board",
-      "previewImagePath": "images/maps/classic_board",
+      "id": "carnival",
+      "name": "狂欢节",
+      "prefabPath": "scene/carnival",
+      "previewImagePath": "images/maps/carnival",
       "type": "classic"
     },
     {

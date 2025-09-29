@@ -18,7 +18,7 @@ export class UIMapElement extends UIBase {
 
     private m_tiles:fgui.GList;      // 地块列表
     private m_objects:fgui.GList;    // 物体列表
-    private m_properties:fgui.GList; // 地产列表
+    private m_buildings:fgui.GList; // 建筑列表
     private m_decorations:fgui.GList; // 装饰列表
 
     private m_categoryController: fgui.Controller;  // category控制器
@@ -27,7 +27,7 @@ export class UIMapElement extends UIBase {
     private m_tileIds:string[];
     /** 物体ID列表 */
     private m_objectIds:string[];
-    /** 地产ID列表 */
+    /** 建筑ID列表 */
     private m_propertyIds:string[];
     /** 装饰ID列表 */
     private m_decorationIds:string[];
@@ -63,7 +63,7 @@ export class UIMapElement extends UIBase {
         const allBlocks = VoxelSystem.getInstance().getAllWeb3Blocks();
         const tileBlocks = allBlocks.filter(b => b.category === 'tile');
         const objectBlocks = allBlocks.filter(b => b.category === 'object');
-        const propertyBlocks = allBlocks.filter(b => b.category === 'property');
+        const propertyBlocks = allBlocks.filter(b => b.category === 'building');  // 建筑类别现在是 'building'
         const decorationBlocks = allBlocks.filter(b => b.category === 'decoration');
 
         // 设置地块列表
@@ -84,12 +84,12 @@ export class UIMapElement extends UIBase {
             console.log("MapElement objects count: ", this.m_objectIds.length);
         }
 
-        // 设置地产列表
+        // 设置建筑列表
         this.m_propertyIds = propertyBlocks.map(b => b.id);
-        this.m_properties = this.getList("properties");
-        if (this.m_properties) {
-            this.m_properties.itemRenderer = this.renderPropertyItem.bind(this);
-            this.m_properties.numItems = this.m_propertyIds.length;
+        this.m_buildings = this.getList("buildings");
+        if (this.m_buildings) {
+            this.m_buildings.itemRenderer = this.renderPropertyItem.bind(this);
+            this.m_buildings.numItems = this.m_propertyIds.length;
             console.log("MapElement properties count: ", this.m_propertyIds.length);
         }
 
@@ -175,7 +175,7 @@ export class UIMapElement extends UIBase {
                    this.m_decorationIds;
         const list = type === 'tile' ? this.m_tiles :
                    type === 'object' ? this.m_objects :
-                   type === 'property' ? this.m_properties :
+                   type === 'property' ? this.m_buildings :
                    this.m_decorations;
 
         if (!list) {
@@ -362,7 +362,7 @@ export class UIMapElement extends UIBase {
         this.renderListItem(index, obj, this.m_objectIds, 'object');
     }
 
-    // 渲染地产项
+    // 渲染建筑项
     private renderPropertyItem(index: number, obj: GObject): void {
         this.renderListItem(index, obj, this.m_propertyIds, 'property');
     }
@@ -477,7 +477,7 @@ export class UIMapElement extends UIBase {
         const tile = evt.sender as GButton;
         const list = type === 'tile' ? this.m_tiles :
                      type === 'object' ? this.m_objects :
-                     type === 'property' ? this.m_properties :
+                     type === 'property' ? this.m_buildings :
                      this.m_decorations;
         const ids = type === 'tile' ? this.m_tileIds :
                    type === 'object' ? this.m_objectIds :

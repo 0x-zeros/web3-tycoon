@@ -1341,24 +1341,24 @@ export class GameMap extends Component {
      * 找到最佳朝向（朝向有路径tile的方向）
      * @param gridPos 地产位置
      * @param size 地产大小
-     * @returns 朝向（0-3），-1表示没找到
+     * @returns 朝向（0-3），默认返回0
      */
     private findBestDirection(gridPos: Vec2, size: 1 | 2): number {
-        // 四个方向：0=下(+Y), 1=右(+X), 2=上(-Y), 3=左(-X)
+        // 四个方向：0=南(+z), 1=西(-x), 2=北(-z), 3=东(+x)
         const directions = [
-            { dx: 0, dy: -1, dir: 0 },  // 下
-            { dx: 1, dy: 0, dir: 1 },   // 右
-            { dx: 0, dy: 1, dir: 2 },   // 上
-            { dx: -1, dy: 0, dir: 3 }   // 左
+            { dx: 0, dz: 1, dir: 0 },   // 南 (+z)
+            { dx: 1, dz: 0, dir: 1 },   // 西 (+x) - 修正：朝向+x实际是西
+            { dx: 0, dz: -1, dir: 2 },  // 北 (-z)
+            { dx: -1, dz: 0, dir: 3 }   // 东 (-x) - 修正：朝向-x实际是东
         ];
 
         // 检查每个方向是否有路径tile
-        for (const { dx, dy, dir } of directions) {
+        for (const { dx, dz, dir } of directions) {
             let hasPath = false;
 
             if (size === 1) {
                 // 1x1地产：检查相邻的一个格子
-                const checkPos = new Vec2(gridPos.x + dx, gridPos.y + dy);
+                const checkPos = new Vec2(gridPos.x + dx, gridPos.y + dz);
                 const key = `${checkPos.x}_${checkPos.y}`;
                 const tile = this._tileIndex.get(key);
                 if (tile && this.isPathTile(tile)) {
@@ -1368,19 +1368,19 @@ export class GameMap extends Component {
                 // 2x2地产：检查该方向的两个格子
                 for (let i = 0; i < 2; i++) {
                     let checkX = gridPos.x;
-                    let checkY = gridPos.y;
+                    let checkZ = gridPos.y;
 
                     if (dx !== 0) {
-                        // 左右方向：检查两个纵向格子
+                        // 东西方向：检查两个纵向格子
                         checkX = gridPos.x + (dx > 0 ? 2 : -1);
-                        checkY = gridPos.y + i;
+                        checkZ = gridPos.y + i;
                     } else {
-                        // 上下方向：检查两个横向格子
+                        // 南北方向：检查两个横向格子
                         checkX = gridPos.x + i;
-                        checkY = gridPos.y + (dy > 0 ? 2 : -1);
+                        checkZ = gridPos.y + (dz > 0 ? 2 : -1);
                     }
 
-                    const key = `${checkX}_${checkY}`;
+                    const key = `${checkX}_${checkZ}`;
                     const tile = this._tileIndex.get(key);
                     if (tile && this.isPathTile(tile)) {
                         hasPath = true;
@@ -1394,20 +1394,24 @@ export class GameMap extends Component {
             }
         }
 
-        return 0; // 默认朝向下
+        return 0; // 默认朝向南
     }
 
     /**
      * 检查tile是否是路径类型
      */
     private isPathTile(tile: MapTile): boolean {
-        const blockId = tile.getBlockId();
-        const blockInfo = getWeb3BlockByBlockId(blockId);
-        if (!blockInfo) return false;
+        if (!tile) return false;
 
-        const typeId = blockInfo.typeId as number;
-        // 检查是否是普通的tile类型（非地产）
-        return isWeb3Tile(typeId) && !isWeb3Property(typeId);
+        const blockId = tile.getBlockId();
+
+        // 排除地产block（property_1x1 和 property_2x2）
+        if (blockId === 'web3:property_1x1' || blockId === 'web3:property_2x2') {
+            return false;
+        }
+
+        // 所有其他类型的tile都算作路径（包括property tile）
+        return true;
     }
 
     /**

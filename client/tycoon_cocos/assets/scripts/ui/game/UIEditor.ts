@@ -4,11 +4,11 @@ import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
 import { UIMapElement } from "./UIMapElement";
 import * as fgui from "fairygui-cc";
-import { _decorator, find, input, Input, KeyCode, Vec2 } from 'cc';
+import { _decorator, find, input, Input, KeyCode } from 'cc';
 import { GameMap } from "../../map/core/GameMap";
 import { MapGenerationMode } from "../../map/generator/MapGeneratorTypes";
 import { MapGenerator } from "../../map/generator/MapGenerator";
-import { getTemplateList } from "../../map/generator/templates/TemplateLibrary";
+// 模板功能已移除
 
 const { ccclass } = _decorator;
 
@@ -33,11 +33,7 @@ export class UIEditor extends UIBase {
     /** 生成Brawl地图按钮 */
     private m_btn_generateBrawl: fgui.GButton;
 
-    /** 模板选择下拉框 */
-    private m_combo_template: fgui.GComboBox;
-
-    /** 导入模板按钮 */
-    private m_btn_importTemplate: fgui.GButton;
+    // 模板功能已移除
 
     /** 当前选中的tile显示 */
     private m_tile: fgui.GComponent;
@@ -74,16 +70,9 @@ export class UIEditor extends UIBase {
         this.m_btn_generateClassic = this.getChild('btn_generateClassic') as fgui.GButton;
         this.m_btn_generateBrawl = this.getChild('btn_generateBrawl') as fgui.GButton;
 
-        // 获取模板选择相关组件
-        this.m_combo_template = this.getChild('combo_template') as fgui.GComboBox;
-        this.m_btn_importTemplate = this.getChild('btn_importTemplate') as fgui.GButton;
-
-        // 初始化模板下拉框
-        this._initTemplateSelector();
-
         // 如果没有专门的按钮，可以创建临时的测试按钮
         if (!this.m_btn_generateMap && !this.m_btn_generateClassic && !this.m_btn_generateBrawl) {
-            console.log('[UIEditor] 生成地图按钮未找到，使用键盘快捷键：G-生成Classic地图，T-选择模板生成');
+            console.log('[UIEditor] 生成地图按钮未找到，使用键盘快捷键：G-生成随机地图');
         }
 
         // 获取tile组件及其子组件
@@ -106,37 +95,7 @@ export class UIEditor extends UIBase {
         // 可以在这里设置其他默认值
     }
 
-    /**
-     * 初始化模板选择器
-     */
-    private _initTemplateSelector(): void {
-        if (!this.m_combo_template) {
-            console.log('[UIEditor] 模板选择器未找到，使用键盘快捷键 T 切换模板');
-            return;
-        }
-
-        // 获取所有可用模板
-        const templates = MapGenerator.getAvailableTemplates();
-
-        // 清空现有选项
-        this.m_combo_template.items = [];
-        this.m_combo_template.values = [];
-
-        // 添加随机选项
-        this.m_combo_template.items.push('随机模板');
-        this.m_combo_template.values.push('random');
-
-        // 添加所有模板
-        for (const template of templates) {
-            this.m_combo_template.items.push(`${template.name} (${template.tileCount}格)`);
-            this.m_combo_template.values.push(template.id);
-        }
-
-        // 默认选择随机
-        this.m_combo_template.selectedIndex = 0;
-
-        console.log(`[UIEditor] 已加载 ${templates.length} 个地图模板`);
-    }
+    // 模板选择器已移除
     
     /**
      * 绑定事件
@@ -163,13 +122,7 @@ export class UIEditor extends UIBase {
             this.m_btn_generateBrawl.onClick(this._onGenerateBrawlClick, this);
         }
 
-        // 绑定模板相关事件
-        if (this.m_combo_template) {
-            this.m_combo_template.on(fgui.Event.STATUS_CHANGED, this._onTemplateSelected, this);
-        }
-        if (this.m_btn_importTemplate) {
-            this.m_btn_importTemplate.onClick(this._onImportTemplateClick, this);
-        }
+        // 模板相关事件已移除
 
         // 绑定tile点击事件
         if (this.m_tile) {
@@ -208,13 +161,7 @@ export class UIEditor extends UIBase {
             this.m_btn_generateBrawl.offClick(this._onGenerateBrawlClick, this);
         }
 
-        // 解绑模板相关事件
-        if (this.m_combo_template) {
-            this.m_combo_template.off(fgui.Event.STATUS_CHANGED, this._onTemplateSelected, this);
-        }
-        if (this.m_btn_importTemplate) {
-            this.m_btn_importTemplate.offClick(this._onImportTemplateClick, this);
-        }
+        // 模板相关事件已移除
 
         // 解绑tile点击事件
         if (this.m_tile) {
@@ -415,41 +362,13 @@ export class UIEditor extends UIBase {
         // Brawl模式已被移除
     }
 
-    /**
-     * 模板选择变化事件
-     */
-    private _onTemplateSelected(): void {
-        if (!this.m_combo_template) return;
-
-        const selectedValue = this.m_combo_template.value;
-        const selectedText = this.m_combo_template.text;
-        console.log(`[UIEditor] Template selected: ${selectedText} (${selectedValue})`);
-    }
-
-    /**
-     * 导入模板按钮点击事件
-     */
-    private _onImportTemplateClick(): void {
-        if (!this.m_combo_template) {
-            console.warn('[UIEditor] No template selector found');
-            return;
-        }
-
-        const selectedTemplate = this.m_combo_template.value;
-        if (!selectedTemplate || selectedTemplate === 'random') {
-            // 如果选择随机，使用随机生成
-            this._generateMapWithTemplate(null);
-        } else {
-            // 使用指定模板生成
-            this._generateMapWithTemplate(selectedTemplate);
-        }
-    }
+    // 模板相关回调已移除
 
     /**
      * 使用模板生成地图
      */
-    private async _generateMapWithTemplate(templateId: string | null): Promise<void> {
-        console.log(`[UIEditor] Generating map with template: ${templateId || 'random'}`);
+    private async _generateRandomMap(): Promise<void> {
+        console.log(`[UIEditor] Generating random map`);
 
         const mapManager = MapManager.getInstance();
         if (mapManager) {
@@ -463,7 +382,6 @@ export class UIEditor extends UIBase {
                         mode: MapGenerationMode.CLASSIC,
                         mapWidth: 40,
                         mapHeight: 40,
-                        templateId: templateId || undefined,
                         roadDensity: 0.25,
                         propertyRatio: 0.35,
                         property2x2Ratio: 0.2,
@@ -471,12 +389,10 @@ export class UIEditor extends UIBase {
                         specialTileTypes: ['hospital', 'shop', 'bank', 'chance', 'news', 'bonus', 'fee', 'card'],
                         specialTileRatio: 0.15,
                         trafficSimulationRounds: 500,
-                        startPositions: [new Vec2(0, 0)]
+                        startPositions: []
                     });
 
-                    const result = templateId
-                        ? await generator.generateFromTemplate(templateId)
-                        : await generator.generateMap();
+                    const result = await generator.generateMap();
 
                     // 应用生成结果到地图
                     gameMap.applyGeneratedMap(result);
@@ -487,7 +403,7 @@ export class UIEditor extends UIBase {
                     this.clearSelectedBlock();
 
                     // 发送生成完成事件
-                    EventBus.emit(EventTypes.Map.MapGenerated, { templateId, result });
+                    EventBus.emit(EventTypes.Map.MapGenerated, { templateId: null, result });
 
                 } catch (error) {
                     console.error('[UIEditor] Failed to generate map:', error);
@@ -501,8 +417,7 @@ export class UIEditor extends UIBase {
      * @param mode 生成模式
      */
     private async _generateMap(mode: MapGenerationMode): Promise<void> {
-        // 使用随机模板生成
-        await this._generateMapWithTemplate(null);
+        await this._generateRandomMap();
     }
 
     /**
@@ -512,7 +427,7 @@ export class UIEditor extends UIBase {
         // 使用Cocos的输入系统监听键盘事件
         input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
 
-        console.log('[UIEditor] Keyboard shortcuts setup: G - Random, T - Next template, Y - Import carnival, U - Download current map');
+        console.log('[UIEditor] Keyboard shortcuts setup: G - Generate random map, U - Download current map');
     }
 
     /**
@@ -528,18 +443,9 @@ export class UIEditor extends UIBase {
             case KeyCode.KEY_G:
                 // G键 - 生成随机地图
                 console.log('[UIEditor] Key G pressed - generating random map');
-                this._generateMapWithTemplate(null);
+                this._generateRandomMap();
                 break;
-            case KeyCode.KEY_T:
-                // T键 - 切换到下一个模板
-                console.log('[UIEditor] Key T pressed - switching to next template');
-                this._switchToNextTemplate();
-                break;
-            case KeyCode.KEY_Y:
-                // Y键 - 直接导入狂欢节(carnival)模板
-                console.log('[UIEditor] Key Y pressed - importing template carnival');
-                this._generateMapWithTemplate('carnival');
-                break;
+            // 模板快捷键已移除
             case KeyCode.KEY_U:
                 // U键 - 下载当前地图的本地存储 MapSaveData
                 console.log('[UIEditor] Key U pressed - downloading MapSaveData from localStorage');
@@ -551,30 +457,7 @@ export class UIEditor extends UIBase {
     /**
      * 切换到下一个模板
      */
-    private _switchToNextTemplate(): void {
-        if (!this.m_combo_template) {
-            console.log('[UIEditor] No template selector, generating random map');
-            this._generateMapWithTemplate(null);
-            return;
-        }
-
-        // 切换到下一个模板
-        const currentIndex = this.m_combo_template.selectedIndex;
-        const nextIndex = (currentIndex + 1) % this.m_combo_template.items.length;
-        this.m_combo_template.selectedIndex = nextIndex;
-
-        // 自动导入新模板
-        const selectedValue = this.m_combo_template.value;
-        const selectedText = this.m_combo_template.text;
-        console.log(`[UIEditor] Switched to template: ${selectedText}`);
-
-        // 生成地图
-        if (selectedValue === 'random') {
-            this._generateMapWithTemplate(null);
-        } else {
-            this._generateMapWithTemplate(selectedValue);
-        }
-    }
+    // 模板切换功能已移除
 
     /**
      * 从 localStorage 读取当前地图 MapSaveData 并触发浏览器下载

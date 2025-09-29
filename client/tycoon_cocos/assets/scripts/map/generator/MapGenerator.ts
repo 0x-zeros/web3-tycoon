@@ -24,13 +24,8 @@ import { PathGenerator, PathGenerationResult } from './PathGenerator';
 import { PropertyPlacer, PropertyPlacementResult, PropertyData } from './PropertyPlacer';
 import { SpecialTilePlacer, SpecialTilePlacementResult } from './SpecialTilePlacer';
 
-// 模板系统
-import {
-    MapTemplateSpec,
-    getTemplateById,
-    getRandomTemplate,
-    MONOPOLY_TEMPLATES
-} from './templates/TemplateLibrary';
+// 模板类型（仅用于构造默认随机模板）
+import { MapTemplateSpec } from './templates/TemplateTypes';
 
 /**
  * 地图生成器
@@ -97,9 +92,9 @@ export class MapGenerator {
         console.log('[MapGenerator] 开始生成地图 (v2.0 - 3阶段系统)...');
         console.log(this.config.getDebugInfo());
 
-        // 选择或获取模板
-        const template = this.selectTemplate();
-        console.log(`[MapGenerator] 使用模板: ${template.name} (${template.id})`);
+        // 构造简化的默认模板（不依赖外部模板库）
+        const template = this.buildDefaultTemplate();
+        console.log(`[MapGenerator] 使用默认随机模板: ${template.name}`);
 
         // ==================== Phase 1: 路径生成 ====================
         console.log('[MapGenerator] Phase 1: 生成路径网络...');
@@ -198,21 +193,45 @@ export class MapGenerator {
     }
 
     /**
-     * 选择模板
+     * 构造一个简化的默认模板（单环 + 适量地产/特殊格）
      */
-    private selectTemplate(): MapTemplateSpec {
-        // 如果指定了模板ID
-        if (this.params.templateId) {
-            const template = getTemplateById(this.params.templateId);
-            if (template) {
-                return template;
-            }
-            console.warn(`[MapGenerator] 找不到模板 ${this.params.templateId}，使用随机模板`);
-        }
-
-        // 使用随机模板
-        const index = Math.floor(this.random() * MONOPOLY_TEMPLATES.length);
-        return MONOPOLY_TEMPLATES[index];
+    private buildDefaultTemplate(): MapTemplateSpec {
+        // 外环四角基于地图宽高边距生成
+        const margin = 5;
+        const w = this.params.mapWidth;
+        const h = this.params.mapHeight;
+        return {
+            id: 'default_random',
+            name: '随机棋盘',
+            layout: 'single_ring',
+            tileCount: 40,
+            pathConfig: {
+                rings: {
+                    outer: [
+                        new Vec2(margin, margin),
+                        new Vec2(w - margin, margin),
+                        new Vec2(w - margin, h - margin),
+                        new Vec2(margin, h - margin)
+                    ]
+                }
+            },
+            propertyConfig: {
+                groups: [
+                    { color: 'group1', count: 3, size: '1x1', preferredZone: 'straight' },
+                    { color: 'group2', count: 3, size: '1x1', preferredZone: 'straight' },
+                    { color: 'group3', count: 2, size: '2x2', preferredZone: 'corner' },
+                    { color: 'group4', count: 2, size: '2x2', preferredZone: 'corner' }
+                ],
+                totalRatio: 0.5,
+                placement: 'mixed'
+            },
+            specialTiles: [
+                { type: 'chance', count: 3, distribution: 'even' },
+                { type: 'bonus', count: 2, distribution: 'even' },
+                { type: 'news', count: 2, distribution: 'random' },
+                { type: 'hospital', count: 1, distribution: 'random' }
+            ]
+        };
     }
 
     /**
@@ -362,22 +381,13 @@ export class MapGenerator {
         return null;
     }
 
-    /**
-     * 获取可用模板列表
-     */
-    static getAvailableTemplates(): Array<{ id: string; name: string; tileCount: number }> {
-        return MONOPOLY_TEMPLATES.map(t => ({
-            id: t.id,
-            name: t.name,
-            tileCount: t.tileCount
-        }));
-    }
+    // 模板列表功能已移除
 
     /**
      * 根据模板ID生成地图
      */
     async generateFromTemplate(templateId: string): Promise<MapGenerationResult> {
-        this.params.templateId = templateId;
+        // 模板功能已移除，忽略传入ID，按默认随机生成
         return this.generateMap();
     }
 
@@ -390,7 +400,7 @@ export class MapGenerator {
             generator: 'MapGenerator-3Phase',
             timestamp: new Date().toISOString(),
             seed: this.params.seed,
-            template: this.params.templateId || 'random',
+            template: 'default_random',
             dimensions: {
                 width: this.params.mapWidth,
                 height: this.params.mapHeight

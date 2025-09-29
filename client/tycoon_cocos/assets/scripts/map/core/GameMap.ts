@@ -340,22 +340,48 @@ export class GameMap extends Component {
      */
     private async onRequestPlace(data: MapInteractionData): Promise<void> {
         if (!this._isEditMode || !this._voxelSystem) return;
-        
+
         const gridPos = data.gridPosition;
-        
+
         // 左键：放置方块
         if (!this._currentSelectedBlockId) {
             console.warn('[GameMap] No block selected');
             return;
         }
-        
+
         // 根据方块类型决定放置高度
         const blockInfo = getWeb3BlockByBlockId(this._currentSelectedBlockId);
         if (!blockInfo) {
             console.warn(`[GameMap] Unknown block: ${this._currentSelectedBlockId}`);
             return;
         }
-        
+
+        // 在放置前检查是否有2x2地产占用
+        const existingProperty = this.findProperty2x2Info(gridPos);
+        if (existingProperty && existingProperty.size === 2) {
+            // 如果要放置的也是2x2地产，检查是否完全重叠
+            const typeId = blockInfo.typeId as number;
+            if (isWeb3Property(typeId)) {
+                const newSize = getPropertySize(this._currentSelectedBlockId);
+                if (newSize === 2) {
+                    // 如果新地产的左下角与现有地产相同，可以替换
+                    if (gridPos.x === existingProperty.position.x && gridPos.y === existingProperty.position.z) {
+                        console.log(`[GameMap] Replacing 2x2 property at (${gridPos.x}, ${gridPos.y})`);
+                    } else {
+                        // 否则需要先删除现有的2x2地产
+                        console.log(`[GameMap] Removing existing 2x2 property to place new one`);
+                        const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
+                        this.removeProperty(propertyPos);
+                    }
+                }
+            } else {
+                // 放置非地产元素时，先删除整个2x2地产
+                console.log(`[GameMap] Removing existing 2x2 property to place new element`);
+                const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
+                this.removeProperty(propertyPos);
+            }
+        }
+
         const typeId = blockInfo.typeId as number;
         if (isWeb3Tile(typeId)) {
             // 地块类型，放置在y=0
@@ -524,8 +550,21 @@ export class GameMap extends Component {
             }
             return;
         }
-        
-        // 然后检查并移除地块（y=0层）
+
+        // 3. 检查是否是Property（包括2x2）
+        const propertyInfo = this.findProperty2x2Info(gridPos);
+        if (propertyInfo) {
+            // 使用Property的左下角位置进行删除
+            const propertyPos = new Vec2(propertyInfo.position.x, propertyInfo.position.z);
+            this.removeProperty(propertyPos);
+            console.log(`[GameMap] Removed ${propertyInfo.size}x${propertyInfo.size} property at base position (${propertyPos.x}, ${propertyPos.y})`);
+            if (this._isEditMode) {
+                this.scheduleAutoSave();
+            }
+            return;
+        }
+
+        // 4. 最后检查普通地块（y=0层）
         const tile = this._tileIndex.get(key);
         if (tile) {
             // 删除地块
@@ -538,7 +577,7 @@ export class GameMap extends Component {
             }
             return;
         }
-        
+
         console.log(`[GameMap] No element found at (${gridPos.x}, ${gridPos.y})`);
     }
     
@@ -1484,5 +1523,38 @@ export class GameMap extends Component {
             (containerNode as any)['propertyBlockId'] = info.blockId;
             (containerNode as any)['propertyPosition'] = new Vec2(info.position.x, info.position.z);
         });
+    }
+
+    /**
+     * 根据网格位置查找其所属的Property信息（支持2x2）
+     * @param gridPos 网格位置
+     * @returns Property信息，如果不是Property则返回null
+     */
+    private findProperty2x2Info(gridPos: Vec2): PropertyInfo | null {
+        // 先检查是否是2x2地产的一部分
+        for (const [key, info] of this._propertyRegistry) {
+            if (info.size === 2) {
+                const basePos = info.position;
+                // 检查是否在2x2范围内
+                if (gridPos.x >= basePos.x && gridPos.x < basePos.x + 2 &&
+                    gridPos.y >= basePos.z && gridPos.y < basePos.z + 2) {
+                    return info;
+                }
+            }
+        }
+
+        // 如果不是2x2的一部分，检查是否是1x1地产
+        const key = `${gridPos.x}_${gridPos.y}`;
+        return this._propertyRegistry.get(key) || null;
+    }
+
+    /**
+     * 检查某个位置是否属于2x2地产的一部分
+     * @param gridPos 网格位置
+     * @returns 是否属于2x2地产
+     */
+    private isPartOfProperty2x2(gridPos: Vec2): boolean {
+        const propertyInfo = this.findProperty2x2Info(gridPos);
+        return propertyInfo !== null && propertyInfo.size === 2;
     }
 }

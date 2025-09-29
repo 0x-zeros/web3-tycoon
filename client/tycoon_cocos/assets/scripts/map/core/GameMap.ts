@@ -357,12 +357,26 @@ export class GameMap extends Component {
             return;
         }
 
-        // 在放置前检查是否有2x2地产占用
+        const typeId = blockInfo.typeId as number;
+        const isProperty = isWeb3Property(typeId);
+
+        // 检查当前位置是否有地产或tile
         const existingProperty = this.findProperty2x2Info(gridPos);
-        if (existingProperty && existingProperty.size === 2) {
-            // 如果要放置的也是2x2地产，检查是否完全重叠
-            const typeId = blockInfo.typeId as number;
-            if (isWeb3Property(typeId)) {
+        const existingTileKey = `${gridPos.x}_${gridPos.y}`;
+        const existingTile = this._tileIndex.get(existingTileKey);
+
+        // 如果要放置的是地产
+        if (isProperty) {
+            // 检查是否是相同类型的地产
+            if (existingProperty && existingProperty.blockId === this._currentSelectedBlockId) {
+                // 相同类型的地产，循环切换朝向
+                const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
+                this.cyclePropertyDirection(propertyPos);
+                return;  // 不需要重新放置，只切换朝向
+            }
+
+            // 不同类型的地产或没有地产，执行替换逻辑
+            if (existingProperty && existingProperty.size === 2) {
                 const newSize = getPropertySize(this._currentSelectedBlockId);
                 if (newSize === 2) {
                     // 如果新地产的左下角与现有地产相同，可以替换
@@ -375,28 +389,50 @@ export class GameMap extends Component {
                         this.removeProperty(propertyPos);
                     }
                 }
-            } else {
-                // 放置非地产元素时，先删除整个2x2地产
+            }
+
+            // Property类型，放置在y=0，并处理相邻Tile
+            const size = getPropertySize(this._currentSelectedBlockId);
+            await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size as 1 | 2);
+        }
+        // 如果要放置的是普通tile
+        else if (isWeb3Tile(typeId)) {
+            // 检查是否是相同类型的tile
+            if (existingTile) {
+                const existingBlockId = existingTile.getBlockId();
+                if (existingBlockId === this._currentSelectedBlockId) {
+                    // 相同类型的tile，不做处理
+                    console.log(`[GameMap] Same tile type at (${gridPos.x}, ${gridPos.y}), skipping`);
+                    return;
+                }
+            }
+
+            // 如果当前位置有2x2地产，需要先删除
+            if (existingProperty && existingProperty.size === 2) {
+                console.log(`[GameMap] Removing existing 2x2 property to place new tile`);
+                const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
+                this.removeProperty(propertyPos);
+            }
+
+            // 地块类型，放置在y=0
+            await this.placeTileAt(this._currentSelectedBlockId, gridPos);
+        }
+        // 其他类型（NPC、装饰等）
+        else {
+            // 如果当前位置有2x2地产，需要先删除
+            if (existingProperty && existingProperty.size === 2) {
                 console.log(`[GameMap] Removing existing 2x2 property to place new element`);
                 const propertyPos = new Vec2(existingProperty.position.x, existingProperty.position.z);
                 this.removeProperty(propertyPos);
             }
-        }
 
-        const typeId = blockInfo.typeId as number;
-        if (isWeb3Tile(typeId)) {
-            // 地块类型，放置在y=0
-            await this.placeTileAt(this._currentSelectedBlockId, gridPos);
-        } else if (isWeb3Property(typeId)) {
-            // Property类型，放置在y=0，并处理相邻Tile
-            const size = getPropertySize(this._currentSelectedBlockId);
-            await this.placePropertyAt(this._currentSelectedBlockId, gridPos, size as 1 | 2);
-        } else if (isWeb3Object(typeId)) {
-            // NPC/物体类型，使用PaperActor
-            await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
-        } else if (blockInfo.category === 'decoration') {
-            // 装饰类型，保留体素渲染
-            await this.placeDecorationAt(this._currentSelectedBlockId, gridPos);
+            if (isWeb3Object(typeId)) {
+                // NPC/物体类型，使用PaperActor
+                await this.placeObjectAt(this._currentSelectedBlockId, gridPos);
+            } else if (blockInfo.category === 'decoration') {
+                // 装饰类型，保留体素渲染
+                await this.placeDecorationAt(this._currentSelectedBlockId, gridPos);
+            }
         }
     }
     
@@ -1432,6 +1468,38 @@ export class GameMap extends Component {
             direction
         };
         this._propertyRegistry.set(propertyKey, propertyInfo);
+
+        // 标记有未保存的修改
+        this._hasUnsavedChanges = true;
+        this.scheduleAutoSave();
+    }
+
+    /**
+     * 循环切换地产朝向
+     * @param gridPos 网格位置
+     */
+    private cyclePropertyDirection(gridPos: Vec2): void {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        const propertyInfo = this._propertyRegistry.get(key);
+
+        if (!propertyInfo) {
+            console.warn(`[GameMap] No property found at (${gridPos.x}, ${gridPos.y})`);
+            return;
+        }
+
+        // 循环切换朝向: 0 -> 1 -> 2 -> 3 -> 0
+        const newDirection = ((propertyInfo.direction || 0) + 1) % 4;
+        propertyInfo.direction = newDirection;
+
+        // 更新PaperActor的朝向
+        const buildingNode = this._buildings.get(key);
+        if (buildingNode && buildingNode.isValid) {
+            const actor = buildingNode.getComponent(PaperActor);
+            if (actor) {
+                actor.setDirection(newDirection);
+                console.log(`[GameMap] Property direction cycled to ${newDirection} at (${gridPos.x}, ${gridPos.y})`);
+            }
+        }
 
         // 标记有未保存的修改
         this._hasUnsavedChanges = true;

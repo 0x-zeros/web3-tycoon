@@ -1446,8 +1446,13 @@ export class GameMap extends Component {
 
         // 2. 先使用体素系统放置建筑方块
         if (size === 1) {
-            // 1x1建筑：直接放置
+            // 1x1建筑：直接放置 + 重命名节点便于调试
             await this.placeTileAt(blockId, gridPos);
+            const renamedKey = `${gridPos.x}_${gridPos.y}`;
+            const placedTile = this._tileIndex.get(renamedKey);
+            if (placedTile && placedTile.node && placedTile.node.isValid) {
+                placedTile.node.name = `Building1x1Tile_${renamedKey}`;
+            }
         } else {
             // 2x2建筑：使用体素系统放置
             await this.place2x2Building(blockId, gridPos);
@@ -1598,31 +1603,56 @@ export class GameMap extends Component {
     private async place2x2Building(blockId: string, gridPos: Vec2): Promise<void> {
         console.log(`[GameMap] Placing 2x2 building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
 
-        // 2x2建筑不创建MapTile，只创建PaperActor
-        // 建筑是独立的实体，不是地块
+        // 2x2 建筑：创建父容器，清理占位，并生成4个可见的体素块（MapTile）
+        // 这样可以与删除/重建逻辑复用统一流程
 
-        // 删除占用位置上的任何现有tiles
+        // 1) 创建/获取父容器
+        const containerName = `Property2x2_${gridPos.x}_${gridPos.y}`;
+        let containerNode = this.tilesContainer?.getChildByName(containerName);
+        if (!containerNode) {
+            containerNode = new Node(containerName);
+            containerNode.setParent(this.tilesContainer!);
+        }
+
+        // 2) 清理区域内任何已有tile
         for (let dx = 0; dx < 2; dx++) {
             for (let dz = 0; dz < 2; dz++) {
                 const pos = new Vec2(gridPos.x + dx, gridPos.y + dz);
                 const key = `${pos.x}_${pos.y}`;
 
-                // 如果该位置有tile，删除它
                 const existingTile = this._tileIndex.get(key);
-                if (existingTile && existingTile.node && existingTile.node.isValid) {
-                    existingTile.node.destroy();
-                    this._tileIndex.delete(key);
-
-                    // 从tiles数组中移除
-                    const index = this._tiles.indexOf(existingTile);
-                    if (index !== -1) {
-                        this._tiles.splice(index, 1);
-                    }
+                if (existingTile) {
+                    this.removeTile(existingTile);
                 }
             }
         }
 
-        console.log(`[GameMap] Successfully prepared 2x2 area for building at (${gridPos.x}, ${gridPos.y})`);
+        // 3) 创建4个MapTile作为可见基座块
+        for (let dx = 0; dx < 2; dx++) {
+            for (let dz = 0; dz < 2; dz++) {
+                const pos = new Vec2(gridPos.x + dx, gridPos.y + dz);
+                const key = `${pos.x}_${pos.y}`;
+
+                // 新建子节点并放到容器下，命名更语义化
+                const tileNode = new Node(`Building2x2Tile_${pos.x}_${pos.y}`);
+                tileNode.setParent(containerNode);
+
+                // 添加MapTile并初始化为对应building方块
+                const tile = tileNode.addComponent(MapTile);
+                await tile.initialize(blockId, pos);
+
+                // 注册到索引与数组，便于统一删除与查询
+                this._tiles.push(tile);
+                this._tileIndex.set(key, tile);
+            }
+        }
+
+        // 标记容器属性（供后续重建使用）
+        (containerNode as any)['isProperty2x2'] = true;
+        (containerNode as any)['propertyBlockId'] = blockId;
+        (containerNode as any)['propertyPosition'] = gridPos.clone();
+
+        console.log(`[GameMap] Created 2x2 building base tiles for ${blockId} at (${gridPos.x}, ${gridPos.y})`);
     }
 
     /**

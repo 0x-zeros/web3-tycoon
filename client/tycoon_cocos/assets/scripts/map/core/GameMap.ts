@@ -981,15 +981,16 @@ export class GameMap extends Component {
                     this._propertyRegistry.set(propertyKey, propertyInfo);
 
                     // 重新创建Property的建筑PaperActor
+                    // 由于PaperActor的原点已改为底部中心，Y坐标设为1
                     let actorPos: Vec3;
                     if (propertyData.size === 1) {
-                        // 1x1地产：xz与该地产的xz一样，y为1.1
-                        actorPos = new Vec3(propertyData.position.x + 0.5, 1.1, propertyData.position.z + 0.5);
+                        // 1x1地产：xz与该地产的中心，y为1
+                        actorPos = new Vec3(propertyData.position.x + 0.5, 0.5, propertyData.position.z + 0.5);
                     } else {
-                        // 2x2地产：xz为4个block的中间位置，y为1.1
+                        // 2x2地产：xz为4个block的中间位置，y为1
                         actorPos = new Vec3(
                             propertyData.position.x + 1,
-                            1.1,
+                            0.5,
                             propertyData.position.z + 1
                         );
                     }
@@ -1447,15 +1448,16 @@ export class GameMap extends Component {
         }
 
         // 计算PaperActor的位置
+        // 由于PaperActor的原点已改为底部中心，Y坐标设为1
         let actorPos: Vec3;
         if (size === 1) {
-            // 1x1地产：xz与该地产的xz一样，y为1.1
-            actorPos = new Vec3(gridPos.x, 1.1, gridPos.y);
+            // 1x1地产：xz与该地产的xz一样，y为1
+            actorPos = new Vec3(gridPos.x, 1, gridPos.y);
         } else {
-            // 2x2地产：xz为4个block的中间位置，y为1.1
+            // 2x2地产：xz为4个block的中间位置，y为1
             actorPos = new Vec3(
                 gridPos.x + 0.5,  // 中心是+0.5
-                1.1,
+                1,
                 gridPos.y + 0.5
             );
         }

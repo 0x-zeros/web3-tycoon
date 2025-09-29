@@ -213,10 +213,23 @@ export class PaperActor extends Component {
 
     /**
      * 创建Quad网格（两个三角形组成的平面）
+     * 原点在底部中心
      */
     private createQuadMesh() {
         // 创建简单的Quad几何体
         const quadInfo = primitives.quad();
+
+        // 修改顶点位置，将原点从中心移动到底部中心
+        // 原始的quad顶点是 (-0.5, -0.5) 到 (0.5, 0.5)
+        // 我们需要改为 (-0.5, 0) 到 (0.5, 1)
+        if (quadInfo.positions) {
+            const positions = quadInfo.positions as Float32Array;
+            // quad有 4 个顶点，每个顶点有3个分量 (x, y, z)
+            // 只需要将y分量加上0.5
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i + 1] += 0.5; // y分量加上0.5
+            }
+        }
 
         this.quadMesh = utils.MeshUtils.createMesh(quadInfo);
 

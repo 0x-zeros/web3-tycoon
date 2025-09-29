@@ -965,7 +965,7 @@ export class GameMap extends Component {
                 }
             }
 
-            // 加载Property数据
+            // 加载Property数据并重建建筑PaperActor
             if (mapData.properties) {
                 for (const propertyData of mapData.properties) {
                     const propertyKey = `${propertyData.position.x}_${propertyData.position.z}`;
@@ -976,9 +976,40 @@ export class GameMap extends Component {
                         data: propertyData.data
                     };
                     this._propertyRegistry.set(propertyKey, propertyInfo);
+
+                    // 重新创建Property的建筑PaperActor
+                    const actorPos = new Vec3(
+                        propertyData.position.x + (propertyData.size - 1) * 0.5,
+                        0.1,
+                        propertyData.position.z + (propertyData.size - 1) * 0.5
+                    );
+
+                    const buildingNode = PaperActorFactory.createBuilding(
+                        propertyData.blockId,
+                        propertyData.data?.level || 0,
+                        actorPos
+                    );
+
+                    if (buildingNode) {
+                        buildingNode.parent = this._buildingsRoot;
+
+                        // 记录所有占用的格子都指向同一个PaperActor
+                        if (propertyData.size === 2) {
+                            for (let dx = 0; dx < propertyData.size; dx++) {
+                                for (let dz = 0; dz < propertyData.size; dz++) {
+                                    const occupiedKey = `${propertyData.position.x + dx}_${propertyData.position.z + dz}`;
+                                    this._buildings.set(occupiedKey, buildingNode);
+                                }
+                            }
+                        } else {
+                            this._buildings.set(propertyKey, buildingNode);
+                        }
+
+                        console.log(`[GameMap] Recreated building PaperActor for ${propertyData.blockId} at (${actorPos.x}, ${actorPos.z})`);
+                    }
                 }
             }
-            
+
             // 保存地图数据
             this._mapSaveData = mapData;
             this.mapId = mapData.mapId;

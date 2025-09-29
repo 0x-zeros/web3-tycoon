@@ -33,6 +33,12 @@ export class UIEditor extends UIBase {
     /** 生成Brawl地图按钮 */
     private m_btn_generateBrawl: fgui.GButton;
 
+    /** 随机生成按钮 */
+    private m_btn_randomGen: fgui.GButton;
+
+    /** 下载按钮 */
+    private m_btn_download: fgui.GButton;
+
     // 模板功能已移除
 
     /** 当前选中的tile显示 */
@@ -70,9 +76,13 @@ export class UIEditor extends UIBase {
         this.m_btn_generateClassic = this.getChild('btn_generateClassic') as fgui.GButton;
         this.m_btn_generateBrawl = this.getChild('btn_generateBrawl') as fgui.GButton;
 
+        // 获取随机生成和下载按钮
+        this.m_btn_randomGen = this.getChild('btn_randomGen') as fgui.GButton;
+        this.m_btn_download = this.getChild('btn_download') as fgui.GButton;
+
         // 如果没有专门的按钮，可以创建临时的测试按钮
-        if (!this.m_btn_generateMap && !this.m_btn_generateClassic && !this.m_btn_generateBrawl) {
-            console.log('[UIEditor] 生成地图按钮未找到，使用键盘快捷键：G-生成随机地图');
+        if (!this.m_btn_generateMap && !this.m_btn_generateClassic && !this.m_btn_generateBrawl && !this.m_btn_randomGen) {
+            console.log('[UIEditor] 生成地图按钮未找到');
         }
 
         // 获取tile组件及其子组件
@@ -122,6 +132,14 @@ export class UIEditor extends UIBase {
             this.m_btn_generateBrawl.onClick(this._onGenerateBrawlClick, this);
         }
 
+        // 绑定随机生成和下载按钮点击事件
+        if (this.m_btn_randomGen) {
+            this.m_btn_randomGen.onClick(this._onRandomGenClick, this);
+        }
+        if (this.m_btn_download) {
+            this.m_btn_download.onClick(this._onDownloadClick, this);
+        }
+
         // 模板相关事件已移除
 
         // 绑定tile点击事件
@@ -161,6 +179,14 @@ export class UIEditor extends UIBase {
             this.m_btn_generateBrawl.offClick(this._onGenerateBrawlClick, this);
         }
 
+        // 解绑随机生成和下载按钮事件
+        if (this.m_btn_randomGen) {
+            this.m_btn_randomGen.offClick(this._onRandomGenClick, this);
+        }
+        if (this.m_btn_download) {
+            this.m_btn_download.offClick(this._onDownloadClick, this);
+        }
+
         // 模板相关事件已移除
 
         // 解绑tile点击事件
@@ -171,8 +197,8 @@ export class UIEditor extends UIBase {
         // 解绑地图元素选中事件
         EventBus.off(EventTypes.UI.MapElementSelected, this._onMapElementSelected, this);
 
-        // 解绑键盘事件
-        input.off(Input.EventType.KEY_DOWN, this._onKeyDown, this);
+        // 键盘事件已移除
+        // input.off(Input.EventType.KEY_DOWN, this._onKeyDown, this);
 
         // 调用父类解绑
         super.unbindEvents();
@@ -365,6 +391,22 @@ export class UIEditor extends UIBase {
     // 模板相关回调已移除
 
     /**
+     * 随机生成按钮点击事件
+     */
+    private _onRandomGenClick(): void {
+        console.log("[UIEditor] Random generate button clicked");
+        this._generateRandomMap();
+    }
+
+    /**
+     * 下载按钮点击事件
+     */
+    private _onDownloadClick(): void {
+        console.log("[UIEditor] Download button clicked");
+        this._downloadCurrentMap();
+    }
+
+    /**
      * 使用模板生成地图
      */
     private async _generateRandomMap(): Promise<void> {
@@ -424,35 +466,17 @@ export class UIEditor extends UIBase {
      * 设置键盘快捷键
      */
     private _setupKeyboardShortcuts(): void {
-        // 使用Cocos的输入系统监听键盘事件
-        input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
-
-        console.log('[UIEditor] Keyboard shortcuts setup: G - Generate random map, U - Download current map');
+        // 移除键盘快捷键，改用按钮
+        // input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
+        console.log('[UIEditor] Using UI buttons for map generation and download');
     }
 
     /**
-     * 键盘按下事件处理
+     * 键盘按下事件处理（已禁用，改用按钮）
      */
-    private _onKeyDown(event: any): void {
-        // 只在编辑模式下响应
-        if (!MapManager.getInstance()?.getCurrentMapEditMode()) {
-            return;
-        }
-
-        switch(event.keyCode) {
-            case KeyCode.KEY_G:
-                // G键 - 生成随机地图
-                console.log('[UIEditor] Key G pressed - generating random map');
-                this._generateRandomMap();
-                break;
-            // 模板快捷键已移除
-            case KeyCode.KEY_U:
-                // U键 - 下载当前地图的本地存储 MapSaveData
-                console.log('[UIEditor] Key U pressed - downloading MapSaveData from localStorage');
-                this._downloadCurrentMap();
-                break;
-        }
-    }
+    // private _onKeyDown(event: any): void {
+    //     // 功能已移至btn_randomGen和btn_download按钮
+    // }
 
     /**
      * 切换到下一个模板

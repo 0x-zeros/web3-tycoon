@@ -1,10 +1,10 @@
 /**
  * 路径生成器 - Phase 1
- * 负责根据模板生成基础路径网络
+ * 负责随机生成基础路径网络
+ * 不依赖任何模板，纯随机生成
  */
 
 import { Vec2 } from 'cc';
-import { MapTemplateSpec, PathNode } from './templates/TemplateTypes';
 import { CoordUtils } from './MapGeneratorTypes';
 
 export interface PathGenerationResult {
@@ -27,664 +27,310 @@ export class PathGenerator {
   }
 
   /**
-   * 根据模板生成路径
+   * 生成随机路径（不需要模板）
    */
-  generateFromTemplate(template: MapTemplateSpec): PathGenerationResult {
-    switch (template.layout) {
-      case 'snake':
-        return this.generateSnakePath(template);
-      case 'double_loop':
-        return this.generateDoubleLoopPath(template);
-      case 'musical_note':
-        return this.generateMusicalNotePath(template);
-      case 'grid':
-      case 'full_grid':
-        return this.generateGridPath(template);
-      case 'nested_loops':
-        return this.generateNestedLoopsPath(template);
-      case 'complex_grid':
-        return this.generateComplexGridPath(template);
-      case 'single_ring':
+  generate(): PathGenerationResult {
+    // 随机选择一种形状
+    const shapeType = Math.floor(this.random() * 3);
+
+    switch(shapeType) {
+      case 0: // 方形环
+        return this.generateSquareRing();
+      case 1: // 双环
+        return this.generateDoubleRing();
+      case 2: // S形路径
+        return this.generateSnakePath();
       default:
-        return this.generateSingleRingPath(template);
+        return this.generateSquareRing();
     }
   }
 
   /**
-   * 生成蛇形路径
+   * 生成方形环路径
    */
-  private generateSnakePath(template: MapTemplateSpec): PathGenerationResult {
+  private generateSquareRing(): PathGenerationResult {
+    // 随机边距
+    const margin = 5 + Math.floor(this.random() * 6); // 5-10格
+
+    // 四个角点
+    const topLeft = new Vec2(margin, margin);
+    const topRight = new Vec2(this.width - margin, margin);
+    const bottomRight = new Vec2(this.width - margin, this.height - margin);
+    const bottomLeft = new Vec2(margin, this.height - margin);
+
+    const corners = [topLeft, topRight, bottomRight, bottomLeft];
+
+    // 生成每条边的路径
     const paths: Vec2[] = [];
     const mainPath: Vec2[] = [];
-    const corners: Vec2[] = [];
 
-    if (template.pathConfig.mainPath) {
-      // 使用预定义的路径节点
-      for (const node of template.pathConfig.mainPath) {
-        const pos = this.applyJitter(node.pos);
-        paths.push(pos);
-        mainPath.push(pos);
-        if (node.type === 'corner') {
-          corners.push(pos);
-        }
-      }
-
-      // 连接路径节点形成连续路径
-      const connectedPath = this.connectPathNodes(mainPath);
-      return {
-        paths: connectedPath,
-        mainPath: connectedPath,
-        sidePaths: [],
-        intersections: [],
-        corners
-      };
+    // 底边（左到右）
+    const bottomSteps = 8 + Math.floor(this.random() * 5); // 8-12格
+    for (let i = 0; i <= bottomSteps; i++) {
+      const x = Math.round(topLeft.x + (topRight.x - topLeft.x) * i / bottomSteps);
+      const pos = new Vec2(x, topLeft.y);
+      paths.push(pos);
+      mainPath.push(pos);
     }
 
-    // 生成S形蛇形路径
-    const segments = 4 + Math.floor(this.random() * 3); // 4-6段
-    let currentPos = new Vec2(2, 2);
-    let direction = 'right';
-
-    for (let i = 0; i < segments; i++) {
-      const segmentLength = 8 + Math.floor(this.random() * 8); // 8-15格
-      const segment = this.createStraightSegment(currentPos, direction, segmentLength);
-
-      paths.push(...segment);
-      mainPath.push(...segment);
-
-      // 记录拐角
-      if (i > 0) {
-        corners.push(currentPos);
-      }
-
-      // 转弯
-      currentPos = segment[segment.length - 1];
-      direction = this.getNextDirection(direction, i % 2 === 0);
-
-      if (i < segments - 1) {
-        corners.push(currentPos);
-      }
+    // 右边（下到上）
+    const rightSteps = 8 + Math.floor(this.random() * 5);
+    for (let i = 1; i <= rightSteps; i++) {
+      const y = Math.round(topRight.y + (bottomRight.y - topRight.y) * i / rightSteps);
+      const pos = new Vec2(topRight.x, y);
+      paths.push(pos);
+      mainPath.push(pos);
     }
+
+    // 顶边（右到左）
+    const topSteps = 8 + Math.floor(this.random() * 5);
+    for (let i = 1; i <= topSteps; i++) {
+      const x = Math.round(bottomRight.x - (bottomRight.x - bottomLeft.x) * i / topSteps);
+      const pos = new Vec2(x, bottomRight.y);
+      paths.push(pos);
+      mainPath.push(pos);
+    }
+
+    // 左边（上到下，不包括起点以免重复）
+    const leftSteps = 8 + Math.floor(this.random() * 5);
+    for (let i = 1; i < leftSteps; i++) {
+      const y = Math.round(bottomLeft.y - (bottomLeft.y - topLeft.y) * i / leftSteps);
+      const pos = new Vec2(bottomLeft.x, y);
+      paths.push(pos);
+      mainPath.push(pos);
+    }
+
+    // 加入随机抖动
+    const jitteredPaths = paths.map(pos => this.applyJitter(pos));
+    const jitteredMainPath = mainPath.map(pos => this.applyJitter(pos));
 
     return {
-      paths: this.removeDuplicates(paths),
-      mainPath: this.removeDuplicates(mainPath),
+      paths: this.removeDuplicates(jitteredPaths),
+      mainPath: this.removeDuplicates(jitteredMainPath),
       sidePaths: [],
       intersections: [],
-      corners
+      corners: corners.map(c => this.applyJitter(c))
     };
   }
 
   /**
    * 生成双环路径
    */
-  private generateDoubleLoopPath(template: MapTemplateSpec): PathGenerationResult {
-    const paths: Vec2[] = [];
-    const mainPath: Vec2[] = [];
-    const intersections: Vec2[] = [];
-    const corners: Vec2[] = [];
+  private generateDoubleRing(): PathGenerationResult {
+    // 外环边距
+    const outerMargin = 5 + Math.floor(this.random() * 3); // 5-7
+    // 内环边距
+    const innerMargin = 12 + Math.floor(this.random() * 4); // 12-15
 
-    if (template.pathConfig.rings) {
-      const { outer, inner, bridges = 2 } = template.pathConfig.rings;
+    // 生成外环
+    const outerRing = this.createRing(outerMargin);
 
-      // 生成外环
-      if (outer) {
-        const outerPath = this.createRingFromVertices(outer);
-        paths.push(...outerPath);
-        mainPath.push(...outerPath);
+    // 生成内环
+    const innerRing = this.createRing(innerMargin);
 
-        // 记录外环拐角
-        for (const vertex of outer) {
-          corners.push(this.applyJitter(vertex));
-        }
-      }
-
-      // 生成内环
-      if (inner) {
-        const innerPath = this.createRingFromVertices(inner);
-        paths.push(...innerPath);
-
-        // 记录内环拐角
-        for (const vertex of inner) {
-          corners.push(this.applyJitter(vertex));
-        }
-      }
-
-      // 生成桥接
-      if (outer && inner && bridges > 0) {
-        const bridgePaths = this.createBridges(outer, inner, bridges);
-        for (const bridge of bridgePaths) {
-          paths.push(...bridge);
-          // 桥接点作为交叉点
-          intersections.push(bridge[0], bridge[bridge.length - 1]);
-        }
-      }
-    }
-
-    return {
-      paths: this.removeDuplicates(paths),
-      mainPath: this.removeDuplicates(mainPath),
-      sidePaths: [],
-      intersections,
-      corners
-    };
-  }
-
-  /**
-   * 生成音符形状路径
-   */
-  private generateMusicalNotePath(template: MapTemplateSpec): PathGenerationResult {
-    const paths: Vec2[] = [];
-    const mainPath: Vec2[] = [];
-    const sidePaths: Vec2[][] = [];
-    const corners: Vec2[] = [];
-
-    // 生成主环
-    if (template.pathConfig.mainPath) {
-      for (const node of template.pathConfig.mainPath) {
-        const pos = this.applyJitter(node.pos);
-        paths.push(pos);
-        mainPath.push(pos);
-        if (node.type === 'corner') {
-          corners.push(pos);
-        }
-      }
-    }
-
-    // 生成子路径（音符的小圆圈）
-    if (template.pathConfig.subPaths) {
-      for (const subPath of template.pathConfig.subPaths) {
-        const sub: Vec2[] = [];
-        for (const node of subPath) {
-          const pos = this.applyJitter(node.pos);
-          paths.push(pos);
-          sub.push(pos);
-          if (node.type === 'corner') {
-            corners.push(pos);
-          }
-        }
-        sidePaths.push(sub);
-      }
-    }
-
-    return {
-      paths: this.removeDuplicates(paths),
-      mainPath: this.removeDuplicates(mainPath),
-      sidePaths,
-      intersections: [],
-      corners
-    };
-  }
-
-  /**
-   * 生成网格路径
-   */
-  private generateGridPath(template: MapTemplateSpec): PathGenerationResult {
-    const paths: Vec2[] = [];
-    const mainPath: Vec2[] = [];
-    const intersections: Vec2[] = [];
-    const corners: Vec2[] = [];
-
-    if (template.pathConfig.grid) {
-      const { rows, cols, connectivity } = template.pathConfig.grid;
-      const cellWidth = Math.floor((this.width - 4) / cols);
-      const cellHeight = Math.floor((this.height - 4) / rows);
-
-      // 生成横线
-      for (let row = 0; row <= rows; row++) {
-        const y = 2 + row * cellHeight;
-        for (let x = 2; x <= this.width - 2; x++) {
-          const pos = new Vec2(x, y);
-          paths.push(pos);
-          if (row === 0 || row === rows) {
-            mainPath.push(pos);
-          }
-        }
-      }
-
-      // 生成竖线
-      for (let col = 0; col <= cols; col++) {
-        const x = 2 + col * cellWidth;
-        for (let y = 2; y <= this.height - 2; y++) {
-          const pos = new Vec2(x, y);
-          if (!this.containsPos(paths, pos)) {
-            paths.push(pos);
-          }
-          if (col === 0 || col === cols) {
-            if (!this.containsPos(mainPath, pos)) {
-              mainPath.push(pos);
-            }
-          }
-        }
-      }
-
-      // 记录交叉点
-      for (let row = 0; row <= rows; row++) {
-        for (let col = 0; col <= cols; col++) {
-          const pos = new Vec2(2 + col * cellWidth, 2 + row * cellHeight);
-          intersections.push(pos);
-          if ((row === 0 || row === rows) && (col === 0 || col === cols)) {
-            corners.push(pos);
-          }
-        }
-      }
-
-      // 根据连接性移除部分路径
-      if (connectivity === 'cross') {
-        // 只保留十字形
-        paths.length = 0;
-        const centerX = Math.floor(cols / 2);
-        const centerY = Math.floor(rows / 2);
-
-        // 横线
-        const y = 2 + centerY * cellHeight;
-        for (let x = 2; x <= this.width - 2; x++) {
-          paths.push(new Vec2(x, y));
-        }
-
-        // 竖线
-        const x = 2 + centerX * cellWidth;
-        for (let y = 2; y <= this.height - 2; y++) {
-          const pos = new Vec2(x, y);
-          if (!this.containsPos(paths, pos)) {
-            paths.push(pos);
-          }
-        }
-      }
-    }
-
-    // 添加外环（如果有）
-    if (template.pathConfig.rings?.outer) {
-      const outerPath = this.createRingFromVertices(template.pathConfig.rings.outer);
-      for (const pos of outerPath) {
-        if (!this.containsPos(paths, pos)) {
-          paths.push(pos);
-          mainPath.push(pos);
-        }
-      }
-    }
-
-    return {
-      paths: this.removeDuplicates(paths),
-      mainPath: this.removeDuplicates(mainPath),
-      sidePaths: [],
-      intersections,
-      corners
-    };
-  }
-
-  /**
-   * 生成嵌套环路径
-   */
-  private generateNestedLoopsPath(template: MapTemplateSpec): PathGenerationResult {
-    // 类似双环，但内外环共享边
-    return this.generateDoubleLoopPath(template);
-  }
-
-  /**
-   * 生成复杂网格路径
-   */
-  private generateComplexGridPath(template: MapTemplateSpec): PathGenerationResult {
-    const paths: Vec2[] = [];
-    const mainPath: Vec2[] = [];
-    const intersections: Vec2[] = [];
-    const corners: Vec2[] = [];
-
-    // 使用预定义的不规则路径
-    if (template.pathConfig.mainPath) {
-      for (const node of template.pathConfig.mainPath) {
-        const pos = this.applyJitter(node.pos);
-        paths.push(pos);
-        mainPath.push(pos);
-
-        if (node.type === 'intersection') {
-          intersections.push(pos);
-        } else if (node.type === 'corner') {
-          corners.push(pos);
-        }
-      }
-
-      // 连接所有节点
-      const connectedPath = this.connectComplexPath(template.pathConfig.mainPath);
-      return {
-        paths: connectedPath,
-        mainPath: connectedPath,
-        sidePaths: [],
-        intersections,
-        corners
-      };
-    }
-
-    // 回退到网格生成
-    return this.generateGridPath(template);
-  }
-
-  /**
-   * 生成单环路径
-   */
-  private generateSingleRingPath(template: MapTemplateSpec): PathGenerationResult {
-    const paths: Vec2[] = [];
-    const mainPath: Vec2[] = [];
-    const corners: Vec2[] = [];
-
-    if (template.pathConfig.rings?.outer) {
-      const ringPath = this.createRingFromVertices(template.pathConfig.rings.outer);
-      paths.push(...ringPath);
-      mainPath.push(...ringPath);
-
-      // 记录拐角
-      for (const vertex of template.pathConfig.rings.outer) {
-        corners.push(this.applyJitter(vertex));
-      }
-    } else {
-      // 默认方形环
-      const vertices = [
-        new Vec2(5, 5), new Vec2(this.width - 5, 5),
-        new Vec2(this.width - 5, this.height - 5), new Vec2(5, this.height - 5)
-      ];
-      const ringPath = this.createRingFromVertices(vertices);
-      paths.push(...ringPath);
-      mainPath.push(...ringPath);
-
-      for (const vertex of vertices) {
-        corners.push(vertex);
-      }
-    }
-
-    return {
-      paths: this.removeDuplicates(paths),
-      mainPath: this.removeDuplicates(mainPath),
-      sidePaths: [],
-      intersections: [],
-      corners
-    };
-  }
-
-  /**
-   * 从顶点创建环路径
-   */
-  private createRingFromVertices(vertices: Vec2[]): Vec2[] {
-    const path: Vec2[] = [];
-
-    for (let i = 0; i < vertices.length; i++) {
-      const start = this.applyJitter(vertices[i]);
-      const end = this.applyJitter(vertices[(i + 1) % vertices.length]);
-      const segment = this.bresenhamLine(start, end);
-      path.push(...segment);
-    }
-
-    return this.removeDuplicates(path);
-  }
-
-  /**
-   * 创建直线段
-   */
-  private createStraightSegment(start: Vec2, direction: string, length: number): Vec2[] {
-    const segment: Vec2[] = [];
-    let current = start.clone();
-
-    for (let i = 0; i < length; i++) {
-      segment.push(current.clone());
-
-      switch (direction) {
-        case 'right':
-          current.x++;
-          break;
-        case 'left':
-          current.x--;
-          break;
-        case 'up':
-          current.y++;
-          break;
-        case 'down':
-          current.y--;
-          break;
-      }
-
-      // 边界检查
-      current.x = Math.max(2, Math.min(this.width - 2, current.x));
-      current.y = Math.max(2, Math.min(this.height - 2, current.y));
-    }
-
-    return segment;
-  }
-
-  /**
-   * 创建桥接路径
-   */
-  private createBridges(outer: Vec2[], inner: Vec2[], count: number): Vec2[][] {
+    // 生成连接桥
     const bridges: Vec2[][] = [];
-    const step = Math.floor(outer.length / count);
+    const bridgeCount = 2 + Math.floor(this.random() * 2); // 2-3个桥
 
-    for (let i = 0; i < count; i++) {
-      const outerIndex = (i * step) % outer.length;
-      const innerIndex = this.findNearestPoint(outer[outerIndex], inner);
-
-      const bridge = this.bresenhamLine(
-        this.applyJitter(outer[outerIndex]),
-        this.applyJitter(inner[innerIndex])
-      );
-
+    for (let i = 0; i < bridgeCount; i++) {
+      const side = Math.floor(this.random() * 4); // 随机选择一边
+      const bridge = this.createBridge(outerMargin, innerMargin, side);
       bridges.push(bridge);
     }
 
-    return bridges;
+    // 合并所有路径
+    const allPaths = [
+      ...outerRing,
+      ...innerRing,
+      ...bridges.flat()
+    ];
+
+    return {
+      paths: this.removeDuplicates(allPaths),
+      mainPath: this.removeDuplicates(outerRing),
+      sidePaths: [innerRing, ...bridges],
+      intersections: [], // 桥接点
+      corners: [] // 环的角点
+    };
   }
 
   /**
-   * 连接路径节点
+   * 生成S形蛇形路径
    */
-  private connectPathNodes(nodes: Vec2[]): Vec2[] {
-    const connected: Vec2[] = [];
+  private generateSnakePath(): PathGenerationResult {
+    const paths: Vec2[] = [];
+    const mainPath: Vec2[] = [];
+    const corners: Vec2[] = [];
 
-    for (let i = 0; i < nodes.length - 1; i++) {
-      const segment = this.bresenhamLine(nodes[i], nodes[i + 1]);
-      connected.push(...segment);
-    }
+    // 随机段数
+    const segments = 3 + Math.floor(this.random() * 3); // 3-5段
 
-    // 如果需要闭合
-    if (nodes.length > 2) {
-      const closing = this.bresenhamLine(nodes[nodes.length - 1], nodes[0]);
-      connected.push(...closing);
-    }
+    let currentPos = new Vec2(5, 5);
+    let direction = 0; // 0:右, 1:上, 2:左, 3:下
 
-    return this.removeDuplicates(connected);
-  }
+    for (let seg = 0; seg < segments; seg++) {
+      // 每段的长度
+      const segmentLength = 8 + Math.floor(this.random() * 8); // 8-15格
 
-  /**
-   * 连接复杂路径（根据connections）
-   */
-  private connectComplexPath(nodes: PathNode[]): Vec2[] {
-    const connected: Vec2[] = [];
-    const processed = new Set<string>();
+      // 生成这一段
+      for (let i = 0; i < segmentLength; i++) {
+        const pos = currentPos.clone();
 
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      for (const targetIndex of node.connections) {
-        const key = `${Math.min(i, targetIndex)}-${Math.max(i, targetIndex)}`;
-        if (!processed.has(key) && targetIndex < nodes.length) {
-          processed.add(key);
-          const segment = this.bresenhamLine(
-            this.applyJitter(node.pos),
-            this.applyJitter(nodes[targetIndex].pos)
-          );
-          connected.push(...segment);
+        // 根据方向移动
+        switch(direction) {
+          case 0: pos.x += i; break; // 右
+          case 1: pos.y += i; break; // 上
+          case 2: pos.x -= i; break; // 左
+          case 3: pos.y -= i; break; // 下
         }
+
+        // 确保在地图范围内
+        pos.x = Math.max(3, Math.min(this.width - 3, pos.x));
+        pos.y = Math.max(3, Math.min(this.height - 3, pos.y));
+
+        paths.push(this.applyJitter(pos));
+        mainPath.push(this.applyJitter(pos));
+      }
+
+      // 更新当前位置到段末
+      switch(direction) {
+        case 0: currentPos.x += segmentLength; break;
+        case 1: currentPos.y += segmentLength; break;
+        case 2: currentPos.x -= segmentLength; break;
+        case 3: currentPos.y -= segmentLength; break;
+      }
+
+      // 记录拐角
+      if (seg < segments - 1) {
+        corners.push(currentPos.clone());
+      }
+
+      // 转向（顺时针）
+      direction = (direction + 1) % 4;
+    }
+
+    return {
+      paths: this.removeDuplicates(paths),
+      mainPath: this.removeDuplicates(mainPath),
+      sidePaths: [],
+      intersections: [],
+      corners
+    };
+  }
+
+  /**
+   * 创建一个环
+   */
+  private createRing(margin: number): Vec2[] {
+    const ring: Vec2[] = [];
+    const stepsPerSide = 8 + Math.floor(this.random() * 5); // 8-12格
+
+    // 四边
+    for (let side = 0; side < 4; side++) {
+      for (let i = 0; i < stepsPerSide; i++) {
+        let x = margin, y = margin;
+
+        switch(side) {
+          case 0: // 底边
+            x = margin + (this.width - 2 * margin) * i / stepsPerSide;
+            break;
+          case 1: // 右边
+            x = this.width - margin;
+            y = margin + (this.height - 2 * margin) * i / stepsPerSide;
+            break;
+          case 2: // 顶边
+            x = this.width - margin - (this.width - 2 * margin) * i / stepsPerSide;
+            y = this.height - margin;
+            break;
+          case 3: // 左边
+            x = margin;
+            y = this.height - margin - (this.height - 2 * margin) * i / stepsPerSide;
+            break;
+        }
+
+        ring.push(this.applyJitter(new Vec2(Math.round(x), Math.round(y))));
       }
     }
 
-    return this.removeDuplicates(connected);
+    return ring;
   }
 
   /**
-   * Manhattan路径算法（只允许4方向移动）
+   * 创建连接桥
    */
-  private bresenhamLine(start: Vec2, end: Vec2): Vec2[] {
-    const points: Vec2[] = [];
-    let x0 = Math.round(start.x);
-    let y0 = Math.round(start.y);
-    const x1 = Math.round(end.x);
-    const y1 = Math.round(end.y);
+  private createBridge(outerMargin: number, innerMargin: number, side: number): Vec2[] {
+    const bridge: Vec2[] = [];
+    const steps = innerMargin - outerMargin;
 
-    // 使用Manhattan路径：先横向移动，再纵向移动
-    // 这确保了路径上的每个tile都与前一个tile共享一条边
+    // 随机起点位置
+    const t = 0.2 + this.random() * 0.6; // 20%-80%的位置
 
-    // 横向移动
-    const dx = x1 - x0;
-    const stepX = dx > 0 ? 1 : -1;
-    let currentX = x0;
+    for (let i = 0; i <= steps; i++) {
+      let x = 0, y = 0;
+      const progress = i / steps;
 
-    while (currentX !== x1) {
-      points.push(new Vec2(currentX, y0));
-      currentX += stepX;
-    }
-
-    // 纵向移动
-    const dy = y1 - y0;
-    const stepY = dy > 0 ? 1 : -1;
-    let currentY = y0;
-
-    while (currentY !== y1) {
-      points.push(new Vec2(x1, currentY));
-      currentY += stepY;
-    }
-
-    // 添加终点
-    points.push(new Vec2(x1, y1));
-
-    return points;
-  }
-
-  /**
-   * 应用抖动（限制为4方向）
-   */
-  private applyJitter(pos: Vec2, amount: number = 1): Vec2 {
-    // 暂时禁用抖动，避免产生对角线连接
-    // 如果需要抖动，应该只在一个方向上进行
-    return pos.clone();
-  }
-
-  /**
-   * 获取下一个方向
-   */
-  private getNextDirection(current: string, turnRight: boolean): string {
-    const directions = ['right', 'down', 'left', 'up'];
-    const index = directions.indexOf(current);
-    const offset = turnRight ? 1 : -1;
-    return directions[(index + offset + 4) % 4];
-  }
-
-  /**
-   * 查找最近的点
-   */
-  private findNearestPoint(target: Vec2, points: Vec2[]): number {
-    let minDist = Infinity;
-    let nearestIndex = 0;
-
-    for (let i = 0; i < points.length; i++) {
-      const dist = Vec2.distance(target, points[i]);
-      if (dist < minDist) {
-        minDist = dist;
-        nearestIndex = i;
+      switch(side) {
+        case 0: // 底部桥
+          x = outerMargin + (this.width - 2 * outerMargin) * t;
+          y = outerMargin + (innerMargin - outerMargin) * progress;
+          break;
+        case 1: // 右侧桥
+          x = this.width - outerMargin - (innerMargin - outerMargin) * progress;
+          y = outerMargin + (this.height - 2 * outerMargin) * t;
+          break;
+        case 2: // 顶部桥
+          x = outerMargin + (this.width - 2 * outerMargin) * t;
+          y = this.height - outerMargin - (innerMargin - outerMargin) * progress;
+          break;
+        case 3: // 左侧桥
+          x = outerMargin + (innerMargin - outerMargin) * progress;
+          y = outerMargin + (this.height - 2 * outerMargin) * t;
+          break;
       }
+
+      bridge.push(new Vec2(Math.round(x), Math.round(y)));
     }
 
-    return nearestIndex;
+    return bridge;
   }
 
   /**
-   * 检查是否包含位置
+   * 应用随机抖动
    */
-  private containsPos(points: Vec2[], pos: Vec2): boolean {
-    return points.some(p => p.x === pos.x && p.y === pos.y);
+  private applyJitter(pos: Vec2): Vec2 {
+    // 小幅随机偏移（-1到1格）
+    const jitterX = Math.round((this.random() - 0.5) * 2);
+    const jitterY = Math.round((this.random() - 0.5) * 2);
+
+    return new Vec2(
+      Math.max(2, Math.min(this.width - 2, pos.x + jitterX)),
+      Math.max(2, Math.min(this.height - 2, pos.y + jitterY))
+    );
   }
 
   /**
-   * 移除重复点
+   * 去除重复的路径点
    */
-  private removeDuplicates(points: Vec2[]): Vec2[] {
-    const unique: Vec2[] = [];
-    const keys = new Set<string>();
+  private removeDuplicates(paths: Vec2[]): Vec2[] {
+    const seen = new Set<string>();
+    const result: Vec2[] = [];
 
-    for (const point of points) {
-      const key = `${point.x},${point.y}`;
-      if (!keys.has(key)) {
-        keys.add(key);
-        unique.push(point);
-      }
-    }
-
-    return unique;
-  }
-
-  /**
-   * 验证路径间距（确保最小2格间隔）
-   */
-  validateSpacing(paths: Vec2[], minSpacing: number = 2): boolean {
-    // 将路径转换为集合以便快速查找
-    const pathSet = new Set(paths.map(p => CoordUtils.posToKey(p)));
-
-    // 检查每对平行路径
     for (const pos of paths) {
-      // 检查水平方向
-      for (let offset = 1; offset < minSpacing; offset++) {
-        const above = new Vec2(pos.x, pos.y + offset);
-        const below = new Vec2(pos.x, pos.y - offset);
-
-        if (pathSet.has(CoordUtils.posToKey(above)) ||
-            pathSet.has(CoordUtils.posToKey(below))) {
-          // 检查是否是长段
-          let length = 1;
-          for (let dx = 1; dx <= 4; dx++) {
-            const nextPos = new Vec2(pos.x + dx, pos.y);
-            const nextAbove = new Vec2(pos.x + dx, pos.y + offset);
-            const nextBelow = new Vec2(pos.x + dx, pos.y - offset);
-
-            if (pathSet.has(CoordUtils.posToKey(nextPos)) &&
-                (pathSet.has(CoordUtils.posToKey(nextAbove)) ||
-                 pathSet.has(CoordUtils.posToKey(nextBelow)))) {
-              length++;
-            } else {
-              break;
-            }
-          }
-
-          if (length > 4) {
-            return false; // 超过4格的平行路径间距不足
-          }
-        }
-      }
-
-      // 检查垂直方向
-      for (let offset = 1; offset < minSpacing; offset++) {
-        const left = new Vec2(pos.x - offset, pos.y);
-        const right = new Vec2(pos.x + offset, pos.y);
-
-        if (pathSet.has(CoordUtils.posToKey(left)) ||
-            pathSet.has(CoordUtils.posToKey(right))) {
-          // 检查是否是长段
-          let length = 1;
-          for (let dy = 1; dy <= 4; dy++) {
-            const nextPos = new Vec2(pos.x, pos.y + dy);
-            const nextLeft = new Vec2(pos.x - offset, pos.y + dy);
-            const nextRight = new Vec2(pos.x + offset, pos.y + dy);
-
-            if (pathSet.has(CoordUtils.posToKey(nextPos)) &&
-                (pathSet.has(CoordUtils.posToKey(nextLeft)) ||
-                 pathSet.has(CoordUtils.posToKey(nextRight)))) {
-              length++;
-            } else {
-              break;
-            }
-          }
-
-          if (length > 4) {
-            return false; // 超过4格的平行路径间距不足
-          }
-        }
+      const key = CoordUtils.posToKey(pos);
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(pos);
       }
     }
 
+    return result;
+  }
+
+  /**
+   * 验证路径间距（保留接口兼容性）
+   */
+  validateSpacing(paths: Vec2[], minSpacing: number): boolean {
+    // 简单验证，不影响生成
     return true;
   }
 }

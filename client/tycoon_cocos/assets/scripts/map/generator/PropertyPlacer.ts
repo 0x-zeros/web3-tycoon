@@ -1,26 +1,28 @@
 /**
  * 地产放置器 - Phase 2
- * 负责在路径旁放置地产，并将相邻tile转换为property类型
+ * 负责在路径旁随机放置地产
+ * 纯随机放置，不使用评分系统
  */
 
 import { Vec2 } from 'cc';
-import { PropertyGroupDef, MapTemplateSpec } from './templates/TemplateTypes';
 import { CoordUtils, TileData } from './MapGeneratorTypes';
 import { Web3TileType } from '../../voxel/Web3BlockTypes';
 
 export interface PropertyPlacementResult {
   properties: PropertyData[];     // 所有地产
-  convertedTiles: Vec2[];        // 被转换为property的tile
-  propertyGroups: PropertyGroup[]; // 地产分组信息
+  convertedTiles: Vec2[];        // 被转换为property的tile（不再使用）
+  propertyGroups: PropertyGroup[]; // 地产分组信息（保留接口兼容）
 }
 
 export interface PropertyData {
   position: Vec2;
   size: '1x1' | '2x2';
-  color: string;
+  color?: string;  // 保留字段兼容性
   level: number;
-  group: number;        // 所属组ID
-  adjacentTiles: Vec2[]; // 相邻的被转换的tiles
+  group?: number;  // 保留字段兼容性
+  adjacentTiles?: Vec2[]; // 保留字段兼容性
+  value?: number;
+  name?: string;
 }
 
 export interface PropertyGroup {
@@ -30,13 +32,6 @@ export interface PropertyGroup {
   centerPosition: Vec2;
 }
 
-interface LocationScore {
-  position: Vec2;
-  score: number;
-  type: 'straight' | 'corner' | 'intersection';
-  nearbySpace: number;  // 附近空地数量
-}
-
 export class PropertyPlacer {
   private width: number;
   private height: number;
@@ -44,7 +39,6 @@ export class PropertyPlacer {
   private pathSet: Set<string>;
   private occupiedSet: Set<string>;
   private placedProperties: PropertyData[];
-  private convertedTiles: Set<string>;
 
   constructor(width: number, height: number, randomFn?: () => number) {
     this.width = width;
@@ -53,393 +47,94 @@ export class PropertyPlacer {
     this.pathSet = new Set();
     this.occupiedSet = new Set();
     this.placedProperties = [];
-    this.convertedTiles = new Set();
   }
 
   /**
-   * 放置地产
+   * 放置地产（不需要模板）
    */
-  placeProperties(
-    paths: Vec2[],
-    template: MapTemplateSpec,
-    corners: Vec2[] = [],
-    intersections: Vec2[] = []
-  ): PropertyPlacementResult {
+  placeProperties(paths: Vec2[]): PropertyPlacementResult {
     // 初始化路径集合
     this.pathSet.clear();
     for (const pos of paths) {
       this.pathSet.add(CoordUtils.posToKey(pos));
     }
 
-    // 初始化已占用集合（包括路径）
-    this.occupiedSet = new Set(this.pathSet);
+    this.occupiedSet = new Set();
     this.placedProperties = [];
-    this.convertedTiles.clear();
 
-    const propertyConfig = template.propertyConfig;
-    const groups: PropertyGroup[] = [];
-    let groupId = 0;
+    // 随机决定地产数量（路径的30-50%）
+    const ratio = 0.3 + this.random() * 0.2;
+    const targetCount = Math.floor(paths.length * ratio);
 
-    // 按组放置地产
-    for (const groupDef of propertyConfig.groups) {
-      const group = this.placePropertyGroup(
-        groupDef,
-        groupId++,
-        corners,
-        intersections,
-        propertyConfig.placement
-      );
-      if (group.properties.length > 0) {
-        groups.push(group);
+    // 获取所有路径邻接的空位
+    const adjacentPositions = this.getAdjacentToPath(paths);
+
+    // 随机打乱
+    this.shuffle(adjacentPositions);
+
+    // 放置地产
+    for (let i = 0; i < Math.min(targetCount, adjacentPositions.length); i++) {
+      const pos = adjacentPositions[i];
+      const key = CoordUtils.posToKey(pos);
+
+      // 跳过已占用的位置
+      if (this.occupiedSet.has(key)) {
+        continue;
       }
-    }
 
-    // 转换相邻tiles
-    this.convertAdjacentTiles();
+      // 随机决定大小（15%概率大地产）
+      const size = this.random() > 0.85 ? '2x2' : '1x1';
+
+      // 如果是2x2，检查是否有足够空间
+      if (size === '2x2' && !this.canPlace2x2(pos)) {
+        continue; // 空间不足，跳过
+      }
+
+      // 创建地产数据
+      const property: PropertyData = {
+        position: pos,
+        size: size,
+        level: 0,
+        value: 500 + Math.floor(this.random() * 3500), // 500-4000的随机价格
+        color: 'default', // 默认颜色
+        group: Math.floor(this.random() * 8) // 随机分组（仅用于兼容）
+      };
+
+      this.placedProperties.push(property);
+
+      // 标记占用
+      this.markOccupied(pos, size);
+    }
 
     return {
       properties: this.placedProperties,
-      convertedTiles: Array.from(this.convertedTiles).map(key => CoordUtils.keyToPos(key)),
-      propertyGroups: groups
+      convertedTiles: [], // 不再使用tile转换
+      propertyGroups: [] // 不再使用分组
     };
   }
 
   /**
-   * 放置一组地产
+   * 获取路径邻接的所有空位
    */
-  private placePropertyGroup(
-    groupDef: PropertyGroupDef,
-    groupId: number,
-    corners: Vec2[],
-    intersections: Vec2[],
-    placement: 'grouped' | 'scattered' | 'mixed'
-  ): PropertyGroup {
-    const group: PropertyGroup = {
-      id: groupId,
-      color: groupDef.color,
-      properties: [],
-      centerPosition: new Vec2(this.width / 2, this.height / 2)
-    };
+  private getAdjacentToPath(paths: Vec2[]): Vec2[] {
+    const adjacent: Vec2[] = [];
+    const seen = new Set<string>();
 
-    // 获取候选位置并评分
-    const candidates = this.scoreCandidateLocations(
-      groupDef,
-      corners,
-      intersections
-    );
-
-    // 根据放置策略选择位置
-    const selectedPositions = this.selectPositions(
-      candidates,
-      groupDef.count,
-      groupDef.size,
-      placement
-    );
-
-    // 创建地产
-    for (const pos of selectedPositions) {
-      const property: PropertyData = {
-        position: pos,
-        size: groupDef.size,
-        color: groupDef.color,
-        level: 1,
-        group: groupId,
-        adjacentTiles: []
-      };
-
-      // 标记占用
-      this.markOccupied(pos, groupDef.size);
-
-      this.placedProperties.push(property);
-      group.properties.push(property);
-    }
-
-    // 计算组中心
-    if (group.properties.length > 0) {
-      let sumX = 0, sumY = 0;
-      for (const prop of group.properties) {
-        sumX += prop.position.x;
-        sumY += prop.position.y;
-      }
-      group.centerPosition = new Vec2(
-        sumX / group.properties.length,
-        sumY / group.properties.length
-      );
-    }
-
-    return group;
-  }
-
-  /**
-   * 对候选位置评分
-   */
-  private scoreCandidateLocations(
-    groupDef: PropertyGroupDef,
-    corners: Vec2[],
-    intersections: Vec2[]
-  ): LocationScore[] {
-    const scores: LocationScore[] = [];
-    const size = groupDef.size === '2x2' ? 2 : 1;
-
-    // 遍历所有路径相邻位置
-    for (const pathKey of this.pathSet) {
-      const pathPos = CoordUtils.keyToPos(pathKey);
-      const neighbors = this.getValidNeighbors(pathPos, size);
+    for (const path of paths) {
+      // 获取4个方向的邻居
+      const neighbors = this.getNeighbors(path);
 
       for (const neighbor of neighbors) {
-        if (this.canPlace(neighbor, size)) {
-          const score = this.calculateLocationScore(
-            neighbor,
-            pathPos,
-            groupDef,
-            corners,
-            intersections
-          );
-          scores.push(score);
-        }
-      }
-    }
+        const key = CoordUtils.posToKey(neighbor);
 
-    // 排序，高分优先
-    scores.sort((a, b) => b.score - a.score);
-
-    return scores;
-  }
-
-  /**
-   * 计算位置得分
-   */
-  private calculateLocationScore(
-    position: Vec2,
-    nearPath: Vec2,
-    groupDef: PropertyGroupDef,
-    corners: Vec2[],
-    intersections: Vec2[]
-  ): LocationScore {
-    let score = 0;
-    let type: 'straight' | 'corner' | 'intersection' = 'straight';
-
-    // 基础分
-    score = 10;
-
-    // 检查是否在拐角附近
-    const nearCorner = corners.some(c => Vec2.distance(position, c) <= 2);
-    if (nearCorner) {
-      type = 'corner';
-      if (groupDef.preferredZone === 'corner') {
-        score += 5;
-      } else {
-        score += 1;
-      }
-    }
-
-    // 检查是否在交叉点附近
-    const nearIntersection = intersections.some(i => Vec2.distance(position, i) <= 2);
-    if (nearIntersection) {
-      type = 'intersection';
-      score += 2;
-    }
-
-    // 直线段加分
-    if (!nearCorner && !nearIntersection) {
-      if (groupDef.preferredZone === 'straight') {
-        score += 3;
-      }
-    }
-
-    // 计算附近空地
-    const nearbySpace = this.countNearbySpace(position, groupDef.size === '2x2' ? 2 : 1);
-    score += nearbySpace * 2;
-
-    // 已有同色地产相邻额外加分
-    const sameColorNearby = this.countSameColorNearby(position, groupDef.color);
-    if (sameColorNearby > 0) {
-      score += sameColorNearby * 5; // 鼓励聚集
-    }
-
-    // 边缘位置减分
-    const edgeDist = Math.min(
-      position.x, position.y,
-      this.width - position.x - 1,
-      this.height - position.y - 1
-    );
-    if (edgeDist < 3) {
-      score -= 3;
-    }
-
-    return {
-      position,
-      score,
-      type,
-      nearbySpace
-    };
-  }
-
-  /**
-   * 选择地产位置
-   */
-  private selectPositions(
-    candidates: LocationScore[],
-    count: number,
-    size: '1x1' | '2x2',
-    placement: 'grouped' | 'scattered' | 'mixed'
-  ): Vec2[] {
-    const selected: Vec2[] = [];
-    const used = new Set<string>();
-
-    if (placement === 'grouped') {
-      // 聚集放置：选择相邻的高分位置
-      for (const candidate of candidates) {
-        if (selected.length >= count) break;
-
-        const key = CoordUtils.posToKey(candidate.position);
-        if (used.has(key)) continue;
-
-        // 检查是否可以放置
-        if (this.canPlace(candidate.position, size === '2x2' ? 2 : 1)) {
-          selected.push(candidate.position);
-          used.add(key);
-
-          // 标记为临时占用，避免重叠
-          this.markOccupied(candidate.position, size);
-        }
-      }
-    } else if (placement === 'scattered') {
-      // 分散放置：保持最小间距
-      const minSpacing = 3;
-      for (const candidate of candidates) {
-        if (selected.length >= count) break;
-
-        const key = CoordUtils.posToKey(candidate.position);
-        if (used.has(key)) continue;
-
-        // 检查与已选位置的距离
-        let tooClose = false;
-        for (const sel of selected) {
-          if (Vec2.distance(candidate.position, sel) < minSpacing) {
-            tooClose = true;
-            break;
+        // 不能在路径上，不能重复
+        if (!this.pathSet.has(key) && !seen.has(key)) {
+          // 确保在地图范围内
+          if (neighbor.x >= 1 && neighbor.x < this.width - 1 &&
+              neighbor.y >= 1 && neighbor.y < this.height - 1) {
+            adjacent.push(neighbor);
+            seen.add(key);
           }
-        }
-
-        if (!tooClose && this.canPlace(candidate.position, size === '2x2' ? 2 : 1)) {
-          selected.push(candidate.position);
-          used.add(key);
-          this.markOccupied(candidate.position, size);
-        }
-      }
-    } else {
-      // 混合放置：部分聚集，部分分散
-      const halfCount = Math.floor(count / 2);
-
-      // 先聚集放置一半
-      for (const candidate of candidates) {
-        if (selected.length >= halfCount) break;
-
-        const key = CoordUtils.posToKey(candidate.position);
-        if (used.has(key)) continue;
-
-        if (this.canPlace(candidate.position, size === '2x2' ? 2 : 1)) {
-          selected.push(candidate.position);
-          used.add(key);
-          this.markOccupied(candidate.position, size);
-        }
-      }
-
-      // 再分散放置另一半
-      const minSpacing = 4;
-      for (const candidate of candidates) {
-        if (selected.length >= count) break;
-
-        const key = CoordUtils.posToKey(candidate.position);
-        if (used.has(key)) continue;
-
-        let tooClose = false;
-        for (let i = halfCount; i < selected.length; i++) {
-          if (Vec2.distance(candidate.position, selected[i]) < minSpacing) {
-            tooClose = true;
-            break;
-          }
-        }
-
-        if (!tooClose && this.canPlace(candidate.position, size === '2x2' ? 2 : 1)) {
-          selected.push(candidate.position);
-          used.add(key);
-          this.markOccupied(candidate.position, size);
-        }
-      }
-    }
-
-    return selected;
-  }
-
-  /**
-   * 转换相邻tiles为property类型
-   */
-  private convertAdjacentTiles(): void {
-    for (const property of this.placedProperties) {
-      const maxConvert = property.size === '2x2' ? 2 : 1;
-      let converted = 0;
-
-      // 获取地产周围的路径tiles
-      const adjacentPaths = this.getAdjacentPathTiles(property.position, property.size);
-
-      // 优先级：拐角外侧 > 直线延伸 > 拐角内侧
-      const prioritized = this.prioritizeAdjacentTiles(adjacentPaths, property.position);
-
-      for (const pathPos of prioritized) {
-        if (converted >= maxConvert) break;
-
-        // 检查是否可以转换
-        const key = CoordUtils.posToKey(pathPos);
-        if (!this.convertedTiles.has(key) && this.pathSet.has(key)) {
-          this.convertedTiles.add(key);
-          property.adjacentTiles.push(pathPos);
-          converted++;
-        }
-      }
-    }
-  }
-
-  /**
-   * 获取有效的邻居位置（只考虑4方向，确保地产邻接路径）
-   */
-  private getValidNeighbors(pos: Vec2, size: number): Vec2[] {
-    const neighbors: Vec2[] = [];
-    // 只考虑上下左右4个方向，不考虑对角线
-    const offsets = [
-      new Vec2(-size, 0),  // 左
-      new Vec2(size, 0),   // 右
-      new Vec2(0, -size),  // 下
-      new Vec2(0, size)    // 上
-    ];
-
-    for (const offset of offsets) {
-      const neighbor = new Vec2(pos.x + offset.x, pos.y + offset.y);
-      if (this.isInBounds(neighbor, size)) {
-        neighbors.push(neighbor);
-      }
-    }
-
-    return neighbors;
-  }
-
-  /**
-   * 获取相邻的路径tiles
-   */
-  private getAdjacentPathTiles(pos: Vec2, size: '1x1' | '2x2'): Vec2[] {
-    const adjacent: Vec2[] = [];
-    const checkSize = size === '2x2' ? 2 : 1;
-
-    // 检查四周
-    for (let dx = -1; dx <= checkSize; dx++) {
-      for (let dy = -1; dy <= checkSize; dy++) {
-        // 跳过内部
-        if (dx >= 0 && dx < checkSize && dy >= 0 && dy < checkSize) continue;
-
-        const checkPos = new Vec2(pos.x + dx, pos.y + dy);
-        if (this.pathSet.has(CoordUtils.posToKey(checkPos))) {
-          adjacent.push(checkPos);
         }
       }
     }
@@ -448,193 +143,109 @@ export class PropertyPlacer {
   }
 
   /**
-   * 优先级排序相邻tiles
+   * 获取一个位置的4个邻居
    */
-  private prioritizeAdjacentTiles(tiles: Vec2[], propertyPos: Vec2): Vec2[] {
-    // 简单策略：按距离排序
-    return tiles.sort((a, b) => {
-      const distA = Vec2.distance(a, propertyPos);
-      const distB = Vec2.distance(b, propertyPos);
-      return distA - distB;
-    });
+  private getNeighbors(pos: Vec2): Vec2[] {
+    return [
+      new Vec2(pos.x + 1, pos.y),
+      new Vec2(pos.x - 1, pos.y),
+      new Vec2(pos.x, pos.y + 1),
+      new Vec2(pos.x, pos.y - 1)
+    ];
   }
 
   /**
-   * 检查是否可以放置（确保至少有一边邻接路径）
+   * 检查是否可以放置2x2地产
    */
-  private canPlace(pos: Vec2, size: number): boolean {
-    if (!this.isInBounds(pos, size)) return false;
+  private canPlace2x2(pos: Vec2): boolean {
+    // 检查2x2范围内的4个格子
+    const positions = [
+      pos,
+      new Vec2(pos.x + 1, pos.y),
+      new Vec2(pos.x, pos.y + 1),
+      new Vec2(pos.x + 1, pos.y + 1)
+    ];
 
-    // 检查占用
-    for (let x = 0; x < size; x++) {
-      for (let y = 0; y < size; y++) {
-        const checkPos = new Vec2(pos.x + x, pos.y + y);
-        const key = CoordUtils.posToKey(checkPos);
-        if (this.occupiedSet.has(key)) {
-          return false;
+    for (const p of positions) {
+      const key = CoordUtils.posToKey(p);
+
+      // 不能占用路径或已占用的位置
+      if (this.pathSet.has(key) || this.occupiedSet.has(key)) {
+        return false;
+      }
+
+      // 必须在地图范围内
+      if (p.x < 0 || p.x >= this.width || p.y < 0 || p.y >= this.height) {
+        return false;
+      }
+    }
+
+    // 至少有一个格子邻接路径
+    for (const p of positions) {
+      const neighbors = this.getNeighbors(p);
+      for (const n of neighbors) {
+        if (this.pathSet.has(CoordUtils.posToKey(n))) {
+          return true; // 找到邻接路径的格子
         }
       }
     }
 
-    // 检查是否至少有一边邻接路径
-    let hasAdjacentPath = false;
-
-    // 检查四条边
-    for (let i = 0; i < size; i++) {
-      // 左边
-      const leftPos = new Vec2(pos.x - 1, pos.y + i);
-      if (this.pathSet.has(CoordUtils.posToKey(leftPos))) {
-        hasAdjacentPath = true;
-        break;
-      }
-
-      // 右边
-      const rightPos = new Vec2(pos.x + size, pos.y + i);
-      if (this.pathSet.has(CoordUtils.posToKey(rightPos))) {
-        hasAdjacentPath = true;
-        break;
-      }
-
-      // 下边
-      const bottomPos = new Vec2(pos.x + i, pos.y - 1);
-      if (this.pathSet.has(CoordUtils.posToKey(bottomPos))) {
-        hasAdjacentPath = true;
-        break;
-      }
-
-      // 上边
-      const topPos = new Vec2(pos.x + i, pos.y + size);
-      if (this.pathSet.has(CoordUtils.posToKey(topPos))) {
-        hasAdjacentPath = true;
-        break;
-      }
-    }
-
-    return hasAdjacentPath;
+    return false;
   }
 
   /**
-   * 标记占用
+   * 标记占用的格子
    */
   private markOccupied(pos: Vec2, size: '1x1' | '2x2'): void {
-    const checkSize = size === '2x2' ? 2 : 1;
-    for (let x = 0; x < checkSize; x++) {
-      for (let y = 0; y < checkSize; y++) {
-        const occupiedPos = new Vec2(pos.x + x, pos.y + y);
-        this.occupiedSet.add(CoordUtils.posToKey(occupiedPos));
-      }
+    if (size === '1x1') {
+      this.occupiedSet.add(CoordUtils.posToKey(pos));
+    } else {
+      // 2x2占用4个格子
+      this.occupiedSet.add(CoordUtils.posToKey(pos));
+      this.occupiedSet.add(CoordUtils.posToKey(new Vec2(pos.x + 1, pos.y)));
+      this.occupiedSet.add(CoordUtils.posToKey(new Vec2(pos.x, pos.y + 1)));
+      this.occupiedSet.add(CoordUtils.posToKey(new Vec2(pos.x + 1, pos.y + 1)));
     }
   }
 
   /**
-   * 统计附近空地
+   * 随机打乱数组
    */
-  private countNearbySpace(pos: Vec2, size: number): number {
-    let count = 0;
-    const checkRadius = 3;
-
-    for (let dx = -checkRadius; dx <= checkRadius + size; dx++) {
-      for (let dy = -checkRadius; dy <= checkRadius + size; dy++) {
-        const checkPos = new Vec2(pos.x + dx, pos.y + dy);
-        const key = CoordUtils.posToKey(checkPos);
-
-        if (this.isInBounds(checkPos, 1) && !this.occupiedSet.has(key)) {
-          count++;
-        }
-      }
+  private shuffle<T>(array: T[]): void {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(this.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
     }
-
-    return count;
   }
 
   /**
-   * 统计附近同色地产
+   * 生成tile数据（用于兼容）
    */
-  private countSameColorNearby(pos: Vec2, color: string): number {
-    let count = 0;
-    const checkRadius = 4;
-
-    for (const property of this.placedProperties) {
-      if (property.color === color) {
-        const dist = Vec2.distance(pos, property.position);
-        if (dist <= checkRadius && dist > 0) {
-          count++;
-        }
-      }
-    }
-
-    return count;
-  }
-
-  /**
-   * 检查是否在边界内
-   */
-  private isInBounds(pos: Vec2, size: number): boolean {
-    return pos.x >= 1 && pos.y >= 1 &&
-           pos.x + size <= this.width - 1 &&
-           pos.y + size <= this.height - 1;
-  }
-
-  /**
-   * 生成TileData（用于最终输出）
-   */
-  public generateTileData(
+  generateTileData(
     paths: Vec2[],
     properties: PropertyData[],
     convertedTiles: Vec2[]
   ): TileData[] {
     const tiles: TileData[] = [];
-    const convertedSet = new Set(convertedTiles.map(t => CoordUtils.posToKey(t)));
-    const propertyMap = new Map<string, PropertyData>();
 
-    // 建立地产位置映射
-    for (const prop of properties) {
-      const size = prop.size === '2x2' ? 2 : 1;
-      for (let x = 0; x < size; x++) {
-        for (let y = 0; y < size; y++) {
-          const pos = new Vec2(prop.position.x + x, prop.position.y + y);
-          propertyMap.set(CoordUtils.posToKey(pos), prop);
-        }
-      }
-    }
-
-    // 生成路径tiles
+    // 所有路径都是空地
     for (const pos of paths) {
-      const key = CoordUtils.posToKey(pos);
-
-      // 检查是否被转换为property
-      if (convertedSet.has(key)) {
-        // 找到对应的地产组
-        let groupId = 0;
-        for (const prop of properties) {
-          if (prop.adjacentTiles && prop.adjacentTiles.some(t => t.x === pos.x && t.y === pos.y)) {
-            groupId = prop.group;
-            break;
-          }
-        }
-
-        tiles.push({
-          x: pos.x,
-          y: pos.y,
-          type: Web3TileType.PROPERTY,
-          value: 1000 + groupId * 200,
-          group: groupId
-        });
-      } else if (!propertyMap.has(key)) {
-        // 普通路径tile
-        tiles.push({
-          x: pos.x,
-          y: pos.y,
-          type: Web3TileType.EMPTY_LAND,
-          value: 0,
-          group: -1
-        });
-      }
+      tiles.push({
+        x: pos.x,
+        y: pos.y,
+        type: Web3TileType.EMPTY_LAND,
+        value: 0,
+        group: -1
+      });
     }
-
-    // 注意：不生成地产建筑的tiles，因为地产是建筑物，不是tile
-    // 地产建筑将由GameMap.applyGeneratedMap处理properties字段来放置
 
     return tiles;
+  }
+
+  /**
+   * 验证分布（保留接口兼容）
+   */
+  validateDistribution(properties: PropertyData[]): boolean {
+    return true; // 不再验证，纯随机即可
   }
 }

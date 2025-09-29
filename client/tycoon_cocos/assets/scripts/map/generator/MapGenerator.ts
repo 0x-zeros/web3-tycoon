@@ -5,8 +5,10 @@
  * Phase 2: 地产放置 (PropertyPlacer)
  * Phase 3: 特殊格子 (SpecialTilePlacer)
  *
+ * 纯随机生成，不依赖模板
+ *
  * @author Web3 Tycoon Team
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 import { Vec2 } from 'cc';
@@ -23,9 +25,6 @@ import { Web3TileType } from '../../voxel/Web3BlockTypes';
 import { PathGenerator, PathGenerationResult } from './PathGenerator';
 import { PropertyPlacer, PropertyPlacementResult, PropertyData } from './PropertyPlacer';
 import { SpecialTilePlacer, SpecialTilePlacementResult } from './SpecialTilePlacer';
-
-// 模板类型（仅用于构造默认随机模板）
-import { MapTemplateSpec } from './templates/TemplateTypes';
 
 /**
  * 地图生成器
@@ -86,54 +85,43 @@ export class MapGenerator {
     }
 
     /**
-     * 生成地图
+     * 生成地图（纯随机，不依赖模板）
      */
     async generateMap(): Promise<MapGenerationResult> {
-        console.log('[MapGenerator] 开始生成地图 (v2.0 - 3阶段系统)...');
-        console.log(this.config.getDebugInfo());
-
-        // 构造简化的默认模板（不依赖外部模板库）
-        const template = this.buildDefaultTemplate();
-        console.log(`[MapGenerator] 使用默认随机模板: ${template.name}`);
+        console.log('[MapGenerator] 开始生成随机地图 (v3.0 - 纯随机系统)...');
+        console.log(`[MapGenerator] 地图大小: ${this.params.mapWidth}x${this.params.mapHeight}`);
+        console.log(`[MapGenerator] 随机种子: ${this.params.seed}`);
 
         // ==================== Phase 1: 路径生成 ====================
-        console.log('[MapGenerator] Phase 1: 生成路径网络...');
-        const pathResult = this.pathGenerator.generateFromTemplate(template);
-
-        // 验证路径间距
-        if (!this.pathGenerator.validateSpacing(pathResult.paths, 2)) {
-            console.warn('[MapGenerator] 路径间距验证失败，尝试修复...');
-            // 可以在这里添加修复逻辑
-        }
+        console.log('[MapGenerator] Phase 1: 生成随机路径网络...');
+        const pathResult = this.pathGenerator.generate(); // 不再需要模板
 
         console.log(`[MapGenerator] 生成了 ${pathResult.paths.length} 个路径格子`);
         console.log(`[MapGenerator] - 主路径: ${pathResult.mainPath.length} 格`);
         console.log(`[MapGenerator] - 拐角: ${pathResult.corners.length} 个`);
-        console.log(`[MapGenerator] - 交叉点: ${pathResult.intersections.length} 个`);
 
         // ==================== Phase 2: 地产放置 ====================
-        console.log('[MapGenerator] Phase 2: 放置地产...');
-        const propertyResult = this.propertyPlacer.placeProperties(
-            pathResult.paths,
-            template,
-            pathResult.corners,
-            pathResult.intersections
-        );
+        console.log('[MapGenerator] Phase 2: 随机放置地产...');
+        const propertyResult = this.propertyPlacer.placeProperties(pathResult.paths);
 
         console.log(`[MapGenerator] 放置了 ${propertyResult.properties.length} 个地产`);
-        console.log(`[MapGenerator] - 地产组: ${propertyResult.propertyGroups.length} 组`);
-        console.log(`[MapGenerator] - 转换tiles: ${propertyResult.convertedTiles.length} 个`);
 
         // ==================== Phase 3: 特殊格子 ====================
-        console.log('[MapGenerator] Phase 3: 放置特殊格子...');
+        console.log('[MapGenerator] Phase 3: 随机放置特殊格子...');
 
-        // 收集所有已占用的位置
-        const occupiedPositions: Vec2[] = [
-            ...propertyResult.properties.map(p => p.position),
-            ...propertyResult.convertedTiles
-        ];
+        // 收集所有已占用的位置（地产占用的位置）
+        const occupiedPositions: Vec2[] = [];
+        for (const prop of propertyResult.properties) {
+            occupiedPositions.push(prop.position);
+            // 如果是2x2地产，还要占用其他3个格子
+            if (prop.size === '2x2') {
+                occupiedPositions.push(new Vec2(prop.position.x + 1, prop.position.y));
+                occupiedPositions.push(new Vec2(prop.position.x, prop.position.y + 1));
+                occupiedPositions.push(new Vec2(prop.position.x + 1, prop.position.y + 1));
+            }
+        }
 
-        // 找出空闲的路径tiles（未被地产占用）
+        // 找出空闲的路径tiles
         const emptyPathTiles = pathResult.paths.filter(path => {
             const key = CoordUtils.posToKey(path);
             const isOccupied = occupiedPositions.some(
@@ -144,7 +132,6 @@ export class MapGenerator {
 
         const specialResult = this.specialTilePlacer.placeSpecialTiles(
             emptyPathTiles,
-            template,
             occupiedPositions
         );
 
@@ -153,18 +140,12 @@ export class MapGenerator {
             console.log(`[MapGenerator] - ${type}: ${count} 个`);
         });
 
-        // 验证分布平衡性
-        if (!this.specialTilePlacer.validateDistribution(specialResult.specialTiles)) {
-            console.warn('[MapGenerator] 特殊格子分布不均衡');
-        }
-
         // ==================== 生成最终地图数据 ====================
         console.log('[MapGenerator] 生成最终地图数据...');
         const mapData = this.generateMapData(
             pathResult,
             propertyResult,
-            specialResult,
-            template
+            specialResult
         );
 
         // 生成统计信息
@@ -184,53 +165,11 @@ export class MapGenerator {
             intersections: pathResult.intersections,
             startPosition: this.findStartPosition(mapData.tiles),
             statistics: stats,
-            properties: propertyResult.properties,  // 添加地产数据
+            properties: propertyResult.properties,  // 地产数据
             width: this.params.mapWidth,
             height: this.params.mapHeight,
             mode: this.params.mode,
             seed: this.params.seed
-        };
-    }
-
-    /**
-     * 构造一个简化的默认模板（单环 + 适量地产/特殊格）
-     */
-    private buildDefaultTemplate(): MapTemplateSpec {
-        // 外环四角基于地图宽高边距生成
-        const margin = 5;
-        const w = this.params.mapWidth;
-        const h = this.params.mapHeight;
-        return {
-            id: 'default_random',
-            name: '随机棋盘',
-            layout: 'single_ring',
-            tileCount: 40,
-            pathConfig: {
-                rings: {
-                    outer: [
-                        new Vec2(margin, margin),
-                        new Vec2(w - margin, margin),
-                        new Vec2(w - margin, h - margin),
-                        new Vec2(margin, h - margin)
-                    ]
-                }
-            },
-            propertyConfig: {
-                groups: [
-                    { color: 'group1', count: 3, size: '1x1', preferredZone: 'straight' },
-                    { color: 'group2', count: 3, size: '1x1', preferredZone: 'straight' },
-                    { color: 'group3', count: 2, size: '2x2', preferredZone: 'corner' },
-                    { color: 'group4', count: 2, size: '2x2', preferredZone: 'corner' }
-                ],
-                totalRatio: 0.5,
-                placement: 'mixed'
-            },
-            specialTiles: [
-                { type: 'chance', count: 3, distribution: 'even' },
-                { type: 'bonus', count: 2, distribution: 'even' },
-                { type: 'news', count: 2, distribution: 'random' },
-                { type: 'hospital', count: 1, distribution: 'random' }
-            ]
         };
     }
 
@@ -240,8 +179,7 @@ export class MapGenerator {
     private generateMapData(
         pathResult: PathGenerationResult,
         propertyResult: PropertyPlacementResult,
-        specialResult: SpecialTilePlacementResult,
-        template: MapTemplateSpec
+        specialResult: SpecialTilePlacementResult
     ): {
         tiles: TileData[];
         specialTiles: TileData[];
@@ -250,56 +188,59 @@ export class MapGenerator {
         const specialTiles: TileData[] = [];
         const processedKeys = new Set<string>();
 
-        // 1. 处理地产tiles
-        const propertyTiles = this.propertyPlacer.generateTileData(
-            pathResult.paths,
-            propertyResult.properties,
-            propertyResult.convertedTiles
-        );
-
-        for (const tile of propertyTiles) {
-            const key = CoordUtils.posToKey(new Vec2(tile.x, tile.y));
-            if (!processedKeys.has(key)) {
-                allTiles.push(tile);
-                processedKeys.add(key);
-            }
-        }
-
-        // 2. 处理特殊格子
+        // 1. 处理特殊格子
         for (const special of specialResult.specialTiles) {
             const key = CoordUtils.posToKey(new Vec2(special.x, special.y));
             if (!processedKeys.has(key)) {
-                const tile: TileData = {
-                    x: special.x,
-                    y: special.y,
-                    type: special.type,
-                    specialType: special.specialType,
-                    value: special.value,
-                    group: -1
-                };
-                allTiles.push(tile);
-                specialTiles.push(tile);
+                allTiles.push(special);
+                specialTiles.push(special);
                 processedKeys.add(key);
             }
         }
 
-        // 3. 处理剩余的空路径tiles
+        // 2. 处理剩余的空路径tiles
         for (const path of pathResult.paths) {
             const key = CoordUtils.posToKey(path);
             if (!processedKeys.has(key)) {
-                const tile: TileData = {
-                    x: path.x,
-                    y: path.y,
-                    type: Web3TileType.EMPTY_LAND,
-                    value: 0,
-                    group: -1
-                };
-                allTiles.push(tile);
-                processedKeys.add(key);
+                // 检查是否被地产占用
+                let isOccupiedByProperty = false;
+                for (const prop of propertyResult.properties) {
+                    if (prop.position.x === path.x && prop.position.y === path.y) {
+                        isOccupiedByProperty = true;
+                        break;
+                    }
+                    // 检查2x2地产的其他格子
+                    if (prop.size === '2x2') {
+                        if ((prop.position.x + 1 === path.x && prop.position.y === path.y) ||
+                            (prop.position.x === path.x && prop.position.y + 1 === path.y) ||
+                            (prop.position.x + 1 === path.x && prop.position.y + 1 === path.y)) {
+                            isOccupiedByProperty = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isOccupiedByProperty) {
+                    const tile: TileData = {
+                        x: path.x,
+                        y: path.y,
+                        type: Web3TileType.EMPTY_LAND,
+                        value: 0,
+                        group: -1
+                    };
+                    allTiles.push(tile);
+                    processedKeys.add(key);
+                }
             }
         }
 
-        // 起点不设置特殊类型（使用空地或后续由游戏逻辑选定）
+        // 3. 设置起点（第一个空地tile）
+        if (allTiles.length > 0) {
+            const startTile = allTiles.find(t => t.type === Web3TileType.EMPTY_LAND);
+            if (startTile) {
+                startTile.specialType = 'start';
+            }
+        }
 
         return { tiles: allTiles, specialTiles };
     }
@@ -345,23 +286,10 @@ export class MapGenerator {
             }
         }
 
-        // 计算多样性指数
-        const totalSpecial = stats.specialCount;
-        let diversity = 0;
-        if (totalSpecial > 0) {
-            stats.specialTypes.forEach(count => {
-                const p = count / totalSpecial;
-                if (p > 0) {
-                    diversity -= p * Math.log(p);
-                }
-            });
-        }
-        stats['diversityIndex'] = diversity;
-
         // 计算密度
         const totalArea = this.params.mapWidth * this.params.mapHeight;
         stats['density'] = stats.totalTiles / totalArea;
-        stats['propertyDensity'] = stats.propertyCount / stats.totalTiles;
+        stats['emptyDensity'] = stats.emptyCount / stats.totalTiles;
         stats['specialDensity'] = stats.specialCount / stats.totalTiles;
 
         return stats;
@@ -371,8 +299,13 @@ export class MapGenerator {
      * 查找起始位置
      */
     private findStartPosition(tiles: TileData[]): Vec2 | null {
-        const startTile = null; // 未设置特殊起点
-        // 返回第一个空地作为起点候选
+        // 优先找标记为start的格子
+        const startTile = tiles.find(t => t.specialType === 'start');
+        if (startTile) {
+            return new Vec2(startTile.x, startTile.y);
+        }
+
+        // 如果没有，返回第一个空地
         const emptyTile = tiles.find(t => t.type === Web3TileType.EMPTY_LAND);
         if (emptyTile) {
             return new Vec2(emptyTile.x, emptyTile.y);
@@ -381,13 +314,12 @@ export class MapGenerator {
         return null;
     }
 
-    // 模板列表功能已移除
-
     /**
-     * 根据模板ID生成地图
+     * 根据模板ID生成地图（为兼容性保留）
      */
     async generateFromTemplate(templateId: string): Promise<MapGenerationResult> {
-        // 模板功能已移除，忽略传入ID，按默认随机生成
+        // 忽略templateId，直接生成随机地图
+        console.log(`[MapGenerator] 忽略模板ID '${templateId}'，生成随机地图`);
         return this.generateMap();
     }
 
@@ -396,17 +328,17 @@ export class MapGenerator {
      */
     exportToJSON(result: MapGenerationResult): string {
         const exportData = {
-            version: '2.0',
-            generator: 'MapGenerator-3Phase',
+            version: '3.0',
+            generator: 'MapGenerator-Random',
             timestamp: new Date().toISOString(),
             seed: this.params.seed,
-            template: 'default_random',
             dimensions: {
                 width: this.params.mapWidth,
                 height: this.params.mapHeight
             },
             tiles: result.tiles,
             specialTiles: result.specialTiles,
+            properties: result.properties,
             statistics: result.statistics
         };
 

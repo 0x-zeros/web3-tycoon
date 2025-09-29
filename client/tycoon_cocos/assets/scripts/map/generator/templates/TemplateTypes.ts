@@ -76,6 +76,12 @@ export interface MapTemplateSpec {
   // 特殊格子配置
   specialTiles: SpecialTileConfig[];
 
+  // 指定位置的特殊格子（用于1:1复刻。若提供，则优先放置这些固定点）
+  fixedSpecialTiles?: Array<{
+    type: 'hospital' | 'shop' | 'bank' | 'chance' | 'news' | 'bonus' | 'fee' | 'card' | 'teleport';
+    positions: Array<[number, number]>; // [x,y] 网格坐标
+  }>;
+
   // 生成参数
   generationHints?: {
     minSpacing?: number;        // 最小间隔

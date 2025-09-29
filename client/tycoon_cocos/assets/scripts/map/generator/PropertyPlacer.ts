@@ -616,7 +616,7 @@ export class PropertyPlacer {
         tiles.push({
           x: pos.x,
           y: pos.y,
-          type: Web3TileType.Property,
+          type: Web3TileType.PROPERTY,
           value: 1000 + groupId * 200,
           group: groupId
         });
@@ -625,7 +625,7 @@ export class PropertyPlacer {
         tiles.push({
           x: pos.x,
           y: pos.y,
-          type: Web3TileType.Empty,
+          type: Web3TileType.EMPTY_LAND,
           value: 0,
           group: -1
         });

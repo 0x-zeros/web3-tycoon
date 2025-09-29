@@ -358,6 +358,93 @@ export const TEMPLATE_CLASSIC_SQUARE: MapTemplateSpec = {
 };
 
 /**
+ * 模板9: 狂欢节 - 双菱形+桥接
+ */
+export const TEMPLATE_CARNIVAL: MapTemplateSpec = {
+  id: 'carnival',
+  name: '狂欢节',
+  layout: 'nested_loops',
+  tileCount: 52,
+
+  // 使用双菱形（外/内）+ 四桥接，确保逐格对位
+  pathConfig: {
+    rings: {
+      outer: [
+        new Vec2(20, 2), new Vec2(38, 20),
+        new Vec2(20, 38), new Vec2(2, 20)
+      ],
+      inner: [
+        new Vec2(20, 8), new Vec2(32, 20),
+        new Vec2(20, 32), new Vec2(8, 20)
+      ],
+      bridges: 4
+    }
+  },
+
+  propertyConfig: {
+    groups: STANDARD_PROPERTY_GROUPS,
+    totalRatio: 0.5,
+    placement: 'mixed'
+  },
+
+  // 固定特殊格（按截图分布大致位置逐格指定）
+  fixedSpecialTiles: [
+    { type: 'chance', positions: [[8, 20], [32, 20]] },
+    { type: 'news', positions: [[2, 20], [38, 20]] },
+    { type: 'bonus', positions: [[26, 2], [26, 38]] },
+    { type: 'card', positions: [[26, 8], [14, 32]] },
+    { type: 'hospital', positions: [[8, 26]] },
+    { type: 'fee', positions: [[38, 26]] }
+  ],
+
+  // 其余类型按均匀/随机填充
+  specialTiles: [
+    { type: 'chance', count: 2, distribution: 'even' },
+    { type: 'bonus', count: 2, distribution: 'even' },
+    { type: 'news', count: 1, distribution: 'random' },
+    { type: 'hospital', count: 0, distribution: 'random' },
+    { type: 'fee', count: 1, distribution: 'random' },
+    { type: 'card', count: 2, distribution: 'even' }
+  ]
+};
+
+/**
+ * 模板10: 山城 - 分离主干+桥接支路
+ */
+export const TEMPLATE_MOUNTAIN_CITY: MapTemplateSpec = {
+  id: 'mountain_city',
+  name: '山城',
+  layout: 'grid',
+  tileCount: 46,
+
+  pathConfig: {
+    mainPath: [
+      // 上方长廊
+      { pos: new Vec2(5, 30), type: 'corner', connections: [1] },
+      { pos: new Vec2(35, 30), type: 'corner', connections: [0, 2] },
+      { pos: new Vec2(35, 22), type: 'intersection', connections: [1, 3] },
+      { pos: new Vec2(22, 22), type: 'intersection', connections: [2, 4] },
+      // 下方独立段
+      { pos: new Vec2(10, 10), type: 'corner', connections: [3, 5] },
+      { pos: new Vec2(30, 10), type: 'corner', connections: [4] }
+    ]
+  },
+
+  propertyConfig: {
+    groups: STANDARD_PROPERTY_GROUPS,
+    totalRatio: 0.45,
+    placement: 'grouped'
+  },
+
+  specialTiles: [
+    { type: 'chance', count: 3, distribution: 'even' },
+    { type: 'news', count: 2, distribution: 'random' },
+    { type: 'bonus', count: 2, distribution: 'even' },
+    { type: 'hospital', count: 1, distribution: 'random' }
+  ]
+};
+
+/**
  * 模板池 - 所有可用的模板
  */
 export const MONOPOLY_TEMPLATES = [
@@ -368,7 +455,9 @@ export const MONOPOLY_TEMPLATES = [
   TEMPLATE_MUSIC_CITY_2,
   TEMPLATE_PICTURE_ERA,
   TEMPLATE_VOLCANO_RELIC,
-  TEMPLATE_CLASSIC_SQUARE
+  TEMPLATE_CLASSIC_SQUARE,
+  TEMPLATE_CARNIVAL,
+  TEMPLATE_MOUNTAIN_CITY
 ];
 
 /**

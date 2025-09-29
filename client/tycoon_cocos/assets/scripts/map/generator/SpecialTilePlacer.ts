@@ -60,6 +60,22 @@ export class SpecialTilePlacer {
 
     this.placedSpecialTiles = [];
 
+    // 先放置固定特殊格子（如果模板提供）
+    const prePlacedCount = new Map<string, number>();
+    if (template.fixedSpecialTiles && template.fixedSpecialTiles.length > 0) {
+      for (const fixed of template.fixedSpecialTiles) {
+        for (const [x, y] of fixed.positions) {
+          const pos = new Vec2(x, y);
+          const key = CoordUtils.posToKey(pos);
+          if (this.pathSet.has(key) && !this.occupiedSet.has(key)) {
+            this.addSpecialTile(pos, fixed.type);
+            this.occupiedSet.add(key);
+            prePlacedCount.set(fixed.type, (prePlacedCount.get(fixed.type) || 0) + 1);
+          }
+        }
+      }
+    }
+
     // 计算总特殊格子数量 (占总tile数的15%)
     const totalTileCount = emptyTiles.length;
     const targetSpecialCount = Math.floor(totalTileCount * 0.15);
@@ -69,6 +85,12 @@ export class SpecialTilePlacer {
       targetSpecialCount,
       template.specialTiles
     );
+
+    // 扣除已固定放置的数量
+    prePlacedCount.forEach((cnt, type) => {
+      const prev = distribution.get(type) || 0;
+      distribution.set(type, Math.max(0, prev - cnt));
+    });
 
     // 获取候选位置并评分
     const candidates = this.evaluateCandidates(emptyTiles);
@@ -437,25 +459,32 @@ export class SpecialTilePlacer {
    * 获取Web3TileType
    */
   private getWeb3TileType(type: string): Web3TileType {
+    // 统一映射到现有的 Web3TileType（见 Web3BlockTypes.ts）
+    // 缺失的类型按约定替换：bank -> chance, teleport -> bonus, shop -> card, fee -> fee
     switch (type) {
       case 'hospital':
-        return Web3TileType.Hospital;
+        return Web3TileType.HOSPITAL;
       case 'shop':
-        return Web3TileType.Shop;
+        // 没有单独的商店格，映射为卡片格
+        return Web3TileType.CARD;
       case 'bank':
-        return Web3TileType.Bank;
+        // 没有银行格，按约定替换为机会格
+        return Web3TileType.CHANCE;
+      case 'teleport':
+        // 没有传送格，按约定替换为奖励格
+        return Web3TileType.BONUS;
       case 'chance':
-        return Web3TileType.Chance;
+        return Web3TileType.CHANCE;
       case 'news':
-        return Web3TileType.News;
+        return Web3TileType.NEWS;
       case 'bonus':
-        return Web3TileType.Bonus;
+        return Web3TileType.BONUS;
       case 'fee':
-        return Web3TileType.Tax;
+        return Web3TileType.FEE;
       case 'card':
-        return Web3TileType.Card;
+        return Web3TileType.CARD;
       default:
-        return Web3TileType.Empty;
+        return Web3TileType.EMPTY_LAND;
     }
   }
 

@@ -1194,51 +1194,32 @@ export class GameMap extends Component {
         for (const tile of result.tiles) {
             const gridPos = new Vec2(tile.x, tile.y);
 
-            // 根据类型确定blockId
+            // 优先根据特殊类型映射
             let blockId = '';
-            switch(tile.type) {
-                case 0: // Empty
+            if (tile.specialType) {
+                switch (tile.specialType) {
+                    case 'hospital': blockId = 'web3:hospital'; break;
+                    case 'bank':     blockId = 'web3:chance';   break; // 银行 -> 机会
+                    case 'teleport': blockId = 'web3:bonus';    break; // 传送 -> 奖励
+                    case 'shop':     blockId = 'web3:card';     break; // 商店 -> 卡片
+                    case 'chance':   blockId = 'web3:chance';   break;
+                    case 'news':     blockId = 'web3:news';     break;
+                    case 'bonus':    blockId = 'web3:bonus';    break;
+                    case 'fee':      blockId = 'web3:fee';      break;
+                    case 'card':     blockId = 'web3:card';     break;
+                    default:         blockId = 'web3:empty_land'; break;
+                }
+            } else {
+                // 非特殊格子，根据类型判断
+                // 仅使用现有类型（见 Web3BlockTypes.ts）
+                if (tile.type === 1 /* Web3TileType.PROPERTY */) {
+                    blockId = 'web3:property';
+                } else {
                     blockId = 'web3:empty_land';
-                    break;
-                case 1: // Property（被转换的路径tile）
-                    // 使用不同颜色的property tile来表示不同组
-                    blockId = `web3:property_${tile.group % 8}`;
-                    break;
-                case 2: // Start
-                    blockId = 'web3:start';
-                    break;
-                case 3: // Hospital
-                    blockId = 'web3:hospital';
-                    break;
-                case 4: // Shop
-                    blockId = 'web3:shop';
-                    break;
-                case 5: // Bank
-                    blockId = 'web3:bank';
-                    break;
-                case 6: // Chance
-                    blockId = 'web3:chance';
-                    break;
-                case 7: // News
-                    blockId = 'web3:news';
-                    break;
-                case 8: // Bonus
-                    blockId = 'web3:bonus';
-                    break;
-                case 9: // Tax
-                    blockId = 'web3:tax';
-                    break;
-                case 10: // Card
-                    blockId = 'web3:card';
-                    break;
-                default:
-                    blockId = 'web3:empty_land';
+                }
             }
 
-            // 放置tile
-            if (blockId) {
-                await this.placeTileAt(blockId, gridPos);
-            }
+            await this.placeTileAt(blockId, gridPos);
         }
 
         // 放置地产建筑
@@ -1254,10 +1235,9 @@ export class GameMap extends Component {
             }
         }
 
-        // 设置起始位置
+        // 起始位置可由游戏逻辑后续决定；此处仅打印
         if (result.startPosition) {
-            this._startPosition = result.startPosition.clone();
-            console.log(`[GameMap] Start position set to (${this._startPosition.x}, ${this._startPosition.y})`);
+            console.log(`[GameMap] Start position candidate: (${result.startPosition.x}, ${result.startPosition.y})`);
         }
 
         console.log('[GameMap] Generated map applied successfully');

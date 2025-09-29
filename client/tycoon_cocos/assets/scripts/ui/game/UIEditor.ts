@@ -512,7 +512,7 @@ export class UIEditor extends UIBase {
         // 使用Cocos的输入系统监听键盘事件
         input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
 
-        console.log('[UIEditor] Keyboard shortcuts setup: G - Generate random map, T - Next template');
+        console.log('[UIEditor] Keyboard shortcuts setup: G - Random, T - Next template, Y - Import carnival, U - Download current map');
     }
 
     /**
@@ -534,6 +534,16 @@ export class UIEditor extends UIBase {
                 // T键 - 切换到下一个模板
                 console.log('[UIEditor] Key T pressed - switching to next template');
                 this._switchToNextTemplate();
+                break;
+            case KeyCode.KEY_Y:
+                // Y键 - 直接导入狂欢节(carnival)模板
+                console.log('[UIEditor] Key Y pressed - importing template carnival');
+                this._generateMapWithTemplate('carnival');
+                break;
+            case KeyCode.KEY_U:
+                // U键 - 下载当前地图的本地存储 MapSaveData
+                console.log('[UIEditor] Key U pressed - downloading MapSaveData from localStorage');
+                this._downloadCurrentMap();
                 break;
         }
     }
@@ -563,6 +573,73 @@ export class UIEditor extends UIBase {
             this._generateMapWithTemplate(null);
         } else {
             this._generateMapWithTemplate(selectedValue);
+        }
+    }
+
+    /**
+     * 从 localStorage 读取当前地图 MapSaveData 并触发浏览器下载
+     */
+    private async _downloadCurrentMap(): Promise<void> {
+        try {
+            const mgr = MapManager.getInstance();
+            const info = mgr?.getCurrentMapInfo();
+            if (!info) {
+                console.warn('[UIEditor] No current map info');
+                return;
+            }
+
+            const gameMap: GameMap = info.component;
+            const mapId = info.mapId;
+            const saveKey = `map_${mapId}`;
+
+            let jsonStr = localStorage.getItem(saveKey);
+            if (!jsonStr) {
+                // 若未保存，先立即保存一次
+                await gameMap.saveImmediate();
+                jsonStr = localStorage.getItem(saveKey);
+            }
+
+            if (!jsonStr) {
+                console.warn('[UIEditor] No MapSaveData found in localStorage:', saveKey);
+                return;
+            }
+
+            // // 解析模板名（优先取下拉框选中的模板名，其次用保存数据里的 mapName，最后用 mapId）
+            // let templateName = '';
+            // if (this.m_combo_template && this.m_combo_template.value && this.m_combo_template.value !== 'random') {
+            //     const text = this.m_combo_template.text || '';
+            //     templateName = text.replace(/\s*\(.+\)$/, ''); // 去掉括号内容
+            // }
+
+            // try {
+            //     const data = JSON.parse(jsonStr);
+            //     if (!templateName) {
+            //         templateName = data?.mapName || '';
+            //     }
+            // } catch { /* ignore parse errors for filename */ }
+
+            // if (!templateName) templateName = mapId;
+
+            // const ts = new Date();
+            // const pad = (n: number) => n < 10 ? `0${n}` : `${n}`;
+            // const stamp = `${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}`;
+
+            // 规范化文件名中的特殊字符
+            //const safeName = templateName.replace(/[\\/:*?"<>|\s]+/g, '_');
+            //const filename = `map_${safeName}_${stamp}.json`;
+            const filename = `${mapId}.json`;
+
+            // 触发下载
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            console.log(`[UIEditor] Download triggered: ${filename}`);
+        } catch (e) {
+            console.error('[UIEditor] Download failed:', e);
         }
     }
 

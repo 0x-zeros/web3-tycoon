@@ -189,7 +189,11 @@ export class MapGenerator {
             intersections: pathResult.intersections,
             startPosition: this.findStartPosition(mapData.tiles),
             statistics: stats,
-            properties: propertyResult.properties  // 添加地产数据
+            properties: propertyResult.properties,  // 添加地产数据
+            width: this.params.mapWidth,
+            height: this.params.mapHeight,
+            mode: this.params.mode,
+            seed: this.params.seed
         };
     }
 
@@ -267,7 +271,7 @@ export class MapGenerator {
                 const tile: TileData = {
                     x: path.x,
                     y: path.y,
-                    type: Web3TileType.Empty,
+                    type: Web3TileType.EMPTY_LAND,
                     value: 0,
                     group: -1
                 };
@@ -276,13 +280,7 @@ export class MapGenerator {
             }
         }
 
-        // 4. 设置起点（第一个空地tile）
-        if (allTiles.length > 0) {
-            const startTile = allTiles.find(t => t.type === Web3TileType.Empty);
-            if (startTile) {
-                startTile.type = Web3TileType.Start;
-            }
-        }
+        // 起点不设置特殊类型（使用空地或后续由游戏逻辑选定）
 
         return { tiles: allTiles, specialTiles };
     }
@@ -303,27 +301,22 @@ export class MapGenerator {
 
         for (const tile of mapData.tiles) {
             switch (tile.type) {
-                case Web3TileType.Empty:
+                case Web3TileType.EMPTY_LAND:
                     stats.emptyCount++;
                     break;
-                case Web3TileType.Property:
+                case Web3TileType.PROPERTY:
                     stats.propertyCount++;
                     if (tile.group !== undefined && tile.group >= 0) {
                         const count = stats.propertyGroups.get(tile.group) || 0;
                         stats.propertyGroups.set(tile.group, count + 1);
                     }
                     break;
-                case Web3TileType.Start:
-                    stats.startCount++;
-                    break;
-                case Web3TileType.Hospital:
-                case Web3TileType.Shop:
-                case Web3TileType.Bank:
-                case Web3TileType.Chance:
-                case Web3TileType.News:
-                case Web3TileType.Bonus:
-                case Web3TileType.Tax:
-                case Web3TileType.Card:
+                case Web3TileType.HOSPITAL:
+                case Web3TileType.CHANCE:
+                case Web3TileType.NEWS:
+                case Web3TileType.BONUS:
+                case Web3TileType.FEE:
+                case Web3TileType.CARD:
                     stats.specialCount++;
                     if (tile.specialType) {
                         const count = stats.specialTypes.get(tile.specialType) || 0;
@@ -359,13 +352,9 @@ export class MapGenerator {
      * 查找起始位置
      */
     private findStartPosition(tiles: TileData[]): Vec2 | null {
-        const startTile = tiles.find(t => t.type === Web3TileType.Start);
-        if (startTile) {
-            return new Vec2(startTile.x, startTile.y);
-        }
-
-        // 如果没有起点，返回第一个空地
-        const emptyTile = tiles.find(t => t.type === Web3TileType.Empty);
+        const startTile = null; // 未设置特殊起点
+        // 返回第一个空地作为起点候选
+        const emptyTile = tiles.find(t => t.type === Web3TileType.EMPTY_LAND);
         if (emptyTile) {
             return new Vec2(emptyTile.x, emptyTile.y);
         }

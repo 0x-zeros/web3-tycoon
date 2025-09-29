@@ -1898,12 +1898,22 @@ export class GameMap extends Component {
             return currentId;
         }
 
-        // 标记为已访问并分酌编号
+        // 检查是否为地产block，地产不应该有tile_id
+        const blockId = tile.getBlockId();
+        if (blockId === 'web3:property_1x1' || blockId === 'web3:property_2x2') {
+            // 地产不分配tile_id，但仍标记为已访问避免重复遍历
+            visited.add(key);
+            // 清除可能已经错误设置的tile_id
+            tile.setTileId(65535);
+            return currentId;
+        }
+
+        // 标记为已访问并分配编号
         visited.add(key);
         tile.setTileId(currentId);
         currentId++;
 
-        // 获取四个方向的相邻 tile
+        // 获取四个方向的相邻tile
         const directions = [
             { x: 0, y: 1 },   // 北
             { x: 1, y: 0 },   // 东
@@ -1917,7 +1927,15 @@ export class GameMap extends Component {
             const neighborTile = this._tileIndex.get(neighborKey);
 
             if (neighborTile && !visited.has(neighborKey)) {
-                currentId = this.dfsAssignTileId(neighborTile, currentId, visited);
+                // 只对非地产的tile进行递归
+                const neighborBlockId = neighborTile.getBlockId();
+                if (neighborBlockId !== 'web3:property_1x1' && neighborBlockId !== 'web3:property_2x2') {
+                    currentId = this.dfsAssignTileId(neighborTile, currentId, visited);
+                } else {
+                    // 地产标记为已访问但不分配编号
+                    visited.add(neighborKey);
+                    neighborTile.setTileId(65535);
+                }
             }
         }
 
@@ -1961,8 +1979,14 @@ export class GameMap extends Component {
         // 清除旧的标签与位置缓存
         this.clearIdLabels();
 
-        // 为tile创建标签
+        // 为tile创建标签（排除地产）
         for (const tile of this._tiles) {
+            const blockId = tile.getBlockId();
+            // 跳过地产block
+            if (blockId === 'web3:property_1x1' || blockId === 'web3:property_2x2') {
+                continue;
+            }
+
             const tileId = tile.getTileId();
             if (tileId !== 65535) {  // 有效ID
                 const pos = tile.getGridPosition();

@@ -34,13 +34,6 @@
       "prefabPath": "scene/defi_plaza",
       "previewImagePath": "images/maps/default_preview",
       "type": "classic"
-    },
-    {
-      "id": "nft_gallery",
-      "name": "NFT 画廊",
-      "prefabPath": "scene/nft_gallery",
-      "previewImagePath": "images/maps/nft_gallery",
-      "type": "brawl"
     }
   ]
 }

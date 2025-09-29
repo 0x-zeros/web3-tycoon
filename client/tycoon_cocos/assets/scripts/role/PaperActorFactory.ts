@@ -84,12 +84,9 @@ export class PaperActorFactory {
     private static getBuildingActorIdFromBuilding(buildingBlockId: string): string {
         // 映射表：从体素建筑ID到PaperActor建筑ID
         const buildingToActorMap: Record<string, string> = {
-            // 基础建筑类型（空地状态）
+            // 基础建筑类型
             'web3:building_1x1': 'web3:building_1x1',
             'web3:building_2x2': 'web3:building_2x2',
-            // 向后兼容
-            'web3:property_1x1': 'web3:building_1x1',
-            'web3:property_2x2': 'web3:building_2x2',
 
             // 升级后的具体建筑类型（保留供未来使用）
             'web3:temple': 'web3:temple',

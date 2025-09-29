@@ -864,8 +864,7 @@ export class GameMap extends Component {
                 gameMode: this._isEditMode ? 'edit' : 'play',
                 tiles: tilesData,
                 objects: objectsData,
-                buildings: buildingsData.length > 0 ? buildingsData : undefined,
-                properties: buildingsData.length > 0 ? buildingsData : undefined  // 向后兼容
+                buildings: buildingsData.length > 0 ? buildingsData : undefined
             };
             
             // 添加游戏规则（如果需要）
@@ -1002,8 +1001,7 @@ export class GameMap extends Component {
             }
 
             // 加载Building数据并重建建筑PaperActor
-            // 优先使用新的buildings字段，如果没有则使用旧的properties字段（向后兼容）
-            const buildingsToLoad = mapData.buildings || mapData.properties;
+            const buildingsToLoad = mapData.buildings;
             if (buildingsToLoad) {
                 for (const buildingData of buildingsToLoad) {
                     const buildingKey = `${buildingData.position.x}_${buildingData.position.z}`;

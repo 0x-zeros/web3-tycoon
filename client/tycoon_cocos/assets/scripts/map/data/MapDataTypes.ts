@@ -156,11 +156,6 @@ export interface BuildingData {
     mortgaged?: boolean;
 }
 
-/**
- * Property数据（向后兼容，实际是BuildingData）
- * @deprecated 请使用 BuildingData
- */
-export type PropertyData = BuildingData;
 
 /**
  * 完整的地图保存数据
@@ -184,8 +179,6 @@ export interface MapSaveData extends MapMetadata {
 
     /** 建筑数据数组 */
     buildings?: BuildingData[];
-    /** Property数据数组（向后兼容） */
-    properties?: BuildingData[];
 
     /** Property-Tile关联映射 */
     propertyTileLinks?: { [tileKey: string]: string };

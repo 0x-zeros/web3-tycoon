@@ -254,11 +254,6 @@ export function getWeb3BuildingBlocks(): Web3BlockInfo[] {
     return WEB3_BLOCKS.filter(block => block.category === 'building');
 }
 
-// 获取Property类型方块（向后兼容）
-// @deprecated 请使用 getWeb3BuildingBlocks
-export function getWeb3PropertyBlocks(): Web3BlockInfo[] {
-    return getWeb3BuildingBlocks();
-}
 
 // 获取装饰类型方块
 export function getWeb3DecorationBlocks(): Web3BlockInfo[] {
@@ -313,11 +308,6 @@ export function isWeb3Building(blockIdOrTypeId: string | number): boolean {
     }
 }
 
-// 判断是否为Property类型（向后兼容）
-// @deprecated 请使用 isWeb3Building
-export function isWeb3Property(blockIdOrTypeId: string | number): boolean {
-    return isWeb3Building(blockIdOrTypeId);
-}
 
 // 获取Building的尺寸
 export function getBuildingSize(blockId: string): number {
@@ -325,8 +315,3 @@ export function getBuildingSize(blockId: string): number {
     return block?.size || 1;
 }
 
-// 获取Property的尺寸（向后兼容）
-// @deprecated 请使用 getBuildingSize
-export function getPropertySize(blockId: string): number {
-    return getBuildingSize(blockId);
-}

@@ -1584,7 +1584,14 @@
     }
   ],
   "objects": [],
-  "properties": [
+  "gameRules": {
+    "startingMoney": 10000,
+    "passingBonus": 200,
+    "landingBonus": 400,
+    "maxPlayers": 4,
+    "minPlayers": 2
+  },
+  "buildings": [
     {
       "blockId": "web3:building_1x1",
       "typeId": 200,
@@ -2265,12 +2272,5 @@
       },
       "direction": 3
     }
-  ],
-  "gameRules": {
-    "startingMoney": 10000,
-    "passingBonus": 200,
-    "landingBonus": 400,
-    "maxPlayers": 4,
-    "minPlayers": 2
-  }
+  ]
 }

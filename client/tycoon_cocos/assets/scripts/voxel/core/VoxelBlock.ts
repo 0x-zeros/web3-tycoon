@@ -696,14 +696,12 @@ export class BlockRegistry {
         }
     });
     
-    // ========== Property（地产）类型 (Properties) ==========
+    // ========== 建筑类型 (Buildings) ==========
 
-    // ========== Property地产类型 ==========
-
-    // 小型地产（1x1）
+    // 小型建筑（1x1）
     this.register({
-        id: 'web3:property_1x1',
-        displayName: '小型地产',
+        id: 'web3:building_1x1',
+        displayName: '小型建筑',
         isPlant: false,
         isObstacle: true,
         isDestructable: true,
@@ -713,15 +711,15 @@ export class BlockRegistry {
         properties: {
             typeId: Web3BuildingType.BUILDING_1X1,
             category: 'building',
-            description: '1x1的基础地产（lv0）',
+            description: '1x1的基础建筑（lv0）',
             size: 1
         }
     });
 
-    // 大型地产（2x2）
+    // 大型建筑（2x2）
     this.register({
-        id: 'web3:property_2x2',
-        displayName: '大型地产',
+        id: 'web3:building_2x2',
+        displayName: '大型建筑',
         isPlant: false,
         isObstacle: true,
         isDestructable: true,
@@ -731,7 +729,7 @@ export class BlockRegistry {
         properties: {
             typeId: Web3BuildingType.BUILDING_2X2,
             category: 'building',
-            description: '2x2的基础地产（lv0）',
+            description: '2x2的基础建筑（lv0）',
             size: 2
         }
     });

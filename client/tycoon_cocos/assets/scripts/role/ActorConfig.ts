@@ -207,11 +207,11 @@ const NPC_CONFIGS: ActorConfig[] = [
  * 建筑配置
  */
 const BUILDING_CONFIGS: ActorConfig[] = [
-    // 小型地产（1x1）
+    // 小型建筑（1x1）
     {
-        id: 'web3:property_1x1',
+        id: 'web3:building_1x1',
         type: ActorType.BUILDING,
-        name: '小型地产',
+        name: '小型建筑',
         textures: {
             levels: [
                 'web3/buildings/lv0',  // 空地 - 只有lv0表示空地
@@ -226,11 +226,11 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         defaultLevel: 0
     },
 
-    // 大型地产（2x2）
+    // 大型建筑（2x2）
     {
-        id: 'web3:property_2x2',
+        id: 'web3:building_2x2',
         type: ActorType.BUILDING,
-        name: '大型地产',
+        name: '大型建筑',
         textures: {
             levels: [
                 'web3/buildings/lv0',  // 空地 - 只有lv0表示空地

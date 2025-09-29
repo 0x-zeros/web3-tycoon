@@ -67,7 +67,7 @@
       <Button title="NPC" controller="category" page="1"/>
     </component>
     <component id="n8_ez89" name="btn_properties" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1284,371" size="126,180">
-      <Button title="地产" controller="category" page="2"/>
+      <Button title="建筑" controller="category" page="2"/>
     </component>
     <component id="n9_w84m" name="btn_decorations" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,555" size="126,180">
       <Button title="装饰" controller="category" page="3"/>

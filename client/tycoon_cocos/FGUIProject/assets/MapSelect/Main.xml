@@ -19,5 +19,10 @@
     <component id="n3_105vo" name="btnEdit" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="1078,747" size="512,128">
       <Button title="编辑地图"/>
     </component>
+    <component id="n7_ja0u" name="btn_loadFromLocalStorage" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="1089,893" scale="0.3,0.3">
+      <relation target="" sidePair="center-center,middle-middle"/>
+      <Button checked="true"/>
+    </component>
+    <text id="n8_ja0u" name="n8" xy="1184,900" size="463,61" fontSize="30" color="#ffffff" autoSize="none" text="优先从浏览器localStorage加载"/>
   </displayList>
 </component>

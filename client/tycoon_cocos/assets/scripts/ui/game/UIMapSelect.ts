@@ -25,6 +25,8 @@ export class UIMapSelect extends UIBase {
     private _editButton: fgui.GButton | null = null;
     /** 刷新按钮 */
     private _refreshButton: fgui.GButton | null = null;
+    /** 从localStorage加载复选框 */
+    private _loadFromLocalStorageCheckbox: fgui.GButton | null = null;
 
     // 当前选中的地图
     private _selectedMapId: string | null = null;
@@ -50,6 +52,7 @@ export class UIMapSelect extends UIBase {
         this._startButton = this.getButton("btnStart");
         this._editButton = this.getButton("btnEdit");
         // this._refreshButton = this.getButton("btnRefresh");
+        this._loadFromLocalStorageCheckbox = this.getButton("btn_loadFromLocalStorage");
 
          // 获取地图列表
          this._mapList = this.getList("mapList");
@@ -294,17 +297,22 @@ export class UIMapSelect extends UIBase {
             return;
         }
 
-        console.log(`[UIMapSelect] ${isEdit ? '编辑' : '开始'}游戏，地图: ${this._selectedMapConfig.name}`);
+        // 读取复选框状态
+        const loadFromLocalStorage = this._loadFromLocalStorageCheckbox?.selected ?? false;
+
+        console.log(`[UIMapSelect] ${isEdit ? '编辑' : '开始'}游戏，地图: ${this._selectedMapConfig.name}, 从localStorage加载: ${loadFromLocalStorage}`);
 
         // 保存选择的地图信息
         Blackboard.instance.set("selectedMapId", this._selectedMapId, true);
         Blackboard.instance.set("selectedMapConfig", this._selectedMapConfig, true);
+        Blackboard.instance.set("loadFromLocalStorage", loadFromLocalStorage, true);
 
         // 发送地图选择事件
         EventBus.emit(EventTypes.Game.MapSelected, {
             mapId: this._selectedMapId,
             isEdit: isEdit,
             mapConfig: this._selectedMapConfig,
+            loadFromLocalStorage: loadFromLocalStorage,
             source: "map_select"
         });
 

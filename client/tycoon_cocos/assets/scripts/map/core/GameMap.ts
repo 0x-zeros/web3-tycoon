@@ -17,6 +17,7 @@ import { MapConfig } from '../MapManager';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
+import { Blackboard } from '../../events/Blackboard';
 import { GridGround } from '../GridGround';
 import { MapInteractionManager, MapInteractionData, MapInteractionEvent } from '../interaction/MapInteractionManager';
 import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile, isWeb3Building, getBuildingSize, Web3TileType } from '../../voxel/Web3BlockTypes';
@@ -185,7 +186,9 @@ export class GameMap extends Component {
         }
         
         // 尝试加载已保存的地图数据
-        const loaded = await this.loadMap(this.mapId);
+        // 从Blackboard获取loadFromLocalStorage选项，默认为true
+        const loadFromLocalStorage = (Blackboard.instance.get("loadFromLocalStorage") as boolean | undefined) ?? true;
+        const loaded = await this.loadMap(this.mapId, { loadFromLocalStorage });
         if (!loaded && isEdit) {
             // 如果没有保存的地图，创建空地图
             this.createEmptyMap();
@@ -920,9 +923,9 @@ export class GameMap extends Component {
     public async loadMap(mapId: string, options?: MapLoadOptions): Promise<boolean> {
         try {
             let mapData: MapSaveData | null = null;
-            
-            // 尝试从本地存储加载（Web平台）
-            if (sys.isBrowser) {
+
+            // 尝试从本地存储加载（Web平台）- 仅在options.loadFromLocalStorage不为false时执行
+            if (sys.isBrowser && options?.loadFromLocalStorage !== false) {
                 const saveKey = `map_${mapId}`;
                 const jsonStr = localStorage.getItem(saveKey);
                 if (jsonStr) {
@@ -930,7 +933,7 @@ export class GameMap extends Component {
                     console.log(`[GameMap] Map loaded from localStorage: ${saveKey}`);
                 }
             }
-            
+
             // 如果本地没有，尝试从资源加载
             if (!mapData) {
                 const resourcePath = `${this.MAP_DATA_DIR}${mapId}`;

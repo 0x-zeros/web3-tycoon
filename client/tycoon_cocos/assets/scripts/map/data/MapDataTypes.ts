@@ -213,6 +213,8 @@ export interface MapLoadOptions {
     loadExtra?: boolean;
     /** 是否清空现有地图 */
     clearExisting?: boolean;
+    /** 是否从localStorage加载（仅Web平台） */
+    loadFromLocalStorage?: boolean;
     /** 加载回调 */
     onProgress?: (progress: number) => void;
 }

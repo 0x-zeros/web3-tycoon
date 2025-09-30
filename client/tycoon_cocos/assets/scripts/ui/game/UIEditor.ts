@@ -233,7 +233,22 @@ export class UIEditor extends UIBase {
     protected onShow(data?: any): void {
         console.log("[UIEditor] Showing editor UI");
         this.updateEditorVisibility();
-        this.m_mapElementUI?.hide()
+        this.m_mapElementUI?.hide();
+
+        // 初始化ID显示状态为隐藏
+        this._isShowingIds = false;
+        if (this.m_btn_showIds) {
+            this.m_btn_showIds.title = "显示ID";
+        }
+
+        // 确保ID标签被隐藏
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                mapInfo.component.hideIds();
+            }
+        }
     }
     
     /**
@@ -241,6 +256,21 @@ export class UIEditor extends UIBase {
      */
     protected onHide(): void {
         console.log("[UIEditor] Hiding editor UI");
+
+        // 清理ID标签并重置状态
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                mapInfo.component.hideIds();
+            }
+        }
+
+        // 重置显示状态
+        this._isShowingIds = false;
+        if (this.m_btn_showIds) {
+            this.m_btn_showIds.title = "显示ID";
+        }
     }
     
     /**

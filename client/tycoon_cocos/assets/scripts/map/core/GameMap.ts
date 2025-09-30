@@ -1095,15 +1095,7 @@ export class GameMap extends Component {
         });
         this._buildings.clear();
 
-        // 清空Property容器与注册
-        if (this.tilesContainer) {
-            const children = [...this.tilesContainer.children];
-            for (const child of children) {
-                if (child.name.startsWith('Property2x2_')) {
-                    child.destroy();
-                }
-            }
-        }
+        // 清空建筑注册表
         this._buildingRegistry.clear();
 
         console.log('[GameMap] Map cleared');
@@ -1171,7 +1163,10 @@ export class GameMap extends Component {
             clearTimeout(this._autoSaveTimer);
             this._autoSaveTimer = null;
         }
-        
+
+        // 先清理ID标签
+        this.hideIds();
+
         // 清空地图
         this.clearMap();
         

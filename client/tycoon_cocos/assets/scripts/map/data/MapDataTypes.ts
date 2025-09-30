@@ -27,6 +27,8 @@ export interface TileData {
     data?: {
         /** Tile编号（u16最大值65535表示无效） */
         tileId?: number;
+        /** 关联的建筑ID（u16最大值65535表示无效） */
+        buildingId?: number;
         /** 自定义数据 */
         custom?: any;
     };
@@ -134,6 +136,8 @@ export interface BuildingData {
     direction?: number;
     /** 建筑ID */
     buildingId?: number;
+    /** 入口tile的ID（最多2个，1x1建筑第二个为65535） */
+    entranceTileIds?: [number, number];
     /** 拥有者 */
     owner?: string;
     /** 建筑等级 */

@@ -34,6 +34,7 @@ interface BuildingInfo {
     size: 1 | 2;
     direction?: number;  // 方向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270°
     buildingId?: number;  // Building编号（u16最大值65535表示无效）
+    entranceTileIds?: [number, number];  // 入口tile的ID（最多2个，1x1建筑第二个为65535）
     owner?: string;
     level?: number;
     price?: number;
@@ -847,6 +848,7 @@ export class GameMap extends Component {
                     position: info.position,
                     direction: info.direction,  // 保存朝向
                     buildingId: info.buildingId,
+                    entranceTileIds: info.entranceTileIds,  // 保存入口tile IDs
                     owner: info.owner,
                     level: info.level,
                     price: info.price,
@@ -1012,6 +1014,7 @@ export class GameMap extends Component {
                         size: buildingData.size,
                         direction: buildingData.direction || 0,  // 保存朝向
                         buildingId: buildingData.buildingId,
+                        entranceTileIds: buildingData.entranceTileIds,  // 加载入口tile IDs
                         owner: buildingData.owner,
                         level: buildingData.level,
                         price: buildingData.price,
@@ -1814,6 +1817,167 @@ export class GameMap extends Component {
         }
 
         console.log(`[GameMap] Assigned IDs to ${buildings.length} buildings`);
+    }
+
+    /**
+     * 将建筑与入口tile关联（用于导出Move数据）
+     *
+     * 功能：
+     * 1. 先执行编号（assignIds）
+     * 2. 找到每个建筑朝向上的相邻tiles
+     * 3. 验证：1x1建筑需要1个tile，2x2建筑需要2个tile
+     * 4. 验证：tile类型只能是EMPTY_LAND或PROPERTY_TILE
+     * 5. 建立关联：建筑保存entranceTileIds，tile保存buildingId并替换为property_tile类型
+     * 6. 保存地图
+     *
+     * @returns 是否成功
+     */
+    public convertBuildingsToPropertyTiles(): boolean {
+        console.log('[GameMap] Converting buildings to property tiles...');
+
+        // 1. 先分配ID（内存中）
+        this.clearAllIds();
+        this.assignTileIds();
+        this.assignBuildingIds();
+
+        // 2. 遍历所有建筑，收集相邻tiles
+        const buildingTileMap = new Map<BuildingInfo, MapTile[]>();
+        for (const buildingInfo of this._buildingRegistry.values()) {
+            const adjacentTiles = this.getAdjacentTilesInDirection(buildingInfo);
+            buildingTileMap.set(buildingInfo, adjacentTiles);
+        }
+
+        // 3. 验证阶段
+        let hasError = false;
+        for (const [buildingInfo, tiles] of buildingTileMap) {
+            const expectedCount = buildingInfo.size === 1 ? 1 : 2;
+            const pos = buildingInfo.position;
+
+            // 检查数量
+            if (tiles.length !== expectedCount) {
+                console.warn(`[GameMap] Building #${buildingInfo.buildingId} at (${pos.x}, ${pos.z}): Expected ${expectedCount} entrance tiles, found ${tiles.length}`);
+                hasError = true;
+                continue;
+            }
+
+            // 检查tile类型
+            for (const tile of tiles) {
+                const typeId = tile.getTypeId();
+                const tilePos = tile.getGridPosition();
+                if (typeId !== Web3TileType.EMPTY_LAND && typeId !== Web3TileType.PROPERTY_TILE) {
+                    console.warn(`[GameMap] Building #${buildingInfo.buildingId} at (${pos.x}, ${pos.z}): Entrance tile at (${tilePos.x}, ${tilePos.y}) has invalid type ${typeId} (must be EMPTY_LAND or PROPERTY_TILE)`);
+                    hasError = true;
+                }
+            }
+        }
+
+        // 4. 如果有错误，停止处理
+        if (hasError) {
+            console.error('[GameMap] Validation failed, conversion aborted');
+            return false;
+        }
+
+        // 5. 建立关联
+        for (const [buildingInfo, tiles] of buildingTileMap) {
+            // 建筑保存入口tile IDs
+            buildingInfo.entranceTileIds = [
+                tiles[0].getTileId(),
+                tiles[1]?.getTileId() || 65535
+            ];
+
+            // tile保存建筑ID并替换blockId
+            for (const tile of tiles) {
+                tile.setBuildingId(buildingInfo.buildingId!);
+                // 替换为property_tile类型
+                this.replaceTileBlockId(tile, 'web3:property_tile');
+            }
+        }
+
+        // 6. 保存地图
+        this.scheduleAutoSave();
+
+        console.log('[GameMap] Building conversion completed successfully');
+        return true;
+    }
+
+    /**
+     * 获取建筑朝向上的相邻tiles
+     */
+    private getAdjacentTilesInDirection(buildingInfo: BuildingInfo): MapTile[] {
+        const { position, size, direction = 0 } = buildingInfo;
+        const tiles: MapTile[] = [];
+
+        // direction: 0=南(+z), 1=西(+x), 2=北(-z), 3=东(-x)
+
+        if (size === 1) {
+            // 1x1建筑：1个相邻tile
+            let checkPos: Vec2;
+            switch (direction) {
+                case 0: checkPos = new Vec2(position.x, position.z + 1); break;  // 南
+                case 1: checkPos = new Vec2(position.x + 1, position.z); break;  // 西
+                case 2: checkPos = new Vec2(position.x, position.z - 1); break;  // 北
+                case 3: checkPos = new Vec2(position.x - 1, position.z); break;  // 东
+                default: checkPos = new Vec2(position.x, position.z + 1);
+            }
+
+            const tile = this.getTileAt(checkPos.x, checkPos.y);
+            if (tile) tiles.push(tile);
+
+        } else {
+            // 2x2建筑：2个相邻tile
+            let positions: Vec2[] = [];
+            switch (direction) {
+                case 0: // 南 (+z)
+                    positions = [
+                        new Vec2(position.x, position.z + 2),
+                        new Vec2(position.x + 1, position.z + 2)
+                    ];
+                    break;
+                case 1: // 西 (+x)
+                    positions = [
+                        new Vec2(position.x + 2, position.z),
+                        new Vec2(position.x + 2, position.z + 1)
+                    ];
+                    break;
+                case 2: // 北 (-z)
+                    positions = [
+                        new Vec2(position.x, position.z - 1),
+                        new Vec2(position.x + 1, position.z - 1)
+                    ];
+                    break;
+                case 3: // 东 (-x)
+                    positions = [
+                        new Vec2(position.x - 1, position.z),
+                        new Vec2(position.x - 1, position.z + 1)
+                    ];
+                    break;
+            }
+
+            for (const pos of positions) {
+                const tile = this.getTileAt(pos.x, pos.y);
+                if (tile) tiles.push(tile);
+            }
+        }
+
+        return tiles;
+    }
+
+    /**
+     * 替换tile的blockId
+     */
+    private replaceTileBlockId(tile: MapTile, newBlockId: string): void {
+        // 直接修改tile的blockId和typeId
+        const newBlockInfo = getWeb3BlockByBlockId(newBlockId);
+        if (!newBlockInfo) {
+            console.error(`[GameMap] Unknown block ID: ${newBlockId}`);
+            return;
+        }
+
+        // 使用反射或直接访问私有字段（TypeScript运行时可以访问）
+        (tile as any)._blockId = newBlockId;
+        (tile as any)._typeId = newBlockInfo.typeId;
+
+        console.log(`[GameMap] Replaced tile at (${tile.getGridPosition().x}, ${tile.getGridPosition().y}) with ${newBlockId}`);
     }
 
     /**

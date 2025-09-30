@@ -27,6 +27,9 @@ export class MapTile extends MapElement {
     /** Tile编号（u16最大值65535表示无效） */
     private _tileId: number = 65535;
 
+    /** 关联的建筑ID（u16最大值65535表示无效） */
+    private _buildingId: number = 65535;
+
     /** 地产拥有者 (仅地产类型有效) */
     private _owner: string | null = null;
     
@@ -145,7 +148,8 @@ export class MapTile extends MapElement {
                 z: this._gridPosition.y
             },
             data: {
-                tileId: this._tileId
+                tileId: this._tileId,
+                buildingId: this._buildingId
             }
         };
     }
@@ -163,6 +167,11 @@ export class MapTile extends MapElement {
         // 恢复tileId
         if (data.data?.tileId !== undefined) {
             this._tileId = data.data.tileId;
+        }
+
+        // 恢复buildingId
+        if (data.data?.buildingId !== undefined) {
+            this._buildingId = data.data.buildingId;
         }
     }
     
@@ -217,12 +226,26 @@ export class MapTile extends MapElement {
     }
     
     /**
+     * 获取关联的建筑ID
+     */
+    public getBuildingId(): number {
+        return this._buildingId;
+    }
+
+    /**
+     * 设置关联的建筑ID
+     */
+    public setBuildingId(id: number): void {
+        this._buildingId = id;
+    }
+
+    /**
      * 设置拥有者
      */
     public setOwner(owner: string | null): void {
         this._owner = owner;
         console.log(`[MapTile] Set owner of tile at (${this._gridPosition.x}, ${this._gridPosition.y}) to ${owner}`);
-        
+
         // TODO: 更新视觉效果（如改变颜色）
     }
     

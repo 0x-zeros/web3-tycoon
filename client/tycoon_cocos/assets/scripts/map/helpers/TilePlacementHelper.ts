@@ -65,16 +65,11 @@ export class TilePlacementHelper {
         const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
         tileNode.setPosition(worldPos);
 
-        // 添加MapTile组件
+        // 添加MapTile组件并初始化
         const mapTile = tileNode.addComponent(MapTile);
-        mapTile.init(blockId, gridPos, blockInfo.typeId || 0);
+        await mapTile.initialize(blockId, gridPos);
 
-        // 放置体素
-        if (this._voxelSystem) {
-            const chunkPos = this._voxelSystem.worldToChunk(worldPos);
-            this._voxelSystem.setBlock(chunkPos.chunkX, chunkPos.chunkZ,
-                chunkPos.localX, 0, chunkPos.localZ, blockInfo.typeId);
-        }
+        // MapTile.createVisual() 已经处理了体素渲染，不需要手动放置
 
         // 添加到索引
         this._tiles.push(mapTile);
@@ -98,13 +93,7 @@ export class TilePlacementHelper {
             this._tiles.splice(index, 1);
         }
 
-        // 删除体素
-        if (this._voxelSystem) {
-            const worldPos = new Vec3(pos.x, 0, pos.y);
-            const chunkPos = this._voxelSystem.worldToChunk(worldPos);
-            this._voxelSystem.setBlock(chunkPos.chunkX, chunkPos.chunkZ,
-                chunkPos.localX, 0, chunkPos.localZ, 0);  // 0表示空气方块
-        }
+        // 体素会随节点销毁自动清理
 
         // 销毁节点
         if (tile.node) {

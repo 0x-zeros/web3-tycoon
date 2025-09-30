@@ -8,13 +8,13 @@
  * @version 2.0.0
  */
 
-import { _decorator, Component, Node, Camera, find, Vec3, Vec2 } from 'cc';
+import { _decorator, Component, Node, Camera, find, Vec2, director } from 'cc';
 import { MapConfig } from '../MapManager';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { MapInteractionManager, MapInteractionData, MapInteractionEvent } from '../interaction/MapInteractionManager';
-import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile, isWeb3Building, getBuildingSize } from '../../voxel/Web3BlockTypes';
+import { isWeb3Object, isWeb3Tile, isWeb3Building, getBuildingSize } from '../../voxel/Web3BlockTypes';
 
 // 编辑器模块
 import { MapEditorManager } from '../editor/MapEditorManager';
@@ -239,7 +239,7 @@ export class GameMap extends Component {
         if (isWeb3Tile(blockId)) {
             await this._tileHelper.placeTileAt(blockId, gridPos);
         } else if (isWeb3Building(blockId)) {
-            const size = getBuildingSize(blockId);
+            const size = getBuildingSize(blockId) as 1 | 2;
             await this._buildingManager.placeBuildingAt(blockId, gridPos, size);
         } else if (isWeb3Object(blockId)) {
             await this._objectHelper.placeObjectAt(blockId, gridPos);
@@ -277,6 +277,12 @@ export class GameMap extends Component {
         const buildingInfo = this._buildingManager.findBuildingInfo(gridPos);
         if (buildingInfo) {
             this._buildingManager.removeBuilding(gridPos);
+        }
+
+        // 尝试删除装饰物
+        const decoration = this._objectHelper.getDecorationAt(gridPos.x, gridPos.y);
+        if (decoration) {
+            this._objectHelper.removeDecorationAt(gridPos.x, gridPos.y);
         }
 
         // 标记有修改
@@ -433,9 +439,26 @@ export class GameMap extends Component {
      */
     private findMainCamera(): void {
         if (!this.mainCamera) {
+            // 尝试按名称查找
             const cameraNode = find('Main Camera');
             if (cameraNode) {
                 this.mainCamera = cameraNode.getComponent(Camera);
+            }
+
+            // 如果找不到，查找场景中的第一个 Camera 组件
+            if (!this.mainCamera) {
+                const scene = director.getScene();
+                if (scene) {
+                    const cameras = scene.getComponentsInChildren(Camera);
+                    if (cameras && cameras.length > 0) {
+                        this.mainCamera = cameras[0];
+                        console.log('[GameMap] Using first camera found in scene');
+                    }
+                }
+            }
+
+            if (!this.mainCamera) {
+                console.warn('[GameMap] No camera found in scene');
             }
         }
     }

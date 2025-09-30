@@ -7,7 +7,7 @@
  * @version 1.0.0
  */
 
-import { Node, Vec2, Vec3 } from 'cc';
+import { Node, Vec2, Vec3, BoxCollider } from 'cc';
 import { MapObject } from '../core/MapObject';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { getWeb3BlockByBlockId, isWeb3Object } from '../../voxel/Web3BlockTypes';
@@ -76,9 +76,9 @@ export class ObjectPlacementHelper {
         const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
         objectNode.setPosition(worldPos);
 
-        // 添加MapObject组件
+        // 添加MapObject组件并初始化
         const mapObject = objectNode.addComponent(MapObject);
-        mapObject.init(blockId, gridPos);
+        await mapObject.initialize(blockId, gridPos);
 
         // 创建PaperActor（如果是NPC类型）
         if (this.isNPCObject(blockId)) {
@@ -105,7 +105,7 @@ export class ObjectPlacementHelper {
      * @param gridPos 网格位置
      */
     public async placeDecorationAt(blockId: string, gridPos: Vec2): Promise<void> {
-        // 装饰物使用体素渲染
+        // 使用体素系统创建装饰物节点
         if (!this._voxelSystem) {
             console.warn('[ObjectPlacementHelper] VoxelSystem not available for decoration');
             return;
@@ -117,27 +117,26 @@ export class ObjectPlacementHelper {
             return;
         }
 
-        // 放置体素
         const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
-        const chunkPos = this._voxelSystem.worldToChunk(worldPos);
-
-        // 装饰物可能有多层高度
-        const height = blockInfo.height || 1;
-        for (let y = 0; y < height; y++) {
-            this._voxelSystem.setBlock(
-                chunkPos.chunkX, chunkPos.chunkZ,
-                chunkPos.localX, y, chunkPos.localZ,
-                blockInfo.typeId
-            );
-        }
-
-        // 记录装饰物节点（如果需要）
         const decorKey = `decor_${gridPos.x}_${gridPos.y}`;
-        const decorNode = new Node(`Decoration_${gridPos.x}_${gridPos.y}`);
-        decorNode.setPosition(worldPos);
-        this._decorations.set(decorKey, decorNode);
 
-        console.log(`[ObjectPlacementHelper] Placed decoration ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        // 使用 createBlockNode 创建装饰物节点
+        const decorNode = await this._voxelSystem.createBlockNode(
+            this._objectsContainer!,
+            blockId,
+            worldPos
+        );
+
+        if (decorNode) {
+            decorNode.name = `Decoration_${gridPos.x}_${gridPos.y}`;
+
+            // 添加碰撞器以支持点击删除
+            const collider = decorNode.addComponent(BoxCollider);
+            collider.size = new Vec3(1, blockInfo.height || 1, 1);
+
+            this._decorations.set(decorKey, decorNode);
+            console.log(`[ObjectPlacementHelper] Placed decoration ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        }
     }
 
     /**
@@ -171,20 +170,7 @@ export class ObjectPlacementHelper {
             this._decorations.delete(decorKey);
         }
 
-        // 清除体素（如果是装饰物）
-        if (this._voxelSystem && this.isDecoration(object.getBlockId())) {
-            const worldPos = new Vec3(pos.x, 0, pos.y);
-            const chunkPos = this._voxelSystem.worldToChunk(worldPos);
-
-            // 清除多层高度
-            for (let y = 0; y < 5; y++) {  // 最大5层高度
-                this._voxelSystem.setBlock(
-                    chunkPos.chunkX, chunkPos.chunkZ,
-                    chunkPos.localX, y, chunkPos.localZ,
-                    0  // 0表示空气
-                );
-            }
-        }
+        // 装饰物节点会随 destroy()自动清理
 
         // 销毁节点
         if (object.node) {
@@ -202,6 +188,31 @@ export class ObjectPlacementHelper {
     public getObjectAt(x: number, z: number): MapObject | null {
         const key = `${x}_${z}`;
         return this._objectIndex.get(key) || null;
+    }
+
+    /**
+     * 获取指定位置的装饰物节点
+     * @param x X坐标
+     * @param z Z坐标
+     */
+    public getDecorationAt(x: number, z: number): Node | null {
+        const decorKey = `decor_${x}_${z}`;
+        return this._decorations.get(decorKey) || null;
+    }
+
+    /**
+     * 删除指定位置的装饰物
+     * @param x X坐标
+     * @param z Z坐标
+     */
+    public removeDecorationAt(x: number, z: number): void {
+        const decorKey = `decor_${x}_${z}`;
+        const decorNode = this._decorations.get(decorKey);
+        if (decorNode) {
+            decorNode.destroy();
+            this._decorations.delete(decorKey);
+            console.log(`[ObjectPlacementHelper] Removed decoration at (${x}, ${z})`);
+        }
     }
 
     /**

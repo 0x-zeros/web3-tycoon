@@ -133,10 +133,10 @@ export class MapDataLoader {
                 const gridPos = new Vec2(tileData.position.x, tileData.position.z);
                 await this._tileHelper?.placeTileAt(tileData.blockId, gridPos);
 
-                // 恢复tile ID
+                // 恢复tile ID（从data字段中读取）
                 const tile = this._tileHelper?.getTileAt(tileData.position.x, tileData.position.z);
-                if (tile && tileData.tileId !== undefined) {
-                    tile.setTileId(tileData.tileId);
+                if (tile && tileData.data?.tileId !== undefined) {
+                    tile.setTileId(tileData.data.tileId);
                 }
             }
         }

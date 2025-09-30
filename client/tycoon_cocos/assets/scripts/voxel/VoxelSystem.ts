@@ -22,13 +22,6 @@ export class VoxelSystem {
     private overlayEnabled: boolean = false; // overlay 功能开关（默认关闭）
     private rootDir: string = 'voxel/resource_pack';
 
-    /**
-     * 获取初始化状态
-     */
-    public get isInitialized(): boolean {
-        return this.initialized;
-    }
-
     private constructor() {
         // 使用新的 BlockParser
         this.blockParser = new BlockParser({
@@ -117,7 +110,7 @@ export class VoxelSystem {
                 const overlayInfo = this.detectOverlayInfo(blockData);
                 if (overlayInfo) {
                     console.log(`[VoxelSystem] 检测到 overlay 方案: ${blockId} overlay=${overlayInfo.overlaySideTexture}`);
-                    const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(meshBuildContext);
+                    const { baseMesh, overlayMesh } = MeshBuilder.buildOverlayBlockMeshes(blockData, meshBuildContext);
 
                     const meshData: VoxelMeshData = {
                         vertices: [],

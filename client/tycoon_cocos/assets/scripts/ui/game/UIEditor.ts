@@ -4,9 +4,11 @@ import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
 import { UIMapElement } from "./UIMapElement";
 import * as fgui from "fairygui-cc";
-import { _decorator } from 'cc';
+import { _decorator, find, input, Input, KeyCode } from 'cc';
 import { GameMap } from "../../map/core/GameMap";
-// 地图生成功能已移除
+import { MapGenerationMode } from "../../map/generator/MapGeneratorTypes";
+import { MapGenerator } from "../../map/generator/MapGenerator";
+// 模板功能已移除
 
 const { ccclass } = _decorator;
 
@@ -21,6 +23,18 @@ export class UIEditor extends UIBase {
     
     /** 清除所有地块按钮 */
     private m_btn_clearAll: fgui.GButton;
+
+    /** 生成地图按钮 */
+    private m_btn_generateMap: fgui.GButton;
+
+    /** 生成Classic地图按钮 */
+    private m_btn_generateClassic: fgui.GButton;
+
+    /** 生成Brawl地图按钮 */
+    private m_btn_generateBrawl: fgui.GButton;
+
+    /** 随机生成按钮 */
+    private m_btn_randomGen: fgui.GButton;
 
     /** 下载按钮 */
     private m_btn_download: fgui.GButton;
@@ -66,11 +80,21 @@ export class UIEditor extends UIBase {
         // 获取清除所有地块按钮
         this.m_btn_clearAll = this.getChild('btn_clearAll') as fgui.GButton;
 
-        // 获取下载按钮
+        // 尝试获取生成地图相关按钮（如果UI中有的话）
+        this.m_btn_generateMap = this.getChild('btn_generateMap') as fgui.GButton;
+        this.m_btn_generateClassic = this.getChild('btn_generateClassic') as fgui.GButton;
+        this.m_btn_generateBrawl = this.getChild('btn_generateBrawl') as fgui.GButton;
+
+        // 获取随机生成和下载按钮
+        this.m_btn_randomGen = this.getChild('btn_randomGen') as fgui.GButton;
         this.m_btn_download = this.getChild('btn_download') as fgui.GButton;
         this.m_btn_assignId = this.getChild('btn_assignId') as fgui.GButton;
         this.m_btn_showIds = this.getChild('btn_showIds') as fgui.GButton;
 
+        // 如果没有专门的按钮，可以创建临时的测试按钮
+        if (!this.m_btn_generateMap && !this.m_btn_generateClassic && !this.m_btn_generateBrawl && !this.m_btn_randomGen) {
+            console.log('[UIEditor] 生成地图按钮未找到');
+        }
 
         // 获取tile组件及其子组件
         this.m_tile = this.getChild('tile').asCom;
@@ -108,7 +132,21 @@ export class UIEditor extends UIBase {
             this.m_btn_clearAll.onClick(this._onClearAllClick, this);
         }
 
-        // 绑定下载按钮点击事件
+        // 绑定生成地图按钮点击事件
+        if (this.m_btn_generateMap) {
+            this.m_btn_generateMap.onClick(this._onGenerateMapClick, this);
+        }
+        if (this.m_btn_generateClassic) {
+            this.m_btn_generateClassic.onClick(this._onGenerateClassicClick, this);
+        }
+        if (this.m_btn_generateBrawl) {
+            this.m_btn_generateBrawl.onClick(this._onGenerateBrawlClick, this);
+        }
+
+        // 绑定随机生成和下载按钮点击事件
+        if (this.m_btn_randomGen) {
+            this.m_btn_randomGen.onClick(this._onRandomGenClick, this);
+        }
         if (this.m_btn_download) {
             this.m_btn_download.onClick(this._onDownloadClick, this);
         }
@@ -147,7 +185,21 @@ export class UIEditor extends UIBase {
             this.m_btn_clearAll.offClick(this._onClearAllClick, this);
         }
 
-        // 解绑下载按钮事件
+        // 解绑生成地图按钮事件
+        if (this.m_btn_generateMap) {
+            this.m_btn_generateMap.offClick(this._onGenerateMapClick, this);
+        }
+        if (this.m_btn_generateClassic) {
+            this.m_btn_generateClassic.offClick(this._onGenerateClassicClick, this);
+        }
+        if (this.m_btn_generateBrawl) {
+            this.m_btn_generateBrawl.offClick(this._onGenerateBrawlClick, this);
+        }
+
+        // 解绑随机生成和下载按钮事件
+        if (this.m_btn_randomGen) {
+            this.m_btn_randomGen.offClick(this._onRandomGenClick, this);
+        }
         if (this.m_btn_download) {
             this.m_btn_download.offClick(this._onDownloadClick, this);
         }
@@ -344,7 +396,39 @@ export class UIEditor extends UIBase {
         }
     }
 
-    // 地图生成功能已移除
+    /**
+     * 生成地图按钮点击事件（通用）
+     */
+    private _onGenerateMapClick(): void {
+        console.log("[UIEditor] Generate map button clicked");
+        this._generateMap(MapGenerationMode.CLASSIC);
+    }
+
+    /**
+     * 生成Classic地图按钮点击事件
+     */
+    private _onGenerateClassicClick(): void {
+        console.log("[UIEditor] Generate Classic map button clicked");
+        this._generateMap(MapGenerationMode.CLASSIC);
+    }
+
+    /**
+     * 生成Brawl地图按钮点击事件
+     */
+    private _onGenerateBrawlClick(): void {
+        console.log("[UIEditor] Brawl mode has been removed");
+        // Brawl模式已被移除
+    }
+
+    // 模板相关回调已移除
+
+    /**
+     * 随机生成按钮点击事件
+     */
+    private _onRandomGenClick(): void {
+        console.log("[UIEditor] Random generate button clicked");
+        this._generateRandomMap();
+    }
 
     /**
      * 下载按钮点击事件
@@ -400,7 +484,61 @@ export class UIEditor extends UIBase {
         }
     }
 
-    // 地图生成相关方法已移除
+    /**
+     * 使用模板生成地图
+     */
+    private async _generateRandomMap(): Promise<void> {
+        console.log(`[UIEditor] Generating random map`);
+
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                const gameMap = mapInfo.component;
+
+                try {
+                    // 使用新的生成器
+                    const generator = new MapGenerator({
+                        mode: MapGenerationMode.CLASSIC,
+                        mapWidth: 40,
+                        mapHeight: 40,
+                        roadDensity: 0.25,
+                        propertyRatio: 0.35,
+                        property2x2Ratio: 0.2,
+                        minPropertySpacing: 2,
+                        specialTileTypes: ['hospital', 'shop', 'bank', 'chance', 'news', 'bonus', 'fee', 'card'],
+                        specialTileRatio: 0.15,
+                        trafficSimulationRounds: 500,
+                        startPositions: []
+                    });
+
+                    const result = await generator.generateMap();
+
+                    // 应用生成结果到地图
+                    gameMap.applyGeneratedMap(result);
+
+                    console.log(`[UIEditor] Map generated successfully with ${result.tiles.length} tiles`);
+
+                    // 清除当前选中的地块
+                    this.clearSelectedBlock();
+
+                    // 发送生成完成事件
+                    EventBus.emit(EventTypes.Map.MapGenerated, { templateId: null, result });
+
+                } catch (error) {
+                    console.error('[UIEditor] Failed to generate map:', error);
+                }
+            }
+        }
+    }
+
+    /**
+     * 生成地图（使用随机模板）
+     * @param mode 生成模式
+     */
+    private async _generateMap(mode: MapGenerationMode): Promise<void> {
+        await this._generateRandomMap();
+    }
 
     /**
      * 设置键盘快捷键

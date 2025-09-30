@@ -1820,36 +1820,36 @@ export class GameMap extends Component {
     }
 
     /**
-     * 将建筑与入口tile关联（用于导出Move数据）
+     * 计算建筑入口关联（用于导出Move数据）
      *
      * 功能：
      * 1. 先执行编号（assignIds）
-     * 2. 找到每个建筑朝向上的相邻tiles
+     * 2. 找到每个建筑朝向上的相邻tiles（入口tiles）
      * 3. 验证：1x1建筑需要1个tile，2x2建筑需要2个tile
      * 4. 验证：tile类型只能是EMPTY_LAND或PROPERTY_TILE
-     * 5. 建立关联：建筑保存entranceTileIds，tile保存buildingId并替换为property_tile类型
+     * 5. 建立关联：建筑保存entranceTileIds，tile保存buildingId
      * 6. 保存地图
      *
      * @returns 是否成功
      */
-    public convertBuildingsToPropertyTiles(): boolean {
-        console.log('[GameMap] Converting buildings to property tiles...');
+    public calculateBuildingEntrances(): boolean {
+        console.log('[GameMap] Calculating building entrances...');
 
         // 1. 先分配ID（内存中）
         this.clearAllIds();
         this.assignTileIds();
         this.assignBuildingIds();
 
-        // 2. 遍历所有建筑，收集相邻tiles
-        const buildingTileMap = new Map<BuildingInfo, MapTile[]>();
+        // 2. 遍历所有建筑，收集入口tiles
+        const buildingEntranceMap = new Map<BuildingInfo, MapTile[]>();
         for (const buildingInfo of this._buildingRegistry.values()) {
-            const adjacentTiles = this.getAdjacentTilesInDirection(buildingInfo);
-            buildingTileMap.set(buildingInfo, adjacentTiles);
+            const entranceTiles = this.getAdjacentTilesInDirection(buildingInfo);
+            buildingEntranceMap.set(buildingInfo, entranceTiles);
         }
 
         // 3. 验证阶段
         let hasError = false;
-        for (const [buildingInfo, tiles] of buildingTileMap) {
+        for (const [buildingInfo, tiles] of buildingEntranceMap) {
             const expectedCount = buildingInfo.size === 1 ? 1 : 2;
             const pos = buildingInfo.position;
 
@@ -1873,12 +1873,12 @@ export class GameMap extends Component {
 
         // 4. 如果有错误，停止处理
         if (hasError) {
-            console.error('[GameMap] Validation failed, conversion aborted');
+            console.error('[GameMap] Validation failed, calculation aborted');
             return false;
         }
 
         // 5. 建立关联
-        for (const [buildingInfo, tiles] of buildingTileMap) {
+        for (const [buildingInfo, tiles] of buildingEntranceMap) {
             // 建筑保存入口tile IDs
             buildingInfo.entranceTileIds = [
                 tiles[0].getTileId(),
@@ -1894,12 +1894,12 @@ export class GameMap extends Component {
         // 6. 保存地图
         this.scheduleAutoSave();
 
-        console.log('[GameMap] Building conversion completed successfully');
+        console.log('[GameMap] Building entrance calculation completed successfully');
         return true;
     }
 
     /**
-     * 获取建筑朝向上的相邻tiles
+     * 获取建筑朝向上的入口tiles
      */
     private getAdjacentTilesInDirection(buildingInfo: BuildingInfo): MapTile[] {
         const { position, size, direction = 0 } = buildingInfo;

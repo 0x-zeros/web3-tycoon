@@ -30,8 +30,8 @@ export class UIEditor extends UIBase {
     /** 显示ID按钮 */
     private m_btn_showIds: fgui.GButton;
 
-    /** 转换为地产Tile按钮 */
-    private m_btn_toPropertyTile: fgui.GButton;
+    /** 计算建筑入口按钮 */
+    private m_btn_calcBuildingEntrance: fgui.GButton;
 
     /** ID显示状态 */
     private _isShowingIds: boolean = false;
@@ -70,7 +70,7 @@ export class UIEditor extends UIBase {
         this.m_btn_download = this.getChild('btn_download') as fgui.GButton;
         this.m_btn_assignId = this.getChild('btn_assignId') as fgui.GButton;
         this.m_btn_showIds = this.getChild('btn_showIds') as fgui.GButton;
-        this.m_btn_toPropertyTile = this.getChild('btn_toPropertyTile') as fgui.GButton;
+        this.m_btn_calcBuildingEntrance = this.getChild('btn_calcBuildingEntrance') as fgui.GButton;
 
         // 获取tile组件及其子组件
         this.m_tile = this.getChild('tile').asCom;
@@ -118,8 +118,8 @@ export class UIEditor extends UIBase {
         if (this.m_btn_showIds) {
             this.m_btn_showIds.onClick(this._onShowIdsClick, this);
         }
-        if (this.m_btn_toPropertyTile) {
-            this.m_btn_toPropertyTile.onClick(this._onToPropertyTileClick, this);
+        if (this.m_btn_calcBuildingEntrance) {
+            this.m_btn_calcBuildingEntrance.onClick(this._onCalcBuildingEntranceClick, this);
         }
 
         // 绑定tile点击事件
@@ -158,8 +158,8 @@ export class UIEditor extends UIBase {
         if (this.m_btn_showIds) {
             this.m_btn_showIds.offClick(this._onShowIdsClick, this);
         }
-        if (this.m_btn_toPropertyTile) {
-            this.m_btn_toPropertyTile.offClick(this._onToPropertyTileClick, this);
+        if (this.m_btn_calcBuildingEntrance) {
+            this.m_btn_calcBuildingEntrance.offClick(this._onCalcBuildingEntranceClick, this);
         }
 
         // 解绑tile点击事件
@@ -377,19 +377,19 @@ export class UIEditor extends UIBase {
     }
 
     /**
-     * 转换为地产Tile按钮点击事件
+     * 计算建筑入口按钮点击事件
      */
-    private _onToPropertyTileClick(): void {
-        console.log("[UIEditor] Convert to property tile button clicked");
+    private _onCalcBuildingEntranceClick(): void {
+        console.log("[UIEditor] Calculate building entrance button clicked");
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
-                const success = mapInfo.component.convertBuildingsToPropertyTiles();
+                const success = mapInfo.component.calculateBuildingEntrances();
                 if (success) {
-                    console.log("[UIEditor] ✓ Buildings converted to property tiles successfully");
+                    console.log("[UIEditor] ✓ Building entrances calculated successfully");
                 } else {
-                    console.error("[UIEditor] ✗ Conversion failed - check warnings above");
+                    console.error("[UIEditor] ✗ Calculation failed - check warnings above");
                 }
             }
         }

@@ -9,8 +9,8 @@
     <component id="n3_9pk1" name="btn_toMoveMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,465" size="230,50">
       <Button title="存为Move地图"/>
     </component>
-    <component id="n4_w84m" name="btn_toPropertyTile" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,404" size="230,50">
-      <Button title="转为地产tile"/>
+    <component id="n4_w84m" name="btn_calcBuildingEntrance" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,404" size="230,50">
+      <Button title="计算建筑入口"/>
     </component>
     <component id="n5_w84m" name="btn_download" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,338" size="230,50">
       <Button title="下载地图"/>

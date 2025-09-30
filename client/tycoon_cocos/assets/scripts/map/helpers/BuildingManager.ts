@@ -97,7 +97,7 @@ export class BuildingManager {
         this._buildingRegistry.set(key, buildingInfo);
 
         // 创建PaperActor
-        const paperActor = await this.createBuildingPaperActor(
+        const paperActor = this.createBuildingPaperActor(
             blockId,
             gridPos,
             size,
@@ -173,13 +173,13 @@ export class BuildingManager {
     /**
      * 创建建筑的PaperActor
      */
-    private async createBuildingPaperActor(
+    private createBuildingPaperActor(
         blockId: string,
         gridPos: Vec2,
         size: 1 | 2,
         direction: number,
         buildingInfo: BuildingInfo
-    ): Promise<Node | null> {
+    ): Node | null {
         try {
             // 计算建筑中心位置
             let centerX = gridPos.x;
@@ -195,8 +195,11 @@ export class BuildingManager {
                 centerZ += 0.5;
             }
 
-            // 创建PaperActor
-            const actorNode = await PaperActorFactory.createFromBlockId(blockId);
+            // 设置位置（Y轴稍微抬高0.1避免Z-fighting）
+            const worldPos = new Vec3(centerX, 0.1, centerZ);
+
+            // 创建PaperActor（使用createBuilding方法）
+            const actorNode = PaperActorFactory.createBuilding(blockId, 0, worldPos);
             if (!actorNode) {
                 console.error(`[BuildingManager] Failed to create PaperActor for ${blockId}`);
                 return null;
@@ -204,10 +207,6 @@ export class BuildingManager {
 
             // 设置父节点
             actorNode.setParent(this._buildingsRoot!);
-
-            // 设置位置和旋转
-            const worldPos = new Vec3(centerX, 0, centerZ);
-            actorNode.setPosition(worldPos);
 
             // 设置Y轴旋转（朝向）
             const rotation = Quat.fromEuler(new Quat(), 0, direction * 90, 0);

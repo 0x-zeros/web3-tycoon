@@ -57,6 +57,8 @@ export class BuildingManager {
      * @param size 建筑大小（1或2）
      */
     public async placeBuildingAt(blockId: string, gridPos: Vec2, size: 1 | 2 = 1): Promise<void> {
+        console.log(`[BuildingManager] Placing ${size}x${size} building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+
         // 验证是否为有效的建筑类型
         if (!isWeb3Building(blockId)) {
             console.error(`[BuildingManager] Invalid building block: ${blockId}`);
@@ -73,6 +75,16 @@ export class BuildingManager {
         if (!this.isValidBuildingPosition(gridPos, size)) {
             console.warn(`[BuildingManager] Invalid position for building at (${gridPos.x}, ${gridPos.y})`);
             return;
+        }
+
+        // 1x1建筑：先放置MapTile基座（与重构前保持一致）
+        await this._tileHelper?.placeTileAt(blockId, gridPos);
+
+        // 重命名节点以便调试
+        const tileKey = `${gridPos.x}_${gridPos.y}`;
+        const placedTile = this._tileHelper?.getTileAt(gridPos.x, gridPos.y);
+        if (placedTile && placedTile.node && placedTile.node.isValid) {
+            placedTile.node.name = `Building1x1Tile_${tileKey}`;
         }
 
         // 找到最佳朝向
@@ -133,9 +145,56 @@ export class BuildingManager {
             }
         }
 
-        // 放置四个占位tile
+        // 创建父容器节点（与重构前保持一致）
+        const containerName = `Property2x2_${gridPos.x}_${gridPos.y}`;
+        let containerNode = this._tilesContainer?.getChildByName(containerName);
+        if (!containerNode) {
+            containerNode = new Node(containerName);
+            if (this._tilesContainer) {
+                containerNode.setParent(this._tilesContainer);
+            }
+        }
+
+        // 清理区域内已有的tile
         for (const pos of positions) {
-            await this._tileHelper?.placeTileAt('web3:building_2x2', pos);
+            const key = `${pos.x}_${pos.y}`;
+            const existingTile = this._tileHelper?.getTileAt(pos.x, pos.y);
+            if (existingTile) {
+                this._tileHelper?.removeTile(existingTile);
+            }
+        }
+
+        // 创建4个MapTile作为容器的子节点
+        for (let dx = 0; dx < 2; dx++) {
+            for (let dz = 0; dz < 2; dz++) {
+                const pos = new Vec2(gridPos.x + dx, gridPos.y + dz);
+                const key = `${pos.x}_${pos.y}`;
+
+                // 创建子节点并放到容器下
+                const tileNode = new Node(`Building2x2Tile_${pos.x}_${pos.y}`);
+                if (containerNode) {
+                    tileNode.setParent(containerNode);
+                }
+
+                // 添加MapTile组件并初始化
+                const tile = tileNode.addComponent(MapTile);
+                await tile.initialize(blockId, pos);
+
+                // 注册到TilePlacementHelper的索引
+                const tilesArray = this._tileHelper?.getTilesArray();
+                const tileIndex = this._tileHelper?.getTileIndex();
+                if (tilesArray && tileIndex) {
+                    tilesArray.push(tile);
+                    tileIndex.set(key, tile);
+                }
+            }
+        }
+
+        // 标记容器属性（供后续重建使用）
+        if (containerNode) {
+            (containerNode as any)['isProperty2x2'] = true;
+            (containerNode as any)['propertyBlockId'] = blockId;
+            (containerNode as any)['propertyPosition'] = gridPos.clone();
         }
 
         // 创建建筑信息

@@ -34,7 +34,12 @@ export class TilePlacementHelper {
     public initialize(tilesContainer: Node, voxelSystem: VoxelSystem | null): void {
         this._tilesContainer = tilesContainer;
         this._voxelSystem = voxelSystem;
-        console.log(`[TilePlacementHelper] Initialized with VoxelSystem: ${voxelSystem ? 'present' : 'null'}, initialized=${voxelSystem?.initialized}`);
+        console.log(`[TilePlacementHelper] Initialized with VoxelSystem: ${voxelSystem ? 'present' : 'null'}, initialized=${voxelSystem?.isInitialized}`);
+
+        // 如果VoxelSystem为空或未初始化，尝试获取实例
+        if (!this._voxelSystem || !this._voxelSystem.isInitialized) {
+            console.log('[TilePlacementHelper] VoxelSystem not ready, will be initialized when needed');
+        }
     }
 
     /**
@@ -73,8 +78,10 @@ export class TilePlacementHelper {
         // 添加MapTile组件并初始化
         const mapTile = tileNode.addComponent(MapTile);
         console.log(`[TilePlacementHelper] Initializing MapTile for ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        console.log(`[TilePlacementHelper] VoxelSystem status before init: ${this._voxelSystem ? 'present' : 'null'}, initialized=${this._voxelSystem?.isInitialized}`);
         await mapTile.initialize(blockId, gridPos);
         console.log(`[TilePlacementHelper] MapTile initialized, visual should be created`);
+        console.log(`[TilePlacementHelper] MapTile renderNode: ${mapTile['_renderNode'] ? 'created' : 'null'}`);
 
         // MapTile.createVisual() 已经处理了体素渲染，不需要手动放置
 

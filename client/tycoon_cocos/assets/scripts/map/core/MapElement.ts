@@ -138,7 +138,7 @@ export abstract class MapElement extends Component {
                 }
             }
 
-            console.log(`[MapElement] VoxelSystem status: initialized=${this._voxelSystem?.initialized}`);
+            console.log(`[MapElement] VoxelSystem status: initialized=${this._voxelSystem?.isInitialized}`);
 
             if (this._voxelSystem) {
                 // 先预加载材质，避免粉色闪烁

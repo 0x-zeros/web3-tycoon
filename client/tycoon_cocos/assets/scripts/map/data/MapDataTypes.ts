@@ -27,16 +27,6 @@ export interface TileData {
     data?: {
         /** Tile编号（u16最大值65535表示无效） */
         tileId?: number;
-        /** 拥有者 */
-        owner?: string;
-        /** 建筑等级 (0-4: 空地,小屋,洋房,大楼,地标) */
-        level?: number;
-        /** 地产价格 */
-        price?: number;
-        /** 租金设置 */
-        rent?: number[];
-        /** 是否被抵押 */
-        mortgaged?: boolean;
         /** 自定义数据 */
         custom?: any;
     };

@@ -137,28 +137,17 @@ export class MapTile extends MapElement {
      * 获取序列化数据
      */
     public getData(): TileData {
-        const data: TileData = {
+        return {
             blockId: this._blockId,
             typeId: this._typeId,
             position: {
                 x: this._gridPosition.x,
                 z: this._gridPosition.y
+            },
+            data: {
+                tileId: this._tileId
             }
         };
-        
-        // 添加地产特有数据
-        if (this._typeId === Web3TileType.PROPERTY_TILE) {
-            data.data = {
-                tileId: this._tileId !== 65535 ? this._tileId : undefined,
-                owner: this._owner || undefined,
-                level: this._buildingLevel,
-                price: this._price,
-                rent: this._rent,
-                mortgaged: this._mortgaged
-            };
-        }
-        
-        return data;
     }
     
     /**
@@ -170,25 +159,10 @@ export class MapTile extends MapElement {
             data.blockId,
             new Vec2(data.position.x, data.position.z)
         );
-        
-        // 恢复地产特有数据
-        if (data.data) {
-            if (data.data.owner !== undefined) {
-                this._owner = data.data.owner;
-            }
-            if (data.data.level !== undefined) {
-                this._buildingLevel = data.data.level;
-                await this.updateBuildingVisual();
-            }
-            if (data.data.price !== undefined) {
-                this._price = data.data.price;
-            }
-            if (data.data.rent !== undefined) {
-                this._rent = data.data.rent;
-            }
-            if (data.data.mortgaged !== undefined) {
-                this._mortgaged = data.data.mortgaged;
-            }
+
+        // 恢复tileId
+        if (data.data?.tileId !== undefined) {
+            this._tileId = data.data.tileId;
         }
     }
     

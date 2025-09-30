@@ -10,7 +10,7 @@
 import { Node, Vec2 } from 'cc';
 import { MapTile } from '../core/MapTile';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
-import { getWeb3BlockByBlockId, isWeb3Tile } from '../../voxel/Web3BlockTypes';
+import { getWeb3BlockByBlockId, isWeb3Tile, isWeb3Building } from '../../voxel/Web3BlockTypes';
 
 /**
  * 地块放置辅助类
@@ -34,6 +34,7 @@ export class TilePlacementHelper {
     public initialize(tilesContainer: Node, voxelSystem: VoxelSystem | null): void {
         this._tilesContainer = tilesContainer;
         this._voxelSystem = voxelSystem;
+        console.log(`[TilePlacementHelper] Initialized with VoxelSystem: ${voxelSystem ? 'present' : 'null'}, initialized=${voxelSystem?.initialized}`);
     }
 
     /**
@@ -50,10 +51,16 @@ export class TilePlacementHelper {
             return;
         }
 
-        // 验证是否为有效的tile类型
+        // 验证是否为有效的方块类型（允许tile和building）
         const blockInfo = getWeb3BlockByBlockId(blockId);
-        if (!blockInfo || !isWeb3Tile(blockId)) {
-            console.error(`[TilePlacementHelper] Invalid tile block: ${blockId}`);
+        if (!blockInfo) {
+            console.error(`[TilePlacementHelper] Unknown block: ${blockId}`);
+            return;
+        }
+
+        // 允许tile和building类型的方块
+        if (!isWeb3Tile(blockId) && !isWeb3Building(blockId)) {
+            console.error(`[TilePlacementHelper] Invalid block type for ${blockId}, must be tile or building`);
             return;
         }
 
@@ -65,7 +72,9 @@ export class TilePlacementHelper {
 
         // 添加MapTile组件并初始化
         const mapTile = tileNode.addComponent(MapTile);
+        console.log(`[TilePlacementHelper] Initializing MapTile for ${blockId} at (${gridPos.x}, ${gridPos.y})`);
         await mapTile.initialize(blockId, gridPos);
+        console.log(`[TilePlacementHelper] MapTile initialized, visual should be created`);
 
         // MapTile.createVisual() 已经处理了体素渲染，不需要手动放置
 

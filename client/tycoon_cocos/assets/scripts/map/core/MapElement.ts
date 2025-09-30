@@ -127,31 +127,41 @@ export abstract class MapElement extends Component {
      */
     protected async createVoxelRender(blockId: string, position: Vec3): Promise<void> {
         try {
+            console.log(`[MapElement] Starting createVoxelRender for ${blockId} at ${position}`);
+
             if (!this._voxelSystem) {
+                console.log('[MapElement] VoxelSystem not set, getting instance...');
                 this._voxelSystem = VoxelSystem.getInstance();
                 if (!this._voxelSystem) {
+                    console.log('[MapElement] VoxelSystem instance null, initializing...');
                     this._voxelSystem = await VoxelSystem.quickInitialize();
                 }
             }
-            
+
+            console.log(`[MapElement] VoxelSystem status: initialized=${this._voxelSystem?.initialized}`);
+
             if (this._voxelSystem) {
                 // 先预加载材质，避免粉色闪烁
+                console.log(`[MapElement] Preloading material for ${blockId}...`);
                 await this._voxelSystem.preloadBlockMaterial(blockId);
-                
+
+                console.log(`[MapElement] Creating block node for ${blockId}...`);
                 this._renderNode = await this._voxelSystem.createBlockNode(
                     this.node,
                     blockId,
                     position
                 );
-                
+
                 if (this._renderNode) {
-                    console.log(`[MapElement] Created voxel render for ${blockId} at ${position}`);
+                    console.log(`[MapElement] ✅ Successfully created voxel render for ${blockId} at ${position}, node=${this._renderNode.name}`);
                 } else {
-                    console.warn(`[MapElement] Failed to create voxel render for ${blockId}`);
+                    console.error(`[MapElement] ❌ Failed to create voxel render for ${blockId}, renderNode is null`);
                 }
+            } else {
+                console.error('[MapElement] ❌ VoxelSystem is null after initialization attempt');
             }
         } catch (error) {
-            console.error(`[MapElement] Error creating voxel render:`, error);
+            console.error(`[MapElement] ❌ Error creating voxel render:`, error);
         }
     }
     

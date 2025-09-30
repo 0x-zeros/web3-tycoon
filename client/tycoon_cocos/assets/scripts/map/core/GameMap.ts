@@ -115,8 +115,13 @@ export class GameMap extends Component {
         // 查找主相机
         this.findMainCamera();
 
-        // 获取体素系统
+        // 获取体素系统，确保已初始化
         this._voxelSystem = VoxelSystem.getInstance();
+        if (!this._voxelSystem || !this._voxelSystem.initialized) {
+            console.log('[GameMap] VoxelSystem not initialized, initializing now...');
+            this._voxelSystem = await VoxelSystem.quickInitialize();
+            console.log('[GameMap] VoxelSystem initialized:', this._voxelSystem?.initialized);
+        }
 
         // 保障辅助模块已创建（避免 onLoad 尚未触发时为 undefined）
         if (!this._tileHelper) this._tileHelper = new TilePlacementHelper();

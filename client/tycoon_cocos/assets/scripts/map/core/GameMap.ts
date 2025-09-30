@@ -1801,6 +1801,9 @@ export class GameMap extends Component {
         this.assignBuildingIds();
 
         console.log('[GameMap] ID assignment completed');
+
+        // 立即保存地图数据
+        this.scheduleAutoSave();
     }
 
     /**

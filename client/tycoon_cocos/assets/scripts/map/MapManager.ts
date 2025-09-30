@@ -8,12 +8,13 @@
  * @version 1.0.0
  */
 
-import { _decorator, Component, Node, resources, Prefab, instantiate, director } from 'cc';
+import { _decorator, Component, Node, resources, Prefab, instantiate, director, Camera, find } from 'cc';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { GameMap } from './core/GameMap';
 import { VoxelSystem } from '../voxel/VoxelSystem';
 import { GridGround, GridGroundConfig } from './GridGround';
+import { MapInteractionManager, MapInteractionEvent, MapInteractionData } from './interaction/MapInteractionManager';
 
 const { ccclass, property } = _decorator;
 
@@ -73,6 +74,9 @@ export class MapManager extends Component {
     // 预加载的地图
     private _preloadedMaps: Map<string, Prefab> = new Map();
 
+    // 交互管理器（编辑模式下使用）
+    private _interactionManager: MapInteractionManager | null = null;
+
     /**
      * 获取单例实例
      */
@@ -103,10 +107,10 @@ export class MapManager extends Component {
         
         // 注册事件监听器
         this.registerEventListeners();
-        
-        // voxelSystem //resourcePackPath
+
+        // 初始化体素系统（全局级别）
         VoxelSystem.getInstance().initialize();
-        
+
         this.log('MapManager ready');
     }
 
@@ -231,9 +235,14 @@ export class MapManager extends Component {
             
             // 添加 GameMap 组件
             const mapComponent = mapInstance.addComponent(GameMap);
-            
+
+            // 如果是编辑模式，初始化交互管理器
+            if (isEdit) {
+                await this.initializeInteractionManager(mapInstance);
+            }
+
             // 初始化地图组件，传入 config 和 isEdit
-            await mapComponent.init(config, isEdit);
+            await mapComponent.init(config, isEdit, this._interactionManager);
 
             // 添加到容器
             const container = this.mapContainer || director.getScene();
@@ -268,6 +277,50 @@ export class MapManager extends Component {
     }
 
     /**
+     * 初始化交互管理器
+     * @param mapNode 地图节点
+     */
+    private async initializeInteractionManager(mapNode: Node): Promise<void> {
+        try {
+            // 如果已存在，先清理
+            if (this._interactionManager) {
+                this.cleanupInteractionManager();
+            }
+
+            // 添加MapInteractionManager组件到地图节点
+            this._interactionManager = mapNode.addComponent(MapInteractionManager);
+
+            // 获取主相机
+            let mainCamera = null;
+            const cameraNode = find('Main Camera');
+            if (cameraNode) {
+                mainCamera = cameraNode.getComponent(Camera);
+            }
+
+            if (mainCamera) {
+                this._interactionManager.targetCamera = mainCamera;
+            }
+
+            this._interactionManager.debugMode = this.debugMode;
+
+            // 注册交互事件监听（在GameMap中处理）
+            this.log('Interaction manager initialized for edit mode');
+        } catch (error) {
+            console.error('[MapManager] Failed to initialize interaction manager:', error);
+        }
+    }
+
+    /**
+     * 清理交互管理器
+     */
+    private cleanupInteractionManager(): void {
+        if (this._interactionManager) {
+            // MapInteractionManager会在节点销毁时自动清理
+            this._interactionManager = null;
+        }
+    }
+
+    /**
      * 卸载当前地图
      */
     public unloadCurrentMap(): void {
@@ -280,6 +333,9 @@ export class MapManager extends Component {
                     mapId: this._currentMapId
                 });
             }
+
+            // 清理交互管理器
+            this.cleanupInteractionManager();
 
             this._currentMapInstance.destroy();
             this._currentMapInstance = null;

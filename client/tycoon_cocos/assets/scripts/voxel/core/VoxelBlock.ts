@@ -456,10 +456,10 @@ export class BlockRegistry {
         }
     });
 
-    // 地产
+    // 乐透
     this.register({
-        id: 'web3:property_tile',
-        displayName: '地产',
+        id: 'web3:lottery',
+        displayName: '乐透',
         isPlant: false,
         isObstacle: true,
         isDestructable: false,
@@ -467,9 +467,9 @@ export class BlockRegistry {
         hardness: 1.0,
         renderType: BlockRenderType.SOLID,
         properties: {
-            typeId: Web3TileType.PROPERTY_TILE,
+            typeId: Web3TileType.LOTTERY,
             category: 'tile',
-            description: '可购买并升级的地产'
+            description: '乐透格子，触发抽奖'
         }
     });
 

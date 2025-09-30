@@ -5,7 +5,7 @@
 // 地块类型枚举（0-99）
 export enum Web3TileType {
     EMPTY_LAND = 0,      // 空地/路径
-    PROPERTY_TILE = 1,   // 可购买地块（不是建筑！）
+    LOTTERY = 1,         // 乐透
     HOSPITAL = 2,        // 医院
     CHANCE = 3,          // 机会
     BONUS = 4,           // 奖励
@@ -71,11 +71,11 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
         description: '空地块，无法购买'
     },
     {
-        id: 'web3:property_tile',
-        name: '可购买地块',
+        id: 'web3:lottery',
+        name: '乐透',
         category: 'tile',
-        typeId: Web3TileType.PROPERTY_TILE,
-        description: '可购买的地块，用于放置建筑'
+        typeId: Web3TileType.LOTTERY,
+        description: '乐透格子，触发抽奖'
     },
     {
         id: 'web3:hospital',

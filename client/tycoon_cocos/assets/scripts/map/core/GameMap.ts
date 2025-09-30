@@ -1826,7 +1826,7 @@ export class GameMap extends Component {
      * 1. 先执行编号（assignIds）
      * 2. 找到每个建筑朝向上的相邻tiles（入口tiles）
      * 3. 验证：1x1建筑需要1个tile，2x2建筑需要2个tile
-     * 4. 验证：tile类型只能是EMPTY_LAND或PROPERTY_TILE
+     * 4. 验证：tile类型只能是EMPTY_LAND
      * 5. 建立关联：建筑保存entranceTileIds，tile保存buildingId
      * 6. 保存地图
      *
@@ -1864,8 +1864,8 @@ export class GameMap extends Component {
             for (const tile of tiles) {
                 const typeId = tile.getTypeId();
                 const tilePos = tile.getGridPosition();
-                if (typeId !== Web3TileType.EMPTY_LAND && typeId !== Web3TileType.PROPERTY_TILE) {
-                    console.warn(`[GameMap] Building #${buildingInfo.buildingId} at (${pos.x}, ${pos.z}): Entrance tile at (${tilePos.x}, ${tilePos.y}) has invalid type ${typeId} (must be EMPTY_LAND or PROPERTY_TILE)`);
+                if (typeId !== Web3TileType.EMPTY_LAND) {
+                    console.warn(`[GameMap] Building #${buildingInfo.buildingId} at (${pos.x}, ${pos.z}): Entrance tile at (${tilePos.x}, ${tilePos.y}) has invalid type ${typeId} (must be EMPTY_LAND)`);
                     hasError = true;
                 }
             }

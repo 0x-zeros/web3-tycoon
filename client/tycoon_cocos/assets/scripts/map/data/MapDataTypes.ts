@@ -14,7 +14,7 @@ import { Web3TileType, Web3ObjectType, Web3BuildingType } from '../../voxel/Web3
  * 地块数据
  */
 export interface TileData {
-    /** 方块ID，如 "web3:property_tile" */
+    /** 方块ID，如 "web3:lottery" */
     blockId: string;
     /** 类型ID (Web3TileType) */
     typeId: number;
@@ -297,7 +297,7 @@ export function validateMapData(data: MapSaveData): MapValidationResult {
     }
     
     // 统计信息
-    const propertyCount = data.tiles.filter(t => t.typeId === Web3TileType.PROPERTY_TILE).length;
+    const propertyCount = data.tiles.filter(t => t.typeId === Web3TileType.LOTTERY).length;
     const npcCount = data.objects.filter(o => 
         o.typeId >= Web3ObjectType.LAND_GOD && 
         o.typeId <= Web3ObjectType.POVERTY_GOD

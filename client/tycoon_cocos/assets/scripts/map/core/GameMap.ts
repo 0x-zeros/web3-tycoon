@@ -136,17 +136,17 @@ export class GameMap extends Component {
         // 设置交互管理器
         this._interactionManager = interactionManager || null;
 
-        // 编辑模式初始化
-        if (isEdit) {
-            await this.initializeEditor();
-            this.registerEditModeEvents();
-        }
-
-        // 尝试加载地图数据
+        // 先加载地图数据（必须在编辑器初始化之前）
         const loadSuccess = await this._dataLoader.loadMap(this.mapId);
         if (!loadSuccess && isEdit) {
             // 编辑模式下如果没有数据，创建空地图
             console.log('[GameMap] No map data found, creating empty map for edit mode');
+        }
+
+        // 编辑模式初始化（在数据加载之后）
+        if (isEdit) {
+            await this.initializeEditor();
+            this.registerEditModeEvents();
         }
 
         this._isInitialized = true;

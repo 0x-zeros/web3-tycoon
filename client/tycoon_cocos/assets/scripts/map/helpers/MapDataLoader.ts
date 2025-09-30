@@ -155,23 +155,22 @@ export class MapDataLoader {
             console.log(`[MapDataLoader] Loading ${mapData.buildings.length} buildings...`);
             for (const buildingData of mapData.buildings) {
                 const gridPos = new Vec2(buildingData.position.x, buildingData.position.z);
+
+                // 直接传入完整的建筑数据，包括direction
                 await this._buildingManager?.placeBuildingAt(
                     buildingData.blockId,
                     gridPos,
-                    buildingData.size
+                    buildingData.size,
+                    buildingData.direction,
+                    {
+                        buildingId: buildingData.buildingId,
+                        owner: buildingData.owner,
+                        level: buildingData.level,
+                        price: buildingData.price,
+                        rent: buildingData.rent,
+                        mortgaged: buildingData.mortgaged
+                    }
                 );
-
-                // 恢复建筑信息
-                const buildingInfo = this._buildingManager?.findBuildingInfo(gridPos);
-                if (buildingInfo) {
-                    buildingInfo.buildingId = buildingData.buildingId || 65535;
-                    buildingInfo.direction = buildingData.direction || 0;
-                    buildingInfo.owner = buildingData.owner || '';
-                    buildingInfo.level = buildingData.level || 1;
-                    buildingInfo.price = buildingData.price || 1000;
-                    buildingInfo.rent = buildingData.rent || [100, 200, 400, 800];
-                    buildingInfo.mortgaged = buildingData.mortgaged || false;
-                }
             }
         }
     }

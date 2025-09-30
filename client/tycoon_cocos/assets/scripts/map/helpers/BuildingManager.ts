@@ -55,8 +55,16 @@ export class BuildingManager {
      * @param blockId 方块ID
      * @param gridPos 网格位置（左下角）
      * @param size 建筑大小（1或2）
+     * @param direction 可选的朝向（0-3），如果不提供则自动计算
+     * @param buildingData 可选的建筑数据（用于恢复保存的建筑）
      */
-    public async placeBuildingAt(blockId: string, gridPos: Vec2, size: 1 | 2 = 1): Promise<void> {
+    public async placeBuildingAt(
+        blockId: string,
+        gridPos: Vec2,
+        size: 1 | 2 = 1,
+        direction?: number,
+        buildingData?: Partial<BuildingInfo>
+    ): Promise<void> {
         console.log(`[BuildingManager] Placing ${size}x${size} building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
 
         // 验证是否为有效的建筑类型
@@ -67,7 +75,7 @@ export class BuildingManager {
 
         // 2x2建筑特殊处理
         if (size === 2) {
-            await this.place2x2Building(blockId, gridPos);
+            await this.place2x2Building(blockId, gridPos, direction, buildingData);
             return;
         }
 
@@ -87,21 +95,21 @@ export class BuildingManager {
             placedTile.node.name = `Building1x1Tile_${tileKey}`;
         }
 
-        // 找到最佳朝向
-        const direction = this.findBestDirection(gridPos, size);
+        // 确定朝向：如果提供了direction参数则使用，否则自动计算
+        const finalDirection = direction !== undefined ? direction : this.findBestDirection(gridPos, size);
 
         // 创建建筑信息
         const buildingInfo: BuildingInfo = {
             blockId,
             position: { x: gridPos.x, z: gridPos.y },
             size,
-            direction,
-            buildingId: 65535,  // 初始无效ID，后续由编辑器分配
-            owner: '',
-            level: 1,
-            price: 1000,
-            rent: [100, 200, 400, 800],
-            mortgaged: false
+            direction: finalDirection,
+            buildingId: buildingData?.buildingId || 65535,  // 初始无效ID，后续由编辑器分配
+            owner: buildingData?.owner || '',
+            level: buildingData?.level || 1,
+            price: buildingData?.price || 1000,
+            rent: buildingData?.rent || [100, 200, 400, 800],
+            mortgaged: buildingData?.mortgaged || false
         };
 
         // 注册建筑信息
@@ -113,7 +121,7 @@ export class BuildingManager {
             blockId,
             gridPos,
             size,
-            direction,
+            finalDirection,
             buildingInfo
         );
 
@@ -121,15 +129,22 @@ export class BuildingManager {
             this._buildings.set(key, paperActor);
         }
 
-        console.log(`[BuildingManager] Placed ${size}x${size} building at (${gridPos.x}, ${gridPos.y}), direction: ${direction}`);
+        console.log(`[BuildingManager] Placed ${size}x${size} building at (${gridPos.x}, ${gridPos.y}), direction: ${finalDirection}`);
     }
 
     /**
      * 放置2x2建筑
      * @param blockId 方块ID
      * @param gridPos 网格位置（左下角）
+     * @param direction 可选的朝向（0-3），如果不提供则自动计算
+     * @param buildingData 可选的建筑数据（用于恢复保存的建筑）
      */
-    private async place2x2Building(blockId: string, gridPos: Vec2): Promise<void> {
+    private async place2x2Building(
+        blockId: string,
+        gridPos: Vec2,
+        direction?: number,
+        buildingData?: Partial<BuildingInfo>
+    ): Promise<void> {
         // 检查四个格子是否都可用
         const positions = [
             gridPos,
@@ -197,18 +212,21 @@ export class BuildingManager {
             (containerNode as any)['propertyPosition'] = gridPos.clone();
         }
 
+        // 确定朝向：如果提供了direction参数则使用，否则自动计算
+        const finalDirection = direction !== undefined ? direction : this.findBestDirection(gridPos, 2);
+
         // 创建建筑信息
         const buildingInfo: BuildingInfo = {
             blockId,
             position: { x: gridPos.x, z: gridPos.y },
             size: 2,
-            direction: this.findBestDirection(gridPos, 2),
-            buildingId: 65535,
-            owner: '',
-            level: 1,
-            price: 2000,
-            rent: [200, 400, 800, 1600],
-            mortgaged: false
+            direction: finalDirection,
+            buildingId: buildingData?.buildingId || 65535,
+            owner: buildingData?.owner || '',
+            level: buildingData?.level || 1,
+            price: buildingData?.price || 2000,
+            rent: buildingData?.rent || [200, 400, 800, 1600],
+            mortgaged: buildingData?.mortgaged || false
         };
 
         // 注册建筑（只在左下角注册一次）
@@ -216,11 +234,11 @@ export class BuildingManager {
         this._buildingRegistry.set(key, buildingInfo);
 
         // 创建PaperActor（放在中心位置）
-        const paperActor = await this.createBuildingPaperActor(
+        const paperActor = this.createBuildingPaperActor(
             blockId,
             gridPos,
             2,
-            buildingInfo.direction!,
+            finalDirection,
             buildingInfo
         );
 
@@ -254,11 +272,14 @@ export class BuildingManager {
                 centerZ += 0.5;
             }
 
-            // 设置位置（Y轴稍微抬高0.1避免Z-fighting）
-            const worldPos = new Vec3(centerX, 0.1, centerZ);
+            // 设置位置（Y轴高度0.5，与旧版本保持一致）
+            const worldPos = new Vec3(centerX, 0.5, centerZ);
+
+            // 获取建筑等级
+            const level = buildingInfo.level || 1;
 
             // 创建PaperActor（使用createBuilding方法）
-            const actorNode = PaperActorFactory.createBuilding(blockId, 0, worldPos);
+            const actorNode = PaperActorFactory.createBuilding(blockId, level, worldPos);
             if (!actorNode) {
                 console.error(`[BuildingManager] Failed to create PaperActor for ${blockId}`);
                 return null;
@@ -267,15 +288,29 @@ export class BuildingManager {
             // 设置父节点
             actorNode.setParent(this._buildingsRoot!);
 
-            // 设置Y轴旋转（朝向）
-            const rotation = Quat.fromEuler(new Quat(), 0, direction * 90, 0);
-            actorNode.setRotation(rotation);
-
-            // 获取PaperActor组件并设置数据
+            // 设置朝向（使用PaperActor的setDirection方法）
             const paperActor = actorNode.getComponent(PaperActor);
             if (paperActor) {
+                paperActor.setDirection(direction);
                 (paperActor as any).buildingInfo = buildingInfo;
             }
+
+            // 注册到_buildings（2x2建筑需要在所有4个格子都注册）
+            const key = `${gridPos.x}_${gridPos.y}`;
+            if (size === 2) {
+                // 2x2建筑：所有4个格子都指向同一个PaperActor
+                for (let dx = 0; dx < 2; dx++) {
+                    for (let dz = 0; dz < 2; dz++) {
+                        const occupiedKey = `${gridPos.x + dx}_${gridPos.y + dz}`;
+                        this._buildings.set(occupiedKey, actorNode);
+                    }
+                }
+            } else {
+                // 1x1建筑：只注册一个格子
+                this._buildings.set(key, actorNode);
+            }
+
+            console.log(`[BuildingManager] Created PaperActor for ${blockId} at (${worldPos.x}, ${worldPos.y}, ${worldPos.z}) with direction ${direction}`);
 
             return actorNode;
 
@@ -354,12 +389,14 @@ export class BuildingManager {
         const newDirection = ((buildingInfo.direction || 0) + 1) % 4;
         buildingInfo.direction = newDirection;
 
-        // 更新PaperActor的旋转
+        // 更新PaperActor的朝向（使用setDirection方法）
         const key = `${buildingInfo.position.x}_${buildingInfo.position.z}`;
         const actorNode = this._buildings.get(key);
         if (actorNode) {
-            const rotation = Quat.fromEuler(new Quat(), 0, newDirection * 90, 0);
-            actorNode.setRotation(rotation);
+            const paperActor = actorNode.getComponent(PaperActor);
+            if (paperActor) {
+                paperActor.setDirection(newDirection);
+            }
         }
 
         console.log(`[BuildingManager] Building direction changed to ${newDirection} at (${buildingInfo.position.x}, ${buildingInfo.position.z})`);

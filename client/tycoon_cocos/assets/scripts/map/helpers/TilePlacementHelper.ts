@@ -7,7 +7,7 @@
  * @version 1.0.0
  */
 
-import { Node, Vec2, Vec3 } from 'cc';
+import { Node, Vec2 } from 'cc';
 import { MapTile } from '../core/MapTile';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
 import { getWeb3BlockByBlockId, isWeb3Tile } from '../../voxel/Web3BlockTypes';
@@ -61,9 +61,7 @@ export class TilePlacementHelper {
         const tileNode = new Node(`Tile_${gridPos.x}_${gridPos.y}`);
         tileNode.setParent(this._tilesContainer!);
 
-        // 设置位置
-        const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
-        tileNode.setPosition(worldPos);
+        // 位置由 MapTile.initialize 负责（会对齐到格子中心），这里无需预设
 
         // 添加MapTile组件并初始化
         const mapTile = tileNode.addComponent(MapTile);

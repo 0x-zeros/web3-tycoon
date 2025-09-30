@@ -72,9 +72,7 @@ export class ObjectPlacementHelper {
         const objectNode = new Node(`Object_${gridPos.x}_${gridPos.y}`);
         objectNode.setParent(this._objectsContainer!);
 
-        // 设置位置
-        const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
-        objectNode.setPosition(worldPos);
+        // 位置由 MapObject.initialize 负责（会对齐到格子中心），这里无需预设
 
         // 添加MapObject组件并初始化
         const mapObject = objectNode.addComponent(MapObject);
@@ -117,7 +115,8 @@ export class ObjectPlacementHelper {
             return;
         }
 
-        const worldPos = new Vec3(gridPos.x, 0, gridPos.y);
+        // 装饰物放置在格子中心，便于与tile对齐
+        const worldPos = new Vec3(gridPos.x + 0.5, 0, gridPos.y + 0.5);
         const decorKey = `decor_${gridPos.x}_${gridPos.y}`;
 
         // 使用 createBlockNode 创建装饰物节点

@@ -55,6 +55,22 @@ export const EventTypes = {
         NpcSpawned: "map_npc_spawned"
     },
 
+    /** 编辑器相关事件 */
+    Editor: {
+        /** 分配所有ID */
+        AssignIds: "editor_assign_ids",
+        /** 显示ID标签 */
+        ShowIds: "editor_show_ids",
+        /** 隐藏ID标签 */
+        HideIds: "editor_hide_ids",
+        /** 保存地图 */
+        Save: "editor_save",
+        /** 导出地图JSON */
+        Export: "editor_export",
+        /** 编辑器状态变化 */
+        StateChanged: "editor_state_changed"
+    },
+
     /** 游戏逻辑事件 */
     Game: {
         /** 玩家死亡 */

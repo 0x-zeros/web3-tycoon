@@ -118,6 +118,13 @@ export class GameMap extends Component {
         // 获取体素系统
         this._voxelSystem = VoxelSystem.getInstance();
 
+        // 保障辅助模块已创建（避免 onLoad 尚未触发时为 undefined）
+        if (!this._tileHelper) this._tileHelper = new TilePlacementHelper();
+        if (!this._buildingManager) this._buildingManager = new BuildingManager();
+        if (!this._objectHelper) this._objectHelper = new ObjectPlacementHelper();
+        if (!this._dataLoader) this._dataLoader = new MapDataLoader();
+        if (!this._pathfinding) this._pathfinding = new MapPathfinding();
+
         // 初始化辅助模块
         this.initializeHelpers();
 

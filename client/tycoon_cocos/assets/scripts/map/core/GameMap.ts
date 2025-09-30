@@ -1885,11 +1885,9 @@ export class GameMap extends Component {
                 tiles[1]?.getTileId() || 65535
             ];
 
-            // tile保存建筑ID并替换blockId
+            // tile保存建筑ID
             for (const tile of tiles) {
                 tile.setBuildingId(buildingInfo.buildingId!);
-                // 替换为property_tile类型
-                this.replaceTileBlockId(tile, 'web3:property_tile');
             }
         }
 
@@ -1960,24 +1958,6 @@ export class GameMap extends Component {
         }
 
         return tiles;
-    }
-
-    /**
-     * 替换tile的blockId
-     */
-    private replaceTileBlockId(tile: MapTile, newBlockId: string): void {
-        // 直接修改tile的blockId和typeId
-        const newBlockInfo = getWeb3BlockByBlockId(newBlockId);
-        if (!newBlockInfo) {
-            console.error(`[GameMap] Unknown block ID: ${newBlockId}`);
-            return;
-        }
-
-        // 使用反射或直接访问私有字段（TypeScript运行时可以访问）
-        (tile as any)._blockId = newBlockId;
-        (tile as any)._typeId = newBlockInfo.typeId;
-
-        console.log(`[GameMap] Replaced tile at (${tile.getGridPosition().x}, ${tile.getGridPosition().y}) with ${newBlockId}`);
     }
 
     /**

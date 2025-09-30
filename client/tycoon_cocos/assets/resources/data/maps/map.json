@@ -3,7 +3,7 @@
   "mapName": "经典地图",
   "version": "1.0.0",
   "createTime": 1759116045302,
-  "updateTime": 1759145125139,
+  "updateTime": 1759246914576,
   "gameMode": "edit",
   "tiles": [
     {
@@ -12,6 +12,10 @@
       "position": {
         "x": -2,
         "z": -10
+      },
+      "data": {
+        "tileId": 98,
+        "buildingId": 1
       }
     },
     {
@@ -20,6 +24,10 @@
       "position": {
         "x": -1,
         "z": -10
+      },
+      "data": {
+        "tileId": 97,
+        "buildingId": 2
       }
     },
     {
@@ -28,6 +36,10 @@
       "position": {
         "x": 0,
         "z": -10
+      },
+      "data": {
+        "tileId": 96,
+        "buildingId": 3
       }
     },
     {
@@ -36,6 +48,10 @@
       "position": {
         "x": 1,
         "z": -10
+      },
+      "data": {
+        "tileId": 95,
+        "buildingId": 4
       }
     },
     {
@@ -44,6 +60,10 @@
       "position": {
         "x": 3,
         "z": -10
+      },
+      "data": {
+        "tileId": 93,
+        "buildingId": 5
       }
     },
     {
@@ -52,6 +72,10 @@
       "position": {
         "x": 3,
         "z": -8
+      },
+      "data": {
+        "tileId": 91,
+        "buildingId": 9
       }
     },
     {
@@ -60,6 +84,10 @@
       "position": {
         "x": 3,
         "z": -9
+      },
+      "data": {
+        "tileId": 92,
+        "buildingId": 6
       }
     },
     {
@@ -68,6 +96,10 @@
       "position": {
         "x": 5,
         "z": -6
+      },
+      "data": {
+        "tileId": 69,
+        "buildingId": 16
       }
     },
     {
@@ -76,6 +108,10 @@
       "position": {
         "x": 5,
         "z": -5
+      },
+      "data": {
+        "tileId": 70,
+        "buildingId": 18
       }
     },
     {
@@ -84,6 +120,10 @@
       "position": {
         "x": 5,
         "z": -4
+      },
+      "data": {
+        "tileId": 71,
+        "buildingId": 21
       }
     },
     {
@@ -92,6 +132,10 @@
       "position": {
         "x": 5,
         "z": -1
+      },
+      "data": {
+        "tileId": 74,
+        "buildingId": 27
       }
     },
     {
@@ -100,6 +144,10 @@
       "position": {
         "x": 5,
         "z": 0
+      },
+      "data": {
+        "tileId": 75,
+        "buildingId": 31
       }
     },
     {
@@ -108,6 +156,10 @@
       "position": {
         "x": 5,
         "z": 1
+      },
+      "data": {
+        "tileId": 76,
+        "buildingId": 38
       }
     },
     {
@@ -116,6 +168,10 @@
       "position": {
         "x": 6,
         "z": -7
+      },
+      "data": {
+        "tileId": 67,
+        "buildingId": 10
       }
     },
     {
@@ -124,6 +180,10 @@
       "position": {
         "x": 7,
         "z": -7
+      },
+      "data": {
+        "tileId": 66,
+        "buildingId": 7
       }
     },
     {
@@ -132,6 +192,10 @@
       "position": {
         "x": 8,
         "z": -7
+      },
+      "data": {
+        "tileId": 65,
+        "buildingId": 7
       }
     },
     {
@@ -140,6 +204,10 @@
       "position": {
         "x": 11,
         "z": -7
+      },
+      "data": {
+        "tileId": 62,
+        "buildingId": 11
       }
     },
     {
@@ -148,6 +216,10 @@
       "position": {
         "x": 12,
         "z": -7
+      },
+      "data": {
+        "tileId": 61,
+        "buildingId": 12
       }
     },
     {
@@ -156,6 +228,10 @@
       "position": {
         "x": 13,
         "z": -7
+      },
+      "data": {
+        "tileId": 60,
+        "buildingId": 13
       }
     },
     {
@@ -164,6 +240,10 @@
       "position": {
         "x": 14,
         "z": -7
+      },
+      "data": {
+        "tileId": 59,
+        "buildingId": 14
       }
     },
     {
@@ -172,6 +252,10 @@
       "position": {
         "x": 14,
         "z": -5
+      },
+      "data": {
+        "tileId": 55,
+        "buildingId": 19
       }
     },
     {
@@ -180,6 +264,10 @@
       "position": {
         "x": 14,
         "z": -4
+      },
+      "data": {
+        "tileId": 54,
+        "buildingId": 22
       }
     },
     {
@@ -188,6 +276,10 @@
       "position": {
         "x": 14,
         "z": -3
+      },
+      "data": {
+        "tileId": 53,
+        "buildingId": 24
       }
     },
     {
@@ -196,6 +288,10 @@
       "position": {
         "x": 14,
         "z": -2
+      },
+      "data": {
+        "tileId": 52,
+        "buildingId": 25
       }
     },
     {
@@ -204,6 +300,10 @@
       "position": {
         "x": 13,
         "z": -2
+      },
+      "data": {
+        "tileId": 51,
+        "buildingId": 65535
       }
     },
     {
@@ -212,6 +312,10 @@
       "position": {
         "x": 12,
         "z": -1
+      },
+      "data": {
+        "tileId": 49,
+        "buildingId": 28
       }
     },
     {
@@ -220,6 +324,10 @@
       "position": {
         "x": 12,
         "z": -2
+      },
+      "data": {
+        "tileId": 50,
+        "buildingId": 65535
       }
     },
     {
@@ -228,6 +336,10 @@
       "position": {
         "x": 12,
         "z": 0
+      },
+      "data": {
+        "tileId": 48,
+        "buildingId": 32
       }
     },
     {
@@ -236,6 +348,10 @@
       "position": {
         "x": 12,
         "z": 1
+      },
+      "data": {
+        "tileId": 47,
+        "buildingId": 43
       }
     },
     {
@@ -244,6 +360,10 @@
       "position": {
         "x": 10,
         "z": 2
+      },
+      "data": {
+        "tileId": 82,
+        "buildingId": 42
       }
     },
     {
@@ -252,6 +372,10 @@
       "position": {
         "x": 9,
         "z": 2
+      },
+      "data": {
+        "tileId": 81,
+        "buildingId": 41
       }
     },
     {
@@ -260,6 +384,10 @@
       "position": {
         "x": 8,
         "z": 2
+      },
+      "data": {
+        "tileId": 80,
+        "buildingId": 40
       }
     },
     {
@@ -268,6 +396,10 @@
       "position": {
         "x": 7,
         "z": 2
+      },
+      "data": {
+        "tileId": 79,
+        "buildingId": 39
       }
     },
     {
@@ -276,6 +408,10 @@
       "position": {
         "x": 11,
         "z": 3
+      },
+      "data": {
+        "tileId": 44,
+        "buildingId": 45
       }
     },
     {
@@ -284,6 +420,10 @@
       "position": {
         "x": 11,
         "z": 4
+      },
+      "data": {
+        "tileId": 43,
+        "buildingId": 47
       }
     },
     {
@@ -292,6 +432,10 @@
       "position": {
         "x": 11,
         "z": 5
+      },
+      "data": {
+        "tileId": 42,
+        "buildingId": 49
       }
     },
     {
@@ -300,6 +444,10 @@
       "position": {
         "x": 11,
         "z": 6
+      },
+      "data": {
+        "tileId": 41,
+        "buildingId": 51
       }
     },
     {
@@ -308,6 +456,10 @@
       "position": {
         "x": 11,
         "z": 7
+      },
+      "data": {
+        "tileId": 40,
+        "buildingId": 53
       }
     },
     {
@@ -316,6 +468,10 @@
       "position": {
         "x": 8,
         "z": 8
+      },
+      "data": {
+        "tileId": 36,
+        "buildingId": 55
       }
     },
     {
@@ -324,6 +480,10 @@
       "position": {
         "x": 8,
         "z": 9
+      },
+      "data": {
+        "tileId": 35,
+        "buildingId": 57
       }
     },
     {
@@ -332,6 +492,10 @@
       "position": {
         "x": 6,
         "z": 12
+      },
+      "data": {
+        "tileId": 30,
+        "buildingId": 63
       }
     },
     {
@@ -340,6 +504,10 @@
       "position": {
         "x": 6,
         "z": 13
+      },
+      "data": {
+        "tileId": 29,
+        "buildingId": 66
       }
     },
     {
@@ -348,6 +516,10 @@
       "position": {
         "x": 2,
         "z": 13
+      },
+      "data": {
+        "tileId": 21,
+        "buildingId": 64
       }
     },
     {
@@ -356,6 +528,10 @@
       "position": {
         "x": 2,
         "z": 12
+      },
+      "data": {
+        "tileId": 20,
+        "buildingId": 62
       }
     },
     {
@@ -364,6 +540,10 @@
       "position": {
         "x": 2,
         "z": 11
+      },
+      "data": {
+        "tileId": 19,
+        "buildingId": 60
       }
     },
     {
@@ -372,6 +552,10 @@
       "position": {
         "x": 2,
         "z": 10
+      },
+      "data": {
+        "tileId": 18,
+        "buildingId": 58
       }
     },
     {
@@ -380,6 +564,10 @@
       "position": {
         "x": -2,
         "z": 5
+      },
+      "data": {
+        "tileId": 9,
+        "buildingId": 48
       }
     },
     {
@@ -388,6 +576,10 @@
       "position": {
         "x": -2,
         "z": 4
+      },
+      "data": {
+        "tileId": 8,
+        "buildingId": 46
       }
     },
     {
@@ -396,6 +588,10 @@
       "position": {
         "x": -2,
         "z": 3
+      },
+      "data": {
+        "tileId": 7,
+        "buildingId": 44
       }
     },
     {
@@ -404,6 +600,10 @@
       "position": {
         "x": 3,
         "z": 2
+      },
+      "data": {
+        "tileId": 84,
+        "buildingId": 30
       }
     },
     {
@@ -412,6 +612,10 @@
       "position": {
         "x": 2,
         "z": 2
+      },
+      "data": {
+        "tileId": 85,
+        "buildingId": 65535
       }
     },
     {
@@ -420,6 +624,10 @@
       "position": {
         "x": 1,
         "z": 2
+      },
+      "data": {
+        "tileId": 86,
+        "buildingId": 37
       }
     },
     {
@@ -428,6 +636,10 @@
       "position": {
         "x": 0,
         "z": 2
+      },
+      "data": {
+        "tileId": 87,
+        "buildingId": 36
       }
     },
     {
@@ -436,6 +648,10 @@
       "position": {
         "x": -2,
         "z": 6
+      },
+      "data": {
+        "tileId": 10,
+        "buildingId": 50
       }
     },
     {
@@ -444,6 +660,10 @@
       "position": {
         "x": 1,
         "z": 7
+      },
+      "data": {
+        "tileId": 14,
+        "buildingId": 52
       }
     },
     {
@@ -452,6 +672,10 @@
       "position": {
         "x": 1,
         "z": 8
+      },
+      "data": {
+        "tileId": 15,
+        "buildingId": 54
       }
     },
     {
@@ -460,6 +684,10 @@
       "position": {
         "x": 1,
         "z": 9
+      },
+      "data": {
+        "tileId": 16,
+        "buildingId": 56
       }
     },
     {
@@ -468,6 +696,10 @@
       "position": {
         "x": 8,
         "z": 10
+      },
+      "data": {
+        "tileId": 34,
+        "buildingId": 59
       }
     },
     {
@@ -476,6 +708,10 @@
       "position": {
         "x": 6,
         "z": 14
+      },
+      "data": {
+        "tileId": 28,
+        "buildingId": 67
       }
     },
     {
@@ -484,6 +720,10 @@
       "position": {
         "x": 4,
         "z": 15
+      },
+      "data": {
+        "tileId": 25,
+        "buildingId": 65
       }
     },
     {
@@ -492,6 +732,10 @@
       "position": {
         "x": -6,
         "z": 0
+      },
+      "data": {
+        "tileId": 112,
+        "buildingId": 29
       }
     },
     {
@@ -500,6 +744,10 @@
       "position": {
         "x": -6,
         "z": -1
+      },
+      "data": {
+        "tileId": 111,
+        "buildingId": 26
       }
     },
     {
@@ -508,6 +756,10 @@
       "position": {
         "x": -3,
         "z": 2
+      },
+      "data": {
+        "tileId": 5,
+        "buildingId": 35
       }
     },
     {
@@ -516,6 +768,10 @@
       "position": {
         "x": -4,
         "z": 2
+      },
+      "data": {
+        "tileId": 4,
+        "buildingId": 34
       }
     },
     {
@@ -524,6 +780,10 @@
       "position": {
         "x": -5,
         "z": 2
+      },
+      "data": {
+        "tileId": 3,
+        "buildingId": 33
       }
     },
     {
@@ -532,6 +792,10 @@
       "position": {
         "x": -7,
         "z": 2
+      },
+      "data": {
+        "tileId": 1,
+        "buildingId": 65535
       }
     },
     {
@@ -540,6 +804,10 @@
       "position": {
         "x": -8,
         "z": 2
+      },
+      "data": {
+        "tileId": 0,
+        "buildingId": 65535
       }
     },
     {
@@ -548,6 +816,10 @@
       "position": {
         "x": -6,
         "z": -5
+      },
+      "data": {
+        "tileId": 107,
+        "buildingId": 17
       }
     },
     {
@@ -556,6 +828,10 @@
       "position": {
         "x": -5,
         "z": -6
+      },
+      "data": {
+        "tileId": 105,
+        "buildingId": 65535
       }
     },
     {
@@ -564,6 +840,10 @@
       "position": {
         "x": -4,
         "z": -6
+      },
+      "data": {
+        "tileId": 104,
+        "buildingId": 15
       }
     },
     {
@@ -572,6 +852,10 @@
       "position": {
         "x": -4,
         "z": -7
+      },
+      "data": {
+        "tileId": 103,
+        "buildingId": 8
       }
     },
     {
@@ -580,6 +864,10 @@
       "position": {
         "x": -4,
         "z": -8
+      },
+      "data": {
+        "tileId": 102,
+        "buildingId": 8
       }
     },
     {
@@ -588,6 +876,10 @@
       "position": {
         "x": -5,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -596,6 +888,10 @@
       "position": {
         "x": -4,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -604,6 +900,10 @@
       "position": {
         "x": -3,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -612,6 +912,10 @@
       "position": {
         "x": -5,
         "z": 0
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -620,6 +924,10 @@
       "position": {
         "x": -5,
         "z": -1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -628,6 +936,10 @@
       "position": {
         "x": -5,
         "z": -5
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -636,6 +948,10 @@
       "position": {
         "x": -5,
         "z": -4
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -644,6 +960,10 @@
       "position": {
         "x": -5,
         "z": -3
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -652,6 +972,10 @@
       "position": {
         "x": 2,
         "z": 8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -660,6 +984,10 @@
       "position": {
         "x": 2,
         "z": 9
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -668,6 +996,10 @@
       "position": {
         "x": 3,
         "z": 10
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -676,6 +1008,10 @@
       "position": {
         "x": 3,
         "z": 11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -684,6 +1020,10 @@
       "position": {
         "x": 3,
         "z": 12
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -692,6 +1032,10 @@
       "position": {
         "x": 3,
         "z": 13
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -700,6 +1044,10 @@
       "position": {
         "x": 7,
         "z": 12
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -708,6 +1056,10 @@
       "position": {
         "x": 7,
         "z": 13
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -716,6 +1068,10 @@
       "position": {
         "x": 7,
         "z": 14
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -724,6 +1080,10 @@
       "position": {
         "x": 9,
         "z": 8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -732,6 +1092,10 @@
       "position": {
         "x": 9,
         "z": 9
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -740,6 +1104,10 @@
       "position": {
         "x": 9,
         "z": 10
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -748,6 +1116,10 @@
       "position": {
         "x": 9,
         "z": 11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -756,6 +1128,10 @@
       "position": {
         "x": 13,
         "z": -1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -764,6 +1140,10 @@
       "position": {
         "x": 13,
         "z": 0
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -772,6 +1152,10 @@
       "position": {
         "x": 15,
         "z": -2
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -780,6 +1164,10 @@
       "position": {
         "x": 15,
         "z": -3
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -788,6 +1176,10 @@
       "position": {
         "x": 15,
         "z": -4
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -796,6 +1188,10 @@
       "position": {
         "x": 15,
         "z": -5
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -804,6 +1200,10 @@
       "position": {
         "x": 13,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -812,6 +1212,10 @@
       "position": {
         "x": 12,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -820,6 +1224,10 @@
       "position": {
         "x": 11,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -828,6 +1236,10 @@
       "position": {
         "x": 6,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -836,6 +1248,10 @@
       "position": {
         "x": 4,
         "z": -10
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -844,6 +1260,10 @@
       "position": {
         "x": 4,
         "z": -9
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -852,6 +1272,10 @@
       "position": {
         "x": 4,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -860,6 +1284,10 @@
       "position": {
         "x": -1,
         "z": -11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -868,6 +1296,10 @@
       "position": {
         "x": -2,
         "z": -11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -876,6 +1308,10 @@
       "position": {
         "x": 0,
         "z": -11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -884,6 +1320,10 @@
       "position": {
         "x": 1,
         "z": -11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -892,6 +1332,10 @@
       "position": {
         "x": -3,
         "z": -11
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -900,6 +1344,10 @@
       "position": {
         "x": -3,
         "z": -6
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -908,6 +1356,10 @@
       "position": {
         "x": -3,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -916,6 +1368,10 @@
       "position": {
         "x": -3,
         "z": -7
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -924,6 +1380,10 @@
       "position": {
         "x": -2,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -932,6 +1392,10 @@
       "position": {
         "x": -2,
         "z": -7
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -940,6 +1404,10 @@
       "position": {
         "x": 0,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -948,6 +1416,10 @@
       "position": {
         "x": 1,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -956,6 +1428,10 @@
       "position": {
         "x": 3,
         "z": 0
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -964,6 +1440,10 @@
       "position": {
         "x": 3,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -972,6 +1452,10 @@
       "position": {
         "x": 4,
         "z": 0
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -980,6 +1464,10 @@
       "position": {
         "x": 4,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -988,6 +1476,10 @@
       "position": {
         "x": 6,
         "z": -1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -996,6 +1488,10 @@
       "position": {
         "x": 6,
         "z": 0
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1004,6 +1500,10 @@
       "position": {
         "x": 6,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1012,6 +1512,10 @@
       "position": {
         "x": 7,
         "z": -9
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1020,6 +1524,10 @@
       "position": {
         "x": 7,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1028,6 +1536,10 @@
       "position": {
         "x": 8,
         "z": -9
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1036,6 +1548,10 @@
       "position": {
         "x": 8,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1044,6 +1560,10 @@
       "position": {
         "x": 14,
         "z": -8
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1052,6 +1572,10 @@
       "position": {
         "x": 15,
         "z": -6
+      },
+      "data": {
+        "tileId": 57,
+        "buildingId": 65535
       }
     },
     {
@@ -1060,6 +1584,10 @@
       "position": {
         "x": 16,
         "z": -6
+      },
+      "data": {
+        "tileId": 58,
+        "buildingId": 65535
       }
     },
     {
@@ -1068,6 +1596,10 @@
       "position": {
         "x": 13,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1076,6 +1608,10 @@
       "position": {
         "x": 13,
         "z": 2
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1084,6 +1620,10 @@
       "position": {
         "x": 14,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1092,6 +1632,10 @@
       "position": {
         "x": 14,
         "z": 2
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1100,6 +1644,10 @@
       "position": {
         "x": 3,
         "z": 14
+      },
+      "data": {
+        "tileId": 23,
+        "buildingId": 65535
       }
     },
     {
@@ -1108,6 +1656,10 @@
       "position": {
         "x": -6,
         "z": 2
+      },
+      "data": {
+        "tileId": 2,
+        "buildingId": 65535
       }
     },
     {
@@ -1116,6 +1668,10 @@
       "position": {
         "x": -6,
         "z": -4
+      },
+      "data": {
+        "tileId": 108,
+        "buildingId": 20
       }
     },
     {
@@ -1124,6 +1680,10 @@
       "position": {
         "x": -6,
         "z": -3
+      },
+      "data": {
+        "tileId": 109,
+        "buildingId": 23
       }
     },
     {
@@ -1132,6 +1692,10 @@
       "position": {
         "x": -6,
         "z": -2
+      },
+      "data": {
+        "tileId": 110,
+        "buildingId": 65535
       }
     },
     {
@@ -1140,6 +1704,10 @@
       "position": {
         "x": 3,
         "z": -7
+      },
+      "data": {
+        "tileId": 90,
+        "buildingId": 65535
       }
     },
     {
@@ -1148,6 +1716,10 @@
       "position": {
         "x": 2,
         "z": 14
+      },
+      "data": {
+        "tileId": 22,
+        "buildingId": 65535
       }
     },
     {
@@ -1156,6 +1728,10 @@
       "position": {
         "x": 11,
         "z": 2
+      },
+      "data": {
+        "tileId": 45,
+        "buildingId": 65535
       }
     },
     {
@@ -1164,6 +1740,10 @@
       "position": {
         "x": 12,
         "z": 2
+      },
+      "data": {
+        "tileId": 46,
+        "buildingId": 43
       }
     },
     {
@@ -1172,6 +1752,10 @@
       "position": {
         "x": 7,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1180,6 +1764,10 @@
       "position": {
         "x": 8,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1188,6 +1776,10 @@
       "position": {
         "x": 9,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1196,6 +1788,10 @@
       "position": {
         "x": 10,
         "z": 1
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1204,6 +1800,10 @@
       "position": {
         "x": 5,
         "z": 2
+      },
+      "data": {
+        "tileId": 77,
+        "buildingId": 65535
       }
     },
     {
@@ -1212,6 +1812,10 @@
       "position": {
         "x": 4,
         "z": 2
+      },
+      "data": {
+        "tileId": 83,
+        "buildingId": 30
       }
     },
     {
@@ -1220,6 +1824,10 @@
       "position": {
         "x": 6,
         "z": 2
+      },
+      "data": {
+        "tileId": 78,
+        "buildingId": 65535
       }
     },
     {
@@ -1228,6 +1836,10 @@
       "position": {
         "x": 5,
         "z": -2
+      },
+      "data": {
+        "tileId": 73,
+        "buildingId": 65535
       }
     },
     {
@@ -1236,6 +1848,10 @@
       "position": {
         "x": 5,
         "z": -3
+      },
+      "data": {
+        "tileId": 72,
+        "buildingId": 65535
       }
     },
     {
@@ -1244,6 +1860,10 @@
       "position": {
         "x": 5,
         "z": -7
+      },
+      "data": {
+        "tileId": 68,
+        "buildingId": 65535
       }
     },
     {
@@ -1252,6 +1872,10 @@
       "position": {
         "x": 4,
         "z": -7
+      },
+      "data": {
+        "tileId": 89,
+        "buildingId": 65535
       }
     },
     {
@@ -1260,6 +1884,10 @@
       "position": {
         "x": 2,
         "z": -10
+      },
+      "data": {
+        "tileId": 94,
+        "buildingId": 65535
       }
     },
     {
@@ -1268,6 +1896,10 @@
       "position": {
         "x": -4,
         "z": -9
+      },
+      "data": {
+        "tileId": 101,
+        "buildingId": 65535
       }
     },
     {
@@ -1276,6 +1908,10 @@
       "position": {
         "x": -3,
         "z": -9
+      },
+      "data": {
+        "tileId": 100,
+        "buildingId": 65535
       }
     },
     {
@@ -1284,6 +1920,10 @@
       "position": {
         "x": -3,
         "z": -10
+      },
+      "data": {
+        "tileId": 99,
+        "buildingId": 0
       }
     },
     {
@@ -1292,6 +1932,10 @@
       "position": {
         "x": -6,
         "z": -6
+      },
+      "data": {
+        "tileId": 106,
+        "buildingId": 65535
       }
     },
     {
@@ -1300,6 +1944,10 @@
       "position": {
         "x": -6,
         "z": 1
+      },
+      "data": {
+        "tileId": 113,
+        "buildingId": 65535
       }
     },
     {
@@ -1308,6 +1956,10 @@
       "position": {
         "x": -2,
         "z": 2
+      },
+      "data": {
+        "tileId": 6,
+        "buildingId": 65535
       }
     },
     {
@@ -1316,6 +1968,10 @@
       "position": {
         "x": -2,
         "z": 7
+      },
+      "data": {
+        "tileId": 11,
+        "buildingId": 65535
       }
     },
     {
@@ -1324,6 +1980,10 @@
       "position": {
         "x": -1,
         "z": 7
+      },
+      "data": {
+        "tileId": 12,
+        "buildingId": 65535
       }
     },
     {
@@ -1332,6 +1992,10 @@
       "position": {
         "x": 0,
         "z": 7
+      },
+      "data": {
+        "tileId": 13,
+        "buildingId": 65535
       }
     },
     {
@@ -1340,6 +2004,10 @@
       "position": {
         "x": 1,
         "z": 10
+      },
+      "data": {
+        "tileId": 17,
+        "buildingId": 65535
       }
     },
     {
@@ -1348,6 +2016,10 @@
       "position": {
         "x": 3,
         "z": 15
+      },
+      "data": {
+        "tileId": 24,
+        "buildingId": 65535
       }
     },
     {
@@ -1356,6 +2028,10 @@
       "position": {
         "x": 6,
         "z": 15
+      },
+      "data": {
+        "tileId": 27,
+        "buildingId": 65535
       }
     },
     {
@@ -1364,6 +2040,10 @@
       "position": {
         "x": 7,
         "z": 11
+      },
+      "data": {
+        "tileId": 32,
+        "buildingId": 65535
       }
     },
     {
@@ -1372,6 +2052,10 @@
       "position": {
         "x": 8,
         "z": 11
+      },
+      "data": {
+        "tileId": 33,
+        "buildingId": 61
       }
     },
     {
@@ -1380,6 +2064,10 @@
       "position": {
         "x": 6,
         "z": 11
+      },
+      "data": {
+        "tileId": 31,
+        "buildingId": 65535
       }
     },
     {
@@ -1388,6 +2076,10 @@
       "position": {
         "x": 8,
         "z": 7
+      },
+      "data": {
+        "tileId": 37,
+        "buildingId": 65535
       }
     },
     {
@@ -1396,6 +2088,10 @@
       "position": {
         "x": 9,
         "z": 7
+      },
+      "data": {
+        "tileId": 38,
+        "buildingId": 65535
       }
     },
     {
@@ -1404,6 +2100,10 @@
       "position": {
         "x": 10,
         "z": 7
+      },
+      "data": {
+        "tileId": 39,
+        "buildingId": 65535
       }
     },
     {
@@ -1412,6 +2112,10 @@
       "position": {
         "x": 14,
         "z": -6
+      },
+      "data": {
+        "tileId": 56,
+        "buildingId": 65535
       }
     },
     {
@@ -1420,6 +2124,10 @@
       "position": {
         "x": 10,
         "z": -7
+      },
+      "data": {
+        "tileId": 63,
+        "buildingId": 65535
       }
     },
     {
@@ -1428,6 +2136,10 @@
       "position": {
         "x": 9,
         "z": -7
+      },
+      "data": {
+        "tileId": 64,
+        "buildingId": 65535
       }
     },
     {
@@ -1436,6 +2148,10 @@
       "position": {
         "x": 4,
         "z": 13
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1444,6 +2160,10 @@
       "position": {
         "x": 4,
         "z": 14
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1452,6 +2172,10 @@
       "position": {
         "x": 5,
         "z": 13
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1460,6 +2184,10 @@
       "position": {
         "x": 5,
         "z": 14
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1468,6 +2196,10 @@
       "position": {
         "x": 5,
         "z": 15
+      },
+      "data": {
+        "tileId": 26,
+        "buildingId": 65
       }
     },
     {
@@ -1476,6 +2208,10 @@
       "position": {
         "x": -1,
         "z": 5
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1484,6 +2220,10 @@
       "position": {
         "x": -1,
         "z": 3
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1492,6 +2232,10 @@
       "position": {
         "x": -1,
         "z": 4
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1500,6 +2244,10 @@
       "position": {
         "x": -1,
         "z": 6
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1508,6 +2256,10 @@
       "position": {
         "x": -1,
         "z": 2
+      },
+      "data": {
+        "tileId": 88,
+        "buildingId": 65535
       }
     },
     {
@@ -1516,6 +2268,10 @@
       "position": {
         "x": 2,
         "z": 7
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1524,6 +2280,10 @@
       "position": {
         "x": 12,
         "z": 7
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1532,6 +2292,10 @@
       "position": {
         "x": 12,
         "z": 3
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1540,6 +2304,10 @@
       "position": {
         "x": 12,
         "z": 4
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1548,6 +2316,10 @@
       "position": {
         "x": 12,
         "z": 5
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1556,6 +2328,10 @@
       "position": {
         "x": 12,
         "z": 6
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1564,6 +2340,10 @@
       "position": {
         "x": 6,
         "z": -6
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1572,6 +2352,10 @@
       "position": {
         "x": 6,
         "z": -5
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     },
     {
@@ -1580,17 +2364,14 @@
       "position": {
         "x": 6,
         "z": -4
+      },
+      "data": {
+        "tileId": 65535,
+        "buildingId": 65535
       }
     }
   ],
   "objects": [],
-  "gameRules": {
-    "startingMoney": 10000,
-    "passingBonus": 200,
-    "landingBonus": 400,
-    "maxPlayers": 4,
-    "minPlayers": 2
-  },
   "buildings": [
     {
       "blockId": "web3:building_1x1",
@@ -1600,7 +2381,12 @@
         "x": -5,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 33,
+      "entranceTileIds": [
+        3,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1610,7 +2396,12 @@
         "x": -4,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 34,
+      "entranceTileIds": [
+        4,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1620,7 +2411,12 @@
         "x": -3,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 35,
+      "entranceTileIds": [
+        5,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1630,7 +2426,12 @@
         "x": -5,
         "z": 0
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 29,
+      "entranceTileIds": [
+        112,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1640,7 +2441,12 @@
         "x": -5,
         "z": -1
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 26,
+      "entranceTileIds": [
+        111,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1650,7 +2456,12 @@
         "x": -5,
         "z": -5
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 17,
+      "entranceTileIds": [
+        107,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1660,7 +2471,12 @@
         "x": -5,
         "z": -4
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 20,
+      "entranceTileIds": [
+        108,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1670,7 +2486,12 @@
         "x": -5,
         "z": -3
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 23,
+      "entranceTileIds": [
+        109,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1680,7 +2501,12 @@
         "x": 2,
         "z": 8
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 54,
+      "entranceTileIds": [
+        15,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1690,7 +2516,12 @@
         "x": 2,
         "z": 9
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 56,
+      "entranceTileIds": [
+        16,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1700,7 +2531,12 @@
         "x": 3,
         "z": 10
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 58,
+      "entranceTileIds": [
+        18,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1710,7 +2546,12 @@
         "x": 3,
         "z": 11
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 60,
+      "entranceTileIds": [
+        19,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1720,7 +2561,12 @@
         "x": 3,
         "z": 12
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 62,
+      "entranceTileIds": [
+        20,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1730,7 +2576,12 @@
         "x": 3,
         "z": 13
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 64,
+      "entranceTileIds": [
+        21,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1740,7 +2591,12 @@
         "x": 7,
         "z": 12
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 63,
+      "entranceTileIds": [
+        30,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1750,7 +2606,12 @@
         "x": 7,
         "z": 13
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 66,
+      "entranceTileIds": [
+        29,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1760,7 +2621,12 @@
         "x": 7,
         "z": 14
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 67,
+      "entranceTileIds": [
+        28,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1770,7 +2636,12 @@
         "x": 9,
         "z": 8
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 55,
+      "entranceTileIds": [
+        36,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1780,7 +2651,12 @@
         "x": 9,
         "z": 9
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 57,
+      "entranceTileIds": [
+        35,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1790,7 +2666,12 @@
         "x": 9,
         "z": 10
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 59,
+      "entranceTileIds": [
+        34,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1800,7 +2681,12 @@
         "x": 9,
         "z": 11
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 61,
+      "entranceTileIds": [
+        33,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1810,7 +2696,12 @@
         "x": 13,
         "z": -1
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 28,
+      "entranceTileIds": [
+        49,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1820,7 +2711,12 @@
         "x": 13,
         "z": 0
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 32,
+      "entranceTileIds": [
+        48,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1830,7 +2726,12 @@
         "x": 15,
         "z": -2
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 25,
+      "entranceTileIds": [
+        52,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1840,7 +2741,12 @@
         "x": 15,
         "z": -3
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 24,
+      "entranceTileIds": [
+        53,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1850,7 +2756,12 @@
         "x": 15,
         "z": -4
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 22,
+      "entranceTileIds": [
+        54,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1860,7 +2771,12 @@
         "x": 15,
         "z": -5
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 19,
+      "entranceTileIds": [
+        55,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1870,7 +2786,12 @@
         "x": 13,
         "z": -8
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 13,
+      "entranceTileIds": [
+        60,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1880,7 +2801,12 @@
         "x": 12,
         "z": -8
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 12,
+      "entranceTileIds": [
+        61,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1890,7 +2816,12 @@
         "x": 11,
         "z": -8
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 11,
+      "entranceTileIds": [
+        62,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1900,7 +2831,12 @@
         "x": 6,
         "z": -8
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 10,
+      "entranceTileIds": [
+        67,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1910,7 +2846,12 @@
         "x": 4,
         "z": -10
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 5,
+      "entranceTileIds": [
+        93,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1920,7 +2861,12 @@
         "x": 4,
         "z": -9
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 6,
+      "entranceTileIds": [
+        92,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1930,7 +2876,12 @@
         "x": 4,
         "z": -8
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 9,
+      "entranceTileIds": [
+        91,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1940,7 +2891,12 @@
         "x": -1,
         "z": -11
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 2,
+      "entranceTileIds": [
+        97,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1950,7 +2906,12 @@
         "x": -2,
         "z": -11
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 1,
+      "entranceTileIds": [
+        98,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1960,7 +2921,12 @@
         "x": 0,
         "z": -11
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 3,
+      "entranceTileIds": [
+        96,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1970,7 +2936,12 @@
         "x": 1,
         "z": -11
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 4,
+      "entranceTileIds": [
+        95,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1980,7 +2951,12 @@
         "x": -3,
         "z": -11
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 0,
+      "entranceTileIds": [
+        99,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -1990,7 +2966,12 @@
         "x": -3,
         "z": -6
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 15,
+      "entranceTileIds": [
+        104,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_2x2",
@@ -2000,7 +2981,12 @@
         "x": -3,
         "z": -8
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 8,
+      "entranceTileIds": [
+        102,
+        103
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2010,7 +2996,12 @@
         "x": 0,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 36,
+      "entranceTileIds": [
+        87,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2020,7 +3011,12 @@
         "x": 1,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 37,
+      "entranceTileIds": [
+        86,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_2x2",
@@ -2030,7 +3026,12 @@
         "x": 3,
         "z": 0
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 30,
+      "entranceTileIds": [
+        84,
+        83
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2040,7 +3041,12 @@
         "x": 6,
         "z": -1
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 27,
+      "entranceTileIds": [
+        74,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2050,7 +3056,12 @@
         "x": 6,
         "z": 0
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 31,
+      "entranceTileIds": [
+        75,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2060,7 +3071,12 @@
         "x": 6,
         "z": 1
       },
-      "direction": 0
+      "direction": 3,
+      "buildingId": 38,
+      "entranceTileIds": [
+        76,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_2x2",
@@ -2070,7 +3086,12 @@
         "x": 7,
         "z": -9
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 7,
+      "entranceTileIds": [
+        66,
+        65
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2080,7 +3101,12 @@
         "x": 14,
         "z": -8
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 14,
+      "entranceTileIds": [
+        59,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_2x2",
@@ -2090,7 +3116,12 @@
         "x": 13,
         "z": 1
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 43,
+      "entranceTileIds": [
+        47,
+        46
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2100,7 +3131,12 @@
         "x": 7,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 39,
+      "entranceTileIds": [
+        79,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2110,7 +3146,12 @@
         "x": 8,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 40,
+      "entranceTileIds": [
+        80,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2120,7 +3161,12 @@
         "x": 9,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 41,
+      "entranceTileIds": [
+        81,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2130,7 +3176,12 @@
         "x": 10,
         "z": 1
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 42,
+      "entranceTileIds": [
+        82,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_2x2",
@@ -2140,7 +3191,12 @@
         "x": 4,
         "z": 13
       },
-      "direction": 0
+      "direction": 0,
+      "buildingId": 65,
+      "entranceTileIds": [
+        25,
+        26
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2150,7 +3206,12 @@
         "x": -1,
         "z": 5
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 48,
+      "entranceTileIds": [
+        9,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2160,7 +3221,12 @@
         "x": -1,
         "z": 3
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 44,
+      "entranceTileIds": [
+        7,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2170,7 +3236,12 @@
         "x": -1,
         "z": 4
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 46,
+      "entranceTileIds": [
+        8,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2180,7 +3251,12 @@
         "x": -1,
         "z": 6
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 50,
+      "entranceTileIds": [
+        10,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2190,7 +3266,12 @@
         "x": 2,
         "z": 7
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 52,
+      "entranceTileIds": [
+        14,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2200,7 +3281,12 @@
         "x": 12,
         "z": 7
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 53,
+      "entranceTileIds": [
+        40,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2210,7 +3296,12 @@
         "x": 12,
         "z": 3
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 45,
+      "entranceTileIds": [
+        44,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2220,7 +3311,12 @@
         "x": 12,
         "z": 4
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 47,
+      "entranceTileIds": [
+        43,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2230,7 +3326,12 @@
         "x": 12,
         "z": 5
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 49,
+      "entranceTileIds": [
+        42,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2240,7 +3341,12 @@
         "x": 12,
         "z": 6
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 51,
+      "entranceTileIds": [
+        41,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2250,7 +3356,12 @@
         "x": 6,
         "z": -6
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 16,
+      "entranceTileIds": [
+        69,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2260,7 +3371,12 @@
         "x": 6,
         "z": -5
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 18,
+      "entranceTileIds": [
+        70,
+        65535
+      ]
     },
     {
       "blockId": "web3:building_1x1",
@@ -2270,7 +3386,19 @@
         "x": 6,
         "z": -4
       },
-      "direction": 3
+      "direction": 3,
+      "buildingId": 21,
+      "entranceTileIds": [
+        71,
+        65535
+      ]
     }
-  ]
+  ],
+  "gameRules": {
+    "startingMoney": 10000,
+    "passingBonus": 200,
+    "landingBonus": 400,
+    "maxPlayers": 4,
+    "minPlayers": 2
+  }
 }

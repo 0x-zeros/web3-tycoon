@@ -5,7 +5,7 @@ CCEffect %{
     - vert: vert
       frag: frag
       rasterizerState:
-        cullMode: none
+        cullMode: back
       depthStencilState:
         depthTest: true
         depthWrite: true
@@ -21,7 +21,7 @@ CCEffect %{
     - vert: vert
       frag: frag
       rasterizerState:
-        cullMode: none            # 双面渲染，避免因顶点顺序差异被剔除
+        cullMode: back            # 双面渲染，避免因顶点顺序差异被剔除
       depthStencilState:
         depthTest: true
         depthWrite: false         # 不写深度，避免覆盖地块

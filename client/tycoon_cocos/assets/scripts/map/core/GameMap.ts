@@ -1313,17 +1313,23 @@ export class GameMap extends Component {
 
     /**
      * 找到最佳朝向（朝向有路径tile的方向）
+     *
+     * Cocos坐标系特性：
+     * - 左手坐标系，Y轴旋转从上方俯视是逆时针CCW
+     * - 旋转角度: direction * 90° (0°→90°→180°→270°为CCW)
+     * - 方向定义: 0=南→1=东→2=北→3=西 (CCW逆时针)
+     *
      * @param gridPos 地产位置
      * @param size 地产大小
      * @returns 朝向（0-3），默认返回0
      */
     private findBestDirection(gridPos: Vec2, size: 1 | 2): number {
-        // 四个方向：0=南(+z), 1=西(-x), 2=北(-z), 3=东(+x)
+        // 四个方向CCW逆时针：南→东→北→西
         const directions = [
-            { dx: 0, dz: 1, dir: 0 },   // 南 (+z)
-            { dx: 1, dz: 0, dir: 1 },   // 西 (+x) - 修正：朝向+x实际是西
-            { dx: 0, dz: -1, dir: 2 },  // 北 (-z)
-            { dx: -1, dz: 0, dir: 3 }   // 东 (-x) - 修正：朝向-x实际是东
+            { dx: 0, dz: 1, dir: 0 },   // 0=南(+z) - 0°
+            { dx: 1, dz: 0, dir: 1 },   // 1=东(+x) - 90°
+            { dx: 0, dz: -1, dir: 2 },  // 2=北(-z) - 180°
+            { dx: -1, dz: 0, dir: 3 }   // 3=西(-x) - 270°
         ];
 
         // 检查每个方向是否有路径tile
@@ -2001,21 +2007,22 @@ export class GameMap extends Component {
 
     /**
      * 获取建筑朝向上的入口tiles
+     *
+     * Cocos坐标系特性：左手坐标系，Y轴旋转CCW逆时针
+     * direction定义：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
      */
     private getAdjacentTilesInDirection(buildingInfo: BuildingInfo): MapTile[] {
         const { position, size, direction = 0 } = buildingInfo;
         const tiles: MapTile[] = [];
 
-        // direction: 0=南(+z), 1=西(+x), 2=北(-z), 3=东(-x)
-
         if (size === 1) {
             // 1x1建筑：1个相邻tile
             let checkPos: Vec2;
             switch (direction) {
-                case 0: checkPos = new Vec2(position.x, position.z + 1); break;  // 南
-                case 1: checkPos = new Vec2(position.x + 1, position.z); break;  // 西
-                case 2: checkPos = new Vec2(position.x, position.z - 1); break;  // 北
-                case 3: checkPos = new Vec2(position.x - 1, position.z); break;  // 东
+                case 0: checkPos = new Vec2(position.x, position.z + 1); break;  // 南(+z)
+                case 1: checkPos = new Vec2(position.x + 1, position.z); break;  // 东(+x)
+                case 2: checkPos = new Vec2(position.x, position.z - 1); break;  // 北(-z)
+                case 3: checkPos = new Vec2(position.x - 1, position.z); break;  // 西(-x)
                 default: checkPos = new Vec2(position.x, position.z + 1);
             }
 
@@ -2026,25 +2033,25 @@ export class GameMap extends Component {
             // 2x2建筑：2个相邻tile
             let positions: Vec2[] = [];
             switch (direction) {
-                case 0: // 南 (+z)
+                case 0: // 南(+z) - 0°
                     positions = [
                         new Vec2(position.x, position.z + 2),
                         new Vec2(position.x + 1, position.z + 2)
                     ];
                     break;
-                case 1: // 西 (+x)
+                case 1: // 东(+x) - 90°
                     positions = [
                         new Vec2(position.x + 2, position.z),
                         new Vec2(position.x + 2, position.z + 1)
                     ];
                     break;
-                case 2: // 北 (-z)
+                case 2: // 北(-z) - 180°
                     positions = [
                         new Vec2(position.x, position.z - 1),
                         new Vec2(position.x + 1, position.z - 1)
                     ];
                     break;
-                case 3: // 东 (-x)
+                case 3: // 西(-x) - 270°
                     positions = [
                         new Vec2(position.x - 1, position.z),
                         new Vec2(position.x - 1, position.z + 1)

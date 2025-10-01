@@ -7,10 +7,26 @@
  * @author Web3 Tycoon Team
  */
 
-import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils, Material, EffectAsset, resources } from 'cc';
+import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils, Material, EffectAsset, resources, primitives } from 'cc';
 import { OverlayConfig, OverlayFace } from './OverlayTypes';
 
 export class BlockOverlayManager {
+    private static _cachedEffect: EffectAsset | null = null;
+    private static _loadingEffectPromise: Promise<EffectAsset | null> | null = null;
+    // 调试：不绑定材质以观察默认渲染（粉色）
+    public static DEBUG_NO_MATERIAL: boolean = true;
+
+    private static async getOverlayEffect(): Promise<EffectAsset | null> {
+        if (this._cachedEffect) return this._cachedEffect;
+        if (this._loadingEffectPromise) return this._loadingEffectPromise;
+
+        // 使用专用 overlay effect，支持 u_BiomeColor.w 控制整体透明度
+        this._loadingEffectPromise = this.loadAsset<EffectAsset>('voxel/shaders/voxel-overlay-tile', EffectAsset);
+        const effect = await this._loadingEffectPromise;
+        this._cachedEffect = effect;
+        this._loadingEffectPromise = null;
+        return effect;
+    }
 
     /**
      * 为block节点创建overlay层
@@ -28,10 +44,11 @@ export class BlockOverlayManager {
         overlayNode.setParent(blockNode);
         overlayNode.setPosition(0, 0, 0);
 
-        // 创建只包含指定faces的mesh
-        const faces = config.faces || [OverlayFace.UP];  // 默认只渲染顶面
+        // 暂时使用 Cocos 自带 cube 进行可见性验证
+        const faces = config.faces || [OverlayFace.UP];  // 保留参数，不参与当前 mesh 构建
         const inflate = config.inflate || 0.001;
-        const mesh = this.createOverlayMesh(faces, inflate);
+        const boxGeo = primitives.box({ width: 0.98, height: 0.02, length: 0.98 });
+        const mesh = utils.MeshUtils.createMesh(boxGeo);
 
         if (!mesh) {
             overlayNode.destroy();
@@ -42,14 +59,20 @@ export class BlockOverlayManager {
         // 添加MeshRenderer
         const renderer = overlayNode.addComponent(MeshRenderer);
         renderer.mesh = mesh;
+        // 将扁平 cube 放置在方块顶面上方，避免与底面共面
+        overlayNode.setPosition(0, 0.515, 0);
+
+        // 如果开启了调试不绑定材质，直接返回（应出现粉色/默认材质）
+        if (this.DEBUG_NO_MATERIAL) {
+            console.warn('[BlockOverlayManager] DEBUG_NO_MATERIAL 开启：不绑定材质用于可见性测试');
+            console.log(`[BlockOverlayManager] Created overlay layer ${layerIndex} (debug no material)`);
+            return overlayNode;
+        }
 
         // 创建overlay材质（直接创建，不通过MaterialFactory）
         try {
-            // 加载voxel-overlay shader
-            const effectAsset = await this.loadAsset<EffectAsset>(
-                'voxel/shaders/voxel-overlay',
-                EffectAsset
-            );
+            // 加载/获取voxel-overlay shader（带缓存）
+            const effectAsset = await this.getOverlayEffect();
 
             if (!effectAsset) {
                 console.error('[BlockOverlayManager] Failed to load voxel-overlay shader');
@@ -116,8 +139,9 @@ export class BlockOverlayManager {
         let vertexCount = 0;
 
         // 标准1x1x1 block的from/to
-        const from = new Vec3(0, 0, 0);
-        const to = new Vec3(1, 1, 1);
+        // 与体素系统坐标保持一致（-0.5 ~ 0.5）
+        const from = new Vec3(-0.5, -0.5, -0.5);
+        const to = new Vec3(0.5, 0.5, 0.5);
 
         // 为每个指定的face生成顶点
         for (const faceDir of faces) {
@@ -165,12 +189,12 @@ export class BlockOverlayManager {
         let vertices: Vec3[];
 
         switch (dir) {
-            case OverlayFace.UP: // +Y 顶面
+            case OverlayFace.UP: // +Y 顶面（与MeshBuilder顶点顺序保持一致，避免背面剔除）
                 vertices = [
-                    new Vec3(from.x, to.y, from.z),  // 左下
-                    new Vec3(to.x, to.y, from.z),    // 右下
-                    new Vec3(to.x, to.y, to.z),      // 右上
-                    new Vec3(from.x, to.y, to.z)     // 左上
+                    new Vec3(to.x, to.y, from.z),   // 左下（相对视角）
+                    new Vec3(from.x, to.y, from.z), // 右下
+                    new Vec3(from.x, to.y, to.z),   // 右上
+                    new Vec3(to.x, to.y, to.z)      // 左上
                 ];
                 break;
             case OverlayFace.DOWN: // -Y 底面
@@ -379,4 +403,3 @@ export class BlockOverlayManager {
         });
     }
 }
-

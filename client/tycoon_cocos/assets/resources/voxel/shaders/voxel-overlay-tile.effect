@@ -1,0 +1,89 @@
+// Web3 Tycoon - 专用 Overlay 着色器
+// 说明：在标准 voxel-overlay 的基础上，明确支持 u_BiomeColor.w 作为整体透明度调节
+
+CCEffect %{
+  techniques:
+  - name: overlay
+    passes:
+    - vert: vert
+      frag: frag
+      rasterizerState:
+        cullMode: none            # 背面剔除
+      depthStencilState:
+        depthTest: true
+        depthWrite: false         # overlay 不写深度，避免影响底层
+      blendState:
+        targets:
+        - blend: true             # 启用混合
+          blendEq: add
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendAlphaEq: add
+          blendSrcAlpha: one
+          blendDstAlpha: one_minus_src_alpha
+    properties:
+      u_OverlayTex:   { value: white }
+      u_BiomeColor:   { value: [1.0, 1.0, 1.0, 1.0] } # w 用作整体透明度
+      u_Inflate:      { value: 0.001 }
+}%
+
+CCProgram vert %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+  in vec3 a_position;
+  in vec3 a_normal;
+  in vec2 a_texCoord;
+  in vec4 a_color;
+
+  uniform Constants {
+    vec4 u_BiomeColor;      // xyz=rgb, w=alpha(整体)
+    float u_Inflate;        // 顶点微膨胀，防止 Z-fight
+  };
+
+  out vec2 v_uv;
+  out vec4 v_color;
+
+  void main () {
+    vec3 pos = a_position + a_normal * u_Inflate;
+    vec4 worldPos = cc_matWorld * vec4(pos, 1.0);
+    gl_Position = cc_matViewProj * worldPos;
+    v_uv = a_texCoord;
+    v_color = a_color;
+  }
+}%
+
+CCProgram frag %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/uniforms/cc-local>
+
+  in vec2 v_uv;
+  in vec4 v_color;
+
+  uniform sampler2D u_OverlayTex;
+  uniform Constants {
+    vec4 u_BiomeColor;      // xyz=rgb, w=alpha(整体)
+    float u_Inflate;
+  };
+
+  layout(location = 0) out vec4 fragColor;
+
+  void main() {
+    vec4 c = texture(u_OverlayTex, v_uv);
+
+    // 颜色调制
+    c.rgb *= u_BiomeColor.rgb;
+
+    // 透明度：纹理 alpha 乘以整体 alpha（u_BiomeColor.w）
+    c.a *= u_BiomeColor.a;
+
+    if (c.a <= 0.01) discard;
+
+    //fragColor = c;
+    
+    // 输出纯白色
+    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }
+}%
+

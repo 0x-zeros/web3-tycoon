@@ -118,6 +118,36 @@ export interface MapMetadata {
 }
 
 /**
+ * NPC数据（PaperActor）
+ */
+export interface NpcData {
+    /** 方块ID，如 "web3:land_god" */
+    blockId: string;
+    /** 类型ID (Web3ObjectType) */
+    typeId: number;
+    /** 网格位置 */
+    position: {
+        x: number;
+        z: number;
+    };
+}
+
+/**
+ * 装饰物数据
+ */
+export interface DecorationData {
+    /** 方块ID，如 "web3:deco_poppy" */
+    blockId: string;
+    /** 类型ID (Web3DecorationType) */
+    typeId: number;
+    /** 网格位置 */
+    position: {
+        x: number;
+        z: number;
+    };
+}
+
+/**
  * 建筑数据（原Property数据）
  */
 export interface BuildingData {
@@ -173,6 +203,12 @@ export interface MapSaveData extends MapMetadata {
 
     /** 建筑数据数组 */
     buildings?: BuildingData[];
+
+    /** NPC数据数组 */
+    npcs?: NpcData[];
+
+    /** 装饰物数据数组 */
+    decorations?: DecorationData[];
 
     /** Property-Tile关联映射 */
     propertyTileLinks?: { [tileKey: string]: string };

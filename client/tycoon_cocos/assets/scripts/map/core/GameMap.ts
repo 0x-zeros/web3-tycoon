@@ -11,7 +11,7 @@
 import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director, BoxCollider } from 'cc';
 import { MapTile } from './MapTile';
 import { MapObject } from './MapObject';
-import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData, BuildingData } from '../data/MapDataTypes';
+import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData, BuildingData, NpcData, DecorationData } from '../data/MapDataTypes';
 import { CameraController } from '../../camera/CameraController';
 import { MapConfig } from '../MapManager';
 import { VoxelSystem } from '../../voxel/VoxelSystem';
@@ -606,6 +606,14 @@ export class GameMap extends Component {
         const actorNode = PaperActorFactory.createFromBlockType(blockId, worldPos);
         if (actorNode) {
             actorNode.parent = this._actorsRoot;
+
+            // 添加BoxCollider用于编辑器点击
+            const collider = actorNode.addComponent(BoxCollider);
+            if (collider) {
+                collider.size = new Vec3(0.8, 0.1, 0.8);  // 与装饰物相同
+                collider.center = new Vec3(0, 0, 0);
+            }
+
             this._actors.set(key, actorNode);
             console.log(`[GameMap] Placed PaperActor ${blockId} at (${gridPos.x}, ${gridPos.y})`);
         } else {
@@ -872,6 +880,40 @@ export class GameMap extends Component {
                 } as BuildingData);
             });
 
+            // 收集NPC数据
+            const npcsData: NpcData[] = [];
+            this._actors.forEach((actorNode, key) => {
+                const [x, z] = key.split('_').map(Number);
+                const actor = actorNode.getComponent(PaperActor);
+                if (actor) {
+                    const blockId = actor.actorId;  // PaperActor的actorId就是blockId
+                    const blockInfo = getWeb3BlockByBlockId(blockId);
+                    npcsData.push({
+                        blockId: blockId,
+                        typeId: blockInfo?.typeId || 0,
+                        position: { x, z }
+                    });
+                }
+            });
+
+            // 收集装饰物数据
+            const decorationsData: DecorationData[] = [];
+            this._decorations.forEach((decoNode, key) => {
+                const [x, z] = key.split('_').map(Number);
+                // 从节点名称解析blockId: "Block_web3:deco_poppy" -> "web3:deco_poppy"
+                let blockId = decoNode.name.replace('Block_', '');
+                // 如果没有命名空间，添加web3前缀
+                if (!blockId.includes(':')) {
+                    blockId = 'web3:' + blockId;
+                }
+                const blockInfo = getWeb3BlockByBlockId(blockId);
+                decorationsData.push({
+                    blockId: blockId,
+                    typeId: blockInfo?.typeId || 0,
+                    position: { x, z }
+                });
+            });
+
             // 构建保存数据
             const saveData: MapSaveData = {
                 mapId: this.mapId,
@@ -882,7 +924,9 @@ export class GameMap extends Component {
                 gameMode: this._isEditMode ? 'edit' : 'play',
                 tiles: tilesData,
                 objects: objectsData,
-                buildings: buildingsData.length > 0 ? buildingsData : undefined
+                buildings: buildingsData.length > 0 ? buildingsData : undefined,
+                npcs: npcsData.length > 0 ? npcsData : undefined,
+                decorations: decorationsData.length > 0 ? decorationsData : undefined
             };
             
             // 添加游戏规则（如果需要）
@@ -1052,6 +1096,24 @@ export class GameMap extends Component {
                         console.warn(`[GameMap] Failed to recreate building ${buildingData.blockId}`);
                     }
                 }
+            }
+
+            // 加载NPC数据
+            if (mapData.npcs) {
+                for (const npcData of mapData.npcs) {
+                    const gridPos = new Vec2(npcData.position.x, npcData.position.z);
+                    await this.placeObjectAt(npcData.blockId, gridPos);
+                }
+                console.log(`[GameMap] Loaded ${mapData.npcs.length} NPCs`);
+            }
+
+            // 加载装饰物数据
+            if (mapData.decorations) {
+                for (const decoData of mapData.decorations) {
+                    const gridPos = new Vec2(decoData.position.x, decoData.position.z);
+                    await this.placeDecorationAt(decoData.blockId, gridPos);
+                }
+                console.log(`[GameMap] Loaded ${mapData.decorations.length} decorations`);
             }
 
             // 保存地图数据

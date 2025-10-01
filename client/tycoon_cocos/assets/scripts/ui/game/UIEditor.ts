@@ -129,9 +129,6 @@ export class UIEditor extends UIBase {
 
         // 监听地图元素选中事件
         EventBus.on(EventTypes.UI.MapElementSelected, this._onMapElementSelected, this);
-
-        // 添加键盘快捷键支持
-        this._setupKeyboardShortcuts();
     }
     
     /**

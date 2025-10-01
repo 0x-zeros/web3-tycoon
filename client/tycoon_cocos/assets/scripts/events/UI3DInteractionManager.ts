@@ -1,4 +1,4 @@
-import { _decorator, Component, input, Input, EventTouch, EventMouse, Camera, geometry, PhysicsSystem, find, Vec2, Vec3} from 'cc';
+import { _decorator, Component, input, Input, EventTouch, EventMouse, Camera, geometry, PhysicsSystem, find, Vec2, Vec3 } from 'cc';
 import { GRoot } from 'fairygui-cc';
 import { EventBus } from './EventBus';
 import { EventTypes, Input3DEventData, RaycastEventData } from './EventTypes';
@@ -41,7 +41,7 @@ export class UI3DInteractionManager extends Component {
     this.node.on(Input.EventType.MOUSE_UP, this.onMouseUp, this);
     this.node.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
     this.node.on(Input.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
-    
+
     // 监听所有TOUCH事件
     this.node.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
     this.node.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
@@ -55,7 +55,7 @@ export class UI3DInteractionManager extends Component {
     this.node.off(Input.EventType.MOUSE_UP, this.onMouseUp, this);
     this.node.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
     this.node.off(Input.EventType.MOUSE_WHEEL, this.onMouseWheel, this);
-    
+
     // 解绑所有TOUCH事件
     this.node.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
     this.node.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);

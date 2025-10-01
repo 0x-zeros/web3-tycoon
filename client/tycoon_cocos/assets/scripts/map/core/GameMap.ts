@@ -476,12 +476,19 @@ export class GameMap extends Component {
     /**
      * 处理元素点击
      */
-    private onElementClicked(data: MapInteractionData): void {
+    private async onElementClicked(data: MapInteractionData): Promise<void> {
         if (!this._isEditMode) return;
 
-        console.log(`[GameMap] Element clicked: ${data.hitNode?.name} at grid (${data.gridPosition.x}, ${data.gridPosition.y})`);
+        console.log(`[GameMap] Element clicked: ${data.hitNode?.name} at grid (${data.gridPosition.x}, ${data.gridPosition.y}), button: ${data.button}`);
 
         const gridPos = data.gridPosition;
+
+        // 鼠标中键：显示tile-building关联
+        if (data.button === 1) {  // 1 = 中键（滚轮按下）
+            await this.handleShowAssociation(gridPos);
+            return;
+        }
+
         const key = `${gridPos.x}_${gridPos.y}`;
 
         // 获取点击位置的tile和property信息
@@ -2458,6 +2465,154 @@ export class GameMap extends Component {
     public hasTileOverlay(gridPos: Vec2, layerIndex: number = 0): boolean {
         const key = `${gridPos.x}_${gridPos.y}`;
         return this._tileOverlays.get(key)?.has(layerIndex) || false;
+    }
+
+    /**
+     * 显示tile-building关联（鼠标中键点击）
+     */
+    private async handleShowAssociation(gridPos: Vec2): Promise<void> {
+        console.log(`[GameMap] Show association at (${gridPos.x}, ${gridPos.y})`);
+
+        // 先清除之前的关联显示
+        this.clearAssociationOverlays();
+
+        const tile = this.getTileAt(gridPos.x, gridPos.y);
+        const buildingInfo = this.findBuilding2x2Info(gridPos);
+
+        // 情况1: 点击的是tile（非building位置），显示关联的building
+        if (tile && !buildingInfo) {
+            const buildingId = tile.getBuildingId();
+            if (buildingId !== 65535) {
+                // 找到关联的building
+                const building = this.findBuildingById(buildingId);
+                if (building) {
+                    await this.showBuildingAssociation(building);
+                }
+            }
+        }
+
+        // 情况2: 点击的是building，显示关联的entrance tiles
+        if (buildingInfo) {
+            await this.showEntranceTilesAssociation(buildingInfo);
+        }
+    }
+
+    /**
+     * 显示building关联（在building顶部显示图标）
+     */
+    private async showBuildingAssociation(buildingInfo: BuildingInfo): Promise<void> {
+        const pos = buildingInfo.position;
+
+        // 加载tileBuilding.png纹理（注意添加/texture后缀）
+        const texture = await new Promise<Texture2D>((resolve, reject) => {
+            resources.load('textures/tileBuilding/texture', Texture2D, (err, tex) => {
+                if (err) {
+                    console.error('[GameMap] Failed to load tileBuilding texture:', err);
+                    reject(err);
+                } else {
+                    resolve(tex);
+                }
+            });
+        });
+
+        // 在building位置的tile上显示（2x2只显示一个）
+        const tile = this.getTileAt(pos.x, pos.z);
+        if (tile) {
+            await this.addTileOverlay(new Vec2(pos.x, pos.z), {
+                texture: texture,
+                faces: [OverlayFace.UP],
+                inflate: 0.004,
+                layerIndex: 10  // 使用特殊layer避免与编号冲突
+            });
+            console.log(`[GameMap] Showed building association at (${pos.x}, ${pos.z})`);
+        }
+    }
+
+    /**
+     * 显示entrance tiles关联（顶部+侧面边框）
+     */
+    private async showEntranceTilesAssociation(buildingInfo: BuildingInfo): Promise<void> {
+        const entranceTileIds = buildingInfo.entranceTileIds;
+        if (!entranceTileIds) {
+            console.warn('[GameMap] Building has no entrance tiles');
+            return;
+        }
+
+        // 加载纹理（注意添加/texture后缀）
+        const entranceTexture = await new Promise<Texture2D>((resolve, reject) => {
+            resources.load('textures/buildingEntrance/texture', Texture2D, (err, tex) => {
+                if (err) reject(err);
+                else resolve(tex);
+            });
+        });
+
+        const borderTexture = await new Promise<Texture2D>((resolve, reject) => {
+            resources.load('textures/highlightBorder/texture', Texture2D, (err, tex) => {
+                if (err) reject(err);
+                else resolve(tex);
+            });
+        });
+
+        // 找到entrance tiles并添加overlay
+        for (const tile of this._tiles) {
+            const tileId = tile.getTileId();
+            if (entranceTileIds[0] === tileId || entranceTileIds[1] === tileId) {
+                const pos = tile.getGridPosition();
+
+                // Layer 10: 顶部entrance图标
+                await this.addTileOverlay(new Vec2(pos.x, pos.y), {
+                    texture: entranceTexture,
+                    faces: [OverlayFace.UP],
+                    inflate: 0.004,
+                    layerIndex: 10
+                });
+
+                // Layer 11: 侧面边框高亮
+                await this.addTileOverlay(new Vec2(pos.x, pos.y), {
+                    texture: borderTexture,
+                    faces: [
+                        OverlayFace.NORTH,
+                        OverlayFace.SOUTH,
+                        OverlayFace.EAST,
+                        OverlayFace.WEST
+                    ],
+                    color: new Color(255, 200, 0, 255),  // 金色
+                    alpha: 0.6,
+                    inflate: 0.005,
+                    layerIndex: 11
+                });
+
+                console.log(`[GameMap] Showed entrance tile overlay at (${pos.x}, ${pos.y})`);
+            }
+        }
+    }
+
+    /**
+     * 清除关联overlay（layer 10-20）
+     */
+    private clearAssociationOverlays(): void {
+        this._tileOverlays.forEach((overlays, key) => {
+            for (let layer = 10; layer <= 20; layer++) {
+                const overlayNode = overlays.get(layer);
+                if (overlayNode && overlayNode.isValid) {
+                    overlayNode.destroy();
+                    overlays.delete(layer);
+                }
+            }
+        });
+        console.log('[GameMap] Cleared association overlays');
+    }
+
+    /**
+     * 根据buildingId查找building
+     */
+    private findBuildingById(buildingId: number): BuildingInfo | null {
+        for (const [key, info] of this._buildingRegistry) {
+            if (info.buildingId === buildingId) {
+                return info;
+            }
+        }
+        return null;
     }
 
     /**

@@ -2553,10 +2553,13 @@ export class GameMap extends Component {
             });
         });
 
-        // 找到entrance tiles并添加overlay
+        // 过滤掉无效的入口ID（65535 表示无效/未分配）
+        const validEntranceIds = entranceTileIds.filter(id => id !== 65535);
+
+        // 找到entrance tiles并添加overlay（仅对有效ID）
         for (const tile of this._tiles) {
             const tileId = tile.getTileId();
-            if (entranceTileIds[0] === tileId || entranceTileIds[1] === tileId) {
+            if (tileId !== 65535 && validEntranceIds.includes(tileId)) {
                 const pos = tile.getGridPosition();
 
                 // Layer 10: 顶部entrance图标
@@ -2629,4 +2632,3 @@ export class GameMap extends Component {
         this._tileOverlays.clear();
     }
 }
-

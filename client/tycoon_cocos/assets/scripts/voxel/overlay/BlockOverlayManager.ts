@@ -7,10 +7,8 @@
  * @author Web3 Tycoon Team
  */
 
-import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils } from 'cc';
-import { MaterialFactory, MaterialType } from '../resource/MaterialFactory';
+import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils, Material, EffectAsset, resources } from 'cc';
 import { OverlayConfig, OverlayFace } from './OverlayTypes';
-import { VoxelSystem } from '../VoxelSystem';
 
 export class BlockOverlayManager {
 
@@ -45,31 +43,45 @@ export class BlockOverlayManager {
         const renderer = overlayNode.addComponent(MeshRenderer);
         renderer.mesh = mesh;
 
-        // 创建overlay材质
+        // 创建overlay材质（直接创建，不通过MaterialFactory）
         try {
-            // 获取MaterialFactory实例
-            const voxelSystem = VoxelSystem.getInstance();
-            const materialFactory = voxelSystem.getMaterialFactory();
+            // 加载voxel-overlay shader
+            const effectAsset = await this.loadAsset<EffectAsset>(
+                'voxel/shaders/voxel-overlay',
+                EffectAsset
+            );
 
-            const material = await materialFactory.createMaterial({
-                type: MaterialType.OVERLAY,
-                texturePath: '',  // 纹理通过setProperty设置
-                overlayColor: config.color || new Color(255, 255, 255, 255),
-                overlayAlpha: config.alpha || 1.0
+            if (!effectAsset) {
+                console.error('[BlockOverlayManager] Failed to load voxel-overlay shader');
+                overlayNode.destroy();
+                return null;
+            }
+
+            // 创建材质
+            const material = new Material();
+            material.initialize({
+                effectAsset: effectAsset,
+                technique: 0  // voxel-overlay.effect的第一个technique
             });
 
-            // 设置纹理和参数
+            // 设置overlay纹理
             material.setProperty('u_OverlayTex', config.texture);
+
+            // 设置inflate参数（Z-fight防护）
             material.setProperty('u_Inflate', inflate);
 
+            // 设置颜色tint
             if (config.color) {
                 const colorVec = [
                     config.color.r / 255,
                     config.color.g / 255,
                     config.color.b / 255,
-                    config.color.a / 255
+                    config.alpha || 1.0  // 使用alpha参数作为整体透明度
                 ];
                 material.setProperty('u_BiomeColor', colorVec);
+            } else {
+                // 默认白色，不影响纹理
+                material.setProperty('u_BiomeColor', [1.0, 1.0, 1.0, config.alpha || 1.0]);
             }
 
             renderer.setMaterial(material, 0);
@@ -343,4 +355,28 @@ export class BlockOverlayManager {
     static hasOverlay(blockNode: Node, layerIndex: number): boolean {
         return this.getOverlay(blockNode, layerIndex) !== null;
     }
+
+    /**
+     * 封装Promise版本的resources.load
+     *
+     * @param path 资源路径
+     * @param type 资源类型
+     * @returns Promise<资源对象 | null>
+     */
+    private static loadAsset<T>(
+        path: string,
+        type: any
+    ): Promise<T | null> {
+        return new Promise((resolve) => {
+            resources.load(path, type, (err, asset) => {
+                if (err) {
+                    console.error(`[BlockOverlayManager] Failed to load ${path}:`, err);
+                    resolve(null);
+                } else {
+                    resolve(asset as T);
+                }
+            });
+        });
+    }
 }
+

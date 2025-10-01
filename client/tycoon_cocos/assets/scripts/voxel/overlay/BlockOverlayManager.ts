@@ -7,14 +7,15 @@
  * @author Web3 Tycoon Team
  */
 
-import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils, Material, EffectAsset, resources, primitives } from 'cc';
+import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils, Material, EffectAsset, resources } from 'cc';
 import { OverlayConfig, OverlayFace } from './OverlayTypes';
 
 export class BlockOverlayManager {
     private static _cachedEffect: EffectAsset | null = null;
     private static _loadingEffectPromise: Promise<EffectAsset | null> | null = null;
     // 调试：不绑定材质以观察默认渲染（粉色）
-    public static DEBUG_NO_MATERIAL: boolean = true;
+    public static DEBUG_NO_MATERIAL: boolean = false;
+    public static DEBUG_LOG: boolean = true;
 
     private static async getOverlayEffect(): Promise<EffectAsset | null> {
         if (this._cachedEffect) return this._cachedEffect;
@@ -44,11 +45,10 @@ export class BlockOverlayManager {
         overlayNode.setParent(blockNode);
         overlayNode.setPosition(0, 0, 0);
 
-        // 暂时使用 Cocos 自带 cube 进行可见性验证
-        const faces = config.faces || [OverlayFace.UP];  // 保留参数，不参与当前 mesh 构建
+        // 创建只包含指定faces的mesh（网格侧做膨胀，shader不再膨胀）
+        const faces = config.faces || [OverlayFace.UP];  // 默认只渲染顶面
         const inflate = config.inflate || 0.001;
-        const boxGeo = primitives.box({ width: 0.98, height: 0.02, length: 0.98 });
-        const mesh = utils.MeshUtils.createMesh(boxGeo);
+        const mesh = this.createOverlayMesh(faces, inflate);
 
         if (!mesh) {
             overlayNode.destroy();
@@ -59,8 +59,8 @@ export class BlockOverlayManager {
         // 添加MeshRenderer
         const renderer = overlayNode.addComponent(MeshRenderer);
         renderer.mesh = mesh;
-        // 将扁平 cube 放置在方块顶面上方，避免与底面共面
-        overlayNode.setPosition(0, 0.515, 0);
+        // 自定义overlay网格与体素坐标系对齐，无需额外偏移
+        overlayNode.setPosition(0, 0, 0);
 
         // 如果开启了调试不绑定材质，直接返回（应出现粉色/默认材质）
         if (this.DEBUG_NO_MATERIAL) {
@@ -84,30 +84,38 @@ export class BlockOverlayManager {
             const material = new Material();
             material.initialize({
                 effectAsset: effectAsset,
-                technique: 0  // voxel-overlay.effect的第一个technique
+                technique: 1  // voxel-overlay.effect的第一个technique; 0 = opaque, 1 = transparent
             });
 
-            // 设置overlay纹理
-            material.setProperty('u_OverlayTex', config.texture);
+            // 调试：输出贴图信息
+            if (this.DEBUG_LOG) {
+                const tex = config.texture;
+                const img = (tex as any)?.image;
+                console.log('[BlockOverlayManager] Texture ready:', {
+                    name: (tex as any)?._uuid || tex?.name,
+                    width: tex?.width,
+                    height: tex?.height,
+                    hasImage: !!img,
+                    imageSize: img ? { width: img.width, height: img.height } : null,
+                });
+            }
 
-            // 设置inflate参数（Z-fight防护）
-            material.setProperty('u_Inflate', inflate);
+            // 设置overlay纹理（使用通用命名 mainTexture）
+            material.setProperty('mainTexture', config.texture);
 
-            // 设置颜色tint
+            // 不使用 shader 侧膨胀
             if (config.color) {
-                const colorVec = [
-                    config.color.r / 255,
-                    config.color.g / 255,
-                    config.color.b / 255,
-                    config.alpha || 1.0  // 使用alpha参数作为整体透明度
-                ];
-                material.setProperty('u_BiomeColor', colorVec);
+                //重点，使用0-255的值，不是0-1的啊，这边设置为1，然后就会全黑或者全透明。
+                material.setProperty('mainColor', config.color);
             } else {
-                // 默认白色，不影响纹理
-                material.setProperty('u_BiomeColor', [1.0, 1.0, 1.0, config.alpha || 1.0]);
+                material.setProperty('mainColor', Color.WHITE);
             }
 
             renderer.setMaterial(material, 0);
+
+            if (this.DEBUG_LOG) {
+                console.log('[BlockOverlayManager] Material set with mainTexture & mainColor');
+            }
 
             console.log(`[BlockOverlayManager] Created overlay layer ${layerIndex} with ${faces.length} faces`);
             return overlayNode;
@@ -325,8 +333,18 @@ export class BlockOverlayManager {
 
         const material = renderer.getMaterial(0);
         if (material) {
-            material.setProperty('u_OverlayTex', newTexture);
+            material.setProperty('mainTexture', newTexture);
             console.log('[BlockOverlayManager] Overlay texture updated');
+            if (this.DEBUG_LOG) {
+                const img = (newTexture as any)?.image;
+                console.log('[BlockOverlayManager] New texture info:', {
+                    name: (newTexture as any)?._uuid || newTexture?.name,
+                    width: newTexture?.width,
+                    height: newTexture?.height,
+                    hasImage: !!img,
+                    imageSize: img ? { width: img.width, height: img.height } : null,
+                });
+            }
         }
     }
 
@@ -348,7 +366,7 @@ export class BlockOverlayManager {
                 color.b / 255,
                 color.a / 255
             ];
-            material.setProperty('u_BiomeColor', colorVec);
+            material.setProperty('mainColor', colorVec);
         }
     }
 

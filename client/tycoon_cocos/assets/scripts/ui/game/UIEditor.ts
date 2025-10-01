@@ -428,8 +428,8 @@ export class UIEditor extends UIBase {
                 this._isShowingIds = !this._isShowingIds;
 
                 if (this._isShowingIds) {
-                    // 显示两套ID
-                    mapInfo.component.showIds();                        // 2D Label
+                    // 显示ID
+                    // mapInfo.component.showIds();                        // 2D Label - 已注释
                     await mapInfo.component.showIdsWithOverlay();       // 3D Overlay
 
                     // 更新按钮文本
@@ -437,8 +437,8 @@ export class UIEditor extends UIBase {
                         this.m_btn_showIds.title = "隐藏ID";
                     }
                 } else {
-                    // 隐藏两套ID
-                    mapInfo.component.hideIds();                        // 2D Label
+                    // 隐藏ID
+                    // mapInfo.component.hideIds();                        // 2D Label - 已注释
                     mapInfo.component.hideIdsWithOverlay();             // 3D Overlay
 
                     // 更新按钮文本
@@ -447,7 +447,7 @@ export class UIEditor extends UIBase {
                     }
                 }
 
-                console.log(`[UIEditor] IDs ${this._isShowingIds ? 'shown' : 'hidden'} (both 2D Label and 3D Overlay)`);
+                console.log(`[UIEditor] IDs ${this._isShowingIds ? 'shown' : 'hidden'} (3D Overlay only)`);
             }
         }
     }

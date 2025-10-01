@@ -280,12 +280,12 @@ export class BlockOverlayManager {
      * 返回4个UV点：左下、右下、右上、左上
      */
     private static getFaceUVs(dir: OverlayFace): Vec2[] {
-        // 标准0-1 UV映射
+        // U轴翻转（修复水平镜像问题）
         return [
-            new Vec2(0, 0),  // 左下
-            new Vec2(1, 0),  // 右下
-            new Vec2(1, 1),  // 右上
-            new Vec2(0, 1)   // 左上
+            new Vec2(1, 0),  // 左下 - U翻转
+            new Vec2(0, 0),  // 右下 - U翻转
+            new Vec2(0, 1),  // 右上 - U翻转
+            new Vec2(1, 1)   // 左上 - U翻转
         ];
     }
 

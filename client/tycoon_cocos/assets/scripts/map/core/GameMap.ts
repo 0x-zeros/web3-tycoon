@@ -2137,11 +2137,10 @@ export class GameMap extends Component {
                 // 生成tile编号纹理（白色背景）
                 const numTexture = NumberTextureGenerator.getNumberTexture(tileId, {
                     size: 64,
-                    fontSize: 42,
+                    fontSize: 28,
                     bgColor: 'rgba(255, 255, 255, 0.85)',
                     textColor: '#000',
-                    withBorder: true,
-                    prefix: 'T'
+                    withBorder: true
                 });
 
                 await this.addTileOverlay(new Vec2(pos.x, pos.y), {
@@ -2164,11 +2163,10 @@ export class GameMap extends Component {
                     buildingInfo.buildingId,
                     {
                         size: 64,
-                        fontSize: 42,
+                        fontSize: 28,
                         bgColor: 'rgba(255, 200, 100, 0.9)',
                         textColor: '#000',
-                        withBorder: true,
-                        prefix: 'B'
+                        withBorder: true
                     }
                 );
 

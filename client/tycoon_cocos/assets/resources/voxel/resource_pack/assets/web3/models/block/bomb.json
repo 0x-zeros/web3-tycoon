@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/cross",
+  "parent": "web3:block/cross",
   "textures": {
     "cross": "web3:block/bomb"
   }

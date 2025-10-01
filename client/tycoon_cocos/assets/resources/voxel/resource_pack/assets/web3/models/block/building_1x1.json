@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "web3:block/cube_all",
   "textures": {
     "all": "web3:block/building_1x1"
   }

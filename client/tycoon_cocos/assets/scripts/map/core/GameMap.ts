@@ -28,6 +28,7 @@ import { PaperActor } from '../../role/PaperActor';
 import { ActorConfigManager } from '../../role/ActorConfig';
 import { BlockOverlayManager } from '../../voxel/overlay/BlockOverlayManager';
 import { OverlayConfig, OverlayFace } from '../../voxel/overlay/OverlayTypes';
+import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerator';
 
 // Building信息接口
 interface BuildingInfo {
@@ -2112,7 +2113,83 @@ export class GameMap extends Component {
     }
 
     /**
-     * 隐藏ID标签
+     * 使用Overlay方式显示ID（3D贴图，用于对比测试）
+     */
+    public async showIdsWithOverlay(): Promise<void> {
+        console.log('[GameMap] Showing IDs with overlay...');
+
+        // 清除旧的overlay
+        this.clearAllOverlays();
+
+        // 为tile添加编号overlay
+        for (const tile of this._tiles) {
+            const tileId = tile.getTileId();
+            if (tileId !== 65535) {
+                const pos = tile.getGridPosition();
+
+                // 生成tile编号纹理（白色背景）
+                const numTexture = NumberTextureGenerator.getNumberTexture(tileId, {
+                    size: 64,
+                    fontSize: 42,
+                    bgColor: 'rgba(255, 255, 255, 0.85)',
+                    textColor: '#000',
+                    withBorder: true,
+                    prefix: 'T'
+                });
+
+                await this.addTileOverlay(new Vec2(pos.x, pos.y), {
+                    texture: numTexture,
+                    faces: [OverlayFace.UP],
+                    inflate: 0.002,
+                    layerIndex: 0
+                });
+            }
+        }
+
+        // 为building添加编号overlay（在所在位置的tile上）
+        for (const [key, buildingInfo] of this._buildingRegistry) {
+            if (buildingInfo.buildingId !== undefined && buildingInfo.buildingId !== 65535) {
+                const pos = buildingInfo.position;
+
+                // 生成building编号纹理（金色背景）
+                const numTexture = NumberTextureGenerator.getNumberTexture(
+                    buildingInfo.buildingId,
+                    {
+                        size: 64,
+                        fontSize: 42,
+                        bgColor: 'rgba(255, 200, 100, 0.9)',
+                        textColor: '#000',
+                        withBorder: true,
+                        prefix: 'B'
+                    }
+                );
+
+                // 在building左下角位置的tile上显示（1x1和2x2都用同一个位置）
+                const tile = this.getTileAt(pos.x, pos.z);
+                if (tile) {
+                    await this.addTileOverlay(new Vec2(pos.x, pos.z), {
+                        texture: numTexture,
+                        faces: [OverlayFace.UP],
+                        inflate: 0.003,  // 比tile编号稍高
+                        layerIndex: 1    // 使用layer 1，避免与tile编号冲突
+                    });
+                }
+            }
+        }
+
+        console.log('[GameMap] IDs overlay created');
+    }
+
+    /**
+     * 隐藏Overlay方式的ID显示
+     */
+    public hideIdsWithOverlay(): void {
+        console.log('[GameMap] Hiding IDs overlay...');
+        this.clearAllOverlays();
+    }
+
+    /**
+     * 隐藏ID标签（2D UI Label方式）
      */
     public hideIds(): void {
         console.log('[GameMap] Hiding ID labels...');

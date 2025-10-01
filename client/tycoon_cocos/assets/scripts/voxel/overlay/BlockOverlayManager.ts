@@ -10,6 +10,7 @@
 import { Node, Mesh, MeshRenderer, Vec3, Vec2, Texture2D, Color, gfx, utils } from 'cc';
 import { MaterialFactory, MaterialType } from '../resource/MaterialFactory';
 import { OverlayConfig, OverlayFace } from './OverlayTypes';
+import { VoxelSystem } from '../VoxelSystem';
 
 export class BlockOverlayManager {
 
@@ -46,7 +47,11 @@ export class BlockOverlayManager {
 
         // 创建overlay材质
         try {
-            const material = await MaterialFactory.createMaterial({
+            // 获取MaterialFactory实例
+            const voxelSystem = VoxelSystem.getInstance();
+            const materialFactory = voxelSystem.getMaterialFactory();
+
+            const material = await materialFactory.createMaterial({
                 type: MaterialType.OVERLAY,
                 texturePath: '',  // 纹理通过setProperty设置
                 overlayColor: config.color || new Color(255, 255, 255, 255),

@@ -420,9 +420,9 @@ export class UIEditor extends UIBase {
     }
 
     /**
-     * 显示/隐藏ID按钮点击事件
+     * 显示/隐藏ID按钮点击事件（同时控制2D Label和3D Overlay）
      */
-    private _onShowIdsClick(): void {
+    private async _onShowIdsClick(): Promise<void> {
         console.log("[UIEditor] Show IDs button clicked");
         const mapManager = MapManager.getInstance();
         if (mapManager) {
@@ -431,20 +431,26 @@ export class UIEditor extends UIBase {
                 this._isShowingIds = !this._isShowingIds;
 
                 if (this._isShowingIds) {
-                    mapInfo.component.showIds();
+                    // 显示两套ID
+                    mapInfo.component.showIds();                        // 2D Label
+                    await mapInfo.component.showIdsWithOverlay();       // 3D Overlay
+
                     // 更新按钮文本
                     if (this.m_btn_showIds) {
                         this.m_btn_showIds.title = "隐藏ID";
                     }
                 } else {
-                    mapInfo.component.hideIds();
+                    // 隐藏两套ID
+                    mapInfo.component.hideIds();                        // 2D Label
+                    mapInfo.component.hideIdsWithOverlay();             // 3D Overlay
+
                     // 更新按钮文本
                     if (this.m_btn_showIds) {
                         this.m_btn_showIds.title = "显示ID";
                     }
                 }
 
-                console.log(`[UIEditor] IDs ${this._isShowingIds ? 'shown' : 'hidden'}`);
+                console.log(`[UIEditor] IDs ${this._isShowingIds ? 'shown' : 'hidden'} (both 2D Label and 3D Overlay)`);
             }
         }
     }

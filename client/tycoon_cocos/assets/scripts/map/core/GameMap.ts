@@ -8,7 +8,7 @@
  * @version 2.0.0
  */
 
-import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director } from 'cc';
+import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director, BoxCollider } from 'cc';
 import { MapTile } from './MapTile';
 import { MapObject } from './MapObject';
 import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData, BuildingData } from '../data/MapDataTypes';
@@ -116,6 +116,7 @@ export class GameMap extends Component {
     private _decorations: Map<string, Node> = new Map();    // 装饰物的体素节点
     private _actorsRoot: Node | null = null;                // Actor的根节点
     private _buildingsRoot: Node | null = null;             // 建筑的根节点
+    private _decorationsRoot: Node | null = null;           // 装饰物的根节点
     
     /** 地图数据（用于保存） */
     private _mapSaveData: MapSaveData | null = null;
@@ -226,6 +227,13 @@ export class GameMap extends Component {
             this._buildingsRoot = new Node('BuildingsRoot');
             this.node.addChild(this._buildingsRoot);
             console.log('[GameMap] Created BuildingsRoot');
+        }
+
+        // 创建装饰物容器
+        if (!this._decorationsRoot) {
+            this._decorationsRoot = new Node('DecorationsRoot');
+            this.node.addChild(this._decorationsRoot);
+            console.log('[GameMap] Created DecorationsRoot');
         }
     }
     
@@ -556,11 +564,18 @@ export class GameMap extends Component {
             return;
         }
 
-        // 装饰使用体素渲染，创建体素节点
+        // 装饰使用体素渲染，创建体素节点（添加到DecorationsRoot）
         const worldPos = new Vec3(gridPos.x, 1, gridPos.y);
-        const decorationNode = await this._voxelSystem.createBlockNode(this.node, blockId, worldPos);
+        const decorationNode = await this._voxelSystem.createBlockNode(this._decorationsRoot, blockId, worldPos);
 
         if (decorationNode) {
+            // 添加BoxCollider用于编辑器点击
+            const collider = decorationNode.addComponent(BoxCollider);
+            if (collider) {
+                collider.size = new Vec3(0.8, 0.1, 0.8);  // 装饰物通常较小
+                collider.center = new Vec3(0, 0, 0);  // 中心在底部上方
+            }
+
             this._decorations.set(key, decorationNode);
             console.log(`[GameMap] Placed decoration ${blockId} at (${gridPos.x}, ${gridPos.y})`);
         } else {
@@ -1082,6 +1097,11 @@ export class GameMap extends Component {
             if (node && node.isValid) node.destroy();
         });
         this._decorations.clear();
+
+        // 清理装饰物容器
+        if (this._decorationsRoot && this._decorationsRoot.isValid) {
+            this._decorationsRoot.removeAllChildren();
+        }
 
         // 清空PaperActor（NPC）
         this._actors.forEach((node) => {

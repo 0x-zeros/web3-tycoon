@@ -147,6 +147,13 @@ export class MapTile extends MapElement {
     }
 
     /**
+     * 设置关联的建筑ID
+     */
+    public setBuildingId(id: number): void {
+        this._buildingId = id;
+    }
+
+    /**
      * 获取地块信息（用于UI显示）
      */
     public getTileInfo(): any {

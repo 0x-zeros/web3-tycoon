@@ -538,7 +538,7 @@ export class GameMap extends Component {
         }
 
         // 创建新地块节点
-        const tileNode = new Node(`Tile_${gridPos.x}_${gridPos.y}`);
+        const tileNode = new Node(`T_${gridPos.x}_${gridPos.y}`);
         tileNode.setParent(this.tilesContainer!);
 
         // 添加MapTile组件
@@ -1036,7 +1036,7 @@ export class GameMap extends Component {
             // 加载地块
             let loadedTiles = 0;
             for (const tileData of mapData.tiles) {
-                const tileNode = new Node(`Tile_${tileData.position.x}_${tileData.position.z}`);
+                const tileNode = new Node(`T_${tileData.position.x}_${tileData.position.z}`);
                 tileNode.setParent(this.tilesContainer!);
                 
                 const tile = tileNode.addComponent(MapTile);
@@ -1529,6 +1529,9 @@ export class GameMap extends Component {
         const buildingNode = PaperActorFactory.createBuilding(blockId, level, actorPos);
         if (buildingNode) {
             buildingNode.parent = this._buildingsRoot;
+
+            // 重命名为简洁格式: B_size_x_z
+            buildingNode.name = `B_${size}x${size}_${gridPos.x}_${gridPos.y}`;
 
             // 4. 设置建筑朝向
             const actor = buildingNode.getComponent(PaperActor);

@@ -572,8 +572,8 @@ export class GameMap extends Component {
             // 添加BoxCollider用于编辑器点击
             const collider = decorationNode.addComponent(BoxCollider);
             if (collider) {
-                collider.size = new Vec3(0.8, 0.1, 0.8);  // 装饰物通常较小
-                collider.center = new Vec3(0, 0, 0);  // 中心在底部上方
+                collider.size = new Vec3(1, 0.1, 1);
+                collider.center = new Vec3(0, 0, 0);
             }
 
             this._decorations.set(key, decorationNode);
@@ -610,7 +610,7 @@ export class GameMap extends Component {
             // 添加BoxCollider用于编辑器点击
             const collider = actorNode.addComponent(BoxCollider);
             if (collider) {
-                collider.size = new Vec3(0.8, 0.1, 0.8);  // 与装饰物相同
+                collider.size = new Vec3(1, 0.1, 1);
                 collider.center = new Vec3(0, 0, 0);
             }
 

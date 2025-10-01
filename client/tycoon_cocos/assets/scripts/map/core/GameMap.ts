@@ -8,7 +8,7 @@
  * @version 2.0.0
  */
 
-import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director, BoxCollider } from 'cc';
+import { _decorator, Component, Node, Camera, resources, JsonAsset, find, Color, MeshRenderer, Vec3, Label, Canvas, UITransform, director, BoxCollider, Texture2D } from 'cc';
 import { MapTile } from './MapTile';
 import { MapObject } from './MapObject';
 import { MapSaveData, MapLoadOptions, MapSaveOptions, TileData, ObjectData, PropertyData, BuildingData, NpcData, DecorationData } from '../data/MapDataTypes';
@@ -26,6 +26,8 @@ import { sys } from 'cc';
 import { PaperActorFactory } from '../../role/PaperActorFactory';
 import { PaperActor } from '../../role/PaperActor';
 import { ActorConfigManager } from '../../role/ActorConfig';
+import { BlockOverlayManager } from '../../voxel/overlay/BlockOverlayManager';
+import { OverlayConfig, OverlayFace } from '../../voxel/overlay/OverlayTypes';
 
 // Building信息接口
 interface BuildingInfo {
@@ -142,6 +144,9 @@ export class GameMap extends Component {
 
     /** Building信息注册表 (key: "x_z") */
     private _buildingRegistry: Map<string, BuildingInfo> = new Map();
+
+    /** Overlay管理 (key: "x_z", value: Map<layerIndex, Node>) */
+    private _tileOverlays: Map<string, Map<number, Node>> = new Map();
 
     // ========================= 生命周期方法 =========================
     
@@ -1250,6 +1255,9 @@ export class GameMap extends Component {
         // 先清理ID标签
         this.hideIds();
 
+        // 清理所有overlay
+        this.clearAllOverlays();
+
         // 清空地图
         this.clearMap();
         
@@ -2244,4 +2252,149 @@ export class GameMap extends Component {
         const uiPos = uiTransform.convertToNodeSpaceAR(new Vec3(screenPos.x, screenPos.y, 0));
         node.setPosition(uiPos);
     }
+
+    // ========================= Overlay管理方法 =========================
+
+    /**
+     * 为tile添加overlay层
+     *
+     * @param gridPos Tile网格位置
+     * @param config Overlay配置
+     * @returns 是否成功
+     */
+    public async addTileOverlay(
+        gridPos: Vec2,
+        config: OverlayConfig
+    ): Promise<boolean> {
+        const tile = this.getTileAt(gridPos.x, gridPos.y);
+        if (!tile) {
+            console.warn(`[GameMap] Tile not found at (${gridPos.x}, ${gridPos.y})`);
+            return false;
+        }
+
+        const overlayNode = await BlockOverlayManager.createOverlay(
+            tile.node,
+            config
+        );
+
+        if (overlayNode) {
+            const key = `${gridPos.x}_${gridPos.y}`;
+            if (!this._tileOverlays.has(key)) {
+                this._tileOverlays.set(key, new Map());
+            }
+            this._tileOverlays.get(key)!.set(config.layerIndex || 0, overlayNode);
+
+            console.log(`[GameMap] Added overlay to tile at (${gridPos.x}, ${gridPos.y}), layer ${config.layerIndex || 0}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 移除tile的overlay层
+     *
+     * @param gridPos Tile网格位置
+     * @param layerIndex 层级索引（默认0）
+     */
+    public removeTileOverlay(gridPos: Vec2, layerIndex: number = 0): void {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        const overlays = this._tileOverlays.get(key);
+
+        if (overlays) {
+            const overlayNode = overlays.get(layerIndex);
+            if (overlayNode && overlayNode.isValid) {
+                overlayNode.destroy();
+                overlays.delete(layerIndex);
+
+                console.log(`[GameMap] Removed overlay from tile at (${gridPos.x}, ${gridPos.y}), layer ${layerIndex}`);
+
+                // 如果该tile没有任何overlay了，清理map entry
+                if (overlays.size === 0) {
+                    this._tileOverlays.delete(key);
+                }
+            }
+        }
+    }
+
+    /**
+     * 移除tile的所有overlay层
+     */
+    public removeAllTileOverlays(gridPos: Vec2): void {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        const overlays = this._tileOverlays.get(key);
+
+        if (overlays) {
+            overlays.forEach((overlayNode, layerIndex) => {
+                if (overlayNode && overlayNode.isValid) {
+                    overlayNode.destroy();
+                }
+            });
+            this._tileOverlays.delete(key);
+
+            console.log(`[GameMap] Removed all overlays from tile at (${gridPos.x}, ${gridPos.y})`);
+        }
+    }
+
+    /**
+     * 更新overlay纹理
+     *
+     * @param gridPos Tile网格位置
+     * @param layerIndex 层级索引
+     * @param newTexture 新纹理
+     */
+    public updateTileOverlayTexture(
+        gridPos: Vec2,
+        layerIndex: number,
+        newTexture: Texture2D
+    ): void {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        const overlayNode = this._tileOverlays.get(key)?.get(layerIndex);
+
+        if (overlayNode) {
+            BlockOverlayManager.updateOverlayTexture(overlayNode, newTexture);
+            console.log(`[GameMap] Updated overlay texture at (${gridPos.x}, ${gridPos.y}), layer ${layerIndex}`);
+        } else {
+            console.warn(`[GameMap] Overlay not found at (${gridPos.x}, ${gridPos.y}), layer ${layerIndex}`);
+        }
+    }
+
+    /**
+     * 更新overlay颜色
+     */
+    public updateTileOverlayColor(
+        gridPos: Vec2,
+        layerIndex: number,
+        color: Color
+    ): void {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        const overlayNode = this._tileOverlays.get(key)?.get(layerIndex);
+
+        if (overlayNode) {
+            BlockOverlayManager.updateOverlayColor(overlayNode, color);
+        }
+    }
+
+    /**
+     * 检查tile是否有overlay
+     */
+    public hasTileOverlay(gridPos: Vec2, layerIndex: number = 0): boolean {
+        const key = `${gridPos.x}_${gridPos.y}`;
+        return this._tileOverlays.get(key)?.has(layerIndex) || false;
+    }
+
+    /**
+     * 清理所有overlay
+     */
+    private clearAllOverlays(): void {
+        this._tileOverlays.forEach((overlays, key) => {
+            overlays.forEach((overlayNode) => {
+                if (overlayNode && overlayNode.isValid) {
+                    overlayNode.destroy();
+                }
+            });
+        });
+        this._tileOverlays.clear();
+    }
 }
+

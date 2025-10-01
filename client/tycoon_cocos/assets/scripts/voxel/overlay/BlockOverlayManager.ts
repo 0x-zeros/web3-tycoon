@@ -84,7 +84,7 @@ export class BlockOverlayManager {
             const material = new Material();
             material.initialize({
                 effectAsset: effectAsset,
-                technique: 1  // voxel-overlay.effect的第一个technique; 0 = opaque, 1 = transparent
+                technique: (config as any).techniqueIndex ?? 1  // 0=opaque, 1=transparent（默认透明）
             });
 
             // 调试：输出贴图信息

@@ -43,4 +43,7 @@ export interface OverlayConfig {
 
     /** 层级索引（用于多层overlay，默认0）*/
     layerIndex?: number;
+
+    /** 使用的shader technique索引（0=opaque, 1=transparent；默认1）*/
+    techniqueIndex?: number;
 }

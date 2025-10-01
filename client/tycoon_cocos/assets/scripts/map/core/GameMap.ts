@@ -2148,7 +2148,8 @@ export class GameMap extends Component {
                     texture: numTexture,
                     faces: [OverlayFace.UP],
                     inflate: 0.002,
-                    layerIndex: 0
+                    layerIndex: 0,
+                    techniqueIndex: 1 // tile 编号：透明
                 });
             }
         }
@@ -2178,7 +2179,8 @@ export class GameMap extends Component {
                         texture: numTexture,
                         faces: [OverlayFace.UP],
                         inflate: 0.003,  // 比tile编号稍高
-                        layerIndex: 1    // 使用layer 1，避免与tile编号冲突
+                        layerIndex: 1,   // 使用layer 1，避免与tile编号冲突
+                        techniqueIndex: 0 // building 编号：不透明
                     });
                 }
             }
@@ -2522,7 +2524,8 @@ export class GameMap extends Component {
                 texture: texture,
                 faces: [OverlayFace.UP],
                 inflate: 0.004,
-                layerIndex: 10  // 使用特殊layer避免与编号冲突
+                layerIndex: 10,  // 使用特殊layer避免与编号冲突
+                techniqueIndex: 0 // building 标记：不透明
             });
             console.log(`[GameMap] Showed building association at (${pos.x}, ${pos.z})`);
         }
@@ -2567,7 +2570,8 @@ export class GameMap extends Component {
                     texture: entranceTexture,
                     faces: [OverlayFace.UP],
                     inflate: 0.004,
-                    layerIndex: 10
+                    layerIndex: 10,
+                    techniqueIndex: 1 // tile 高亮：透明
                 });
 
                 // Layer 11: 侧面边框高亮
@@ -2582,7 +2586,8 @@ export class GameMap extends Component {
                     color: new Color(255, 200, 0, 255),  // 金色
                     alpha: 0.6,
                     inflate: 0.005,
-                    layerIndex: 11
+                    layerIndex: 11,
+                    techniqueIndex: 1 // tile 边框：透明
                 });
 
                 console.log(`[GameMap] Showed entrance tile overlay at (${pos.x}, ${pos.y})`);

@@ -38,26 +38,7 @@ public(package) fun create_admin_cap(ctx: &mut TxContext) {
 
 // ===== Entry Functions 入口函数 =====
 
-// 发布测试地图
-entry fun publish_test_map(
-    registry: &mut MapRegistry,
-    _admin: &AdminCap,
-    ctx: &mut TxContext
-) {
-    let template = map::create_test_map_8(ctx);
-    let template_id = map::get_template_id(&template);
-    let tile_count = map::get_tile_count(&template);
-
-    map::publish_template(registry, template, ctx);
-
-    event::emit(MapTemplatePublishedEvent {
-        template_id,
-        publisher: ctx.sender(),
-        tile_count
-    });
-}
-
-// 发布自定义地图模板
+// 发布自定义地图模板（通过客户端PTB调用）
 entry fun publish_custom_map_template(
     registry: &mut MapRegistry,
     template_id: u16,
@@ -83,9 +64,16 @@ entry fun publish_custom_map_template(
 }
 
 // ===== Helper Functions 辅助函数 =====
+// 地图创建已移至客户端，通过PTB调用map模块函数
 
-// 创建简化的测试地图（演示新的 property 系统）
-public fun create_simple_test_map(ctx: &mut TxContext): MapTemplate {
+// 以下函数已删除（改为客户端编辑+PTB）：
+// - create_simple_test_map()
+// - create_standard_monopoly_map()
+
+// ===== Test Helper Functions 测试辅助函数 =====
+
+#[test_only]
+public fun create_simple_test_map_old(ctx: &mut TxContext): MapTemplate {
     let mut template = map::new_map_template(100, 4, 4, ctx);
 
     // 创建地产
@@ -152,8 +140,8 @@ public fun create_simple_test_map(ctx: &mut TxContext): MapTemplate {
     template
 }
 
-// 创建并配置一个标准的大富翁地图（40格）
-public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
+#[test_only]
+public fun create_standard_monopoly_map_old(ctx: &mut TxContext): MapTemplate {
     let mut template = map::new_map_template(2, 11, 11, ctx);
 
     // 先创建所有地产

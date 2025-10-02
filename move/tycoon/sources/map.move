@@ -53,16 +53,17 @@ public struct PropertyStatic has store, copy, drop {
 //   * 医院/监狱：停留回合数
 //   * 罚金/奖励：金额
 //   * 其他特殊效果
-// - cw_next: 顺时针下一个地块ID
-// - ccw_next: 逆时针下一个地块ID
+// - w/n/e/s: 西/北/东/南四个方向的邻居地块ID
 public struct TileStatic has store, copy, drop {
     x: u8,
     y: u8,
     kind: u8,           // TileKind //todo 只有 TILE_PROPERTY 类型的property_id才有意义, 其他类型tile无关联地产
     property_id: u16,   // 关联的地产ID（NO_PROPERTY表示非地产）
     special: u64,       // 额外参数（非地产地块使用）
-    cw_next: u16,       // 顺时针下一个地块ID (最多65535个地块)
-    ccw_next: u16       // 逆时针下一个地块ID
+    w: u16,             // west邻居 (x-1方向)
+    n: u16,             // north邻居 (z-1方向)
+    e: u16,             // east邻居 (x+1方向)
+    s: u16              // south邻居 (z+1方向)
 }
 
 // ===== MapTemplate 地图模板（静态，不随对局变化） =====
@@ -88,9 +89,7 @@ public struct TileStatic has store, copy, drop {
 // - properties_static: 所有地产的静态信息
 //
 // 导航系统：
-// - adj: 邻接表，记录每个地块的相邻地块
-// - cw_next: 顺时针走向的下一个地块
-// - ccw_next: 逆时针走向的下一个地块
+// - 每个tile通过w/n/e/s字段存储4方向邻居，无需额外邻接表
 //
 // 特殊地块索引：
 // - hospital_ids: 所有医院地块
@@ -112,8 +111,7 @@ public struct MapTemplate has store {
     tile_count: u64,
     tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
     properties_static: vector<PropertyStatic>, // 地产静态信息，property_id 即为索引
-    adj: Table<u16 /* tile_id */, vector<u16> /* neighbors */>,
-    // 导航信息已集成到 TileStatic 中，不再需要独立的 Table
+    // 导航信息已集成到 TileStatic.w/n/e/s 中，不再需要额外的邻接表
     hospital_ids: vector<u16>,
     prison_ids: vector<u16>,
     shop_ids: vector<u16>,
@@ -198,8 +196,10 @@ public fun new_tile_static(
         kind,
         property_id,
         special,
-        cw_next: INVALID_TILE_ID,     // 使用无效值作为未设置标记
-        ccw_next: INVALID_TILE_ID     // 使用无效值作为未设置标记
+        w: INVALID_TILE_ID,           // 使用无效值表示无邻居
+        n: INVALID_TILE_ID,
+        e: INVALID_TILE_ID,
+        s: INVALID_TILE_ID
     }
 }
 
@@ -223,17 +223,25 @@ public fun new_tile_static_with_nav(
     kind: u8,
     property_id: u16,  // NO_PROPERTY 表示非地产地块
     special: u64,
-    cw_next: u16,
-    ccw_next: u16
+    w: u16,
+    n: u16,
+    e: u16,
+    s: u16
 ): TileStatic {
     // 验证导航字段的有效性
-    // 允许 INVALID_TILE_ID 表示未设置（将在add_tile_to_template中处理）
+    // 允许 INVALID_TILE_ID 表示无邻居
     // 但如果不是 INVALID_TILE_ID，必须是有效范围内
-    if (cw_next != INVALID_TILE_ID) {
-        assert!(cw_next <= MAX_TILE_ID, ETileIdTooLarge);
+    if (w != INVALID_TILE_ID) {
+        assert!(w <= MAX_TILE_ID, ETileIdTooLarge);
     };
-    if (ccw_next != INVALID_TILE_ID) {
-        assert!(ccw_next <= MAX_TILE_ID, ETileIdTooLarge);
+    if (n != INVALID_TILE_ID) {
+        assert!(n <= MAX_TILE_ID, ETileIdTooLarge);
+    };
+    if (e != INVALID_TILE_ID) {
+        assert!(e <= MAX_TILE_ID, ETileIdTooLarge);
+    };
+    if (s != INVALID_TILE_ID) {
+        assert!(s <= MAX_TILE_ID, ETileIdTooLarge);
     };
 
     TileStatic {
@@ -242,8 +250,10 @@ public fun new_tile_static_with_nav(
         kind,
         property_id,
         special,
-        cw_next,
-        ccw_next
+        w,
+        n,
+        e,
+        s
     }
 }
 
@@ -262,7 +272,6 @@ public fun new_map_template(
         tile_count: 0,
         tiles_static: vector[],  // 初始化为空 vector
         properties_static: vector[],  // 初始化为空 vector
-        adj: table::new(ctx),
         hospital_ids: vector[],
         prison_ids: vector[],
         shop_ids: vector[],
@@ -288,14 +297,8 @@ public fun add_tile_to_template(
     let current_count = template.tiles_static.length() as u16;
     assert!(tile_id == current_count, ETileIdNotSequential);
 
-    // 如果导航字段未设置（等于INVALID_TILE_ID），初始化为自环
-    // 这样新创建的地块默认是"孤岛"，后续通过set_cw_next/set_ccw_next建立连接
-    if (tile.cw_next == INVALID_TILE_ID) {
-        tile.cw_next = tile_id;
-    };
-    if (tile.ccw_next == INVALID_TILE_ID) {
-        tile.ccw_next = tile_id;
-    };
+    // w/n/e/s默认为INVALID_TILE_ID，表示无邻居
+    // 后续通过set_w/n/e/s建立连接
 
     template.tiles_static.push_back(tile);
     template.tile_count = template.tile_count + 1;
@@ -312,64 +315,48 @@ public fun add_tile_to_template(
     };
 }
 
-// 设置地块的邻接关系
-public fun set_tile_adjacency(
-    template: &mut MapTemplate,
-    tile_id: u16,
-    neighbors: vector<u16>
-) {
-    if (table::contains(&template.adj, tile_id)) {
-        let adj_list = table::borrow_mut(&mut template.adj, tile_id);
-        *adj_list = neighbors;
-    } else {
-        table::add(&mut template.adj, tile_id, neighbors);
+// 设置west方向邻居
+public fun set_w(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    if (neighbor_id != INVALID_TILE_ID) {
+        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
+        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
     };
+    let tile = &mut template.tiles_static[tile_id as u64];
+    tile.w = neighbor_id;
 }
 
-// 设置顺时针下一格
-public fun set_cw_next(
-    template: &mut MapTemplate,
-    tile_id: u16,
-    next_id: u16
-) {
+// 设置north方向邻居
+public fun set_n(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
     assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-
-    // 验证next_id的有效性
-    // 允许自环（next_id == tile_id）用于表示端点
-    // 但禁止设置为INVALID_TILE_ID（除非是真正的未设置状态）
-    assert!(next_id != INVALID_TILE_ID, EInvalidNextTileId);
-    assert!(next_id <= MAX_TILE_ID, ETileIdTooLarge);
-
-    // 如果不是自环，验证目标地块存在
-    if (next_id != tile_id) {
-        assert!((next_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
+    if (neighbor_id != INVALID_TILE_ID) {
+        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
+        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
     };
-
     let tile = &mut template.tiles_static[tile_id as u64];
-    tile.cw_next = next_id;
+    tile.n = neighbor_id;
 }
 
-// 设置逆时针下一格
-public fun set_ccw_next(
-    template: &mut MapTemplate,
-    tile_id: u16,
-    next_id: u16
-) {
+// 设置east方向邻居
+public fun set_e(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
     assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-
-    // 验证next_id的有效性
-    // 允许自环（next_id == tile_id）用于表示端点
-    // 但禁止设置为INVALID_TILE_ID（除非是真正的未设置状态）
-    assert!(next_id != INVALID_TILE_ID, EInvalidNextTileId);
-    assert!(next_id <= MAX_TILE_ID, ETileIdTooLarge);
-
-    // 如果不是自环，验证目标地块存在
-    if (next_id != tile_id) {
-        assert!((next_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
+    if (neighbor_id != INVALID_TILE_ID) {
+        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
+        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
     };
-
     let tile = &mut template.tiles_static[tile_id as u64];
-    tile.ccw_next = next_id;
+    tile.e = neighbor_id;
+}
+
+// 设置south方向邻居
+public fun set_s(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
+    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
+    if (neighbor_id != INVALID_TILE_ID) {
+        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
+        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
+    };
+    let tile = &mut template.tiles_static[tile_id as u64];
+    tile.s = neighbor_id;
 }
 
 // ===== Template Query Functions 模板查询函数 =====
@@ -380,27 +367,26 @@ public fun get_tile(template: &MapTemplate, tile_id: u16): &TileStatic {
     &template.tiles_static[tile_id as u64]
 }
 
-// 获取顺时针下一格
-public fun get_cw_next(template: &MapTemplate, tile_id: u16): u16 {
+// 获取所有有效邻居（!=INVALID_TILE_ID）
+public fun get_valid_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
     assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
     let tile = &template.tiles_static[tile_id as u64];
-    tile.cw_next
-}
+    let mut neighbors = vector[];
 
-// 获取逆时针下一格
-public fun get_ccw_next(template: &MapTemplate, tile_id: u16): u16 {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id as u64];
-    tile.ccw_next
-}
+    if (tile.w != INVALID_TILE_ID) {
+        neighbors.push_back(tile.w);
+    };
+    if (tile.n != INVALID_TILE_ID) {
+        neighbors.push_back(tile.n);
+    };
+    if (tile.e != INVALID_TILE_ID) {
+        neighbors.push_back(tile.e);
+    };
+    if (tile.s != INVALID_TILE_ID) {
+        neighbors.push_back(tile.s);
+    };
 
-// 获取邻接地块
-public fun get_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
-    if (table::contains(&template.adj, tile_id)) {
-        *table::borrow(&template.adj, tile_id)
-    } else {
-        vector[]
-    }
+    neighbors
 }
 
 // 检查地块是否存在
@@ -436,17 +422,6 @@ public fun get_width(template: &MapTemplate): u8 {
 // 获取地图高度
 public fun get_height(template: &MapTemplate): u8 {
     template.height
-}
-
-// 检查地块是否有邻接表（分叉）
-public fun tile_has_adj(template: &MapTemplate, tile_id: u16): bool {
-    table::contains(&template.adj, tile_id) &&
-    !(table::borrow(&template.adj, tile_id)).is_empty()
-}
-
-// 获取地块的邻接列表
-public fun get_adj_tiles(template: &MapTemplate, tile_id: u16): &vector<u16> {
-    table::borrow(&template.adj, tile_id)
 }
 
 // 检查地块是否可以放置NPC
@@ -489,8 +464,10 @@ public fun tile_y(tile: &TileStatic): u8 { tile.y }
 public fun tile_kind(tile: &TileStatic): u8 { tile.kind }
 public fun tile_property_id(tile: &TileStatic): u16 { tile.property_id }
 public fun tile_special(tile: &TileStatic): u64 { tile.special }
-public fun tile_cw_next(tile: &TileStatic): u16 { tile.cw_next }
-public fun tile_ccw_next(tile: &TileStatic): u16 { tile.ccw_next }
+public fun tile_w(tile: &TileStatic): u16 { tile.w }
+public fun tile_n(tile: &TileStatic): u16 { tile.n }
+public fun tile_e(tile: &TileStatic): u16 { tile.e }
+public fun tile_s(tile: &TileStatic): u16 { tile.s }
 
 // PropertyStatic 访问器函数
 // property_kind函数已删除，建筑类型改为动态属性Property.building_type
@@ -521,76 +498,6 @@ public fun tile_has_property(tile: &TileStatic): bool {
 
 // 导出常量供其他模块使用
 public fun no_property(): u16 { NO_PROPERTY }
-
-// ===== Test Helper Functions 测试辅助函数 =====
-
-// 创建简单的8格测试地图
-public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
-    let mut template = new_map_template(1, 3, 3, ctx);
-
-    // 先创建所有地产
-    let prop_0 = add_property_to_template(&mut template,
-        new_property_static(types::SIZE_1X1(), 1000, 100));
-    let prop_1 = add_property_to_template(&mut template,
-        new_property_static(types::SIZE_1X1(), 1200, 120));
-    let prop_3 = add_property_to_template(&mut template,
-        new_property_static(types::SIZE_1X1(), 1500, 150));
-    let prop_4 = add_property_to_template(&mut template,
-        new_property_static(types::SIZE_1X1(), 1800, 180));
-    let prop_6 = add_property_to_template(&mut template,
-        new_property_static(types::SIZE_1X1(), 2000, 200));
-    let prop_7 = add_property_to_template(&mut template,
-        new_property_static(types::SIZE_1X1(), 2200, 220));
-
-    // 创建8个地块，形成环形
-    // tile 0: 起点 (0,0) - PROPERTY
-    add_tile_to_template(&mut template, 0,
-        new_tile_static(0, 0, types::TILE_PROPERTY(), prop_0, 0));
-
-    // tile 1: (1,0) - PROPERTY
-    add_tile_to_template(&mut template, 1,
-        new_tile_static(1, 0, types::TILE_PROPERTY(), prop_1, 0));
-
-    // tile 2: (2,0) - CARD
-    add_tile_to_template(&mut template, 2,
-        new_tile_static(2, 0, types::TILE_CARD(), NO_PROPERTY, 0));
-
-    // tile 3: (2,1) - PROPERTY
-    add_tile_to_template(&mut template, 3,
-        new_tile_static(2, 1, types::TILE_PROPERTY(), prop_3, 0));
-
-    // tile 4: (2,2) - PROPERTY
-    add_tile_to_template(&mut template, 4,
-        new_tile_static(2, 2, types::TILE_PROPERTY(), prop_4, 0));
-
-    // tile 5: (1,2) - HOSPITAL
-    add_tile_to_template(&mut template, 5,
-        new_tile_static(1, 2, types::TILE_HOSPITAL(), NO_PROPERTY, 2)); // special=2表示停留2回合
-
-    // tile 6: (0,2) - PROPERTY
-    add_tile_to_template(&mut template, 6,
-        new_tile_static(0, 2, types::TILE_PROPERTY(), prop_6, 0));
-
-    // tile 7: (0,1) - PROPERTY
-    add_tile_to_template(&mut template, 7,
-        new_tile_static(0, 1, types::TILE_PROPERTY(), prop_7, 0));
-
-    // 设置顺时针路径
-    let mut i = 0;
-    while (i < 8) {
-        set_cw_next(&mut template, i, (i + 1) % 8);
-        i = i + 1;
-    };
-
-    // 设置逆时针路径
-    i = 0;
-    while (i < 8) {
-        set_ccw_next(&mut template, i, (i + 7) % 8);
-        i = i + 1;
-    };
-
-    template
-}
 
 // ===== Test Helper Functions 测试辅助函数 =====
 

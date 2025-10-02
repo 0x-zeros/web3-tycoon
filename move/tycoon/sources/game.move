@@ -60,8 +60,8 @@ const EInvalidParams: u64 = 5005;  // 参数无效
 
 // 移动相关错误
 const EInvalidMove: u64 = 4001;
-const ENoPathAllowed: u64 = 4002;  // 无遥控骰子时不允许提供路径
-const EInvalidPathChoice: u64 = 4003;  // 路径选择不是有效的邻居
+const EPathTooShort: u64 = 4002;       // path长度不足dice值
+const EInvalidPath: u64 = 4003;        // 非法path（包含非邻居或回头）
 
 // NPC相关错误（已无全局数量限制）
 const E_NPC_SPAWN_POOL_INDEX_OUT_OF_BOUNDS: u64 = 8001;  // NPC生成池索引越界
@@ -117,7 +117,7 @@ public struct BuffEntry has store, copy, drop {
 // - in_hospital_turns: 剩余医院回合数（0表示不在医院）
 // - bankrupt: 破产标志，破产后不参与游戏但保留在players表中
 // - cards: 手牌集合，使用vector存储以优化小集合性能
-// - dir_pref: 移动方向偏好（顺时针/逆时针/自动选择）
+// - last_tile_id: 上一步所在的tile_id（用于避免回头）
 // - buffs: 当前激活的所有Buff列表
 public struct Player has store {
     owner: address,
@@ -127,7 +127,7 @@ public struct Player has store {
     in_hospital_turns: u8,
     bankrupt: bool,
     cards: vector<CardEntry>,  // 改为vector存储
-    dir_pref: u8,  // DirMode
+    last_tile_id: u16,  // 上一步的tile（避免回头），初始为spawn_tile的某个邻居
     buffs: vector<BuffEntry>  // 统一的buff存储
 }
 
@@ -374,7 +374,7 @@ public entry fun create_game(
 
     // 创建者自动加入（使用解析后的起始资金）
     let creator = ctx.sender();
-    let player = create_player_with_cash(creator, types::DIR_CW(), starting_cash, ctx);
+    let player = create_player_with_cash(creator, starting_cash, ctx);
     game.players.push_back(player);
 
     // 发出游戏创建事件
@@ -426,7 +426,7 @@ public entry fun join(
     } else {
         tycoon::get_starting_cash(game_data)  // 兜底使用默认值
     };
-    let player = create_player_with_cash(player_addr, types::DIR_CW(), starting_cash, ctx);  // 默认顺时针，游戏开始时随机
+    let player = create_player_with_cash(player_addr, starting_cash, ctx);
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 
@@ -466,19 +466,11 @@ public entry fun start(
     game.active_idx = 0;
     game.has_rolled = false;
 
-    // 为每个玩家随机分配初始方向
-    let mut generator = random::new_generator(r, ctx);
-    let mut i = 0;
-    while (i < game.players.length()) {
-        let player = &mut game.players[i];
-        let random_bit = generator.generate_u8() % 2;
-        player.dir_pref = if (random_bit == 0) types::DIR_CW() else types::DIR_CCW();
-        i = i + 1;
-    };
-
     // 获取地图模板（提前获取，供位置分配和NPC生成使用）
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
+
+    let mut generator = random::new_generator(r, ctx);
 
     // 为每个玩家随机分配不同的初始位置
     let player_count = game.players.length();
@@ -510,11 +502,23 @@ public entry fun start(
         i = i + 1;
     };
 
-    // 然后分配位置给玩家
+    // 然后分配位置给玩家，并初始化last_tile_id
     let mut i = 0;
     while (i < player_count) {
+        let spawn_pos = player_positions[i];
         let player = &mut game.players[i];
-        player.pos = player_positions[i];
+        player.pos = spawn_pos;
+
+        // 随机选择spawn位置的一个有效邻居作为last_tile_id
+        let neighbors = map::get_valid_neighbors(template, spawn_pos);
+        if (!neighbors.is_empty()) {
+            let random_idx = (generator.generate_u8() as u64) % neighbors.length();
+            player.last_tile_id = neighbors[random_idx];
+        } else {
+            // 如果没有邻居，使用spawn_pos自己（虽然不太可能）
+            player.last_tile_id = spawn_pos;
+        };
+
         i = i + 1;
     };
 
@@ -594,11 +598,11 @@ public entry fun use_card(
 }
 
 // 掷骰并移动
-//todo 改为entry fun
+// path现在必须始终传递（客户端寻路）
 public entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
-    path_choices: vector<u16>,  // 替换 dir_intent，传分叉选择序列
+    path: vector<u16>,  // 完整路径（客户端寻路生成）
     game_data: &GameData,
     r: &Random,
     clock: &Clock,//todo 在获取btc价格或者其他defi相关场景的时候会使用到
@@ -618,18 +622,30 @@ public entry fun roll_and_step(
     // 在函数开头创建一个生成器，贯穿整个交易使用
     let mut generator = random::new_generator(r, ctx);
 
-    // 获取骰子点数
-    let dice = get_dice_value(game, player_index, &mut generator);
-
     let player = &game.players[player_index as u64];
     let from_pos = player.pos;
+    let has_move_ctrl = is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
 
-    // 验证path_choices：有遥控骰子时才能提供路径选择
-    if (is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round)) {
-        // 有遥控骰子buff，可以提供路径选择
+    // 确定实际使用的骰子点数和path
+    let (dice, actual_path) = if (has_move_ctrl) {
+        // 有遥控骰子：使用完整path，path长度即为骰子点数
+        assert!(!path.is_empty() && path.length() <= 12, EInvalidPath);
+        let dice_value = path.length() as u8;
+        (dice_value, path)
     } else {
-        // 无遥控骰子，不应提供路径选择
-        assert!(path_choices.is_empty(), ENoPathAllowed);
+        // 无遥控骰子：掷骰子，截取path前N个
+        let dice_value = get_dice_value(game, player_index, &mut generator);
+        assert!(path.length() >= (dice_value as u64), EPathTooShort);
+
+        // 截取path的前dice_value个
+        let mut truncated_path = vector[];
+        let mut i = 0;
+        while (i < dice_value) {
+            truncated_path.push_back(path[i as u64]);
+            i = i + 1;
+        };
+
+        (dice_value, truncated_path)
     };
 
     // 创建事件收集器
@@ -642,7 +658,7 @@ public entry fun roll_and_step(
         game,
         seat.player_index,
         dice,
-        &path_choices,
+        &actual_path,
         &mut steps,
         &mut cash_changes,
         game_data,
@@ -653,14 +669,14 @@ public entry fun roll_and_step(
     let end_player = &game.players[player_index as u64];
     let end_pos = end_player.pos;
 
-    // 发射聚合事件（包含path_choices）
+    // 发射聚合事件（包含actual_path）
     events::emit_roll_and_step_action_event_with_choices(
         game.id.to_inner(),
         player_addr,
         game.round,
         game.turn,
         dice,
-        path_choices,  // 记录实际使用的路径选择
+        actual_path,  // 记录实际使用的路径
         from_pos,
         steps,
         cash_changes,
@@ -931,7 +947,7 @@ public entry fun upgrade_property(
 // ===== Internal Functions 内部函数 =====
 
 // 创建玩家（指定起始资金）
-fun create_player_with_cash(owner: address, dir_pref: u8, cash: u64, _ctx: &mut TxContext): Player {
+fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Player {
     // 创建初始卡牌
     let mut initial_cards = vector[];
     initial_cards.push_back(cards::new_card_entry(types::CARD_MOVE_CTRL(), 1));  // 遥控骰子 1 张
@@ -947,7 +963,7 @@ fun create_player_with_cash(owner: address, dir_pref: u8, cash: u64, _ctx: &mut 
         in_hospital_turns: 0,
         bankrupt: false,
         cards: initial_cards,
-        dir_pref  // 使用传入的方向
+        last_tile_id: 65535  // INVALID_TILE_ID，在start()中设置为有效值
     }
 }
 
@@ -1097,9 +1113,9 @@ fun execute_step_movement_with_choices(
     let template = map::get_template(map_registry, game.template_id);
 
     // 先读取必要的玩家信息
-    let (from_pos, mut direction, is_frozen) = {
+    let (from_pos, mut last_tile_id, is_frozen) = {
         let player = &game.players[player_index as u64];
-        (player.pos, player.dir_pref, is_buff_active(player, types::BUFF_FROZEN(), game.round))
+        (player.pos, player.last_tile_id, is_buff_active(player, types::BUFF_FROZEN(), game.round))
     };
 
     if (is_frozen) {
@@ -1128,67 +1144,16 @@ fun execute_step_movement_with_choices(
 
     // 初始化移动状态
     let mut current_pos = from_pos;
-    let mut choice_idx = 0;
     let mut step_index: u8 = 0;
     let mut i = 0;
-    let mut dir_updated = false;  // 标记是否已更新方向
 
-    // 逐步移动主循环
+    // 逐步移动主循环 - path_choices必须包含完整路径
     while (i < dice) {
-        // 确定下一个位置
-        let next_pos = if (!path_choices.is_empty() &&
-                          choice_idx < path_choices.length()) {
-            // 提供了路径选择（可用于分叉或纯环方向控制）
-            let chosen = path_choices[choice_idx];
+        // 从path_choices获取下一个位置
+        let next_pos = path_choices[i as u64];
 
-            // 验证选择是否合法
-            assert!(is_valid_next_tile(template, current_pos, chosen), EInvalidPathChoice);
-            choice_idx = choice_idx + 1;
-
-            // 首次消费方向选择时，更新 dir_pref
-            if (!dir_updated) {
-                let cw_next = map::get_cw_next(template, current_pos);
-                let ccw_next = map::get_ccw_next(template, current_pos);
-
-                // 如果选择的是 cw 或 ccw 方向，更新玩家方向偏好
-                if (chosen == cw_next || chosen == ccw_next) {
-                    let new_direction = if (chosen == ccw_next) {
-                        types::DIR_CCW()
-                    } else {
-                        types::DIR_CW()
-                    };
-
-                    // 更新玩家的持久方向偏好
-                    let player = &mut game.players[player_index as u64];
-                    player.dir_pref = new_direction;
-
-                    // 同步更新本回合的局部方向变量
-                    direction = new_direction;
-
-                    dir_updated = true;
-                }
-            };
-
-            chosen
-        } else {
-            // 无分叉或无选择，按方向偏好自动前进
-            let mut next_pos = if (direction == types::DIR_CCW()) {
-                map::get_ccw_next(template, current_pos)
-            } else {
-                map::get_cw_next(template, current_pos)
-            };
-
-            // 如果遇到自环（终端地块），自动掉头
-            if (next_pos == current_pos) {
-                next_pos = if (direction == types::DIR_CCW()) {
-                    map::get_cw_next(template, current_pos)  // 掉头走cw方向
-                } else {
-                    map::get_ccw_next(template, current_pos)  // 掉头走ccw方向
-                };
-            };
-
-            next_pos
-        };
+        // 验证next_pos是current_pos的有效邻居，且不是last_tile_id（避免回头）
+        assert!(is_valid_neighbor(template, current_pos, next_pos, last_tile_id), EInvalidPath);
 
         let mut pass_draws = vector[];
         let mut npc_event_opt = option::none<events::NpcStepEvent>();
@@ -1332,43 +1297,40 @@ fun execute_step_movement_with_choices(
             ));
         };
 
+        // 更新last_tile_id为当前位置
+        last_tile_id = current_pos;
         current_pos = next_pos;
         step_index = step_index + 1;
         i = i + 1;
     };
 
-    // 注意：早停（路障/炸弹/狗狗）时可能有剩余的choices，这是正常的
-    // 不需要验证是否用完所有choices
+    // 更新玩家的last_tile_id
+    {
+        let player = &mut game.players[player_index as u64];
+        player.last_tile_id = last_tile_id;
+    };
 }
 
-// 验证选择的下一格是否合法
-fun is_valid_next_tile(template: &MapTemplate, current: u16, chosen: u16): bool {
-    // 禁止选择停留在原地（自环）
-    if (chosen == current) {
-        return false
-    };
+// 验证next_pos是current_pos的有效邻居，且不是last_tile_id
+fun is_valid_neighbor(
+    template: &MapTemplate,
+    current: u16,
+    next: u16,
+    last_tile_id: u16
+): bool {
+    // 禁止回头
+    if (next == last_tile_id) return false;
+
+    // 禁止原地不动
+    if (next == current) return false;
 
     let tile = map::get_tile(template, current);
 
-    // 检查是否是cw/ccw
-    if (chosen == map::get_cw_next(template, current) ||
-        chosen == map::get_ccw_next(template, current)) {
-        return true
-    };
-
-    // 检查是否在adj列表中
-    if (map::tile_has_adj(template, current)) {
-        let adjs = map::get_adj_tiles(template, current);
-        let mut i = 0;
-        while (i < adjs.length()) {
-            if (adjs[i] == chosen) {
-                return true
-            };
-            i = i + 1;
-        };
-    };
-
-    false
+    // 检查是否是四个方向的邻居之一
+    next == map::tile_w(tile) ||
+    next == map::tile_n(tile) ||
+    next == map::tile_e(tile) ||
+    next == map::tile_s(tile)
 }
 
 fun handle_tile_pass(
@@ -2085,22 +2047,10 @@ fun apply_card_effect_with_collectors(
     } else if (kind == types::CARD_TURN()) {
         // 转向卡：切换玩家的方向偏好
         // params[0]=目标玩家索引（可选，默认为自己）
-        let target_index = if (params.length() > 0) {
-            (params[0] as u8)
-        } else {
-            player_index  // 默认给自己
-        };
-        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
-
-        // 切换方向
-        let target_player = &mut game.players[target_index as u64];
-        target_player.dir_pref = if (target_player.dir_pref == types::DIR_CW()) {
-            types::DIR_CCW()
-        } else {
-            types::DIR_CW()
-        };
-
-        // 转向卡是即时效果，不需要记录buff
+        // 转向卡在新寻路系统下无效（客户端寻路）
+        // 保留卡牌类型但不做任何处理
+        let _ = params;  // 避免未使用警告
+        let _ = player_index;
     }
 }
 
@@ -3074,74 +3024,14 @@ fun check_chain_tiles(
     // 加入中心地块
     chain_tiles.push_back(center_tile_id);
 
-    // 向顺时针方向查找
-    let mut current_id = center_tile_id;
-    let mut cw_count = 0;
-    while (cw_count < max_range) {
-        let current_static = map::get_tile(template, current_id);
-        let next_id = map::tile_cw_next(current_static);
-        // 避免绕回到起点
-        if (next_id == center_tile_id) break;
+    // 在新的四方向邻接系统下，连街检测暂时禁用
+    // TODO: 实现基于BFS的连街检测算法
+    // 暂时返回：始终不连街
+    let _ = game;
+    let _ = owner;
+    let _ = max_range;
 
-        let next_static = map::get_tile(template, next_id);
-        let next_property_id = map::tile_property_id(next_static);
-
-        // 跳过非地产tile
-        if (next_property_id == map::no_property()) break;
-
-        let next_property = &game.properties[next_property_id as u64];
-        let next_property_static = map::get_property(template, next_property_id);
-        
-        let next_size = map::property_size(next_property_static);
-
-        // 检查是否为同owner的小地产（1x1的地产）
-        if (next_size == types::SIZE_1X1() &&
-            next_property.owner == owner) {
-            chain_tiles.push_back(next_id);
-            current_id = next_id;
-            cw_count = cw_count + 1;
-        } else {
-            break; // 连街中断
-        };
-    };
-
-    // 向逆时针方向查找
-    current_id = center_tile_id;
-    let mut ccw_count = 0;
-    while (ccw_count < max_range) {
-        let current_static = map::get_tile(template, current_id);
-        let next_id = map::tile_ccw_next(current_static);
-        // 避免绕回到起点
-        if (next_id == center_tile_id) break;
-
-        let next_static = map::get_tile(template, next_id);
-        let next_property_id = map::tile_property_id(next_static);
-
-        // 跳过非地产tile
-        if (next_property_id == map::no_property()) break;
-
-        let next_property = &game.properties[next_property_id as u64];
-        let next_property_static = map::get_property(template, next_property_id);
-        
-        let next_size = map::property_size(next_property_static);
-
-        // 检查是否为同owner的小地产（1x1的地产）
-        if (next_size == types::SIZE_1X1() &&
-            next_property.owner == owner) {
-            // 避免重复添加
-            if (!chain_tiles.contains(&next_id)) {
-                chain_tiles.push_back(next_id);
-            };
-            current_id = next_id;
-            ccw_count = ccw_count + 1;
-        } else {
-            break; // 连街中断
-        };
-    };
-
-    // 至少2块地才算连街
-    let is_chained = chain_tiles.length() >= 2;
-    (is_chained, chain_tiles)
+    (false, chain_tiles)
 }
 
 /// 查找影响某地块的土地庙
@@ -3166,59 +3056,11 @@ fun find_nearby_temples(
     };
     checked_tiles.push_back(center_tile_id);
 
-    // 向顺时针查找
-    let mut current_id = center_tile_id;
-    let mut i = 0;
-    while (i < range) {
-        let current_static = map::get_tile(template, current_id);
-        let next_id = map::tile_cw_next(current_static);
-        // 避免循环
-        if (checked_tiles.contains(&next_id)) break;
-
-        checked_tiles.push_back(next_id);
-
-        // 检查是否为土地庙
-        let tile_static = map::get_tile(template, next_id);
-        let property_id = map::tile_property_id(tile_static);
-        if (property_id != map::no_property()) {
-            let property = &game.properties[property_id as u64];
-            if (property.building_type == types::BUILDING_TEMPLE() &&
-                property.owner != NO_OWNER &&
-                property.level > 0) {
-                temple_levels.push_back(property.level);
-            };
-        };
-
-        current_id = next_id;
-        i = i + 1;
-    };
-
-    // 向逆时针查找
-    current_id = center_tile_id;
-    i = 0;
-    while (i < range) {
-        let current_static = map::get_tile(template, current_id);
-        let next_id = map::tile_ccw_next(current_static);
-        // 避免循环
-        if (checked_tiles.contains(&next_id)) break;
-
-        checked_tiles.push_back(next_id);
-
-        // 检查是否为土地庙
-        let tile_static = map::get_tile(template, next_id);
-        let property_id = map::tile_property_id(tile_static);
-        if (property_id != map::no_property()) {
-            let property = &game.properties[property_id as u64];
-            if (property.building_type == types::BUILDING_TEMPLE() &&
-                property.owner != NO_OWNER &&
-                property.level > 0) {
-                temple_levels.push_back(property.level);
-            };
-        };
-
-        current_id = next_id;
-        i = i + 1;
-    };
+    // 在新的四方向邻接系统下，土地庙范围检测暂时禁用
+    // TODO: 实现基于BFS的范围搜索算法
+    // 暂时返回：只检测中心地块自己
+    let _ = range;
+    let _ = checked_tiles;
 
     temple_levels
 }

@@ -76,10 +76,6 @@ public fun PHASE_MANAGE(): u8 { 4 }
 public fun PHASE_EVENTS(): u8 { 5 }
 public fun PHASE_END(): u8 { 6 }
 
-// ===== DirMode 移动方向模式 =====
-public fun DIR_CW(): u8 { 0 }   // 顺时针
-public fun DIR_CCW(): u8 { 1 }  // 逆时针
-
 // ===== GameStatus 游戏状态 =====
 public fun STATUS_READY(): u8 { 0 }
 public fun STATUS_ACTIVE(): u8 { 1 }

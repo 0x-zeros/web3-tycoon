@@ -339,7 +339,6 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     while (i < 40) {
         map::set_cw_next(&mut template, (i as u16), ((i + 1) % 40) as u16);
         map::set_ccw_next(&mut template, (i as u16), ((i + 39) % 40) as u16);
-        map::set_ring_info(&mut template, (i as u16), 0, (i as u16));
         i = i + 1;
     };
 

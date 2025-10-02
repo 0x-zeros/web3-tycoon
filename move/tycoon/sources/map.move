@@ -55,8 +55,6 @@ public struct PropertyStatic has store, copy, drop {
 //   * 其他特殊效果
 // - cw_next: 顺时针下一个地块ID
 // - ccw_next: 逆时针下一个地块ID
-// - ring_id: 所属环路ID（支持多环路）
-// - ring_idx: 在环路中的位置索引
 public struct TileStatic has store, copy, drop {
     x: u8,
     y: u8,
@@ -64,9 +62,7 @@ public struct TileStatic has store, copy, drop {
     property_id: u16,   // 关联的地产ID（NO_PROPERTY表示非地产）
     special: u64,       // 额外参数（非地产地块使用）
     cw_next: u16,       // 顺时针下一个地块ID (最多65535个地块)
-    ccw_next: u16,      // 逆时针下一个地块ID
-    ring_id: u8,        // 所属环路ID (最多256个环路)
-    ring_idx: u16       // 在环路中的索引
+    ccw_next: u16       // 逆时针下一个地块ID
 }
 
 // ===== MapTemplate 地图模板（静态，不随对局变化） =====
@@ -95,8 +91,6 @@ public struct TileStatic has store, copy, drop {
 // - adj: 邻接表，记录每个地块的相邻地块
 // - cw_next: 顺时针走向的下一个地块
 // - ccw_next: 逆时针走向的下一个地块
-// - ring_id: 地块所属环路ID（支持多环路）
-// - ring_idx: 地块在环路中的位置索引
 //
 // 特殊地块索引：
 // - hospital_ids: 所有医院地块
@@ -205,9 +199,7 @@ public fun new_tile_static(
         property_id,
         special,
         cw_next: INVALID_TILE_ID,     // 使用无效值作为未设置标记
-        ccw_next: INVALID_TILE_ID,    // 使用无效值作为未设置标记
-        ring_id: 0,     // 默认值，后续通过set_ring_info设置
-        ring_idx: 0     // 默认值，后续通过set_ring_info设置
+        ccw_next: INVALID_TILE_ID     // 使用无效值作为未设置标记
     }
 }
 
@@ -232,9 +224,7 @@ public fun new_tile_static_with_nav(
     property_id: u16,  // NO_PROPERTY 表示非地产地块
     special: u64,
     cw_next: u16,
-    ccw_next: u16,
-    ring_id: u8,
-    ring_idx: u16
+    ccw_next: u16
 ): TileStatic {
     // 验证导航字段的有效性
     // 允许 INVALID_TILE_ID 表示未设置（将在add_tile_to_template中处理）
@@ -253,9 +243,7 @@ public fun new_tile_static_with_nav(
         property_id,
         special,
         cw_next,
-        ccw_next,
-        ring_id,
-        ring_idx
+        ccw_next
     }
 }
 
@@ -384,20 +372,6 @@ public fun set_ccw_next(
     tile.ccw_next = next_id;
 }
 
-// 设置环路信息
-public fun set_ring_info(
-    template: &mut MapTemplate,
-    tile_id: u16,
-    ring_id: u8,
-    ring_idx: u16
-) {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    let tile = &mut template.tiles_static[tile_id as u64];
-    tile.ring_id = ring_id;
-    tile.ring_idx = ring_idx;
-}
-
-
 // ===== Template Query Functions 模板查询函数 =====
 
 // 获取地块信息
@@ -418,20 +392,6 @@ public fun get_ccw_next(template: &MapTemplate, tile_id: u16): u16 {
     assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
     let tile = &template.tiles_static[tile_id as u64];
     tile.ccw_next
-}
-
-// 获取地块所属环路ID
-public fun get_ring_id(template: &MapTemplate, tile_id: u16): u8 {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id as u64];
-    tile.ring_id
-}
-
-// 获取地块在环路中的索引
-public fun get_ring_idx(template: &MapTemplate, tile_id: u16): u16 {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    let tile = &template.tiles_static[tile_id as u64];
-    tile.ring_idx
 }
 
 // 获取邻接地块
@@ -531,8 +491,6 @@ public fun tile_property_id(tile: &TileStatic): u16 { tile.property_id }
 public fun tile_special(tile: &TileStatic): u64 { tile.special }
 public fun tile_cw_next(tile: &TileStatic): u16 { tile.cw_next }
 public fun tile_ccw_next(tile: &TileStatic): u16 { tile.ccw_next }
-public fun tile_ring_id(tile: &TileStatic): u8 { tile.ring_id }
-public fun tile_ring_idx(tile: &TileStatic): u16 { tile.ring_idx }
 
 // PropertyStatic 访问器函数
 // property_kind函数已删除，建筑类型改为动态属性Property.building_type
@@ -628,13 +586,6 @@ public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
     i = 0;
     while (i < 8) {
         set_ccw_next(&mut template, i, (i + 7) % 8);
-        i = i + 1;
-    };
-
-    // 设置所有地块为同一个环路
-    i = 0;
-    while (i < 8) {
-        set_ring_info(&mut template, i, 0, (i as u16));
         i = i + 1;
     };
 

@@ -22,20 +22,19 @@ const INVALID_TILE_ID: u16 = 65535;    // u16::MAX 作为无效/未设置的tile
 const MAX_TILE_ID: u16 = 65534;        // 实际可用的最大tile_id
 const NO_PROPERTY: u16 = 65535;        // u16::MAX 表示tile不属于任何property
 
-// ===== PropertyStatic 静态地产信息 =====
+// ===== PropertyStatic 静态建筑信息 =====
 //
 // 功能说明：
-// 定义地产的静态属性（价格、租金等）
-// 多个Tile可以指向同一个Property（如大地产、交叉口地产）
+// 定义建筑的静态属性（价格、租金等）
+// 建筑分为1x1和2x2两种尺寸
+// 建筑类型（temple/research等）是动态属性，存储在Property.building_type
 //
 // 字段说明：
-// - kind: 地产类型（TILE_PROPERTY/TILE_TEMPLE/TILE_HOTEL等）
-// - size: 地产大小（SIZE_1X1/SIZE_2X2）
+// - size: 建筑大小（SIZE_1X1/SIZE_2X2）
 // - price: 购买价格
 // - base_toll: 基础过路费
 public struct PropertyStatic has store, copy, drop {
-    kind: u8,       // 地产类型
-    size: u8,       // 地产大小
+    size: u8,       // 建筑大小（1x1 或 2x2）
     price: u64,     // 购买价格
     base_toll: u64  // 基础租金
 }
@@ -214,13 +213,11 @@ public fun new_tile_static(
 
 // 创建地产静态信息
 public fun new_property_static(
-    kind: u8,
     size: u8,
     price: u64,
     base_toll: u64
 ): PropertyStatic {
     PropertyStatic {
-        kind,
         size,
         price,
         base_toll
@@ -538,7 +535,7 @@ public fun tile_ring_id(tile: &TileStatic): u8 { tile.ring_id }
 public fun tile_ring_idx(tile: &TileStatic): u16 { tile.ring_idx }
 
 // PropertyStatic 访问器函数
-public fun property_kind(property: &PropertyStatic): u8 { property.kind }
+// property_kind函数已删除，建筑类型改为动态属性Property.building_type
 public fun property_size(property: &PropertyStatic): u8 { property.size }
 public fun property_price(property: &PropertyStatic): u64 { property.price }
 public fun property_base_toll(property: &PropertyStatic): u64 { property.base_toll }
@@ -575,17 +572,17 @@ public fun create_test_map_8(ctx: &mut TxContext): MapTemplate {
 
     // 先创建所有地产
     let prop_0 = add_property_to_template(&mut template,
-        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1000, 100));
+        new_property_static(types::SIZE_1X1(), 1000, 100));
     let prop_1 = add_property_to_template(&mut template,
-        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1200, 120));
+        new_property_static(types::SIZE_1X1(), 1200, 120));
     let prop_3 = add_property_to_template(&mut template,
-        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1500, 150));
+        new_property_static(types::SIZE_1X1(), 1500, 150));
     let prop_4 = add_property_to_template(&mut template,
-        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1800, 180));
+        new_property_static(types::SIZE_1X1(), 1800, 180));
     let prop_6 = add_property_to_template(&mut template,
-        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2000, 200));
+        new_property_static(types::SIZE_1X1(), 2000, 200));
     let prop_7 = add_property_to_template(&mut template,
-        new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2200, 220));
+        new_property_static(types::SIZE_1X1(), 2200, 220));
 
     // 创建8个地块，形成环形
     // tile 0: 起点 (0,0) - PROPERTY
@@ -670,10 +667,12 @@ public fun add_tile(
     toll: u64
 ) {
     let tile_id = ((y as u16) * (template.width as u16) + (x as u16));
+    // name, price, toll 参数已废弃，仅为兼容旧测试保留
+    // 使用 NO_PROPERTY 因为这是测试辅助函数
     add_tile_to_template(
         template,
         tile_id,
-        new_tile_static(x, y, kind, types::SIZE_1X1(), price, toll, 0)
+        new_tile_static(x, y, kind, NO_PROPERTY, 0)
     );
 }
 

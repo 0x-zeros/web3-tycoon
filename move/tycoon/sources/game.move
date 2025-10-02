@@ -36,6 +36,11 @@ const EInsufficientFunds: u64 = 7001;
 const EPropertyAlreadyOwned: u64 = 7002;
 const ENotPropertyOwner: u64 = 7003;
 const EMaxLevelReached: u64 = 7004;
+const ENotLargeBuilding: u64 = 7010;         // 不是2x2建筑
+const EBuildingTypeAlreadySet: u64 = 7011;   // 建筑类型已设置
+const EInvalidBuildingType: u64 = 7012;      // 无效的建筑类型
+const EBuildingAlreadyUpgraded: u64 = 7013;  // 建筑已升级，无法选择类型
+const EPropertyNotFound: u64 = 7014;         // 建筑不存在
 
 // 地块相关错误（game.move中使用的部分）
 const EPosMismatch: u64 = 2003;
@@ -180,12 +185,15 @@ public struct Seat has key {
 
 // ===== Property Dynamic Data 地产动态数据 =====
 
-// 地产动态数据结构
+// 建筑动态数据结构
 // 与MapTemplate.properties_static对应，存储游戏中变化的数据
 // 使用vector索引对齐，property_id即为数组下标
 public struct Property has store, copy, drop {
-    owner: u8,     // 所有者玩家索引（255表示无主）
-    level: u8      // 地产等级（0-5级）
+    owner: u8,          // 所有者玩家索引（NO_OWNER=255表示无主）
+    level: u8,          // 建筑等级（0-5级）
+    building_type: u8   // 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等）
+                        // 1x1建筑: 始终为BUILDING_NONE
+                        // 2x2建筑: 初始BUILDING_NONE，玩家选择后设置为具体类型
 }
 
 // ===== Tile Dynamic Data 地块动态数据 =====
@@ -336,7 +344,8 @@ public entry fun create_game(
     while (j < property_count) {
         properties.push_back(Property {
             owner: NO_OWNER,
-            level: 0
+            level: 0,
+            building_type: types::BUILDING_NONE()  // 所有建筑初始为NONE
         });
         j = j + 1;
     };
@@ -803,7 +812,7 @@ public entry fun buy_property(
     let tile_kind = map::tile_kind(tile_static);
 
     // 验证是地产类型
-    assert!(types::is_property(tile_kind), ENotProperty);
+    assert!(types::is_property_tile(tile_kind), ENotProperty);
 
     // 获取property_id
     let property_id = map::tile_property_id(tile_static);
@@ -877,7 +886,7 @@ public entry fun upgrade_property(
     let tile_kind = map::tile_kind(tile_static);
 
     // 验证是地产类型
-    assert!(types::is_property(tile_kind), ENotProperty);
+    assert!(types::is_property_tile(tile_kind), ENotProperty);
 
     // 获取property_id
     let property_id = map::tile_property_id(tile_static);
@@ -897,7 +906,7 @@ public entry fun upgrade_property(
     let property_static = map::get_property(template, property_id);
 
     // 计算升级费用（从当前等级升到下一级）
-    let upgrade_cost = calculate_property_price(property_static, current_level, current_level + 1, game, game_data);
+    let upgrade_cost = calculate_property_price(property_static, property, current_level, current_level + 1, game, game_data);
 
     // 验证现金
     assert!(player.cash >= upgrade_cost, EInsufficientCash);
@@ -1463,7 +1472,7 @@ fun handle_tile_stop_with_collector(
     let mut card_gains = vector<events::CardDrawItem>[];
 
     // 检查是否是地产类型（包括小地产和大地产）
-    if (types::is_property(tile_kind)) {
+    if (types::is_property_tile(tile_kind)) {
         // 获取property_id
         let property_id = map::tile_property_id(tile);
         if (property_id != map::no_property()) {
@@ -1574,7 +1583,7 @@ fun handle_tile_stop_with_collector(
                         game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
                         game.decision_tile = tile_id;
                         // 计算从当前等级升到下一级的费用
-                        let upgrade_cost = calculate_property_price(property_static, level, level + 1, game, game_data);
+                        let upgrade_cost = calculate_property_price(property_static, property, level, level + 1, game, game_data);
                         game.decision_amount = upgrade_cost;
                     } else {
                         // 已达最高级
@@ -3055,11 +3064,10 @@ fun check_chain_tiles(
         return (false, chain_tiles)
     };
 
-    // 检查是否为小地产
+    // 检查是否为小地产（只有1x1建筑才能连街）
     let center_property_static = map::get_property(template, center_property_id);
-    let center_kind = map::property_kind(center_property_static);
     let center_size = map::property_size(center_property_static);
-    if (!types::is_small_property_by_size(center_size, center_kind)) {
+    if (center_size != types::SIZE_1X1()) {
         return (false, chain_tiles)
     };
 
@@ -3083,11 +3091,11 @@ fun check_chain_tiles(
 
         let next_property = &game.properties[next_property_id as u64];
         let next_property_static = map::get_property(template, next_property_id);
-        let next_kind = map::property_kind(next_property_static);
+        
         let next_size = map::property_size(next_property_static);
 
         // 检查是否为同owner的小地产（1x1的地产）
-        if (types::is_small_property_by_size(next_size, next_kind) &&
+        if (next_size == types::SIZE_1X1() &&
             next_property.owner == owner) {
             chain_tiles.push_back(next_id);
             current_id = next_id;
@@ -3114,11 +3122,11 @@ fun check_chain_tiles(
 
         let next_property = &game.properties[next_property_id as u64];
         let next_property_static = map::get_property(template, next_property_id);
-        let next_kind = map::property_kind(next_property_static);
+        
         let next_size = map::property_size(next_property_static);
 
         // 检查是否为同owner的小地产（1x1的地产）
-        if (types::is_small_property_by_size(next_size, next_kind) &&
+        if (next_size == types::SIZE_1X1() &&
             next_property.owner == owner) {
             // 避免重复添加
             if (!chain_tiles.contains(&next_id)) {
@@ -3152,7 +3160,7 @@ fun find_nearby_temples(
     let center_property_id = map::tile_property_id(center_static);
     if (center_property_id != map::no_property()) {
         let center_property = &game.properties[center_property_id as u64];
-        if (map::tile_kind(center_static) == types::TILE_TEMPLE() && center_property.owner != NO_OWNER) {
+        if (center_property.building_type == types::BUILDING_TEMPLE() && center_property.owner != NO_OWNER) {
             temple_levels.push_back(center_property.level);
         };
     };
@@ -3174,7 +3182,7 @@ fun find_nearby_temples(
         let property_id = map::tile_property_id(tile_static);
         if (property_id != map::no_property()) {
             let property = &game.properties[property_id as u64];
-            if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
+            if (property.building_type == types::BUILDING_TEMPLE() &&
                 property.owner != NO_OWNER &&
                 property.level > 0) {
                 temple_levels.push_back(property.level);
@@ -3201,7 +3209,7 @@ fun find_nearby_temples(
         let property_id = map::tile_property_id(tile_static);
         if (property_id != map::no_property()) {
             let property = &game.properties[property_id as u64];
-            if (map::tile_kind(tile_static) == types::TILE_TEMPLE() &&
+            if (property.building_type == types::BUILDING_TEMPLE() &&
                 property.owner != NO_OWNER &&
                 property.level > 0) {
                 temple_levels.push_back(property.level);
@@ -3359,6 +3367,7 @@ fun calculate_price_factor(game: &Game): u64 {
 /// 大地产(2x2): 使用大地产价格表 × F / 100
 public fun calculate_property_price(
     property_static: &map::PropertyStatic,  // 地产静态信息
+    property: &Property,  // 地产动态信息（需要访问building_type）
     current_level: u8, // 当前等级
     target_level: u8,  // 目标等级
     game: &Game,
@@ -3404,10 +3413,8 @@ public fun calculate_property_price(
         }
     } else if (property_size == types::SIZE_2X2()) {
         // 大地产(2x2)价格计算
-        let property_kind = map::property_kind(property_static);
-
         // 土地庙不能升级，只能建造
-        if (property_kind == types::TILE_TEMPLE() && current_level > 0) {
+        if (property.building_type == types::BUILDING_TEMPLE() && current_level > 0) {
             return 0
         };
 

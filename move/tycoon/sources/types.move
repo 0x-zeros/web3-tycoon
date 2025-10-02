@@ -13,17 +13,19 @@ public fun TILE_NEWS(): u8 { 8 }
 public fun TILE_LOTTERY(): u8 { 9 }
 public fun TILE_SHOP(): u8 { 10 }
 
-// ===== 大地产类型（2x2） =====
-// 土地庙（影响周围地块租金）
-public fun TILE_TEMPLE(): u8 { 20 }
-// 研究所
-public fun TILE_RESEARCH(): u8 { 21 }
-// 石油公司
-public fun TILE_OIL(): u8 { 22 }
-// 商业中心
-public fun TILE_COMMERCIAL(): u8 { 23 }
-// 大饭店
-public fun TILE_HOTEL(): u8 { 24 }
+// ===== BuildingType 建筑类型 =====
+// 无类型（1x1建筑 或 2x2未选择类型时使用）
+public fun BUILDING_NONE(): u8 { 0 }
+// 土地庙（影响周围地块租金，2x2专属）
+public fun BUILDING_TEMPLE(): u8 { 20 }
+// 研究所（2x2专属）
+public fun BUILDING_RESEARCH(): u8 { 21 }
+// 石油公司（2x2专属）
+public fun BUILDING_OIL(): u8 { 22 }
+// 商业中心（2x2专属）
+public fun BUILDING_COMMERCIAL(): u8 { 23 }
+// 大饭店（2x2专属）
+public fun BUILDING_HOTEL(): u8 { 24 }
 
 // ===== Size 地块大小 =====
 public fun SIZE_1X1(): u8 { 1 }
@@ -97,23 +99,23 @@ public fun SKIP_HOSPITAL(): u8 { 2 }
 //   - round：轮次（所有玩家各行动一次）
 //   - turn：轮内回合（0到player_count-1）
 //   - max_rounds：最大轮数限制
-// ===== 地产类型判断辅助函数 =====
-// 判断是否为地产（包括小地产和大地产）
-public fun is_property(kind: u8): bool {
-    kind == TILE_PROPERTY() ||                      // 小地产（1x1）
-    (kind >= TILE_TEMPLE() && kind <= TILE_HOTEL()) // 大地产（2x2）
+
+// ===== Tile类型判断辅助函数 =====
+// 判断tile_kind是否为地产关联类型（现在只有TILE_PROPERTY）
+public fun is_property_tile(tile_kind: u8): bool {
+    tile_kind == TILE_PROPERTY()
 }
 
-// 判断是否为小地产（基于size和kind）
-// 注意：需要同时满足1x1且是地产类型
-public fun is_small_property_by_size(size: u8, kind: u8): bool {
-    size == SIZE_1X1() && is_property(kind)
+// ===== BuildingType判断辅助函数 =====
+// 判断building_type是否有效
+public fun is_valid_building_type(building_type: u8): bool {
+    building_type == BUILDING_NONE() ||
+    (building_type >= BUILDING_TEMPLE() && building_type <= BUILDING_HOTEL())
 }
 
-// 判断是否为大地产（基于size和kind）
-// 注意：需要同时满足2x2且是地产类型
-public fun is_large_property_by_size(size: u8, kind: u8): bool {
-    size == SIZE_2X2() && is_property(kind)
+// 判断是否为2x2专属建筑类型（TEMPLE/RESEARCH等）
+public fun is_large_building_type(building_type: u8): bool {
+    building_type >= BUILDING_TEMPLE() && building_type <= BUILDING_HOTEL()
 }
 
 // ===== Default Configs 默认配置 =====

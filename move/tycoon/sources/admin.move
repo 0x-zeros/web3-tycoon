@@ -91,15 +91,15 @@ public fun create_simple_test_map(ctx: &mut TxContext): MapTemplate {
     // 创建地产
     // 小地产0: tile 0
     let property_0 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1000, 100));
+        map::new_property_static(types::SIZE_1X1(), 1000, 100));
 
     // 小地产1: tile 1
     let property_1 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1200, 120));
+        map::new_property_static(types::SIZE_1X1(), 1200, 120));
 
     // 大地产（土地庙）: tile 3,4,7,8 四个格子共享
     let temple_property = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_TEMPLE(), types::SIZE_2X2(), 5000, 500));
+        map::new_property_static(types::SIZE_2X2(), 5000, 500));
 
     // 创建 tiles
     // tile 0: 小地产
@@ -116,13 +116,13 @@ public fun create_simple_test_map(ctx: &mut TxContext): MapTemplate {
 
     // tile 3,4,7,8: 土地庙（2x2大地产）
     map::add_tile_to_template(&mut template, 3,
-        map::new_tile_static(3, 0, types::TILE_TEMPLE(), temple_property, 0));
+        map::new_tile_static(3, 0, types::TILE_PROPERTY(), temple_property, 0));
     map::add_tile_to_template(&mut template, 4,
-        map::new_tile_static(0, 1, types::TILE_TEMPLE(), temple_property, 0));
+        map::new_tile_static(0, 1, types::TILE_PROPERTY(), temple_property, 0));
     map::add_tile_to_template(&mut template, 7,
-        map::new_tile_static(3, 1, types::TILE_TEMPLE(), temple_property, 0));
+        map::new_tile_static(3, 1, types::TILE_PROPERTY(), temple_property, 0));
     map::add_tile_to_template(&mut template, 8,
-        map::new_tile_static(0, 2, types::TILE_TEMPLE(), temple_property, 0));
+        map::new_tile_static(0, 2, types::TILE_PROPERTY(), temple_property, 0));
 
     // tile 5: 医院（无地产）
     map::add_tile_to_template(&mut template, 5,
@@ -159,78 +159,78 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
     // 先创建所有地产
     // 起点
     let property_start = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 0, 0));
+        map::new_property_static(types::SIZE_1X1(), 0, 0));
 
     // 第一边小地产
     let property_1 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1200, 120));
+        map::new_property_static(types::SIZE_1X1(), 1200, 120));
     let property_2 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 1400, 140));
+        map::new_property_static(types::SIZE_1X1(), 1400, 140));
     // 土地庙（2x2大地产）- tiles 3,4会共享
     let property_temple = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_TEMPLE(), types::SIZE_2X2(), 2000, 200));
+        map::new_property_static(types::SIZE_2X2(), 2000, 200));
     // tile 5是卡牌格，无地产
     let property_6 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2200, 220));
+        map::new_property_static(types::SIZE_1X1(), 2200, 220));
     // 研究所（2x2大地产）- tiles 7,8会共享
     let property_research = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_RESEARCH(), types::SIZE_2X2(), 2000, 200));
+        map::new_property_static(types::SIZE_2X2(), 2000, 200));
     let property_9 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2800, 280));
+        map::new_property_static(types::SIZE_1X1(), 2800, 280));
 
     // 第二边小地产
     let property_11 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2200, 220));
+        map::new_property_static(types::SIZE_1X1(), 2200, 220));
     let property_12 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 2400, 240));
+        map::new_property_static(types::SIZE_1X1(), 2400, 240));
     // 石油公司（2x2大地产）- tiles 13,14会共享
     let property_oil = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_OIL(), types::SIZE_2X2(), 3000, 300));
+        map::new_property_static(types::SIZE_2X2(), 3000, 300));
     // tile 15是医院，无地产
     let property_16 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 3200, 320));
+        map::new_property_static(types::SIZE_1X1(), 3200, 320));
     let property_17 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 3400, 340));
+        map::new_property_static(types::SIZE_1X1(), 3400, 340));
     let property_18 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 3600, 360));
+        map::new_property_static(types::SIZE_1X1(), 3600, 360));
     let property_19 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 3800, 380));
+        map::new_property_static(types::SIZE_1X1(), 3800, 380));
 
     // 第三边小地产
     let property_21 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 3200, 320));
+        map::new_property_static(types::SIZE_1X1(), 3200, 320));
     let property_22 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 3400, 340));
+        map::new_property_static(types::SIZE_1X1(), 3400, 340));
     // 商业中心（2x2大地产）- tiles 23,24会共享
     let property_commercial = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_COMMERCIAL(), types::SIZE_2X2(), 4000, 400));
+        map::new_property_static(types::SIZE_2X2(), 4000, 400));
     // tile 25是机会格，无地产
     let property_26 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 4200, 420));
+        map::new_property_static(types::SIZE_1X1(), 4200, 420));
     // 大饭店（2x2大地产）- tiles 27,28会共享
     let property_hotel = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_HOTEL(), types::SIZE_2X2(), 5000, 500));
+        map::new_property_static(types::SIZE_2X2(), 5000, 500));
     let property_29 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 5600, 560));
+        map::new_property_static(types::SIZE_1X1(), 5600, 560));
 
     // 第四边小地产
     let property_31 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 4200, 420));
+        map::new_property_static(types::SIZE_1X1(), 4200, 420));
     let property_32 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 4400, 440));
+        map::new_property_static(types::SIZE_1X1(), 4400, 440));
     let property_33 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 4600, 460));
+        map::new_property_static(types::SIZE_1X1(), 4600, 460));
     let property_34 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 4800, 480));
+        map::new_property_static(types::SIZE_1X1(), 4800, 480));
     // tile 35是新闻格，无地产
     let property_36 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 5200, 520));
+        map::new_property_static(types::SIZE_1X1(), 5200, 520));
     let property_37 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 5400, 540));
+        map::new_property_static(types::SIZE_1X1(), 5400, 540));
     let property_38 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 5600, 560));
+        map::new_property_static(types::SIZE_1X1(), 5600, 560));
     let property_39 = map::add_property_to_template(&mut template,
-        map::new_property_static(types::TILE_PROPERTY(), types::SIZE_1X1(), 5800, 580));
+        map::new_property_static(types::SIZE_1X1(), 5800, 580));
 
     // 现在创建所有tiles，引用相应的property
     // 起点
@@ -244,18 +244,18 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
         map::new_tile_static(2, 0, types::TILE_PROPERTY(), property_2, 0));
     // 土地庙占用tiles 3,4（都指向同一个property）
     map::add_tile_to_template(&mut template, 3,
-        map::new_tile_static(3, 0, types::TILE_TEMPLE(), property_temple, 0));
+        map::new_tile_static(3, 0, types::TILE_PROPERTY(), property_temple, 0));
     map::add_tile_to_template(&mut template, 4,
-        map::new_tile_static(4, 0, types::TILE_TEMPLE(), property_temple, 0));
+        map::new_tile_static(4, 0, types::TILE_PROPERTY(), property_temple, 0));
     map::add_tile_to_template(&mut template, 5,
         map::new_tile_static(5, 0, types::TILE_CARD(), map::no_property(), 0));
     map::add_tile_to_template(&mut template, 6,
         map::new_tile_static(6, 0, types::TILE_PROPERTY(), property_6, 0));
     // 研究所占用tiles 7,8
     map::add_tile_to_template(&mut template, 7,
-        map::new_tile_static(7, 0, types::TILE_RESEARCH(), property_research, 0));
+        map::new_tile_static(7, 0, types::TILE_PROPERTY(), property_research, 0));
     map::add_tile_to_template(&mut template, 8,
-        map::new_tile_static(8, 0, types::TILE_RESEARCH(), property_research, 0));
+        map::new_tile_static(8, 0, types::TILE_PROPERTY(), property_research, 0));
     map::add_tile_to_template(&mut template, 9,
         map::new_tile_static(9, 0, types::TILE_PROPERTY(), property_9, 0));
 
@@ -270,9 +270,9 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
         map::new_tile_static(10, 2, types::TILE_PROPERTY(), property_12, 0));
     // 石油公司占用tiles 13,14
     map::add_tile_to_template(&mut template, 13,
-        map::new_tile_static(10, 3, types::TILE_OIL(), property_oil, 0));
+        map::new_tile_static(10, 3, types::TILE_PROPERTY(), property_oil, 0));
     map::add_tile_to_template(&mut template, 14,
-        map::new_tile_static(10, 4, types::TILE_OIL(), property_oil, 0));
+        map::new_tile_static(10, 4, types::TILE_PROPERTY(), property_oil, 0));
     map::add_tile_to_template(&mut template, 15,
         map::new_tile_static(10, 5, types::TILE_HOSPITAL(), map::no_property(), 2));
     map::add_tile_to_template(&mut template, 16,
@@ -295,18 +295,18 @@ public fun create_standard_monopoly_map(ctx: &mut TxContext): MapTemplate {
         map::new_tile_static(8, 10, types::TILE_PROPERTY(), property_22, 0));
     // 商业中心占用tiles 23,24
     map::add_tile_to_template(&mut template, 23,
-        map::new_tile_static(7, 10, types::TILE_COMMERCIAL(), property_commercial, 0));
+        map::new_tile_static(7, 10, types::TILE_PROPERTY(), property_commercial, 0));
     map::add_tile_to_template(&mut template, 24,
-        map::new_tile_static(6, 10, types::TILE_COMMERCIAL(), property_commercial, 0));
+        map::new_tile_static(6, 10, types::TILE_PROPERTY(), property_commercial, 0));
     map::add_tile_to_template(&mut template, 25,
         map::new_tile_static(5, 10, types::TILE_CHANCE(), map::no_property(), 0));
     map::add_tile_to_template(&mut template, 26,
         map::new_tile_static(4, 10, types::TILE_PROPERTY(), property_26, 0));
     // 大饭店占用tiles 27,28
     map::add_tile_to_template(&mut template, 27,
-        map::new_tile_static(3, 10, types::TILE_HOTEL(), property_hotel, 0));
+        map::new_tile_static(3, 10, types::TILE_PROPERTY(), property_hotel, 0));
     map::add_tile_to_template(&mut template, 28,
-        map::new_tile_static(2, 10, types::TILE_HOTEL(), property_hotel, 0));
+        map::new_tile_static(2, 10, types::TILE_PROPERTY(), property_hotel, 0));
     map::add_tile_to_template(&mut template, 29,
         map::new_tile_static(1, 10, types::TILE_PROPERTY(), property_29, 0));
 

@@ -2731,14 +2731,15 @@ export class GameMap extends Component {
     private async handleShowAssociation(gridPos: Vec2): Promise<void> {
         console.log(`[GameMap] Show association at (${gridPos.x}, ${gridPos.y})`);
 
+        // 清除之前的所有关联显示
+        this.clearAssociationOverlays();     // 清除layer 10/11（building关联）
+        this.clearTileNeighborOverlays();    // 清除layer 20（tile邻居）
+
         const tile = this.getTileAt(gridPos.x, gridPos.y);
         const buildingInfo = this.findBuilding2x2Info(gridPos);
 
         // 情况1: 点击的是tile（非building位置）
         if (tile && !buildingInfo) {
-            // 先清除之前tile的邻居显示（layer 20）
-            this.clearTileNeighborOverlays();
-
             // 显示关联的building（如果有，layer 10）
             const buildingId = tile.getBuildingId();
             if (buildingId !== 65535) {
@@ -2754,9 +2755,6 @@ export class GameMap extends Component {
 
         // 情况2: 点击的是building，显示entrance tiles（layer 10/11）
         if (buildingInfo) {
-            // 清除邻居显示
-            this.clearTileNeighborOverlays();
-
             await this.showEntranceTilesAssociation(buildingInfo);
         }
     }

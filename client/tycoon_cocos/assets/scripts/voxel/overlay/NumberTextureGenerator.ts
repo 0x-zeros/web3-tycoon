@@ -52,7 +52,12 @@ export class NumberTextureGenerator {
         // 生成缓存键（包含主要参数）
         const prefix = options?.prefix || '';
         const bgColor = options?.bgColor || 'default';
-        const cacheKey = `${prefix}${num}_${bgColor}`;
+        const customText = options?.customText || '';
+
+        // 缓存键：customText优先，否则用prefix+num
+        const cacheKey = customText
+            ? `custom_${customText}_${bgColor}`
+            : `${prefix}${num}_${bgColor}`;
 
         // 检查缓存
         if (this.cache.has(cacheKey)) {

@@ -29,6 +29,11 @@ export interface TileData {
         tileId?: number;
         /** 关联的建筑ID（u16最大值65535表示无效） */
         buildingId?: number;
+        /** 4个方向的相邻tile ID（65535表示无效） */
+        w?: number;  // west: x-1
+        n?: number;  // north: z-1
+        e?: number;  // east: x+1
+        s?: number;  // south: z+1
         /** 自定义数据 */
         custom?: any;
     };

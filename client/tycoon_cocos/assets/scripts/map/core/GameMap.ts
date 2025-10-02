@@ -1782,6 +1782,9 @@ export class GameMap extends Component {
         // 分配building编号
         this.assignBuildingIds();
 
+        // 计算tile邻居关系（包含一致性校验）
+        this.calculateTileNeighbors();
+
         console.log('[GameMap] ID assignment completed');
 
         // 立即保存地图数据
@@ -1924,6 +1927,187 @@ export class GameMap extends Component {
         }
 
         console.log(`[GameMap] Assigned IDs to ${buildings.length} buildings`);
+    }
+
+    /**
+     * 计算每个tile的4方向邻居关系
+     *
+     * 方向定义（Cocos坐标系）:
+     * w (west):  x-1, z不变
+     * e (east):  x+1, z不变
+     * n (north): x不变, z-1
+     * s (south): x不变, z+1
+     */
+    private calculateTileNeighbors(): void {
+        console.log('[GameMap] Calculating tile neighbors...');
+
+        let isolatedCount = 0;
+        let endpointCount = 0;
+
+        for (const tile of this._tiles) {
+            const tileId = tile.getTileId();
+            if (tileId === 65535) continue;
+
+            const pos = tile.getGridPosition();
+
+            // 查找4个方向的邻居tile
+            const wTile = this.getTileAt(pos.x - 1, pos.y);
+            const nTile = this.getTileAt(pos.x, pos.y - 1);
+            const eTile = this.getTileAt(pos.x + 1, pos.y);
+            const sTile = this.getTileAt(pos.x, pos.y + 1);
+
+            // 获取邻居ID（如果存在且有效）
+            const wId = wTile?.getTileId();
+            const nId = nTile?.getTileId();
+            const eId = eTile?.getTileId();
+            const sId = sTile?.getTileId();
+
+            // 设置邻居ID（不存在或无效则设为65535）
+            tile.setW(wId !== undefined && wId !== 65535 ? wId : 65535);
+            tile.setN(nId !== undefined && nId !== 65535 ? nId : 65535);
+            tile.setE(eId !== undefined && eId !== 65535 ? eId : 65535);
+            tile.setS(sId !== undefined && sId !== 65535 ? sId : 65535);
+
+            // 拓扑检查
+            const validCount = [tile.getW(), tile.getN(), tile.getE(), tile.getS()]
+                .filter(id => id !== 65535).length;
+
+            if (validCount === 0) {
+                // 孤立tile
+                isolatedCount++;
+                console.warn(`[GameMap] Isolated tile: T${tileId} at (${pos.x}, ${pos.y}) - no neighbors`);
+            } else if (validCount === 1) {
+                // 端点tile
+                endpointCount++;
+                const neighborInfo =
+                    tile.getW() !== 65535 ? `w=T${tile.getW()}` :
+                    tile.getN() !== 65535 ? `n=T${tile.getN()}` :
+                    tile.getE() !== 65535 ? `e=T${tile.getE()}` :
+                    `s=T${tile.getS()}`;
+                console.log(`[GameMap] Endpoint tile: T${tileId} at (${pos.x}, ${pos.y}), ${neighborInfo}`);
+            }
+        }
+
+        console.log(`[GameMap] Tile neighbors calculated: ${isolatedCount} isolated, ${endpointCount} endpoints`);
+
+        // 一致性校验
+        this.validateTileNeighborConsistency();
+    }
+
+    /**
+     * 校验tile邻居关系的一致性
+     *
+     * 校验规则：
+     * 1. 双向一致性：A.e=B ⇔ B.w=A
+     * 2. 坐标一致性：A.e=B ⇒ B.x=A.x+1 且 B.z=A.z
+     */
+    private validateTileNeighborConsistency(): void {
+        console.log('[GameMap] Validating neighbor consistency...');
+
+        let errorCount = 0;
+
+        for (const tile of this._tiles) {
+            const tileId = tile.getTileId();
+            if (tileId === 65535) continue;
+
+            const pos = tile.getGridPosition();
+
+            // 校验east/west对称性
+            const eId = tile.getE();
+            if (eId !== 65535) {
+                const eTile = this.findTileById(eId);
+                if (eTile) {
+                    const ePos = eTile.getGridPosition();
+
+                    // 坐标一致性
+                    if (ePos.x !== pos.x + 1 || ePos.y !== pos.y) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).e=T${eId}: position error, T${eId} at (${ePos.x},${ePos.y}) expected (${pos.x + 1},${pos.y})`);
+                        errorCount++;
+                    }
+
+                    // 双向一致性
+                    if (eTile.getW() !== tileId) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).e=T${eId}, but T${eId}.w=T${eTile.getW()} (expected T${tileId})`);
+                        errorCount++;
+                    }
+                }
+            }
+
+            // 校验west/east对称性
+            const wId = tile.getW();
+            if (wId !== 65535) {
+                const wTile = this.findTileById(wId);
+                if (wTile) {
+                    const wPos = wTile.getGridPosition();
+
+                    if (wPos.x !== pos.x - 1 || wPos.y !== pos.y) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).w=T${wId}: position error, T${wId} at (${wPos.x},${wPos.y}) expected (${pos.x - 1},${pos.y})`);
+                        errorCount++;
+                    }
+
+                    if (wTile.getE() !== tileId) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).w=T${wId}, but T${wId}.e=T${wTile.getE()} (expected T${tileId})`);
+                        errorCount++;
+                    }
+                }
+            }
+
+            // 校验south/north对称性
+            const sId = tile.getS();
+            if (sId !== 65535) {
+                const sTile = this.findTileById(sId);
+                if (sTile) {
+                    const sPos = sTile.getGridPosition();
+
+                    if (sPos.x !== pos.x || sPos.y !== pos.y + 1) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).s=T${sId}: position error, T${sId} at (${sPos.x},${sPos.y}) expected (${pos.x},${pos.y + 1})`);
+                        errorCount++;
+                    }
+
+                    if (sTile.getN() !== tileId) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).s=T${sId}, but T${sId}.n=T${sTile.getN()} (expected T${tileId})`);
+                        errorCount++;
+                    }
+                }
+            }
+
+            // 校验north/south对称性
+            const nId = tile.getN();
+            if (nId !== 65535) {
+                const nTile = this.findTileById(nId);
+                if (nTile) {
+                    const nPos = nTile.getGridPosition();
+
+                    if (nPos.x !== pos.x || nPos.y !== pos.y - 1) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).n=T${nId}: position error, T${nId} at (${nPos.x},${nPos.y}) expected (${pos.x},${pos.y - 1})`);
+                        errorCount++;
+                    }
+
+                    if (nTile.getS() !== tileId) {
+                        console.warn(`[GameMap] T${tileId}(${pos.x},${pos.y}).n=T${nId}, but T${nId}.s=T${nTile.getS()} (expected T${tileId})`);
+                        errorCount++;
+                    }
+                }
+            }
+        }
+
+        if (errorCount === 0) {
+            console.log('[GameMap] ✓ Tile neighbor consistency validation passed');
+        } else {
+            console.error(`[GameMap] ✗ Tile neighbor consistency validation failed: ${errorCount} errors`);
+        }
+    }
+
+    /**
+     * 根据tileId查找MapTile
+     */
+    private findTileById(tileId: number): MapTile | null {
+        for (const tile of this._tiles) {
+            if (tile.getTileId() === tileId) {
+                return tile;
+            }
+        }
+        return null;
     }
 
     /**

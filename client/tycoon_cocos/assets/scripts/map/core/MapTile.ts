@@ -29,6 +29,12 @@ export class MapTile extends MapElement {
 
     /** 关联的建筑ID（u16最大值65535表示无效） */
     private _buildingId: number = 65535;
+
+    /** 4个方向的邻居tile ID（65535表示无效） */
+    private _w: number = 65535;  // west: x-1
+    private _n: number = 65535;  // north: z-1
+    private _e: number = 65535;  // east: x+1
+    private _s: number = 65535;  // south: z+1
     
     // ========================= 初始化 =========================
     
@@ -97,7 +103,11 @@ export class MapTile extends MapElement {
             },
             data: {
                 tileId: this._tileId,
-                buildingId: this._buildingId
+                buildingId: this._buildingId,
+                w: this._w,
+                n: this._n,
+                e: this._e,
+                s: this._s
             }
         };
     }
@@ -120,6 +130,20 @@ export class MapTile extends MapElement {
         // 恢复buildingId
         if (data.data?.buildingId !== undefined) {
             this._buildingId = data.data.buildingId;
+        }
+
+        // 恢复4方向邻居
+        if (data.data?.w !== undefined) {
+            this._w = data.data.w;
+        }
+        if (data.data?.n !== undefined) {
+            this._n = data.data.n;
+        }
+        if (data.data?.e !== undefined) {
+            this._e = data.data.e;
+        }
+        if (data.data?.s !== undefined) {
+            this._s = data.data.s;
         }
     }
     
@@ -151,6 +175,62 @@ export class MapTile extends MapElement {
      */
     public setBuildingId(id: number): void {
         this._buildingId = id;
+    }
+
+    /**
+     * 获取west方向邻居tile ID
+     */
+    public getW(): number {
+        return this._w;
+    }
+
+    /**
+     * 设置west方向邻居tile ID
+     */
+    public setW(id: number): void {
+        this._w = id;
+    }
+
+    /**
+     * 获取north方向邻居tile ID
+     */
+    public getN(): number {
+        return this._n;
+    }
+
+    /**
+     * 设置north方向邻居tile ID
+     */
+    public setN(id: number): void {
+        this._n = id;
+    }
+
+    /**
+     * 获取east方向邻居tile ID
+     */
+    public getE(): number {
+        return this._e;
+    }
+
+    /**
+     * 设置east方向邻居tile ID
+     */
+    public setE(id: number): void {
+        this._e = id;
+    }
+
+    /**
+     * 获取south方向邻居tile ID
+     */
+    public getS(): number {
+        return this._s;
+    }
+
+    /**
+     * 设置south方向邻居tile ID
+     */
+    public setS(id: number): void {
+        this._s = id;
     }
 
     /**

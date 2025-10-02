@@ -1,20 +1,5 @@
 module tycoon::types;
 
-use sui::object::UID;
-
-// ===== Admin Cap 管理员权限 =====
-
-/// 管理员权限凭证
-/// 用于执行管理操作（发布地图、更新配置等）
-public struct AdminCap has key, store {
-    id: UID
-}
-
-/// 创建AdminCap（仅供tycoon模块使用）
-public(package) fun new_admin_cap(id: UID): AdminCap {
-    AdminCap { id }
-}
-
 // ===== TileKind 地块类型 =====
 public fun TILE_EMPTY(): u8 { 0 }
 public fun TILE_LOTTERY(): u8 { 1 }

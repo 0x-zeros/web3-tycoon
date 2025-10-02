@@ -115,14 +115,14 @@ const NPC_RESULT_BARRIER_STOP: u8 = 2;
 
 // 停留类型常量
 const STOP_NONE: u8 = 0;
-const STOP_PROPERTY_TOLL: u8 = 1;
-const STOP_PROPERTY_NO_RENT: u8 = 2;
+const STOP_BUILDING_TOLL: u8 = 1;
+const STOP_BUILDING_NO_RENT: u8 = 2;
 const STOP_HOSPITAL: u8 = 3;
 const STOP_PRISON: u8 = 4;
 const STOP_BONUS: u8 = 5;
 const STOP_FEE: u8 = 6;
 const STOP_CARD_STOP: u8 = 7;
-const STOP_PROPERTY_UNOWNED: u8 = 8;  // 无主地产（可购买）
+const STOP_BUILDING_UNOWNED: u8 = 8;  // 无主建筑（可购买）
 
 // ===== Aggregated Event Data Types 聚合事件数据类型 =====
 
@@ -519,14 +519,14 @@ public fun npc_result_barrier_stop(): u8 { NPC_RESULT_BARRIER_STOP }
 
 // 停留类型常量获取函数
 public fun stop_none(): u8 { STOP_NONE }
-public fun stop_property_toll(): u8 { STOP_PROPERTY_TOLL }
-public fun stop_property_no_rent(): u8 { STOP_PROPERTY_NO_RENT }
+public fun stop_building_toll(): u8 { STOP_BUILDING_TOLL }
+public fun stop_building_no_rent(): u8 { STOP_BUILDING_NO_RENT }
 public fun stop_hospital(): u8 { STOP_HOSPITAL }
 public fun stop_prison(): u8 { STOP_PRISON }
 public fun stop_bonus(): u8 { STOP_BONUS }
 public fun stop_fee(): u8 { STOP_FEE }
 public fun stop_card_stop(): u8 { STOP_CARD_STOP }
-public fun stop_property_unowned(): u8 { STOP_PROPERTY_UNOWNED }
+public fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
 
 // ===== Admin Event Emitters 管理事件发射函数 =====
 

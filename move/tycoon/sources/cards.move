@@ -5,7 +5,7 @@ use sui::table::{Self, Table};
 use sui::transfer;
 use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
-use tycoon::types::{Self, AdminCap};
+use tycoon::types;
 
 // ===== Errors =====
 const ECardNotOwned: u64 = 5001;
@@ -283,29 +283,26 @@ fun register_card_internal(
 }
 
 // ===== Admin Functions 管理函数 =====
+// Package内部函数，供tycoon模块封装后对外提供
 
-// 注册新卡牌（需要AdminCap）
-public fun register_card(
-    _cap: &AdminCap,
+// 注册新卡牌（package内部，由tycoon模块的admin函数调用）
+public(package) fun register_card_for_admin(
     registry: &mut CardRegistry,
     kind: u8,
     name: vector<u8>,
     description: vector<u8>,
     target_type: u8,
     value: u64,
-    rarity: u8,
-    _ctx: &mut TxContext
+    rarity: u8
 ) {
     register_card_internal(registry, kind, name, description, target_type, value, rarity);
 }
 
-// 更新掉落配置（需要AdminCap）
-public fun update_drop_config(
-    _cap: &AdminCap,
+// 更新掉落配置（package内部，由tycoon模块的admin函数调用）
+public(package) fun update_drop_config_for_admin(
     config: &mut DropConfig,
     tile_type: u8,
-    rule: DropRule,
-    _ctx: &mut TxContext
+    rule: DropRule
 ) {
     if (table::contains(&config.tile_drops, tile_type)) {
         *table::borrow_mut(&mut config.tile_drops, tile_type) = rule;

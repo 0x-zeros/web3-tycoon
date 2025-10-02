@@ -201,12 +201,12 @@ public struct Building has store, copy, drop {
 // 地块动态数据结构
 // 与MapTemplate.tiles_static对应，存储游戏中变化的数据
 // 使用vector索引对齐，tile_id即为数组下标
-// 现在只存储NPC信息，地产信息移至Property结构
+// 现在只存储NPC信息，建筑信息移至Building结构
 public struct Tile has store, copy, drop {
     npc_on: u8     // NPC类型（0表示无NPC，用于查询密度）
 }
 
-// 无主地产的owner值
+// 无主建筑的owner值
 const NO_OWNER: u8 = 255;
 // 无NPC的标记值
 const NO_NPC: u8 = 0;
@@ -233,10 +233,10 @@ const NO_NPC: u8 = 0;
 // - turn: 当前轮内回合，从0开始（0到player_count-1）
 // - has_rolled: 是否已经掷骰（限制卡牌使用时机）
 //
-// 地产系统：
+// 建筑系统：
 // - tiles: 地块动态数据vector，索引对应tile_id
-// - properties: 地产动态数据vector，索引对应building_id
-// - owner_index: 反向索引，快速查找玩家的所有地产（building_id）
+// - buildings: 建筑动态数据vector，索引对应building_id
+// - owner_index: 反向索引，快速查找玩家的所有建筑（building_id）
 //
 // NPC系统：
 // - npc_on: 地块上的NPC实例（完整数据）
@@ -707,7 +707,7 @@ public entry fun decide_rent_payment(
     let tile_id = game.decision_tile;
     let toll = game.decision_amount;
 
-    // 获取地产所有者（需要从tile找到property）
+    // 获取建筑所有者（需要从tile找到building）
     let map_registry = tycoon::get_map_registry(game_data);
     let template = map::get_template(map_registry, game.template_id);
     let tile_static = map::get_tile(template, tile_id);
@@ -746,8 +746,8 @@ public entry fun decide_rent_payment(
     clear_decision_state(game);
 }
 
-// 跳过地产决策（不购买或不升级）
-public entry fun skip_property_decision(
+// 跳过建筑决策（不购买或不升级）
+public entry fun skip_building_decision(
     game: &mut Game,
     seat: &Seat,
     ctx: &mut TxContext
@@ -798,7 +798,7 @@ public entry fun end_turn(
     advance_turn(game, game_data, r, ctx);
 }
 
-// 购买地产
+// 购买建筑
 public entry fun buy_building(
     game: &mut Game,
     seat: &Seat,
@@ -833,7 +833,7 @@ public entry fun buy_building(
     let building =&game.buildings[building_id as u64];
     assert!(building.owner == NO_OWNER, EBuildingOwned);
 
-    // 获取地产静态信息
+    // 获取建筑静态信息
     let building_static = map::get_building(template, building_id);
 
     // 验证价格和现金（应用物价指数）
@@ -849,10 +849,10 @@ public entry fun buy_building(
         player_mut.cash = player_mut.cash - price;
     };
 
-    // 设置地产所有权和等级
-    let property_mut = &mut game.buildings[building_id as u64];
-    property_mut.owner = player_index;
-    property_mut.level = 1;
+    // 设置建筑所有权和等级
+    let building_mut = &mut game.buildings[building_id as u64];
+    building_mut.owner = player_index;
+    building_mut.level = 1;
 
     // 更新owner_index（保持不变，仍然记录tile_id用于连街判定）
     if (!table::contains(&game.owner_index, player_index)) {
@@ -1440,8 +1440,8 @@ fun handle_tile_stop_with_collector(
         let building_static = map::get_building(template, building_id);
 
         if (building.owner == NO_OWNER) {
-                // 无主地产 - 设置待决策状态（应用物价指数）
-                stop_type = events::stop_property_unowned();
+                // 无主建筑 - 设置待决策状态（应用物价指数）
+                stop_type = events::stop_building_unowned();
                 game.pending_decision = types::DECISION_BUY_PROPERTY();
                 game.decision_tile = tile_id;
                 let base_price = map::building_price(building_static);
@@ -1450,7 +1450,7 @@ fun handle_tile_stop_with_collector(
             } else {
                 let owner_index = building.owner;
                 if (owner_index != player_index) {
-                    // 他人的地产 - 需要支付过路费
+                    // 他人的建筑 - 需要支付过路费
                     let level = building.level;
                     let toll = calculate_toll(game, tile_id, template, game_data);
 
@@ -1461,14 +1461,14 @@ fun handle_tile_stop_with_collector(
 
                 if (has_rent_free_buff) {
                     // 有免租buff - 直接免租，无需决策
-                    stop_type = events::stop_property_no_rent();
+                    stop_type = events::stop_building_no_rent();
                     let owner_addr = (&game.players[owner_index as u64]).owner;
                     owner_opt = option::some(owner_addr);
                     level_opt = option::some(level);
                     amount = 0;
                 } else if (has_rent_free_card) {
                     // 没有buff但有免租卡 - 设置待决策状态
-                    stop_type = events::stop_property_toll();
+                    stop_type = events::stop_building_toll();
                     game.pending_decision = types::DECISION_PAY_RENT();
                     game.decision_tile = tile_id;
                     game.decision_amount = toll;
@@ -1518,7 +1518,7 @@ fun handle_tile_stop_with_collector(
                             tile_id
                         ));
 
-                        stop_type = events::stop_property_toll();
+                        stop_type = events::stop_building_toll();
                         amount = actual_payment;
                     };
 
@@ -1533,13 +1533,13 @@ fun handle_tile_stop_with_collector(
                     level_opt = option::some(level);
                 }
             } else {
-                // 自己的地产 - 检查是否可以升级
+                // 自己的建筑 - 检查是否可以升级
                 let level = building.level;
                 let player_addr = (&game.players[player_index as u64]).owner;
 
                 if (level < types::LEVEL_4()) {
                     // 可以升级 - 设置待决策状态
-                    stop_type = events::stop_none();  // 自己的地产，无特殊效果
+                    stop_type = events::stop_none();  // 自己的建筑，无特殊效果
                     game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
                     game.decision_tile = tile_id;
                     // 计算从当前等级升到下一级的费用
@@ -1547,7 +1547,7 @@ fun handle_tile_stop_with_collector(
                     game.decision_amount = upgrade_cost;
                 } else {
                     // 已达最高级
-                    stop_type = events::stop_none();  // 自己的地产，无特殊效果
+                    stop_type = events::stop_none();  // 自己的建筑，无特殊效果
                 };
 
                 owner_opt = option::some(player_addr);
@@ -1663,7 +1663,7 @@ fun handle_tile_stop_with_collector(
     )
 }
 
-// 处理地产停留
+// 处理建筑停留
 fun handle_building_stop(
     game: &mut Game,
     player_index: u8,
@@ -1678,13 +1678,13 @@ fun handle_building_stop(
     // 获取building_id
     let building_id = map::tile_building_id(tile_static);
     if (building_id == map::no_building()) {
-        return  // 非地产tile
+        return  // 非建筑tile
     };
 
     let building =&game.buildings[building_id as u64];
 
     if (building.owner == NO_OWNER) {
-        // 无主地产 - 可以购买
+        // 无主建筑 - 可以购买
         // TODO: 实现购买逻辑（需要用户确认）
     } else {
         let owner_index = building.owner;
@@ -1779,9 +1779,9 @@ fun send_to_hospital(game: &mut Game, player_index: u8, game_data: &GameData) {
 //
 // 破产处理步骤：
 // 1. 标记玩家破产状态，防止其继续参与游戏
-// 2. 释放该玩家拥有的所有地产：
+// 2. 释放该玩家拥有的所有建筑：
 //    - 从owner_of表中移除所有权记录
-//    - 重置地产等级为0（恢复初始状态）
+//    - 重置建筑等级为0（恢复初始状态）
 //    - 清空owner_index中的拥有列表
 // 3. 发送破产事件通知
 // 4. 检查游戏结束条件：
@@ -1790,7 +1790,7 @@ fun send_to_hospital(game: &mut Game, player_index: u8, game_data: &GameData) {
 //
 // 参数说明：
 // - player_addr: 破产玩家的地址
-// - creditor: 导致破产的债权人（如收租的地产拥有者）
+// - creditor: 导致破产的债权人（如收租的建筑拥有者）
 fun handle_bankruptcy(
     game: &mut Game,
     game_data: &GameData,
@@ -1804,7 +1804,7 @@ fun handle_bankruptcy(
         player.bankrupt = true;
     };
 
-    // 步骤2: 释放玩家拥有的所有地产
+    // 步骤2: 释放玩家拥有的所有建筑
     // 注意：owner_index记录的是tile_id，但我们需要通过tile找到对应的building_id
     if (table::contains(&game.owner_index, player_index)) {
         let owned_tiles = *table::borrow(&game.owner_index, player_index);
@@ -1823,7 +1823,7 @@ fun handle_bankruptcy(
 
             if (building_id != map::no_building()) {
                 let building =&mut game.buildings[building_id as u64];
-                // 重置地产所有权和等级
+                // 重置建筑所有权和等级
                 if (building.owner != NO_OWNER) {
                     building.owner = NO_OWNER;
                     building.level = 0;
@@ -1833,7 +1833,7 @@ fun handle_bankruptcy(
             i = i + 1;
         };
 
-        // 清空玩家的地产拥有列表
+        // 清空玩家的建筑拥有列表
         let owner_tiles_mut = table::borrow_mut(&mut game.owner_index, player_index);
         *owner_tiles_mut = vector[];
     };
@@ -2753,7 +2753,7 @@ fun calculate_price_index(game: &Game): u64 {
 // ===== 新数值系统：连街判定和租金计算 =====
 
 /// 检查从某地块开始的连街情况
-/// 从中心地块向左右各查最多max_range格，找出连续的同owner小地产
+/// 从中心地块向左右各查最多max_range格，找出连续的同owner小建筑
 /// 返回：(是否形成连街, 连街地块列表)
 fun check_chain_tiles(
     game: &Game,
@@ -2764,16 +2764,16 @@ fun check_chain_tiles(
 ): (bool, vector<u16>) {
     let mut chain_tiles = vector::empty<u16>();
 
-    // 中心地块必须是小地产（1x1的地产）
+    // 中心地块必须是小建筑（1x1的建筑）
     let center_static = map::get_tile(template, center_tile_id);
     let center_building_id = map::tile_building_id(center_static);
 
-    // 非地产tile不能连街
+    // 非建筑tile不能连街
     if (center_building_id == map::no_building()) {
         return (false, chain_tiles)
     };
 
-    // 检查是否为小地产（只有1x1建筑才能连街）
+    // 检查是否为小建筑（只有1x1建筑才能连街）
     let center_building_static = map::get_building(template, center_building_id);
     let center_size = map::building_size(center_building_static);
     if (center_size != types::SIZE_1X1()) {
@@ -2881,12 +2881,12 @@ public fun calculate_toll(
     let tile_static = map::get_tile(template, landing_tile_id);
     let building_id = map::tile_building_id(tile_static);
 
-    // 非地产tile不收租
+    // 非建筑tile不收租
     if (building_id == map::no_building()) return 0;
 
     let building =&game.buildings[building_id as u64];
 
-    // 无主地产不收租
+    // 无主建筑不收租
     if (building.owner == NO_OWNER) return 0;
 
     // 物价指数
@@ -2927,7 +2927,7 @@ public fun calculate_toll(
             let t_static = map::get_tile(template, tile_id);
             let t_building_id = map::tile_building_id(t_static);
 
-            // 跳过非地产tile
+            // 跳过非建筑tile
             if (t_building_id == map::no_building()) {
                 i = i + 1;
                 continue
@@ -2980,11 +2980,11 @@ public fun calculate_building_price(
     let price_factor = calculate_price_factor(game);  // F×100
     let building_size = map::building_size(building_static);
 
-    // 根据地产大小选择不同的价格表
+    // 根据建筑大小选择不同的价格表
     if (building_size == types::SIZE_1X1()) {
-        // 小地产(1x1)价格计算
+        // 小建筑(1x1)价格计算
         let base_price = map::building_price(building_static);
-        let upgrade_costs = tycoon::get_property_upgrade_costs(game_data);
+        let upgrade_costs = tycoon::get_building_upgrade_costs(game_data);
 
         // 获取当前等级的加价
         let current_cost = if ((current_level as u64) < upgrade_costs.length()) {
@@ -3013,15 +3013,15 @@ public fun calculate_building_price(
             0
         }
     } else if (building_size == types::SIZE_2X2()) {
-        // 大地产(2x2)价格计算
+        // 大建筑(2x2)价格计算
         // 土地庙不能升级，只能建造
         if (building.building_type == types::BUILDING_TEMPLE() && current_level > 0) {
             return 0
         };
 
-        let large_costs = tycoon::get_large_property_costs(game_data);
+        let large_costs = tycoon::get_large_building_costs(game_data);
 
-        // 大地产等级从1开始，所以要减1作为数组索引
+        // 大建筑等级从1开始，所以要减1作为数组索引
         let current_idx = if (current_level > 0) { (current_level - 1) as u64 } else { 0 };
         let target_idx = (target_level - 1) as u64;
 

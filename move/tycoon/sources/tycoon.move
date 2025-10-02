@@ -7,8 +7,15 @@ use sui::tx_context::{Self, TxContext};
 
 use tycoon::map;
 use tycoon::cards;
-use tycoon::types::{Self, AdminCap};
+use tycoon::types;
 use tycoon::events;
+
+// ===== Admin Cap 管理员权限 =====
+
+/// 管理员权限凭证
+public struct AdminCap has key, store {
+    id: UID
+}
 
 // ===== GameData 统一的策划数据容器 =====
 
@@ -35,15 +42,15 @@ public struct GameData has key, store {
     // 对应倍率：[1.3, 1.4, 1.5, 1.7, 2.0]
     temple_multipliers: vector<u64>,
 
-    // 小地产升级价格表：[L0, L1, L2, L3, L4, L5]
+    // 小建筑升级价格表：[L0, L1, L2, L3, L4, L5]
     // 基础价格加上这个值再乘以物价系数F
-    property_upgrade_costs: vector<u64>,
+    building_upgrade_costs: vector<u64>,
 
-    // 大地产租金倍率：[L1, L2, L3, L4, L5]
-    large_property_multipliers: vector<u64>,
+    // 大建筑租金倍率：[L1, L2, L3, L4, L5]
+    large_building_multipliers: vector<u64>,
 
-    // 大地产升级价格：[L1, L2, L3, L4, L5]
-    large_property_costs: vector<u64>,
+    // 大建筑升级价格：[L1, L2, L3, L4, L5]
+    large_building_costs: vector<u64>,
 
     // NPC生成配置（权重表）
     npc_spawn_weights: vector<u8>,     // NPC类型的权重列表
@@ -77,14 +84,14 @@ fun init(ctx: &mut TxContext) {
         // 土地庙加成倍率：1-5级对应 [1.3, 1.4, 1.5, 1.7, 2.0]倍
         temple_multipliers: vector[130, 140, 150, 170, 200],
 
-        // 小地产升级加价表：L0-L5
-        property_upgrade_costs: vector[0, 1000, 1500, 6000, 15000, 35000],
+        // 小建筑升级加价表：L0-L5
+        building_upgrade_costs: vector[0, 1000, 1500, 6000, 15000, 35000],
 
-        // 大地产租金倍率：L1-L5
-        large_property_multipliers: vector[150, 200, 300, 500, 800],
+        // 大建筑租金倍率：L1-L5
+        large_building_multipliers: vector[150, 200, 300, 500, 800],
 
-        // 大地产升级价格：L1-L5
-        large_property_costs: vector[2000, 3000, 7000, 18000, 40000],
+        // 大建筑升级价格：L1-L5
+        large_building_costs: vector[2000, 3000, 7000, 18000, 40000],
 
         // NPC生成权重配置
         // 格式：[NPC类型, 权重, NPC类型, 权重, ...]
@@ -109,7 +116,9 @@ fun init(ctx: &mut TxContext) {
 
 /// 创建管理员权限并转移给部署者
 fun create_admin_cap(ctx: &mut TxContext) {
-    let admin_cap = types::new_admin_cap(object::new(ctx));
+    let admin_cap = AdminCap {
+        id: object::new(ctx)
+    };
     transfer::public_transfer(admin_cap, ctx.sender());
 }
 
@@ -137,6 +146,43 @@ entry fun publish_custom_map_template(
 /// 验证管理员权限
 public fun verify_admin_cap(_admin: &AdminCap): bool {
     true
+}
+
+/// 注册卡牌（需要AdminCap）
+entry fun admin_register_card(
+    game_data: &mut GameData,
+    kind: u8,
+    name: vector<u8>,
+    description: vector<u8>,
+    target_type: u8,
+    value: u64,
+    rarity: u8,
+    _admin: &AdminCap,
+    _ctx: &mut TxContext
+) {
+    cards::register_card_for_admin(
+        &mut game_data.card_registry,
+        kind,
+        name,
+        description,
+        target_type,
+        value,
+        rarity
+    );
+}
+
+/// 更新掉落配置（需要AdminCap）
+public fun admin_update_drop_config(
+    game_data: &mut GameData,
+    tile_type: u8,
+    rule: cards::DropRule,
+    _admin: &AdminCap
+) {
+    cards::update_drop_config_for_admin(
+        &mut game_data.drop_config,
+        tile_type,
+        rule
+    );
 }
 
 // ===== Game Configuration Constants 游戏配置常量 =====
@@ -205,19 +251,19 @@ public(package) fun get_temple_multipliers(game_data: &GameData): &vector<u64> {
     &game_data.temple_multipliers
 }
 
-/// 获取小地产升级价格表
-public(package) fun get_property_upgrade_costs(game_data: &GameData): &vector<u64> {
-    &game_data.property_upgrade_costs
+/// 获取小建筑升级价格表
+public(package) fun get_building_upgrade_costs(game_data: &GameData): &vector<u64> {
+    &game_data.building_upgrade_costs
 }
 
-/// 获取大地产租金倍率
-public(package) fun get_large_property_multipliers(game_data: &GameData): &vector<u64> {
-    &game_data.large_property_multipliers
+/// 获取大建筑租金倍率
+public(package) fun get_large_building_multipliers(game_data: &GameData): &vector<u64> {
+    &game_data.large_building_multipliers
 }
 
-/// 获取大地产升级价格
-public(package) fun get_large_property_costs(game_data: &GameData): &vector<u64> {
-    &game_data.large_property_costs
+/// 获取大建筑升级价格
+public(package) fun get_large_building_costs(game_data: &GameData): &vector<u64> {
+    &game_data.large_building_costs
 }
 
 // ===== Configuration Validation Functions 配置验证函数 =====

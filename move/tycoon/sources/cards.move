@@ -571,36 +571,3 @@ public fun count_total_cards(player_cards: &vector<CardEntry>): u64 {
 public fun is_hand_full(player_cards: &vector<CardEntry>, max_cards: u64): bool {
     count_total_cards(player_cards) >= max_cards
 }
-
-// ===== Test Helper Functions 测试辅助函数 =====
-
-// 创建测试用卡牌
-#[test_only]
-public fun create_test_card(
-    kind: u8,
-    name: vector<u8>,
-    description: vector<u8>,
-    target_type: u8,
-    value: u64,
-    rarity: u8
-): Card {
-    Card {
-        kind,
-        name,
-        description,
-        target_type,
-        value,
-        rarity
-    }
-}
-
-// 创建空的卡牌表
-#[test_only]
-public fun create_empty_card_vector(): vector<CardEntry> {
-    vector[]
-}
-
-// [已移除] init_for_testing - CardRegistry 和 DropConfig 现在在 admin::init 中创建
-
-// ===== Module Initialization =====
-// 注：CardRegistry 和 DropConfig 现在在 admin 模块的 init 中创建，确保全局唯一

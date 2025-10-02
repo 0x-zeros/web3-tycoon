@@ -288,10 +288,3 @@ entry fun update_toll_multipliers(
     assert!(!new_multipliers.is_empty(), 0); // 确保不为空
     game_data.toll_multipliers = new_multipliers;
 }
-
-// ===== Test Helper 测试辅助 =====
-
-#[test_only]
-public fun init_for_testing(ctx: &mut TxContext) {
-    init(ctx);
-}

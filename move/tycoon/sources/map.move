@@ -20,20 +20,20 @@ const ETargetTileNotExist: u64 = 3013; // 目标地块不存在
 // ===== Constants =====
 const INVALID_TILE_ID: u16 = 65535;    // u16::MAX 作为无效/未设置的tile_id
 const MAX_TILE_ID: u16 = 65534;        // 实际可用的最大tile_id
-const NO_PROPERTY: u16 = 65535;        // u16::MAX 表示tile不属于任何property
+const NO_BUILDING: u16 = 65535;        // u16::MAX 表示tile不属于任何building
 
-// ===== PropertyStatic 静态建筑信息 =====
+// ===== BuildingStatic 静态建筑信息 =====
 //
 // 功能说明：
 // 定义建筑的静态属性（价格、租金等）
 // 建筑分为1x1和2x2两种尺寸
-// 建筑类型（temple/research等）是动态属性，存储在Property.building_type
+// 建筑类型（temple/research等）是动态属性，存储在Building.building_type
 //
 // 字段说明：
 // - size: 建筑大小（SIZE_1X1/SIZE_2X2）
 // - price: 购买价格
 // - base_toll: 基础过路费
-public struct PropertyStatic has store, copy, drop {
+public struct BuildingStatic has store, copy, drop {
     size: u8,       // 建筑大小（1x1 或 2x2）
     price: u64,     // 购买价格
     base_toll: u64  // 基础租金
@@ -47,9 +47,9 @@ public struct PropertyStatic has store, copy, drop {
 //
 // 字段说明：
 // - x, y: 地块在地图上的坐标位置
-// - kind: 地块类型（PROPERTY/HOSPITAL/PRISON/CHANCE等）
-// - property_id: 关联的地产ID（NO_PROPERTY表示非地产地块）
-// - special: 额外参数位，用于非地产地块的特殊功能
+// - kind: 地块类型（EMPTY/LOTTERY/HOSPITAL等功能型）
+// - building_id: 关联的建筑ID（NO_BUILDING表示无建筑）
+// - special: 额外参数位，用于功能地块的特殊配置
 //   * 医院/监狱：停留回合数
 //   * 罚金/奖励：金额
 //   * 其他特殊效果
@@ -57,9 +57,9 @@ public struct PropertyStatic has store, copy, drop {
 public struct TileStatic has store, copy, drop {
     x: u8,
     y: u8,
-    kind: u8,           // TileKind //todo 只有 TILE_PROPERTY 类型的property_id才有意义, 其他类型tile无关联地产
-    property_id: u16,   // 关联的地产ID（NO_PROPERTY表示非地产）
-    special: u64,       // 额外参数（非地产地块使用）
+    kind: u8,           // TileKind (功能型：EMPTY/LOTTERY/HOSPITAL等)
+    building_id: u16,   // 关联的建筑ID（NO_BUILDING表示无建筑）
+    special: u64,       // 额外参数（功能地块使用）
     w: u16,             // west邻居 (x-1方向)
     n: u16,             // north邻居 (z-1方向)
     e: u16,             // east邻居 (x+1方向)
@@ -86,7 +86,7 @@ public struct TileStatic has store, copy, drop {
 //
 // 地块数据：
 // - tiles_static: 所有地块的静态信息
-// - properties_static: 所有地产的静态信息
+// - buildings_static: 所有建筑的静态信息
 //
 // 导航系统：
 // - 每个tile通过w/n/e/s字段存储4方向邻居，无需额外邻接表
@@ -110,7 +110,7 @@ public struct MapTemplate has store {
     height: u8,
     tile_count: u64,
     tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
-    properties_static: vector<PropertyStatic>, // 地产静态信息，property_id 即为索引
+    buildings_static: vector<BuildingStatic>, // 建筑静态信息，building_id 即为索引
     // 导航信息已集成到 TileStatic.w/n/e/s 中，不再需要额外的邻接表
     hospital_ids: vector<u16>,
     prison_ids: vector<u16>,
@@ -187,14 +187,14 @@ public fun new_tile_static(
     x: u8,
     y: u8,
     kind: u8,
-    property_id: u16,  // NO_PROPERTY 表示非地产地块
+    building_id: u16,  // NO_BUILDING 表示无建筑
     special: u64
 ): TileStatic {
     TileStatic {
         x,
         y,
         kind,
-        property_id,
+        building_id,
         special,
         w: INVALID_TILE_ID,           // 使用无效值表示无邻居
         n: INVALID_TILE_ID,
@@ -203,13 +203,13 @@ public fun new_tile_static(
     }
 }
 
-// 创建地产静态信息
-public fun new_property_static(
+// 创建建筑静态信息
+public fun new_building_static(
     size: u8,
     price: u64,
     base_toll: u64
-): PropertyStatic {
-    PropertyStatic {
+): BuildingStatic {
+    BuildingStatic {
         size,
         price,
         base_toll
@@ -221,7 +221,7 @@ public fun new_tile_static_with_nav(
     x: u8,
     y: u8,
     kind: u8,
-    property_id: u16,  // NO_PROPERTY 表示非地产地块
+    building_id: u16,  // NO_BUILDING 表示无建筑
     special: u64,
     w: u16,
     n: u16,
@@ -248,7 +248,7 @@ public fun new_tile_static_with_nav(
         x,
         y,
         kind,
-        property_id,
+        building_id,
         special,
         w,
         n,
@@ -271,7 +271,7 @@ public fun new_map_template(
         height,
         tile_count: 0,
         tiles_static: vector[],  // 初始化为空 vector
-        properties_static: vector[],  // 初始化为空 vector
+        buildings_static: vector[],  // 初始化为空 vector
         hospital_ids: vector[],
         prison_ids: vector[],
         shop_ids: vector[],
@@ -312,6 +312,8 @@ public fun add_tile_to_template(
         template.shop_ids.push_back(tile_id);
     } else if (tile.kind == types::TILE_NEWS()) {
         template.news_ids.push_back(tile_id);
+    } else if (tile.kind == types::TILE_LOTTERY()) {
+        // lottery也可以加到索引中（如果需要）
     };
 }
 
@@ -426,7 +428,6 @@ public fun get_height(template: &MapTemplate): u8 {
 
 // 检查地块是否可以放置NPC
 public fun can_place_npc_on_tile(tile_kind: u8): bool {
-    tile_kind == types::TILE_PROPERTY() ||
     tile_kind == types::TILE_EMPTY()
 }
 
@@ -435,9 +436,9 @@ public fun get_tile_count(template: &MapTemplate): u64 {
     template.tile_count
 }
 
-// 获取地产总数
-public fun get_property_count(template: &MapTemplate): u64 {
-    template.properties_static.length()
+// 获取建筑总数
+public fun get_building_count(template: &MapTemplate): u64 {
+    template.buildings_static.length()
 }
 
 // 获取模板ID
@@ -462,42 +463,41 @@ public fun get_template_status(registry: &MapRegistry, template_id: u16): u8 {
 public fun tile_x(tile: &TileStatic): u8 { tile.x }
 public fun tile_y(tile: &TileStatic): u8 { tile.y }
 public fun tile_kind(tile: &TileStatic): u8 { tile.kind }
-public fun tile_property_id(tile: &TileStatic): u16 { tile.property_id }
+public fun tile_building_id(tile: &TileStatic): u16 { tile.building_id }
 public fun tile_special(tile: &TileStatic): u64 { tile.special }
 public fun tile_w(tile: &TileStatic): u16 { tile.w }
 public fun tile_n(tile: &TileStatic): u16 { tile.n }
 public fun tile_e(tile: &TileStatic): u16 { tile.e }
 public fun tile_s(tile: &TileStatic): u16 { tile.s }
 
-// PropertyStatic 访问器函数
-// property_kind函数已删除，建筑类型改为动态属性Property.building_type
-public fun property_size(property: &PropertyStatic): u8 { property.size }
-public fun property_price(property: &PropertyStatic): u64 { property.price }
-public fun property_base_toll(property: &PropertyStatic): u64 { property.base_toll }
+// BuildingStatic 访问器函数
+public fun building_size(building: &BuildingStatic): u8 { building.size }
+public fun building_price(building: &BuildingStatic): u64 { building.price }
+public fun building_base_toll(building: &BuildingStatic): u64 { building.base_toll }
 
-// 添加地产到模板
-public fun add_property_to_template(
+// 添加建筑到模板
+public fun add_building_to_template(
     template: &mut MapTemplate,
-    property: PropertyStatic
+    building: BuildingStatic
 ): u16 {
-    let property_id = template.properties_static.length() as u16;
-    template.properties_static.push_back(property);
-    property_id
+    let building_id = template.buildings_static.length() as u16;
+    template.buildings_static.push_back(building);
+    building_id
 }
 
-// 获取地产信息
-public fun get_property(template: &MapTemplate, property_id: u16): &PropertyStatic {
-    assert!((property_id as u64) < template.properties_static.length(), 0);
-    &template.properties_static[property_id as u64]
+// 获取建筑信息
+public fun get_building(template: &MapTemplate, building_id: u16): &BuildingStatic {
+    assert!((building_id as u64) < template.buildings_static.length(), 0);
+    &template.buildings_static[building_id as u64]
 }
 
-// 检查tile是否有关联的property
-public fun tile_has_property(tile: &TileStatic): bool {
-    tile.property_id != NO_PROPERTY
+// 检查tile是否有关联的building
+public fun tile_has_building(tile: &TileStatic): bool {
+    tile.building_id != NO_BUILDING
 }
 
 // 导出常量供其他模块使用
-public fun no_property(): u16 { NO_PROPERTY }
+public fun no_building(): u16 { NO_BUILDING }
 
 // ===== Test Helper Functions 测试辅助函数 =====
 

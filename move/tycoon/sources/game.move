@@ -626,26 +626,16 @@ public entry fun roll_and_step(
     let from_pos = player.pos;
     let has_move_ctrl = is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
 
-    // 确定实际使用的骰子点数和path
-    let (dice, actual_path) = if (has_move_ctrl) {
-        // 有遥控骰子：使用完整path，path长度即为骰子点数
+    // 确定实际使用的骰子点数
+    let dice = if (has_move_ctrl) {
+        // 有遥控骰子：path长度即为骰子点数
         assert!(!path.is_empty() && path.length() <= 12, EInvalidPath);
-        let dice_value = path.length() as u8;
-        (dice_value, path)
+        path.length() as u8
     } else {
-        // 无遥控骰子：掷骰子，截取path前N个
+        // 无遥控骰子：掷骰子，验证path足够长
         let dice_value = get_dice_value(game, player_index, &mut generator);
         assert!(path.length() >= (dice_value as u64), EPathTooShort);
-
-        // 截取path的前dice_value个
-        let mut truncated_path = vector[];
-        let mut i = 0;
-        while (i < dice_value) {
-            truncated_path.push_back(path[i as u64]);
-            i = i + 1;
-        };
-
-        (dice_value, truncated_path)
+        dice_value
     };
 
     // 创建事件收集器
@@ -658,7 +648,7 @@ public entry fun roll_and_step(
         game,
         seat.player_index,
         dice,
-        &actual_path,
+        &path,  // 直接传原始path，dice控制使用前N个
         &mut steps,
         &mut cash_changes,
         game_data,
@@ -669,14 +659,22 @@ public entry fun roll_and_step(
     let end_player = &game.players[player_index as u64];
     let end_pos = end_player.pos;
 
-    // 发射聚合事件（包含actual_path）
+    // 发射聚合事件（只记录实际使用的path部分）
+    // 截取path前dice个用于事件记录
+    let mut used_path = vector[];
+    let mut i = 0;
+    while (i < dice) {
+        used_path.push_back(path[i as u64]);
+        i = i + 1;
+    };
+
     events::emit_roll_and_step_action_event_with_choices(
         game.id.to_inner(),
         player_addr,
         game.round,
         game.turn,
         dice,
-        actual_path,  // 记录实际使用的路径
+        used_path,  // 记录实际使用的路径
         from_pos,
         steps,
         cash_changes,

@@ -2662,31 +2662,101 @@ export class GameMap extends Component {
     }
 
     /**
+     * 显示tile的4方向邻居（使用字母overlay）
+     *
+     * 在邻居tile上显示方向字母：W/N/E/S
+     * 使用layer 20
+     */
+    private async showTileNeighbors(tile: MapTile): Promise<void> {
+        const tileId = tile.getTileId();
+        if (tileId === 65535) return;
+
+        // 检查是否有邻居数据
+        const wId = tile.getW();
+        const nId = tile.getN();
+        const eId = tile.getE();
+        const sId = tile.getS();
+
+        if (wId === 65535 && nId === 65535 && eId === 65535 && sId === 65535) {
+            console.log(`[GameMap] T${tileId} has no neighbor data`);
+            return;
+        }
+
+        const pos = tile.getGridPosition();
+        console.log(`[GameMap] Showing neighbors for T${tileId}: w=${wId}, n=${nId}, e=${eId}, s=${sId}`);
+
+        // 为每个有效邻居显示方向字母
+        const neighbors = [
+            { dir: 'W', id: wId },
+            { dir: 'N', id: nId },
+            { dir: 'E', id: eId },
+            { dir: 'S', id: sId }
+        ];
+
+        for (const { dir, id } of neighbors) {
+            if (id === 65535) continue;
+
+            const neighborTile = this.findTileById(id);
+            if (!neighborTile) continue;
+
+            const neighborPos = neighborTile.getGridPosition();
+
+            // 生成方向字母纹理（蓝色背景）
+            const letterTexture = NumberTextureGenerator.getLetterTexture(dir);
+
+            // 在邻居tile上显示字母
+            await this.addTileOverlay(new Vec2(neighborPos.x, neighborPos.y), {
+                texture: letterTexture,
+                faces: [OverlayFace.UP],
+                inflate: 0.006,
+                layerIndex: 20,
+                techniqueIndex: 1
+            });
+        }
+    }
+
+    /**
+     * 清除所有tile邻居显示（layer 20）
+     */
+    private clearTileNeighborOverlays(): void {
+        for (const tile of this._tiles) {
+            const pos = tile.getGridPosition();
+            this.removeTileOverlay(new Vec2(pos.x, pos.y), 20);
+        }
+    }
+
+    /**
      * 显示tile-building关联（鼠标中键点击）
      */
     private async handleShowAssociation(gridPos: Vec2): Promise<void> {
         console.log(`[GameMap] Show association at (${gridPos.x}, ${gridPos.y})`);
 
-        // 先清除之前的关联显示
-        this.clearAssociationOverlays();
-
         const tile = this.getTileAt(gridPos.x, gridPos.y);
         const buildingInfo = this.findBuilding2x2Info(gridPos);
 
-        // 情况1: 点击的是tile（非building位置），显示关联的building
+        // 情况1: 点击的是tile（非building位置）
         if (tile && !buildingInfo) {
+            // 先清除之前tile的邻居显示（layer 20）
+            this.clearTileNeighborOverlays();
+
+            // 显示关联的building（如果有，layer 10）
             const buildingId = tile.getBuildingId();
             if (buildingId !== 65535) {
-                // 找到关联的building
                 const building = this.findBuildingById(buildingId);
                 if (building) {
                     await this.showBuildingAssociation(building);
                 }
             }
+
+            // 显示tile的4方向邻居（layer 20）
+            await this.showTileNeighbors(tile);
         }
 
-        // 情况2: 点击的是building，显示关联的entrance tiles
+        // 情况2: 点击的是building，显示entrance tiles（layer 10/11）
         if (buildingInfo) {
+            // 清除邻居显示
+            this.clearTileNeighborOverlays();
+
             await this.showEntranceTilesAssociation(buildingInfo);
         }
     }

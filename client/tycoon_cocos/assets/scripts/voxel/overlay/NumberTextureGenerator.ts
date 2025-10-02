@@ -27,6 +27,8 @@ export interface NumberTextureOptions {
     prefix?: string;
     /** 圆角半径（默认6）*/
     borderRadius?: number;
+    /** 自定义文字（优先级高于prefix+num）*/
+    customText?: string;
 }
 
 /**
@@ -106,8 +108,9 @@ export class NumberTextureGenerator {
             ctx.stroke();
         }
 
-        // 绘制文字
-        const text = prefix ? `${prefix}${num}` : num.toString();
+        // 绘制文字（优先级: customText > prefix+num > num）
+        const text = options?.customText ||
+                     (prefix ? `${prefix}${num}` : num.toString());
         ctx.fillStyle = textColor;
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = 'center';
@@ -184,4 +187,22 @@ export class NumberTextureGenerator {
             keys: Array.from(this.cache.keys())
         };
     }
+
+    /**
+     * 生成字母纹理（方向标记专用）
+     *
+     * @param letter 字母（如 "W", "N", "E", "S"）
+     * @returns Texture2D
+     */
+    static getLetterTexture(letter: string): Texture2D {
+        return this.getNumberTexture(0, {
+            size: 64,
+            fontSize: 36,
+            bgColor: 'rgba(100, 200, 255, 0.85)',  // 蓝色背景
+            textColor: '#FFF',  // 白色字母
+            withBorder: true,
+            customText: letter
+        });
+    }
 }
+

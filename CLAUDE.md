@@ -131,24 +131,56 @@ resource_pack/
 
 ### Map System Architecture
 
-Two-layer map system with voxel integration:
+**核心架构重构（2024-10）**：Tile和Building完全分离
 
 ```typescript
-// Layer 0 (y=0): Ground tiles
-MapTile.ts                  // Base tile class
-├── PropertyTile.ts         // Purchasable properties
-├── ChanceTile.ts           // Chance cards
-└── StartTile.ts            // Starting position
+// Tile系统：简单路径抽象（y=0层）
+MapTile.ts                  // 纯路径tile，管理tileId和邻居关系
+  - 数据：tileId, buildingId, w/n/e/s (4方向邻居)
+  - 类型：EMPTY_LAND, LOTTERY, HOSPITAL, CHANCE等
+  - 无地产业务逻辑（owner/price/rent已移除）
 
-// Layer 1 (y=1): Objects
-MapObject.ts                // Base object class
-├── Building.ts             // Buildings on properties
-└── Decoration.ts           // Decorative objects
+// Building系统：复杂业务实体（y=0.5层PaperActor）
+GameMap._buildingRegistry   // Map<key, BuildingInfo>管理所有建筑
+  - BuildingInfo：position, size, direction, buildingId, entranceTileIds
+  - 1x1/2x2建筑，朝向0-3（南东北西，CCW）
+  - 与entrance tiles通过ID关联
 
-// Voxel integration
-- Tiles and objects are rendered as voxels
-- Support for multi-block structures
-- Real-time block placement/removal in edit mode
+// 关键关系：
+- Tile → Building: tile.buildingId指向关联的building
+- Building → Tile: building.entranceTileIds[0,1]指向入口tiles
+- Tile邻居：tile.w/n/e/s存储4方向相邻tile的ID
+- 编号算法：DFS遍历从hospital开始分配tileId
+
+// 容器节点结构：
+TilesContainer    // 所有tiles
+ObjectsContainer  // 旧物体系统（待整合）
+ActorsRoot        // NPC PaperActors
+BuildingsRoot     // Building PaperActors
+DecorationsRoot   // 装饰物体素节点
+```
+
+### Overlay系统架构（2024-10新增）
+
+```typescript
+// 多层overlay渲染系统
+BlockOverlayManager.ts      // 在block表面叠加视觉效果
+  - 参数化faces控制：可选渲染6个面的任意组合
+  - 多层支持：layerIndex + inflate分层避免z-fight
+  - 用途：数字编号、方向箭头、装饰贴花
+
+// Layer使用规划：
+Layer 0:  Tile编号（白色背景）
+Layer 1:  Building编号（金色背景）
+Layer 10: Building关联图标
+Layer 11: Entrance tile边框
+Layer 20: Tile邻居方向字母（W/N/E/S）
+
+// 关键实现：
+NumberTextureGenerator.ts   // Canvas2D动态生成数字/字母纹理
+  - 支持缓存避免重复生成
+  - customText优先级高于prefix+num
+  - 纹理缓存键包含customText避免冲突
 ```
 
 ### Event System Architecture
@@ -230,12 +262,14 @@ web3-tycoon/
 - **开发策略**: 只实现核心功能，避免过度工程化
 
 ### Voxel System Specifics
-- Uses custom shader for voxel rendering
+- Uses custom shader for voxel rendering (voxel-block.effect, voxel-overlay.effect等)
 - Chunk-based world management for performance
 - Supports runtime block placement/removal
-- Web3-themed blocks (empty_land, building variants, etc.)
-- Resource pack system for texture management
+- Web3-themed blocks (empty_land, lottery, hospital等)
+- Resource pack system for texture management（**完全独立，不依赖minecraft资源**）
 - Block models defined in JSON (Minecraft-style)
+- 模板系统：web3:block/cube_all, web3:block/cross, web3:block/cube_column
+- Overlay双mesh渲染：支持在block表面叠加多层透明效果
 
 ### Code Conventions (from .cursorrules)
 - **Code**: English only for all code
@@ -336,3 +370,40 @@ web3-tycoon/
 - **Random in Move**: 一个交易使用一个 RandomGenerator，避免多次创建
 - 生成代码时，没有我的指示，不要添加多余的fallback机制，让错误能够早点可见
 - 不要修改cocos的TypeScript的target，因为cocos不支持
+
+## 关键架构决策记录
+
+### Tile vs Building分离（2024-10）
+- **Tile**: 纯路径节点，只存储tileId、buildingId、4方向邻居(w/n/e/s)
+- **Building**: 在_buildingRegistry管理，存储position、direction、entranceTileIds
+- **关联计算**: `calculateBuildingEntrances()`建立tile↔building双向关联
+- **邻居计算**: `calculateTileNeighbors()`计算并校验tile的4方向邻居一致性
+
+### 朝向系统（Cocos左手坐标系）
+- **Cocos特性**: Y轴旋转从上方俯视是逆时针CCW
+- **Direction定义**: 0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
+- **旋转角度**: direction * 90° (0°→90°→180°→270°为CCW)
+- **点击切换**: 0→1→2→3→0 (南→东→北→西)
+
+### Overlay渲染系统
+- **实现方式**: 双Mesh方式，独立节点使用voxel-overlay.effect
+- **faces参数**: 数组指定要渲染的面，不硬编码（如[OverlayFace.UP]）
+- **inflate机制**: 沿法线膨胀避免z-fight，多层递增0.001
+- **纹理生成**: Canvas2D动态生成，缓存键必须包含customText
+- **重要**: `resources.load()`回调方式，无`loadAsync()`，需Promise封装
+
+### 资源包独立性
+- **web3资源包完全自包含**: 删除了minecraft资源依赖
+- **模板模型**: web3:block/cube_all, web3:block/cross, web3:block/cube_column
+- **所有web3 model的parent引用**: 必须指向web3命名空间，不能指向minecraft
+
+### 节点命名规范
+- **Tile**: `T_x_z` (如 `T_-2_-10`)
+- **Building**: `B_size_x_z` (如 `B_1x1_5_3`, `B_2x2_10_8`)
+- **简洁清晰**: 包含坐标信息，便于层级面板调试
+
+### 碰撞器配置
+- **所有BoxCollider的xz scale统一为1**
+- Tile: `(1, 0.1, 1)` - 扁平
+- NPC/Decoration: `(1, 0.1, 1)` - 扁平，用于点击
+- Object: `(1, 1, 1)` - 立体

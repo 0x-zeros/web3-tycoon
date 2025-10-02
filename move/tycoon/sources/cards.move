@@ -5,8 +5,7 @@ use sui::table::{Self, Table};
 use sui::transfer;
 use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
-use tycoon::types;
-use tycoon::admin;
+use tycoon::types::{Self, AdminCap};
 
 // ===== Errors =====
 const ECardNotOwned: u64 = 5001;
@@ -287,7 +286,7 @@ fun register_card_internal(
 
 // 注册新卡牌（需要AdminCap）
 public fun register_card(
-    _cap: &admin::AdminCap,
+    _cap: &AdminCap,
     registry: &mut CardRegistry,
     kind: u8,
     name: vector<u8>,
@@ -302,7 +301,7 @@ public fun register_card(
 
 // 更新掉落配置（需要AdminCap）
 public fun update_drop_config(
-    _cap: &admin::AdminCap,
+    _cap: &AdminCap,
     config: &mut DropConfig,
     tile_type: u8,
     rule: DropRule,

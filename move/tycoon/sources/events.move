@@ -1,8 +1,28 @@
 module tycoon::events;
 
-// use std::option;
+use std::option;
 use sui::event;
-// use sui::object::ID;
+use sui::object::ID;
+
+// ===== Admin Events 管理事件 =====
+
+// 地图模板发布事件
+public struct MapTemplatePublishedEvent has copy, drop {
+    template_id: u16,
+    publisher: address,
+    tile_count: u64
+}
+
+// 注册表创建事件
+public struct RegistryCreatedEvent has copy, drop {
+    registry_id: ID,
+    creator: address
+}
+
+// GameData创建事件
+public struct GameDataCreatedEvent has copy, drop {
+    data_id: ID
+}
 
 // ===== Game Events 游戏事件 =====
 
@@ -507,5 +527,36 @@ public fun stop_bonus(): u8 { STOP_BONUS }
 public fun stop_fee(): u8 { STOP_FEE }
 public fun stop_card_stop(): u8 { STOP_CARD_STOP }
 public fun stop_property_unowned(): u8 { STOP_PROPERTY_UNOWNED }
+
+// ===== Admin Event Emitters 管理事件发射函数 =====
+
+/// 发射地图模板发布事件
+public fun emit_map_template_published_event(
+    template_id: u16,
+    publisher: address,
+    tile_count: u64
+) {
+    event::emit(MapTemplatePublishedEvent {
+        template_id,
+        publisher,
+        tile_count
+    });
+}
+
+/// 发射注册表创建事件
+public fun emit_registry_created_event(
+    registry_id: ID,
+    creator: address
+) {
+    event::emit(RegistryCreatedEvent {
+        registry_id,
+        creator
+    });
+}
+
+/// 发射GameData创建事件
+public fun emit_game_data_created_event(data_id: ID) {
+    event::emit(GameDataCreatedEvent { data_id });
+}
 
 

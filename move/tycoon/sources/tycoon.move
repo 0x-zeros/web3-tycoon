@@ -4,12 +4,11 @@ module tycoon::tycoon;
 use sui::transfer;
 use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
-use sui::event;
 
-use tycoon::admin::{Self, AdminCap};
 use tycoon::map;
 use tycoon::cards;
-use tycoon::types;
+use tycoon::types::{Self, AdminCap};
+use tycoon::events;
 
 // ===== GameData 统一的策划数据容器 =====
 
@@ -50,21 +49,13 @@ public struct GameData has key, store {
     npc_spawn_weights: vector<u8>,     // NPC类型的权重列表
 }
 
-// ===== Events 事件 =====
-
-/// GameData 创建事件
-public struct GameDataCreated has copy, drop {
-    data_id: ID
-}
-
-
 // ===== Package Init 包初始化 =====
 
 /// 包发布时的初始化函数
 /// 创建所有全局唯一的共享对象
 fun init(ctx: &mut TxContext) {
     // 1. 创建管理员权限并转移给部署者
-    admin::create_admin_cap(ctx);
+    create_admin_cap(ctx);
 
     // 2. 创建统一的游戏数据容器
     let game_data = GameData {
@@ -111,7 +102,41 @@ fun init(ctx: &mut TxContext) {
 
     let game_data_id = object::id(&game_data);
     transfer::share_object(game_data);
-    event::emit(GameDataCreated { data_id: game_data_id });
+    events::emit_game_data_created_event(game_data_id);
+}
+
+// ===== Admin Functions 管理函数 =====
+
+/// 创建管理员权限并转移给部署者
+fun create_admin_cap(ctx: &mut TxContext) {
+    let admin_cap = types::new_admin_cap(object::new(ctx));
+    transfer::public_transfer(admin_cap, ctx.sender());
+}
+
+/// 发布自定义地图模板（通过客户端PTB调用）
+entry fun publish_custom_map_template(
+    game_data: &mut GameData,
+    template_id: u16,
+    width: u8,
+    height: u8,
+    _admin: &AdminCap,
+    ctx: &mut TxContext
+) {
+    let template = map::new_map_template(template_id, width, height, ctx);
+    let tile_count = map::get_tile_count(&template);
+
+    map::publish_template(&mut game_data.map_registry, template, ctx);
+
+    events::emit_map_template_published_event(
+        template_id,
+        ctx.sender(),
+        tile_count
+    );
+}
+
+/// 验证管理员权限
+public fun verify_admin_cap(_admin: &AdminCap): bool {
+    true
 }
 
 // ===== Game Configuration Constants 游戏配置常量 =====
@@ -264,7 +289,7 @@ public(package) fun borrow_card_registry_mut(game_data: &mut GameData): &mut car
 entry fun update_starting_cash(
     game_data: &mut GameData,
     new_cash: u64,
-    _admin: &admin::AdminCap
+    _admin: &AdminCap
 ) {
     game_data.starting_cash = new_cash;
 }
@@ -273,7 +298,7 @@ entry fun update_starting_cash(
 entry fun update_upgrade_multipliers(
     game_data: &mut GameData,
     new_multipliers: vector<u64>,
-    _admin: &admin::AdminCap
+    _admin: &AdminCap
 ) {
     assert!(!new_multipliers.is_empty(), 0); // 确保不为空
     game_data.upgrade_multipliers = new_multipliers;
@@ -283,7 +308,7 @@ entry fun update_upgrade_multipliers(
 entry fun update_toll_multipliers(
     game_data: &mut GameData,
     new_multipliers: vector<u64>,
-    _admin: &admin::AdminCap
+    _admin: &AdminCap
 ) {
     assert!(!new_multipliers.is_empty(), 0); // 确保不为空
     game_data.toll_multipliers = new_multipliers;

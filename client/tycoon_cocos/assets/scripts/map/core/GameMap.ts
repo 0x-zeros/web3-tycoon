@@ -2970,35 +2970,60 @@ export class GameMap extends Component {
      * 计算同朝向建筑的连街关系
      */
     private calculateChainsForDirection(buildings: BuildingInfo[], direction: number): void {
+        console.log(`[GameMap] --- Calculating chains for direction ${direction} ---`);
+
         // 朝向：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
         // 入口在朝向一侧，建筑沿垂直方向排列
-        const isEastWest = direction === 1 || direction === 3;  // 东西朝向 → 南北排列
+        const isEastWest = direction === 1 || direction === 3;  // 东西朝向 → 南北排列（z轴变化）
 
-        // 排序
-        buildings.sort((a, b) =>
-            isEastWest ? (a.position.z - b.position.z) : (a.position.x - b.position.x)
-        );
+        // 1. 按"不变轴"分组成列/行
+        const lines = new Map<number, BuildingInfo[]>();
+        for (const building of buildings) {
+            // 获取列/行的key（不变的轴坐标）
+            const lineKey = isEastWest ? building.position.x : building.position.z;
 
-        // 遍历找相邻
-        for (let i = 0; i < buildings.length - 1; i++) {
-            const curr = buildings[i];
-            const next = buildings[i + 1];
-
-            // 检查是否相邻（距离=1 且 在同一直线）
-            const dist = isEastWest
-                ? Math.abs(next.position.z - curr.position.z)
-                : Math.abs(next.position.x - curr.position.x);
-
-            const aligned = isEastWest
-                ? curr.position.x === next.position.x
-                : curr.position.z === next.position.z;
-
-            if (dist === 1 && aligned) {
-                curr.chainNextId = next.buildingId!;
-                next.chainPrevId = curr.buildingId!;
-                console.log(`[Chain] ${curr.buildingId} ↔ ${next.buildingId} (dir=${direction})`);
+            if (!lines.has(lineKey)) {
+                lines.set(lineKey, []);
             }
+            lines.get(lineKey)!.push(building);
         }
+
+        console.log(`[GameMap] Grouped into ${lines.size} ${isEastWest ? 'columns(x)' : 'rows(z)'}`);
+
+        // 2. 对每列/行独立处理
+        lines.forEach((lineBuildings, lineKey) => {
+            const axis = isEastWest ? 'x' : 'z';
+            console.log(`  ${axis}=${lineKey}: ${lineBuildings.length} buildings`);
+
+            if (lineBuildings.length < 2) {
+                console.log(`    Only 1 building, no chain`);
+                return;
+            }
+
+            // 按"变化轴"排序
+            lineBuildings.sort((a, b) =>
+                isEastWest ? (a.position.z - b.position.z) : (a.position.x - b.position.x)
+            );
+
+            // 检查相邻
+            for (let i = 0; i < lineBuildings.length - 1; i++) {
+                const curr = lineBuildings[i];
+                const next = lineBuildings[i + 1];
+
+                // 计算"变化轴"的距离
+                const dist = isEastWest
+                    ? Math.abs(next.position.z - curr.position.z)
+                    : Math.abs(next.position.x - curr.position.x);
+
+                if (dist === 1) {
+                    curr.chainNextId = next.buildingId!;
+                    next.chainPrevId = curr.buildingId!;
+                    console.log(`    ✓ ${curr.buildingId} ↔ ${next.buildingId}`);
+                }
+            }
+        });
+
+        console.log(`[GameMap] --- Direction ${direction} done ---`);
     }
 
     /**
@@ -3018,7 +3043,7 @@ export class GameMap extends Component {
         let current = buildingId;
         while (true) {
             const b = this.getBuildingById(current);
-            if (!b || !b.chainNextId || b.chainNextId === 65535) break;
+            if (!b || b.chainNextId === undefined || b.chainNextId === 65535) break;  // 显式判断，避免0被当作falsy
             if (chain.has(b.chainNextId)) break;  // 防止循环
             chain.add(b.chainNextId);
             current = b.chainNextId;
@@ -3028,7 +3053,7 @@ export class GameMap extends Component {
         current = buildingId;
         while (true) {
             const b = this.getBuildingById(current);
-            if (!b || !b.chainPrevId || b.chainPrevId === 65535) break;
+            if (!b || b.chainPrevId === undefined || b.chainPrevId === 65535) break;  // 显式判断，避免0被当作falsy
             if (chain.has(b.chainPrevId)) break;
             chain.add(b.chainPrevId);
             current = b.chainPrevId;
@@ -3119,6 +3144,7 @@ export class GameMap extends Component {
         }
 
         console.log(`[GameMap] ===== Chain overlay shown for ${chainBuildingIds.length} buildings =====`);
+        console.log(`[GameMap] Chain building IDs: [${chainBuildingIds.join(', ')}]`);
     }
 
     /**

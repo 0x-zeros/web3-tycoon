@@ -126,12 +126,10 @@ fun create_admin_cap(ctx: &mut TxContext) {
 entry fun publish_custom_map_template(
     game_data: &mut GameData,
     template_id: u16,
-    width: u8,
-    height: u8,
     _admin: &AdminCap,
     ctx: &mut TxContext
 ) {
-    let template = map::new_map_template(template_id, width, height, ctx);
+    let template = map::new_map_template(template_id, ctx);
     let tile_count = map::get_tile_count(&template);
 
     map::publish_template(&mut game_data.map_registry, template, ctx);

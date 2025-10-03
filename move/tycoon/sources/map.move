@@ -80,9 +80,6 @@ public struct TileStatic has store, copy, drop {
 // 字段说明：
 // 基本信息：
 // - id: 模板唯一标识符
-// - status: 模板状态（0=draft, 1=active, 2=deprecated, 3=blocked, 4=archived）
-// - width, height: 地图尺寸
-// - tile_count: 地块总数
 //
 // 地块数据：
 // - tiles_static: 所有地块的静态信息
@@ -94,23 +91,16 @@ public struct TileStatic has store, copy, drop {
 // 特殊地块索引：
 // - hospital_ids: 所有医院地块（用于送医院功能）
 //
-// 模板状态说明（仅供客户端/服务端使用，链上逻辑不做校验/限制）：
-// - 0 = draft（草稿，不对外）
-// - 1 = active（可用，前端可见、可创建对局）
-// - 2 = deprecated（废弃，不可新建，对局仍可读取）
-// - 3 = blocked（封禁，前端隐藏，不可新建；旧局仍可读）
-// - 4 = archived（归档，完全隐藏，仅链上存证）
 public struct MapTemplate has store {
     id: u16,
-    status: u8,                    // 模板状态
-    width: u8,
-    height: u8,
-    tile_count: u64,
     tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
     buildings_static: vector<BuildingStatic>, // 建筑静态信息，building_id 即为索引
     // 导航信息已集成到 TileStatic.w/n/e/s 中，不再需要额外的邻接表
     hospital_ids: vector<u16>
 }
+
+//meta data， 描述，截图等可以放到warus里？或者随便啥网站上，和move无关（？）
+
 
 // ===== MapRegistry 地图注册表 =====
 //
@@ -254,16 +244,10 @@ public fun new_tile_static_with_nav(
 // 创建地图模板
 public fun new_map_template(
     id: u16,
-    width: u8,
-    height: u8,
-    ctx: &mut TxContext
+    _ctx: &mut TxContext
 ): MapTemplate {
     MapTemplate {
         id,
-        status: 1,  // 默认为 active 状态
-        width,
-        height,
-        tile_count: 0,
         tiles_static: vector[],  // 初始化为空 vector
         buildings_static: vector[],  // 初始化为空 vector
         hospital_ids: vector[]
@@ -292,7 +276,6 @@ public fun add_tile_to_template(
     // 后续通过set_w/n/e/s建立连接
 
     template.tiles_static.push_back(tile);
-    template.tile_count = template.tile_count + 1;
 
     // 根据地块类型添加到对应的ID列表
     if (tile.kind == types::TILE_HOSPITAL()) {
@@ -384,16 +367,6 @@ public fun get_hospital_ids(template: &MapTemplate): vector<u16> {
     template.hospital_ids
 }
 
-// 获取地图宽度
-public fun get_width(template: &MapTemplate): u8 {
-    template.width
-}
-
-// 获取地图高度
-public fun get_height(template: &MapTemplate): u8 {
-    template.height
-}
-
 // 检查地块是否可以放置NPC
 public fun can_place_npc_on_tile(tile_kind: u8): bool {
     tile_kind == types::TILE_EMPTY()
@@ -401,7 +374,7 @@ public fun can_place_npc_on_tile(tile_kind: u8): bool {
 
 // 获取地块总数
 public fun get_tile_count(template: &MapTemplate): u64 {
-    template.tile_count
+    template.tiles_static.length()
 }
 
 // 获取建筑总数
@@ -412,19 +385,6 @@ public fun get_building_count(template: &MapTemplate): u64 {
 // 获取模板ID
 public fun get_template_id(template: &MapTemplate): u16 {
     template.id
-}
-
-
-// 设置模板状态（允许更新，不加权限控制）
-public fun set_template_status(registry: &mut MapRegistry, template_id: u16, status: u8) {
-    let template = table::borrow_mut(&mut registry.templates, template_id);
-    template.status = status;
-}
-
-// 获取模板状态
-public fun get_template_status(registry: &MapRegistry, template_id: u16): u8 {
-    let template = table::borrow(&registry.templates, template_id);
-    template.status
 }
 
 // ===== TileStatic Accessors 地块访问器 =====

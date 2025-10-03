@@ -57,6 +57,7 @@ const ECardNotOwned: u64 = 5001;
 const EInvalidCardTarget: u64 = 5003;
 const ECardNotFound: u64 = 5004;
 const EInvalidParams: u64 = 5005;  // 参数无效
+const ECannotTurn: u64 = 5006;     // 无法使用转向卡（初始位置等）
 
 // 移动相关错误
 const EInvalidMove: u64 = 4001;
@@ -118,6 +119,7 @@ public struct BuffEntry has store, copy, drop {
 // - bankrupt: 破产标志，破产后不参与游戏但保留在players表中
 // - cards: 手牌集合，使用vector存储以优化小集合性能
 // - last_tile_id: 上一步所在的tile_id（用于避免回头）
+// - next_tile_id: 下一步强制目标tile（INVALID_TILE_ID表示无强制，用于转向卡等）
 // - buffs: 当前激活的所有Buff列表
 public struct Player has store {
     owner: address,
@@ -128,6 +130,7 @@ public struct Player has store {
     bankrupt: bool,
     cards: vector<CardEntry>,  // 改为vector存储
     last_tile_id: u16,  // 上一步的tile（避免回头），初始为spawn_tile的某个邻居
+    next_tile_id: u16,  // 下一步强制目标（默认65535=INVALID_TILE_ID）
     buffs: vector<BuffEntry>  // 统一的buff存储
 }
 
@@ -955,7 +958,8 @@ fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Pl
         in_hospital_turns: 0,
         bankrupt: false,
         cards: initial_cards,
-        last_tile_id: 65535  // INVALID_TILE_ID，在start()中设置为有效值
+        last_tile_id: 65535,  // INVALID_TILE_ID，在start()中设置为有效值
+        next_tile_id: 65535   // INVALID_TILE_ID，默认无强制目标
     }
 }
 
@@ -1105,9 +1109,9 @@ fun execute_step_movement_with_choices(
     let template = map::get_template(map_registry, game.template_id);
 
     // 先读取必要的玩家信息
-    let (from_pos, mut last_tile_id, is_frozen) = {
+    let (from_pos, mut last_tile_id, mut next_tile_id, is_frozen) = {
         let player = &game.players[player_index as u64];
-        (player.pos, player.last_tile_id, is_buff_active(player, types::BUFF_FROZEN(), game.round))
+        (player.pos, player.last_tile_id, player.next_tile_id, is_buff_active(player, types::BUFF_FROZEN(), game.round))
     };
 
     if (is_frozen) {
@@ -1144,8 +1148,24 @@ fun execute_step_movement_with_choices(
         // 从path_choices获取下一个位置
         let next_pos = path_choices[i as u64];
 
-        // 验证next_pos是current_pos的有效邻居，且不是last_tile_id（避免回头）
-        assert!(is_valid_neighbor(template, current_pos, next_pos, last_tile_id), EInvalidPath);
+        // 第一步：检查是否有强制目标（转向卡等）
+        if (i == 0 && next_tile_id != 65535) {
+            // 有强制目标：必须走向 next_tile_id
+            assert!(next_pos == next_tile_id, EInvalidPath);
+            // 验证 next_tile_id 确实是邻居
+            assert!(is_valid_neighbor(template, current_pos, next_pos, 65535), EInvalidPath);
+            next_tile_id = 65535;  // 使用后清空
+        } else {
+            // 正常验证：不能回头（除非是端点tile）
+            if (next_pos == last_tile_id) {
+                // 要回头：检查是否是端点tile（只有last_tile_id这一个邻居）
+                let neighbors = map::get_valid_neighbors(template, current_pos);
+                assert!(neighbors.length() == 1 && neighbors[0] == last_tile_id, EInvalidPath);
+            } else {
+                // 不回头：正常验证
+                assert!(is_valid_neighbor(template, current_pos, next_pos, last_tile_id), EInvalidPath);
+            }
+        };
 
         let mut pass_draws = vector[];
         let mut npc_event_opt = option::none<events::NpcStepEvent>();
@@ -1296,10 +1316,11 @@ fun execute_step_movement_with_choices(
         i = i + 1;
     };
 
-    // 更新玩家的last_tile_id
+    // 更新玩家的 last_tile_id 和 next_tile_id
     {
         let player = &mut game.players[player_index as u64];
         player.last_tile_id = last_tile_id;
+        player.next_tile_id = next_tile_id;  // 写回（已清空或仍无效）
     };
 }
 
@@ -2039,12 +2060,26 @@ fun apply_card_effect_with_collectors(
             i = i + 1;
         };
     } else if (kind == types::CARD_TURN()) {
-        // 转向卡：切换玩家的方向偏好
+        // 转向卡：设置next_tile_id为last_tile_id，允许下一步回头
         // params[0]=目标玩家索引（可选，默认为自己）
-        // 转向卡在新寻路系统下无效（客户端寻路）
-        // 保留卡牌类型但不做任何处理
-        let _ = params;  // 避免未使用警告
-        let _ = player_index;
+
+        let target_index = if (params.length() > 0) {
+            (params[0] as u8)
+        } else {
+            player_index
+        };
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        let target_player = &mut game.players[target_index as u64];
+
+        // 验证 last_tile_id 有效（不是初始值）
+        assert!(target_player.last_tile_id != 65535, ECannotTurn);
+
+        // 设置 next_tile_id 为 last_tile_id（强制下一步回头）
+        target_player.next_tile_id = target_player.last_tile_id;
+
+        // 转向卡是即时效果，不需要记录buff
+        // next_tile_id 会在 roll_and_step 的第一步使用后自动清空
     }
 }
 

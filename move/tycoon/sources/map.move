@@ -426,3 +426,11 @@ public fun tile_has_building(tile: &TileStatic): bool {
 
 // 导出常量供其他模块使用
 public fun no_building(): u16 { NO_BUILDING }
+
+// 手动设置 hospital_ids（供 BCS 反序列化使用）
+public(package) fun set_hospital_ids(
+    template: &mut MapTemplate,
+    hospital_ids: vector<u16>
+) {
+    template.hospital_ids = hospital_ids;
+}

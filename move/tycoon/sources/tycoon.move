@@ -4,6 +4,7 @@ module tycoon::tycoon;
 use sui::transfer;
 use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
+use sui::bcs;
 
 use tycoon::map;
 use tycoon::cards;
@@ -144,6 +145,86 @@ entry fun publish_custom_map_template(
 /// 验证管理员权限
 public fun verify_admin_cap(_admin: &AdminCap): bool {
     true
+}
+
+/// 从 BCS 编码的数据创建并发布地图模板
+/// 客户端使用 @mysten/sui/bcs 序列化数据，Move 端反序列化
+entry fun create_map_from_bcs(
+    game_data: &mut GameData,
+    template_id: u16,
+    tiles_bcs: vector<u8>,
+    buildings_bcs: vector<u8>,
+    hospital_ids_bcs: vector<u8>,
+    _admin: &AdminCap,
+    ctx: &mut TxContext
+) {
+    // 创建空模板
+    let mut template = map::new_map_template(template_id, ctx);
+
+    // 1. 反序列化 buildings
+    let mut bcs_reader = bcs::new(buildings_bcs);
+    let building_count = bcs_reader.peel_vec_length();
+
+    let mut i = 0;
+    while (i < building_count) {
+        // 按 BuildingStatic 字段顺序 peel：size, price, base_toll
+        let size = bcs_reader.peel_u8();
+        let price = bcs_reader.peel_u64();
+        let base_toll = bcs_reader.peel_u64();
+
+        let building = map::new_building_static(size, price, base_toll);
+        map::add_building_to_template(&mut template, building);
+        i = i + 1;
+    };
+
+    // 2. 反序列化 tiles
+    bcs_reader = bcs::new(tiles_bcs);
+    let tile_count = bcs_reader.peel_vec_length();
+
+    i = 0;
+    while (i < tile_count) {
+        // 按 TileStatic 字段顺序 peel：x, y, kind, building_id, special, w, n, e, s
+        let x = bcs_reader.peel_u8();
+        let y = bcs_reader.peel_u8();
+        let kind = bcs_reader.peel_u8();
+        let building_id = bcs_reader.peel_u16();
+        let special = bcs_reader.peel_u64();
+        let w = bcs_reader.peel_u16();
+        let n = bcs_reader.peel_u16();
+        let e = bcs_reader.peel_u16();
+        let s = bcs_reader.peel_u16();
+
+        let tile = map::new_tile_static_with_nav(
+            x, y, kind, building_id, special,
+            w, n, e, s
+        );
+        map::add_tile_to_template(&mut template, (i as u16), tile);
+        i = i + 1;
+    };
+
+    // 3. 反序列化 hospital_ids
+    bcs_reader = bcs::new(hospital_ids_bcs);
+    let hospital_count = bcs_reader.peel_vec_length();
+
+    let mut hospital_ids = vector[];
+    i = 0;
+    while (i < hospital_count) {
+        hospital_ids.push_back(bcs_reader.peel_u16());
+        i = i + 1;
+    };
+
+    // 手动设置 hospital_ids（覆盖自动填充的）
+    map::set_hospital_ids(&mut template, hospital_ids);
+
+    // 发布模板
+    map::publish_template(&mut game_data.map_registry, template, ctx);
+
+    // 发射事件
+    events::emit_map_template_published_event(
+        template_id,
+        ctx.sender(),
+        tile_count
+    );
 }
 
 /// 注册卡牌（需要AdminCap）

@@ -17,8 +17,6 @@ export interface BuildingStatic {
     size: number;
     /** 基础价格 */
     price: bigint;
-    /** 基础过路费 */
-    base_toll: bigint;
 }
 
 /**

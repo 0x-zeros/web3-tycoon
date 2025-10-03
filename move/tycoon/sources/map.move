@@ -32,11 +32,9 @@ const NO_BUILDING: u16 = 65535;        // u16::MAX 表示tile不属于任何buil
 // 字段说明：
 // - size: 建筑大小（SIZE_1X1/SIZE_2X2）
 // - price: 购买价格
-// - base_toll: 基础过路费
 public struct BuildingStatic has store, copy, drop {
     size: u8,       // 建筑大小（1x1 或 2x2）
-    price: u64,     // 购买价格
-    base_toll: u64  // 基础租金
+    price: u64      // 购买价格
 }
 
 // ===== TileStatic 静态地块信息 =====
@@ -190,13 +188,11 @@ public fun new_tile_static(
 // 创建建筑静态信息
 public fun new_building_static(
     size: u8,
-    price: u64,
-    base_toll: u64
+    price: u64
 ): BuildingStatic {
     BuildingStatic {
         size,
-        price,
-        base_toll
+        price
     }
 }
 
@@ -401,7 +397,6 @@ public fun tile_s(tile: &TileStatic): u16 { tile.s }
 // BuildingStatic 访问器函数
 public fun building_size(building: &BuildingStatic): u8 { building.size }
 public fun building_price(building: &BuildingStatic): u64 { building.price }
-public fun building_base_toll(building: &BuildingStatic): u64 { building.base_toll }
 
 // 添加建筑到模板
 public fun add_building_to_template(

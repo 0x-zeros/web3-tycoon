@@ -45,14 +45,12 @@ const TileStaticBCS = bcs.struct('TileStatic', {
  * Move定义：
  * public struct BuildingStatic has store, copy, drop {
  *     size: u8,
- *     price: u64,
- *     base_toll: u64
+ *     price: u64
  * }
  */
 const BuildingStaticBCS = bcs.struct('BuildingStatic', {
     size: bcs.u8(),
-    price: bcs.u64(),
-    base_toll: bcs.u64()
+    price: bcs.u64()
 });
 
 // ===== 序列化函数 =====
@@ -109,7 +107,6 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
     const buildings: Array<{
         size: number;
         price: bigint;
-        base_toll: bigint;
     }> = [];
 
     if (mapTemplate.buildings_static.size > 0) {
@@ -126,8 +123,7 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
 
             buildings.push({
                 size: building.size,
-                price: BigInt(building.price),
-                base_toll: BigInt(building.base_toll)
+                price: BigInt(building.price)
             });
         }
     }
@@ -183,8 +179,7 @@ export function decodeMapTemplateFromBCS(
         })),
         buildings: buildings.map(b => ({
             size: b.size,
-            price: b.price,
-            base_toll: b.base_toll
+            price: b.price
         })),
         hospital_ids
     };

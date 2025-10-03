@@ -126,6 +126,22 @@ export const DEFAULT_MAX_ROUNDS = 100;
 export const DEFAULT_HOSPITAL_TURNS = 2;
 export const DEFAULT_PRISON_TURNS = 2;
 
+// ===== 默认数值配置（编辑器初始值，可微调） =====
+
+/**
+ * 建筑默认价格
+ * 注：编辑器可为每个建筑单独设置，这些是默认值
+ */
+export const DEFAULT_BUILDING_PRICE_1X1 = 2000n;  // 1x1建筑基础价格
+export const DEFAULT_BUILDING_PRICE_2X2 = 5000n;  // 2x2建筑基础价格
+
+/**
+ * Tile特殊数值默认值
+ * 注：编辑器可为每个tile单独设置，这些是默认值
+ */
+export const DEFAULT_TILE_BONUS_AMOUNT = 2000n;   // 奖励金额
+export const DEFAULT_TILE_FEE_AMOUNT = 2000n;     // 罚款金额
+
 // ===== 辅助函数（对应Move端的判断函数） =====
 
 /**

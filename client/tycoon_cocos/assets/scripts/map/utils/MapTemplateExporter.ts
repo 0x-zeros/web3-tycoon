@@ -8,7 +8,17 @@
  */
 
 import type { MapTemplate, TileStatic, BuildingStatic } from '../../sui/types/map';
-import { TileKind, INVALID_TILE_ID, NO_BUILDING } from '../../sui/types/constants';
+import {
+    TileKind,
+    INVALID_TILE_ID,
+    NO_BUILDING,
+    DEFAULT_BUILDING_PRICE_1X1,
+    DEFAULT_BUILDING_PRICE_2X2,
+    DEFAULT_TILE_BONUS_AMOUNT,
+    DEFAULT_TILE_FEE_AMOUNT,
+    DEFAULT_HOSPITAL_TURNS,
+    DEFAULT_PRISON_TURNS
+} from '../../sui/types/constants';
 import type { GameMap } from '../core/GameMap';
 import type { MapTile } from '../core/MapTile';
 import type { MapBuilding } from '../core/MapBuilding';
@@ -51,12 +61,14 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
 
         const gridPos = tile.getGridPosition();
 
+        const tileKind = tile.getTypeId();
+
         tilesMap.set(tileId, {
             x: gridPos.x,
             y: gridPos.y,
-            kind: tile.getTypeId(),
+            kind: tileKind,
             building_id: tile.getBuildingId(),
-            special: BigInt(0),  // 根据 tile 类型设置（如 BONUS/FEE 金额）
+            special: tile.getSpecial?.() ?? getDefaultTileSpecial(tileKind),  // 编辑器值优先，否则用默认
             w: tile.getW(),
             n: tile.getN(),
             e: tile.getE(),
@@ -75,11 +87,11 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
             // key 格式可能是 "B_1x1_5_3" 或其他
             // 需要从 BuildingInfo 中提取 buildingId
             const buildingId = info.buildingId || parseInt(key.split('_')[1]);
+            const size = info.size === '1x1' ? 1 : 2;
 
             buildingsMap.set(buildingId, {
-                size: info.size === '1x1' ? 1 : 2,
-                price: BigInt(info.price || 1000),       // 默认价格或从 info 获取
-                base_toll: BigInt(info.baseToll || 100)  // 默认租金或从 info 获取
+                size,
+                price: info.price ?? getDefaultBuildingPrice(size as 1 | 2)  // 编辑器值优先，否则用默认
             });
         });
     }
@@ -208,3 +220,35 @@ function validateExportedData(
 
     console.log('[MapExporter] ✓ Exported data validation passed');
 }
+
+// ===== 默认值计算函数 =====
+
+/**
+ * 获取 tile.special 的默认值
+ * 根据 tile 类型返回对应的默认数值
+ * 编辑器可为每个tile单独设置，此函数提供默认值
+ */
+function getDefaultTileSpecial(tileKind: number): bigint {
+    switch (tileKind) {
+        case TileKind.BONUS:
+            return DEFAULT_TILE_BONUS_AMOUNT;
+        case TileKind.FEE:
+            return DEFAULT_TILE_FEE_AMOUNT;
+        case TileKind.HOSPITAL:
+            return DEFAULT_HOSPITAL_TURNS;
+        case TileKind.PRISON:
+            return DEFAULT_PRISON_TURNS;
+        default:
+            return 0n;
+    }
+}
+
+/**
+ * 获取 building.price 的默认值
+ * 根据建筑尺寸返回对应的默认价格
+ * 编辑器可为每个building单独设置，此函数提供默认值
+ */
+function getDefaultBuildingPrice(size: 1 | 2): bigint {
+    return size === 1 ? DEFAULT_BUILDING_PRICE_1X1 : DEFAULT_BUILDING_PRICE_2X2;
+}
+

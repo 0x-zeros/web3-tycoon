@@ -167,12 +167,11 @@ entry fun create_map_from_bcs(
 
     let mut i = 0;
     while (i < building_count) {
-        // 按 BuildingStatic 字段顺序 peel：size, price, base_toll
+        // 按 BuildingStatic 字段顺序 peel：size, price
         let size = bcs_reader.peel_u8();
         let price = bcs_reader.peel_u64();
-        let base_toll = bcs_reader.peel_u64();
 
-        let building = map::new_building_static(size, price, base_toll);
+        let building = map::new_building_static(size, price);
         map::add_building_to_template(&mut template, building);
         i = i + 1;
     };

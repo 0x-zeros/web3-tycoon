@@ -88,17 +88,17 @@ export class BlockOverlayManager {
             });
 
             // 调试：输出贴图信息
-            if (this.DEBUG_LOG) {
-                const tex = config.texture;
-                const img = (tex as any)?.image;
-                console.log('[BlockOverlayManager] Texture ready:', {
-                    name: (tex as any)?._uuid || tex?.name,
-                    width: tex?.width,
-                    height: tex?.height,
-                    hasImage: !!img,
-                    imageSize: img ? { width: img.width, height: img.height } : null,
-                });
-            }
+            // if (this.DEBUG_LOG) {
+            //     const tex = config.texture;
+            //     const img = (tex as any)?.image;
+            //     console.log('[BlockOverlayManager] Texture ready:', {
+            //         name: (tex as any)?._uuid || tex?.name,
+            //         width: tex?.width,
+            //         height: tex?.height,
+            //         hasImage: !!img,
+            //         imageSize: img ? { width: img.width, height: img.height } : null,
+            //     });
+            // }
 
             // 设置overlay纹理（使用通用命名 mainTexture）
             material.setProperty('mainTexture', config.texture);
@@ -113,9 +113,9 @@ export class BlockOverlayManager {
 
             renderer.setMaterial(material, 0);
 
-            if (this.DEBUG_LOG) {
-                console.log('[BlockOverlayManager] Material set with mainTexture & mainColor');
-            }
+            // if (this.DEBUG_LOG) {
+            //     console.log('[BlockOverlayManager] Material set with mainTexture & mainColor');
+            // }
 
             console.log(`[BlockOverlayManager] Created overlay layer ${layerIndex} with ${faces.length} faces`);
             return overlayNode;

@@ -24,8 +24,8 @@ export enum GameEffectType {
     LOSE_MONEY = 'lose_money',
     PAY_RENT = 'pay_rent',
     COLLECT_RENT = 'collect_rent',
-    BUY_PROPERTY = 'buy_property',
-    UPGRADE_PROPERTY = 'upgrade_property',
+    BUY_BUILDING = 'buy_building',
+    UPGRADE_BUILDING = 'upgrade_building',
 
     // 移动效果
     NORMAL_MOVE = 'normal_move',
@@ -352,10 +352,10 @@ export class TycoonEventProcessor {
      */
     private processStopEffect(stop: StopEffect, player: string, effects: GameEffect[]): void {
         switch (stop.stop_type) {
-            case StopType.PROPERTY_TOLL:
+            case StopType.BUILDING_TOLL:
                 // 已在现金变动中处理
                 break;
-            case StopType.PROPERTY_NO_RENT:
+            case StopType.BUILDING_NO_RENT:
                 effects.push({
                     type: GameEffectType.NORMAL_MOVE,
                     player,
@@ -395,9 +395,9 @@ export class TycoonEventProcessor {
                     description: `支付罚款 ${stop.amount}`
                 });
                 break;
-            case StopType.PROPERTY_UNOWNED:
+            case StopType.BUILDING_UNOWNED:
                 effects.push({
-                    type: GameEffectType.BUY_PROPERTY,
+                    type: GameEffectType.BUY_BUILDING,
                     player,
                     position: { tile: stop.tile_id },
                     description: '可以购买地产'

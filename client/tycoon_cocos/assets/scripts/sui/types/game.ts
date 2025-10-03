@@ -37,8 +37,10 @@ export interface Player {
     in_hospital_turns: number;
     /** 剩余监狱回合数 */
     in_prison_turns: number;
-    /** 方向偏好（0=顺时针，1=逆时针） */
-    dir_pref: number;
+    /** 上一步的tile_id（用于避免回头） */
+    last_tile_id: number;
+    /** 下一步强制目标tile（65535=无强制，用于转向卡等） */
+    next_tile_id: number;
     /** 活跃的Buff列表 */
     buffs: BuffEntry[];
     /** 持有的卡牌（key: card_kind, value: count） */
@@ -89,15 +91,17 @@ export interface Seat {
 }
 
 /**
- * 地产数据（新的Tile/Property分离架构）
- * 对应Move: struct Property
+ * 建筑数据（新的Tile/Building分离架构）
+ * 对应Move: struct Building
  * 注意：这是经济实体，与地块（Tile）分离
  */
-export interface Property {
+export interface Building {
     /** 所有者索引（NO_OWNER=255表示无主） */
     owner: number;
-    /** 地产等级（0-5） */
+    /** 建筑等级（0-5） */
     level: number;
+    /** 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等） */
+    building_type: number;
 }
 
 /**
@@ -147,13 +151,13 @@ export interface Game {
     // 游戏元素
     /** 地块列表（导航用） */
     tiles: Tile[];
-    /** 地产列表（经济实体） */
-    properties: Property[];
+    /** 建筑列表（经济实体） */
+    buildings: Building[];
     /** 玩家列表（key: player_index, value: Player） */
     players: Map<number, Player>;
     /** 加入顺序（决定回合顺序） */
     join_order: number[];
-    /** 所有者索引（key: owner_index, value: tile_ids） */
+    /** 所有者索引（key: owner_index, value: building_ids） */
     owner_index: Map<number, number[]>;
 
     // NPC管理
@@ -225,10 +229,10 @@ export interface GameCreateConfig {
  */
 
 /**
- * 判断地块是否有主人
+ * 判断建筑是否有主人
  */
-export function hasOwner(property: Property): boolean {
-    return property.owner !== NO_OWNER;
+export function hasOwner(building: Building): boolean {
+    return building.owner !== NO_OWNER;
 }
 
 /**

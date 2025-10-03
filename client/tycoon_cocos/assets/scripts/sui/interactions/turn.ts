@@ -27,7 +27,7 @@ export class TurnInteraction {
     async rollAndStep(
         gameId: string,
         seatId: string,
-        pathChoices: number[] = [],
+        path: number[] = [],
         keypair: Ed25519Keypair
     ): Promise<{
         dice: number;
@@ -43,9 +43,10 @@ export class TurnInteraction {
             arguments: [
                 tx.object(gameId),          // game: &mut Game
                 tx.object(seatId),          // seat: &Seat
-                tx.pure.vector('u16', pathChoices), // path_choices: vector<u16>
+                tx.pure.vector('u16', path), // path: vector<u16>
                 tx.object(this.gameDataId), // game_data: &GameData
-                tx.object('0x8')            // random: &Random
+                tx.object('0x8'),           // random: &Random
+                tx.object('0x6')            // clock: &Clock
             ]
         });
 

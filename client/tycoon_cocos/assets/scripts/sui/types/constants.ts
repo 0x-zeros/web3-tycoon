@@ -8,7 +8,7 @@
 // ===== TileKind 地块类型 =====
 export enum TileKind {
     EMPTY = 0,
-    PROPERTY = 1,
+    LOTTERY = 1,
     HOSPITAL = 2,
     PRISON = 3,
     CHANCE = 4,
@@ -16,25 +16,27 @@ export enum TileKind {
     FEE = 6,
     CARD = 7,
     NEWS = 8,
-    LOTTERY = 9,
-    SHOP = 10,
+    SHOP = 10
+}
 
-    // 大地产类型（2x2）
-    TEMPLE = 20,        // 土地庙（影响周围地块租金）
+// ===== BuildingType 建筑类型 =====
+export enum BuildingType {
+    NONE = 0,           // 无类型（1x1建筑或2x2未选择）
+    TEMPLE = 20,        // 土地庙（2x2专属）
     RESEARCH = 21,      // 研究所
     OIL = 22,          // 石油公司
     COMMERCIAL = 23,    // 商业中心
     HOTEL = 24         // 大饭店
 }
 
-// ===== Size 地块大小 =====
-export enum PropertySize {
+// ===== Size 建筑大小 =====
+export enum BuildingSize {
     SIZE_1X1 = 1,
     SIZE_2X2 = 2
 }
 
-// ===== Level 地产等级 =====
-export enum PropertyLevel {
+// ===== Level 建筑等级 =====
+export enum BuildingLevel {
     LEVEL_0 = 0,
     LEVEL_1 = 1,
     LEVEL_2 = 2,
@@ -92,12 +94,6 @@ export enum GamePhase {
     END = 6        // 结束阶段
 }
 
-// ===== DirMode 移动方向模式 =====
-export enum DirMode {
-    CW = 0,        // 顺时针
-    CCW = 1        // 逆时针
-}
-
 // ===== GameStatus 游戏状态 =====
 export enum GameStatus {
     READY = 0,     // 准备中
@@ -120,8 +116,9 @@ export enum SkipReason {
 }
 
 // ===== 特殊常量 =====
-export const NO_OWNER = 255;        // 无所有者（u8 max）
-export const NO_PROPERTY = 65535;   // 非地产地块（u16 max）
+export const NO_OWNER = 255;          // 无所有者（u8 max）
+export const NO_BUILDING = 65535;     // 无建筑（u16 max）
+export const INVALID_TILE_ID = 65535; // 无效tile_id（u16 max）
 
 // ===== 默认配置 =====
 export const DEFAULT_MAX_PLAYERS = 4;
@@ -132,25 +129,24 @@ export const DEFAULT_PRISON_TURNS = 2;
 // ===== 辅助函数（对应Move端的判断函数） =====
 
 /**
- * 判断是否为地产（包括小地产和大地产）
+ * 判断building_type是否为有效的2x2建筑类型
  */
-export function isProperty(kind: number): boolean {
-    return kind === TileKind.PROPERTY ||
-           (kind >= TileKind.TEMPLE && kind <= TileKind.HOTEL);
+export function isLargeBuildingType(buildingType: number): boolean {
+    return buildingType >= BuildingType.TEMPLE && buildingType <= BuildingType.HOTEL;
 }
 
 /**
- * 判断是否为小地产
+ * 判断是否为小建筑
  */
-export function isSmallProperty(size: number, kind: number): boolean {
-    return size === PropertySize.SIZE_1X1 && isProperty(kind);
+export function isSmallBuilding(size: number): boolean {
+    return size === BuildingSize.SIZE_1X1;
 }
 
 /**
- * 判断是否为大地产
+ * 判断是否为大建筑
  */
-export function isLargeProperty(size: number, kind: number): boolean {
-    return size === PropertySize.SIZE_2X2 && isProperty(kind);
+export function isLargeBuilding(size: number): boolean {
+    return size === BuildingSize.SIZE_2X2;
 }
 
 // ===== NPC操作常量（对应events.move） =====
@@ -170,14 +166,14 @@ export enum NpcResult {
 // ===== 停留类型常量 =====
 export enum StopType {
     NONE = 0,                  // 无停留效果
-    PROPERTY_TOLL = 1,         // 地产过路费
-    PROPERTY_NO_RENT = 2,      // 地产免租
+    BUILDING_TOLL = 1,         // 建筑过路费
+    BUILDING_NO_RENT = 2,      // 建筑免租
     HOSPITAL = 3,              // 医院
     PRISON = 4,                // 监狱
     BONUS = 5,                 // 奖金
     FEE = 6,                   // 罚款
     CARD_STOP = 7,             // 卡片停留
-    PROPERTY_UNOWNED = 8       // 无主地产（可购买）
+    BUILDING_UNOWNED = 8       // 无主建筑（可购买）
 }
 
 // ===== 现金变动原因 =====

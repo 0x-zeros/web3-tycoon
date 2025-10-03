@@ -323,7 +323,7 @@ export class GameInteraction {
             turn: fields.turn || 0,
             active_idx: fields.active_idx || 0,
             tiles: fields.tiles || [],
-            properties: fields.properties || [],
+            buildings: fields.buildings || [],
             players: new Map(),
             join_order: fields.join_order || [],
             owner_index: new Map(),

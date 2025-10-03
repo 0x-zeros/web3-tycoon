@@ -5,17 +5,15 @@
  * Move源文件: move/tycoon/sources/map.move
  */
 
-import { NO_PROPERTY } from './constants';
+import { NO_BUILDING } from './constants';
 
 /**
- * 地产静态数据（新的Tile/Property分离架构）
- * 对应Move: struct PropertyStatic
- * 注意：这是地产的经济属性，与地块分离
+ * 建筑静态数据（新的Tile/Building分离架构）
+ * 对应Move: struct BuildingStatic
+ * 注意：这是建筑的经济属性，与地块分离
  */
-export interface PropertyStatic {
-    /** 地产类型（TILE_PROPERTY、TILE_TEMPLE等） */
-    kind: number;
-    /** 地产大小（1=1x1小地产，2=2x2大地产） */
+export interface BuildingStatic {
+    /** 建筑大小（1=1x1小建筑，2=2x2大建筑） */
     size: number;
     /** 基础价格 */
     price: bigint;
@@ -24,7 +22,7 @@ export interface PropertyStatic {
 }
 
 /**
- * 地块静态数据（新的Tile/Property分离架构）
+ * 地块静态数据（新的Tile/Building分离架构）
  * 对应Move: struct TileStatic
  * 注意：这是导航节点，包含路径信息
  */
@@ -33,24 +31,26 @@ export interface TileStatic {
     x: number;
     /** Y坐标（客户端展示用） */
     y: number;
-    /** 地块类型（用于触发事件） */
+    /** 地块类型（EMPTY/LOTTERY/HOSPITAL等功能型） */
     kind: number;
     /**
-     * 关联的地产ID
-     * NO_PROPERTY (65535) 表示非地产地块
-     * 多个地块可以有相同的property_id（如大地产的多个入口）
+     * 关联的建筑ID
+     * NO_BUILDING (65535) 表示无建筑
+     * 多个地块可以有相同的building_id（如大建筑的多个入口）
      */
-    property_id: number;
+    building_id: number;
     /** 特殊数值（如奖金、罚款金额） */
     special: bigint;
 
-    // 导航字段
-    /** 顺时针下一个地块 */
-    cw_next: number;
-    /** 逆时针下一个地块 */
-    ccw_next: number;
-    /** 邻接地块列表（用于复杂地图） */
-    adj?: number[];
+    // 四方向邻居导航字段
+    /** West邻居tile_id (x-1方向，65535表示无效) */
+    w: number;
+    /** North邻居tile_id (z-1方向，65535表示无效) */
+    n: number;
+    /** East邻居tile_id (x+1方向，65535表示无效) */
+    e: number;
+    /** South邻居tile_id (z+1方向，65535表示无效) */
+    s: number;
 }
 
 /**
@@ -70,8 +70,8 @@ export interface MapTemplate {
     starting_tile: number;
     /** 地块静态数据表 */
     tiles_static: Map<number, TileStatic>;
-    /** 地产静态数据表 */
-    properties_static: Map<number, PropertyStatic>;
+    /** 建筑静态数据表 */
+    buildings_static: Map<number, BuildingStatic>;
     /** 支持的玩家数量 */
     min_players: number;
     max_players: number;
@@ -137,10 +137,10 @@ export interface TileVisual {
  */
 
 /**
- * 判断地块是否关联地产
+ * 判断地块是否关联建筑
  */
-export function hasProperty(tile: TileStatic): boolean {
-    return tile.property_id !== NO_PROPERTY;
+export function hasBuilding(tile: TileStatic): boolean {
+    return tile.building_id !== NO_BUILDING;
 }
 
 /**
@@ -160,7 +160,7 @@ function getTileId(tile: TileStatic): number {
 }
 
 /**
- * 获取地块的所有邻接地块
+ * 获取地块的所有邻接地块（四方向）
  */
 export function getAdjacentTiles(tileId: number, template: MapTemplate): number[] {
     const tile = template.tiles_static.get(tileId);
@@ -168,17 +168,13 @@ export function getAdjacentTiles(tileId: number, template: MapTemplate): number[
 
     const adjacent: number[] = [];
 
-    // 添加环形连接
-    if (tile.cw_next !== undefined) adjacent.push(tile.cw_next);
-    if (tile.ccw_next !== undefined) adjacent.push(tile.ccw_next);
+    // 添加四方向邻居
+    if (tile.w !== 65535) adjacent.push(tile.w);
+    if (tile.n !== 65535) adjacent.push(tile.n);
+    if (tile.e !== 65535) adjacent.push(tile.e);
+    if (tile.s !== 65535) adjacent.push(tile.s);
 
-    // 添加邻接连接
-    if (tile.adj) {
-        adjacent.push(...tile.adj);
-    }
-
-    // 去重
-    return [...new Set(adjacent)];
+    return adjacent;
 }
 
 /**
@@ -190,12 +186,12 @@ export function areAdjacent(tile1Id: number, tile2Id: number, template: MapTempl
 }
 
 /**
- * 获取地产的所有入口地块
+ * 获取建筑的所有入口地块
  */
-export function getPropertyTiles(propertyId: number, template: MapTemplate): number[] {
+export function getBuildingTiles(buildingId: number, template: MapTemplate): number[] {
     const tiles: number[] = [];
     template.tiles_static.forEach((tile, tileId) => {
-        if (tile.property_id === propertyId) {
+        if (tile.building_id === buildingId) {
             tiles.push(tileId);
         }
     });
@@ -204,25 +200,34 @@ export function getPropertyTiles(propertyId: number, template: MapTemplate): num
 
 /**
  * 计算两个地块之间的最短距离（步数）
+ * 使用BFS在四方向邻接网格中寻路
+ * @param lastTileId 上一步tile（避免第一步回头），65535表示无限制
  */
-export function getDistance(from: number, to: number, template: MapTemplate, direction: 'cw' | 'ccw' = 'cw'): number {
-    let current = from;
-    let steps = 0;
-    const visited = new Set<number>();
+export function getDistance(from: number, to: number, template: MapTemplate, lastTileId: number = 65535): number {
+    if (from === to) return 0;
 
-    while (current !== to && !visited.has(current)) {
-        visited.add(current);
-        const tile = template.tiles_static.get(current);
-        if (!tile) break;
+    const queue: Array<{tile: number; dist: number; prev: number}> = [{tile: from, dist: 0, prev: lastTileId}];
+    const visited = new Set<number>([from]);
 
-        current = direction === 'cw' ? tile.cw_next : tile.ccw_next;
-        steps++;
+    while (queue.length > 0) {
+        const {tile: current, dist, prev} = queue.shift()!;
+        const currentTile = template.tiles_static.get(current);
+        if (!currentTile) continue;
 
-        if (steps > template.tiles_static.size) {
-            // 防止无限循环
-            return -1;
+        // 检查四个方向的邻居
+        const neighbors = [currentTile.w, currentTile.n, currentTile.e, currentTile.s];
+
+        for (const next of neighbors) {
+            if (next === 65535) continue;  // 无效邻居
+            if (visited.has(next)) continue;
+            if (next === prev && dist === 0) continue;  // 第一步不能回头
+
+            if (next === to) return dist + 1;
+
+            visited.add(next);
+            queue.push({tile: next, dist: dist + 1, prev: current});
         }
     }
 
-    return current === to ? steps : -1;
+    return -1;  // 无法到达
 }

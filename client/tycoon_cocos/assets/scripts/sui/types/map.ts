@@ -17,6 +17,10 @@ export interface BuildingStatic {
     size: number;
     /** 基础价格 */
     price: bigint;
+    /** 前一个连街建筑ID（65535表示无效，只对1x1有效） */
+    chain_prev_id: number;
+    /** 后一个连街建筑ID（65535表示无效，只对1x1有效） */
+    chain_next_id: number;
 }
 
 /**

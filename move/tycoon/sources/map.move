@@ -32,9 +32,13 @@ const NO_BUILDING: u16 = 65535;        // u16::MAX 表示tile不属于任何buil
 // 字段说明：
 // - size: 建筑大小（SIZE_1X1/SIZE_2X2）
 // - price: 购买价格
+// - chain_prev_id: 前一个连街建筑ID（NO_BUILDING表示无效）
+// - chain_next_id: 后一个连街建筑ID（NO_BUILDING表示无效）
 public struct BuildingStatic has store, copy, drop {
     size: u8,       // 建筑大小（1x1 或 2x2）
-    price: u64      // 购买价格
+    price: u64,     // 购买价格
+    chain_prev_id: u16,  // 前一个连街建筑（只对1x1有效）
+    chain_next_id: u16   // 后一个连街建筑（只对1x1有效）
 }
 
 // ===== TileStatic 静态地块信息 =====
@@ -188,11 +192,15 @@ public fun new_tile_static(
 // 创建建筑静态信息
 public fun new_building_static(
     size: u8,
-    price: u64
+    price: u64,
+    chain_prev_id: u16,
+    chain_next_id: u16
 ): BuildingStatic {
     BuildingStatic {
         size,
-        price
+        price,
+        chain_prev_id,
+        chain_next_id
     }
 }
 
@@ -397,6 +405,8 @@ public fun tile_s(tile: &TileStatic): u16 { tile.s }
 // BuildingStatic 访问器函数
 public fun building_size(building: &BuildingStatic): u8 { building.size }
 public fun building_price(building: &BuildingStatic): u64 { building.price }
+public fun building_chain_prev_id(building: &BuildingStatic): u16 { building.chain_prev_id }
+public fun building_chain_next_id(building: &BuildingStatic): u16 { building.chain_next_id }
 
 // 添加建筑到模板
 public fun add_building_to_template(
@@ -429,3 +439,5 @@ public(package) fun set_hospital_ids(
 ) {
     template.hospital_ids = hospital_ids;
 }
+
+// get_chain_buildings 移至 game.move 以避免循环依赖

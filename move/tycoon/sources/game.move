@@ -2752,6 +2752,104 @@ public fun xxx_calculate_upgrade_cost(game: &mut Game, player: address, position
 
 // ===== Helper Functions (moved from types) =====
 
+// Building 访问器（供map模块的get_chain_buildings使用）
+public fun building_owner(building: &Building): u8 {
+    building.owner
+}
+
+public fun no_owner(): u8 {
+    NO_OWNER
+}
+
+/// 获取连街的所有建筑ID
+/// 条件：1x1建筑 + 同owner + 中间无间隔
+/// @param game 游戏实例（需要buildings数据）
+/// @param building_id 起始建筑ID
+/// @param template 地图模板（需要chain关系）
+/// @returns 连街的所有建筑ID（至少包含自己）
+public fun get_chain_buildings(
+    game: &Game,
+    template: &map::MapTemplate,
+    building_id: u16
+): vector<u16> {
+    // 验证有效性
+    if ((building_id as u64) >= game.buildings.length()) {
+        return vector[]
+    };
+
+    let building_static = map::get_building(template, building_id);
+
+    // 只处理1x1建筑
+    if (map::building_size(building_static) != types::SIZE_1X1()) {
+        return vector[building_id]
+    };
+
+    let building = &game.buildings[building_id as u64];
+    let owner = building.owner;
+
+    // 无主建筑不连街
+    if (owner == NO_OWNER) {
+        return vector[building_id]
+    };
+
+    let mut chain = vector[building_id];
+
+    // 向 next 方向遍历
+    let mut current = building_id;
+    loop {
+        let current_static = map::get_building(template, current);
+        let next_id = map::building_chain_next_id(current_static);
+
+        // 检查有效性（使用常量，0是合法值）
+        if (next_id == map::no_building()) break;
+        if ((next_id as u64) >= game.buildings.length()) break;
+        if (chain.contains(&next_id)) break;  // 防止循环
+
+        // 检查owner是否相同
+        let next_building = &game.buildings[next_id as u64];
+        if (next_building.owner != owner) break;
+
+        chain.push_back(next_id);
+        current = next_id;
+    };
+
+    // 向 prev 方向遍历
+    current = building_id;
+    let mut prev_chain = vector[];
+    loop {
+        let current_static = map::get_building(template, current);
+        let prev_id = map::building_chain_prev_id(current_static);
+
+        // 检查有效性
+        if (prev_id == map::no_building()) break;
+        if ((prev_id as u64) >= game.buildings.length()) break;
+        if (chain.contains(&prev_id)) break;
+
+        // 检查owner
+        let prev_building = &game.buildings[prev_id as u64];
+        if (prev_building.owner != owner) break;
+
+        prev_chain.push_back(prev_id);
+        current = prev_id;
+    };
+
+    // 合并：prev_chain（逆序）+ chain
+    let mut result = vector[];
+    let mut i = prev_chain.length();
+    while (i > 0) {
+        result.push_back(prev_chain[i - 1]);
+        i = i - 1;
+    };
+
+    i = 0;
+    while (i < chain.length()) {
+        result.push_back(chain[i]);
+        i = i + 1;
+    };
+
+    result
+}
+
 // 计算升级成本 - 使用GameData中的配置
 public fun calculate_upgrade_cost(price: u64, level: u8, game: &Game, game_data: &GameData): u64 {
     let multipliers = tycoon::get_upgrade_multipliers(game_data);

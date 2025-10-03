@@ -167,11 +167,13 @@ entry fun create_map_from_bcs(
 
     let mut i = 0;
     while (i < building_count) {
-        // 按 BuildingStatic 字段顺序 peel：size, price
+        // 按 BuildingStatic 字段顺序 peel：size, price, chain_prev_id, chain_next_id
         let size = bcs_reader.peel_u8();
         let price = bcs_reader.peel_u64();
+        let chain_prev_id = bcs_reader.peel_u16();
+        let chain_next_id = bcs_reader.peel_u16();
 
-        let building = map::new_building_static(size, price);
+        let building = map::new_building_static(size, price, chain_prev_id, chain_next_id);
         map::add_building_to_template(&mut template, building);
         i = i + 1;
     };

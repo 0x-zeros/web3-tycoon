@@ -91,7 +91,9 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
 
             buildingsMap.set(buildingId, {
                 size,
-                price: info.price ?? getDefaultBuildingPrice(size as 1 | 2)  // 编辑器值优先，否则用默认
+                price: info.price ?? getDefaultBuildingPrice(size as 1 | 2),  // 编辑器值优先，否则用默认
+                chain_prev_id: info.chainPrevId ?? NO_BUILDING,
+                chain_next_id: info.chainNextId ?? NO_BUILDING
             });
         });
     }

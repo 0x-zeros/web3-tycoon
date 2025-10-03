@@ -38,6 +38,11 @@ interface BuildingInfo {
     direction?: number;  // 方向(0-3)，对应Y轴旋转 0°, 90°, 180°, 270°
     buildingId?: number;  // Building编号（u16最大值65535表示无效）
     entranceTileIds?: [number, number];  // 入口tile的ID（最多2个，1x1建筑第二个为65535）
+
+    // 连街关系（只对1x1建筑有效）
+    chainPrevId?: number;  // 前一个连街建筑（默认65535=无效）
+    chainNextId?: number;  // 后一个连街建筑（默认65535=无效）
+
     owner?: string;
     level?: number;
     price?: number;
@@ -1785,6 +1790,9 @@ export class GameMap extends Component {
         // 计算tile邻居关系（包含一致性校验）
         this.calculateTileNeighbors();
 
+        // 计算建筑连街关系（在building id和朝向确定后）
+        this.calculateBuildingChains();
+
         console.log('[GameMap] ID assignment completed');
 
         // 立即保存地图数据
@@ -2734,6 +2742,7 @@ export class GameMap extends Component {
         // 清除之前的所有关联显示
         this.clearAssociationOverlays();     // 清除layer 10/11（building关联）
         this.clearTileNeighborOverlays();    // 清除layer 20（tile邻居）
+        this.clearBuildingChainOverlay();    // 清除layer 30（连街）
 
         const tile = this.getTileAt(gridPos.x, gridPos.y);
         const buildingInfo = this.findBuilding2x2Info(gridPos);
@@ -2756,6 +2765,11 @@ export class GameMap extends Component {
         // 情况2: 点击的是building，显示entrance tiles（layer 10/11）
         if (buildingInfo) {
             await this.showEntranceTilesAssociation(buildingInfo);
+
+            // 如果是1x1建筑，显示连街高亮（layer 30）
+            if (buildingInfo.size === 1 && buildingInfo.buildingId !== undefined) {
+                await this.showBuildingChainOverlay(buildingInfo.buildingId);
+            }
         }
     }
 
@@ -2895,5 +2909,231 @@ export class GameMap extends Component {
             });
         });
         this._tileOverlays.clear();
+    }
+
+    // ===== 连街机制（1x1建筑） =====
+
+    /**
+     * 计算1x1建筑的连街关系
+     * 在 assignBuildingIds() 和建筑朝向确定后调用
+     */
+    public calculateBuildingChains(): void {
+        console.log('[GameMap] ===== Calculating building chains =====');
+
+        // 1. 只处理 1x1 建筑
+        const smallBuildings = Array.from(this._buildingRegistry.values())
+            .filter(b => b.size === 1 && b.buildingId !== undefined);
+
+        console.log(`[GameMap] Found ${smallBuildings.length} 1x1 buildings`);
+
+        // 2. 清除旧关系
+        for (const building of smallBuildings) {
+            building.chainPrevId = 65535;
+            building.chainNextId = 65535;
+        }
+
+        // 3. 按朝向分组
+        const byDirection = new Map<number, BuildingInfo[]>();
+        for (const building of smallBuildings) {
+            const dir = building.direction ?? 0;
+            if (!byDirection.has(dir)) {
+                byDirection.set(dir, []);
+            }
+            byDirection.get(dir)!.push(building);
+        }
+
+        // 日志：每个朝向的建筑数量
+        byDirection.forEach((buildings, dir) => {
+            console.log(`[GameMap] Direction ${dir}: ${buildings.length} buildings`);
+            buildings.forEach(b => {
+                console.log(`  Building ${b.buildingId} at (${b.position.x}, ${b.position.z})`);
+            });
+        });
+
+        // 4. 对每组计算连街
+        byDirection.forEach((buildings, dir) => {
+            this.calculateChainsForDirection(buildings, dir);
+        });
+
+        // 5. 输出最终连街结果
+        console.log('[GameMap] ----- Chain results -----');
+        for (const building of smallBuildings) {
+            if (building.chainPrevId !== 65535 || building.chainNextId !== 65535) {
+                console.log(`Building ${building.buildingId}: prev=${building.chainPrevId}, next=${building.chainNextId}`);
+            }
+        }
+
+        console.log('[GameMap] ===== Building chains calculated =====');
+    }
+
+    /**
+     * 计算同朝向建筑的连街关系
+     */
+    private calculateChainsForDirection(buildings: BuildingInfo[], direction: number): void {
+        // 朝向：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
+        // 入口在朝向一侧，建筑沿垂直方向排列
+        const isEastWest = direction === 1 || direction === 3;  // 东西朝向 → 南北排列
+
+        // 排序
+        buildings.sort((a, b) =>
+            isEastWest ? (a.position.z - b.position.z) : (a.position.x - b.position.x)
+        );
+
+        // 遍历找相邻
+        for (let i = 0; i < buildings.length - 1; i++) {
+            const curr = buildings[i];
+            const next = buildings[i + 1];
+
+            // 检查是否相邻（距离=1 且 在同一直线）
+            const dist = isEastWest
+                ? Math.abs(next.position.z - curr.position.z)
+                : Math.abs(next.position.x - curr.position.x);
+
+            const aligned = isEastWest
+                ? curr.position.x === next.position.x
+                : curr.position.z === next.position.z;
+
+            if (dist === 1 && aligned) {
+                curr.chainNextId = next.buildingId!;
+                next.chainPrevId = curr.buildingId!;
+                console.log(`[Chain] ${curr.buildingId} ↔ ${next.buildingId} (dir=${direction})`);
+            }
+        }
+    }
+
+    /**
+     * 获取连街的所有建筑ID
+     * @param buildingId 起始建筑ID
+     * @returns 街道上所有建筑ID（包括自己）
+     */
+    public getChainBuildings(buildingId: number): number[] {
+        const building = this.getBuildingById(buildingId);
+        if (!building || building.size !== 1) {
+            return [buildingId];
+        }
+
+        const chain = new Set<number>([buildingId]);
+
+        // 向 next 遍历
+        let current = buildingId;
+        while (true) {
+            const b = this.getBuildingById(current);
+            if (!b || !b.chainNextId || b.chainNextId === 65535) break;
+            if (chain.has(b.chainNextId)) break;  // 防止循环
+            chain.add(b.chainNextId);
+            current = b.chainNextId;
+        }
+
+        // 向 prev 遍历
+        current = buildingId;
+        while (true) {
+            const b = this.getBuildingById(current);
+            if (!b || !b.chainPrevId || b.chainPrevId === 65535) break;
+            if (chain.has(b.chainPrevId)) break;
+            chain.add(b.chainPrevId);
+            current = b.chainPrevId;
+        }
+
+        return Array.from(chain).sort((a, b) => a - b);
+    }
+
+    /**
+     * 根据ID获取建筑信息
+     */
+    private getBuildingById(id: number): BuildingInfo | undefined {
+        for (const b of this._buildingRegistry.values()) {
+            if (b.buildingId === id) return b;
+        }
+    }
+
+    /**
+     * 根据ID获取tile
+     */
+    private getTileById(tileId: number): MapTile | undefined {
+        for (const tile of this._tiles) {
+            if (tile.getTileId() === tileId) return tile;
+        }
+    }
+
+    /**
+     * 显示连街高亮（中键点击建筑时）
+     * 使用 street.png 纹理，Layer 30
+     */
+    public async showBuildingChainOverlay(buildingId: number): Promise<void> {
+        console.log(`[GameMap] ===== Showing chain overlay for building ${buildingId} =====`);
+
+        // 1. 清除旧的连街高亮
+        this.clearBuildingChainOverlay();
+
+        // 2. 获取连街的所有建筑
+        const chainBuildingIds = this.getChainBuildings(buildingId);
+
+        // 详细日志
+        console.log(`[GameMap] Chain building IDs: [${chainBuildingIds.join(', ')}]`);
+        for (const id of chainBuildingIds) {
+            const b = this.getBuildingById(id);
+            if (b) {
+                console.log(`  Building ${id}: pos=(${b.position.x},${b.position.z}), ` +
+                    `prev=${b.chainPrevId ?? 65535}, next=${b.chainNextId ?? 65535}`);
+            }
+        }
+
+        // 3. 加载 street 纹理（与其他纹理加载方式一致）
+        const streetTexture = await new Promise<Texture2D>((resolve, reject) => {
+            resources.load('textures/street/texture', Texture2D, (err, tex) => {
+                if (err) {
+                    console.error('[GameMap] Failed to load street texture:', err);
+                    reject(err);
+                } else {
+                    resolve(tex);
+                }
+            });
+        });
+
+        if (!streetTexture) {
+            console.error('[GameMap] Street texture not loaded');
+            return;
+        }
+
+        // 4. 为每个连街建筑添加overlay（在building位置，不是tile）
+        for (const bId of chainBuildingIds) {
+            const building = this.getBuildingById(bId);
+            if (!building) {
+                console.warn(`[GameMap] Building ${bId} not found in registry`);
+                continue;
+            }
+
+            const pos = building.position;
+            console.log(`[GameMap] Adding overlay to building ${bId} at (${pos.x}, ${pos.z})`);
+
+            // Layer 30: 连街标记（在building位置的tile上）
+            await this.addTileOverlay(new Vec2(pos.x, pos.z), {
+                texture: streetTexture,
+                faces: [OverlayFace.UP],
+                color: new Color(100, 200, 255, 255),  // 蓝色调
+                alpha: 0.8,
+                inflate: 0.006,  // 比entrance层高一点
+                layerIndex: 30,
+                techniqueIndex: 1  // 透明渲染
+            });
+        }
+
+        console.log(`[GameMap] ===== Chain overlay shown for ${chainBuildingIds.length} buildings =====`);
+    }
+
+    /**
+     * 清除连街高亮
+     */
+    public clearBuildingChainOverlay(): void {
+        // 清除 layer 30 的所有overlay
+        this._tileOverlays.forEach((overlays, key) => {
+            const overlayNode = overlays.get(30);
+            if (overlayNode && overlayNode.isValid) {
+                overlayNode.destroy();
+                overlays.delete(30);
+            }
+        });
+
+        console.log('[GameMap] Chain overlay cleared');
     }
 }

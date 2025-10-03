@@ -23,12 +23,19 @@ import type { GameMap } from '../../map/core/GameMap';
 /**
  * "上传到 Move" 按钮点击
  * 将当前编辑的地图上传到链上
+ *
+ * ⚠️ 完整流程：
+ * 1. 强制执行编号和验证
+ * 2. 输入模板ID
+ * 3. 导出MapTemplate（前置检查）
+ * 4. 用户确认
+ * 5. BCS序列化并上传
  */
 async function onBtnToMoveMapClick(this: any) {
     console.log('[UIEditor] btn_toMoveMap clicked');
 
     try {
-        // 1. 检查必要条件
+        // ===== Step 0: 检查必要条件 =====
         if (!this._gameMap) {
             console.error('[UIEditor] GameMap not initialized');
             this.showErrorToast('地图未加载');
@@ -41,24 +48,67 @@ async function onBtnToMoveMapClick(this: any) {
             return;
         }
 
-        // 2. 弹出输入框：模板ID
+        // ===== Step 1: 强制执行编号流程 =====
+        console.log('[UIEditor] Step 1: Assigning IDs...');
+        this._gameMap.assignIds();
+        // 内部执行：
+        //   - DFS分配tile编号（从医院开始）
+        //   - 按坐标排序分配building编号
+        //   - 计算tile邻居（w/n/e/s）+ 一致性验证
+        console.log('[UIEditor] ✓ IDs assigned');
+
+        // ===== Step 2: 强制执行建筑入口验证 =====
+        console.log('[UIEditor] Step 2: Validating building entrances...');
+        const entrancesValid = this._gameMap.calculateBuildingEntrances();
+
+        if (!entrancesValid) {
+            this.showErrorDialog(
+                '❌ 建筑入口验证失败！\n\n' +
+                '请检查控制台中的警告信息。\n\n' +
+                '常见问题：\n' +
+                '• 建筑周围缺少空地tile\n' +
+                '• 入口tile的类型不是EMPTY_LAND\n' +
+                '• 1x1建筑应有1个入口，2x2建筑应有2个入口\n' +
+                '• 建筑朝向与入口位置不匹配\n\n' +
+                '修复后地图会自动保存，然后重新点击此按钮。'
+            );
+            return;  // 中止上传
+        }
+        console.log('[UIEditor] ✓ Building entrances validated');
+
+        // ===== Step 3: 输入模板ID =====
         const templateId = await this.promptTemplateId();
         if (templateId === null) {
             console.log('[UIEditor] User cancelled');
             return;
         }
 
-        // 3. 导出地图数据
-        console.log('[UIEditor] Exporting map data...');
-        const mapTemplate = exportGameMapToMapTemplate(this._gameMap, templateId);
+        // ===== Step 4: 导出地图数据 =====
+        console.log('[UIEditor] Step 4: Exporting map template...');
+        let mapTemplate;
+        try {
+            mapTemplate = exportGameMapToMapTemplate(this._gameMap, templateId);
+        } catch (error) {
+            console.error('[UIEditor] Export failed:', error);
+            this.showErrorDialog(
+                `导出失败：\n${error.message}\n\n` +
+                '这可能是程序错误，请联系开发者。'
+            );
+            return;
+        }
+        console.log('[UIEditor] ✓ Map template exported');
 
-        // 4. 显示确认对话框
+        // ===== Step 5: 用户确认 =====
         const confirmMessage =
-            `确认上传地图模板 #${templateId}？\n\n` +
-            `地块数量: ${mapTemplate.tiles_static.size}\n` +
-            `建筑数量: ${mapTemplate.buildings_static.size}\n` +
-            `医院数量: ${mapTemplate.hospital_ids.length}\n\n` +
-            `上传后无法修改，请确认数据无误。`;
+            `确认上传地图模板 #${templateId} 到 Sui 链上？\n\n` +
+            `✓ 地块数量: ${mapTemplate.tiles_static.size}\n` +
+            `✓ 建筑数量: ${mapTemplate.buildings_static.size}\n` +
+            `✓ 医院数量: ${mapTemplate.hospital_ids.length}\n\n` +
+            `注意：\n` +
+            `• 上传后无法修改\n` +
+            `• 需要消耗 Gas 费用\n` +
+            `• 数据已通过完整验证\n\n` +
+            `确认继续？`;
 
         const confirmed = await this.showConfirmDialog(confirmMessage);
         if (!confirmed) {
@@ -66,10 +116,16 @@ async function onBtnToMoveMapClick(this: any) {
             return;
         }
 
-        // 5. 显示加载中
-        this.showLoadingDialog('正在上传地图到 Sui 链上...\n请稍候，这可能需要几秒钟。');
+        // ===== Step 6: BCS序列化并上传 =====
+        this.showLoadingDialog(
+            '正在上传地图到 Sui 链上...\n\n' +
+            '步骤：\n' +
+            '1. BCS序列化数据...\n' +
+            '2. 构建交易...\n' +
+            '3. 提交到链上...\n\n' +
+            '请稍候，这可能需要几秒钟。'
+        );
 
-        // 6. 创建交互器并上传
         const mapAdmin = new MapAdminInteraction(
             this._suiClient,
             this._packageId,
@@ -82,33 +138,40 @@ async function onBtnToMoveMapClick(this: any) {
             this._keypair
         );
 
-        // 7. 成功提示
+        // ===== Step 7: 成功提示 =====
         this.hideLoadingDialog();
 
         const successMessage =
-            `地图上传成功！\n\n` +
+            `🎉 地图上传成功！\n\n` +
             `模板 ID: ${result.templateId}\n` +
-            `交易哈希: ${result.txHash.slice(0, 16)}...\n\n` +
-            `玩家现在可以使用此地图创建游戏。`;
+            `交易哈希: ${result.txHash.slice(0, 20)}...\n\n` +
+            `✓ 数据已写入区块链\n` +
+            `✓ 玩家现在可以使用此地图创建游戏\n\n` +
+            `您可以在区块浏览器中查看详情。`;
 
         this.showSuccessDialog(successMessage);
 
-        console.log('[UIEditor] Map uploaded successfully');
+        console.log('[UIEditor] ===== Upload Complete =====');
         console.log('Template ID:', result.templateId);
-        console.log('Transaction:', result.txHash);
+        console.log('Transaction Hash:', result.txHash);
+        console.log('Tiles:', mapTemplate.tiles_static.size);
+        console.log('Buildings:', mapTemplate.buildings_static.size);
 
     } catch (error) {
-        // 8. 错误处理
+        // ===== 错误处理 =====
         this.hideLoadingDialog();
 
-        console.error('[UIEditor] Failed to upload map:', error);
+        console.error('[UIEditor] ===== Upload Failed =====');
+        console.error('Error:', error);
 
-        let errorMessage = '上传失败：';
+        let errorMessage = '❌ 上传失败\n\n';
         if (error instanceof Error) {
             errorMessage += error.message;
         } else {
             errorMessage += String(error);
         }
+
+        errorMessage += '\n\n详细错误信息已输出到控制台。';
 
         this.showErrorDialog(errorMessage);
     }

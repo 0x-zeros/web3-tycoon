@@ -92,10 +92,7 @@ public struct TileStatic has store, copy, drop {
 // - 每个tile通过w/n/e/s字段存储4方向邻居，无需额外邻接表
 //
 // 特殊地块索引：
-// - hospital_ids: 所有医院地块
-// - prison_ids: 所有监狱地块
-// - shop_ids: 所有商店地块
-// - news_ids: 所有新闻地块
+// - hospital_ids: 所有医院地块（用于送医院功能）
 //
 // 模板状态说明（仅供客户端/服务端使用，链上逻辑不做校验/限制）：
 // - 0 = draft（草稿，不对外）
@@ -112,10 +109,7 @@ public struct MapTemplate has store {
     tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
     buildings_static: vector<BuildingStatic>, // 建筑静态信息，building_id 即为索引
     // 导航信息已集成到 TileStatic.w/n/e/s 中，不再需要额外的邻接表
-    hospital_ids: vector<u16>,
-    prison_ids: vector<u16>,
-    shop_ids: vector<u16>,
-    news_ids: vector<u16>
+    hospital_ids: vector<u16>
 }
 
 // ===== MapRegistry 地图注册表 =====
@@ -272,10 +266,7 @@ public fun new_map_template(
         tile_count: 0,
         tiles_static: vector[],  // 初始化为空 vector
         buildings_static: vector[],  // 初始化为空 vector
-        hospital_ids: vector[],
-        prison_ids: vector[],
-        shop_ids: vector[],
-        news_ids: vector[]
+        hospital_ids: vector[]
     }
 }
 
@@ -306,14 +297,6 @@ public fun add_tile_to_template(
     // 根据地块类型添加到对应的ID列表
     if (tile.kind == types::TILE_HOSPITAL()) {
         template.hospital_ids.push_back(tile_id);
-    } else if (tile.kind == types::TILE_PRISON()) {
-        template.prison_ids.push_back(tile_id);
-    } else if (tile.kind == types::TILE_SHOP()) {
-        template.shop_ids.push_back(tile_id);
-    } else if (tile.kind == types::TILE_NEWS()) {
-        template.news_ids.push_back(tile_id);
-    } else if (tile.kind == types::TILE_LOTTERY()) {
-        // lottery也可以加到索引中（如果需要）
     };
 }
 
@@ -399,21 +382,6 @@ public fun has_tile(template: &MapTemplate, tile_id: u16): bool {
 // 获取医院地块ID列表
 public fun get_hospital_ids(template: &MapTemplate): vector<u16> {
     template.hospital_ids
-}
-
-// 获取监狱地块ID列表
-public fun get_prison_ids(template: &MapTemplate): vector<u16> {
-    template.prison_ids
-}
-
-// 获取商店地块ID列表
-public fun get_shop_ids(template: &MapTemplate): vector<u16> {
-    template.shop_ids
-}
-
-// 获取新闻地块ID列表
-public fun get_news_ids(template: &MapTemplate): vector<u16> {
-    template.news_ids
 }
 
 // 获取地图宽度

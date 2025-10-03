@@ -84,14 +84,21 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
 
     if (buildingRegistry) {
         buildingRegistry.forEach((info, key) => {
-            // key 格式可能是 "B_1x1_5_3" 或其他
-            // 需要从 BuildingInfo 中提取 buildingId
-            const buildingId = info.buildingId || parseInt(key.split('_')[1]);
-            const size = info.size === '1x1' ? 1 : 2;
+            // buildingId 必须存在（assignIds 应已分配）
+            if (info.buildingId === undefined) {
+                throw new Error(
+                    `❌ Building at (${info.position.x}, ${info.position.z}) missing buildingId!\n\n` +
+                    '请先点击 "分配编号" 按钮（或内部会自动调用）。'
+                );
+            }
+            const buildingId = info.buildingId;
+
+            // size 直接使用（已是数字类型 1 | 2）
+            const size = info.size;
 
             buildingsMap.set(buildingId, {
                 size,
-                price: info.price ?? getDefaultBuildingPrice(size as 1 | 2),  // 编辑器值优先，否则用默认
+                price: info.price ?? getDefaultBuildingPrice(size),
                 chain_prev_id: info.chainPrevId ?? NO_BUILDING,
                 chain_next_id: info.chainNextId ?? NO_BUILDING
             });
@@ -127,63 +134,34 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
 
 /**
  * 前置条件检查
- * 确保 GameMap 已完成编号和验证
+ * 信任 calculateBuildingEntrances() 已完成所有计算和验证
+ * 这里只做最小的结果检查
  */
 function checkPrerequisites(gameMap: GameMap): void {
     // 1. 检查是否有tiles
     const tilesContainer = gameMap['_tilesContainer'];
     if (!tilesContainer || tilesContainer.children.length === 0) {
-        throw new Error(
-            '❌ 地图没有tiles！\n' +
-            '请先放置地块。'
-        );
+        throw new Error('❌ 地图没有tiles！请先放置地块。');
     }
 
-    // 2. 检查tiles是否已编号
-    let hasNumberedTile = false;
-    for (const node of tilesContainer.children) {
-        const tile = node.getComponent('MapTile') as MapTile;
-        if (tile && tile.getTileId() !== INVALID_TILE_ID) {
-            hasNumberedTile = true;
-            break;
-        }
-    }
-
-    if (!hasNumberedTile) {
+    // 2. 检查tiles已编号（抽查第一个）
+    const firstTile = tilesContainer.children[0]?.getComponent('MapTile') as MapTile;
+    if (!firstTile || firstTile.getTileId() === INVALID_TILE_ID) {
         throw new Error(
             '❌ Tiles尚未编号！\n\n' +
-            '请先点击 "分配编号" 按钮。\n' +
-            '该按钮会：\n' +
-            '• DFS算法分配tile编号\n' +
-            '• 分配building编号\n' +
-            '• 计算邻居关系（w/n/e/s）\n' +
-            '• 验证邻居一致性'
+            '导出前应先调用 calculateBuildingEntrances()，\n' +
+            '该函数会自动执行所有必要的计算和验证。'
         );
     }
 
-    // 3. 检查buildings是否已关联入口tiles
+    // 3. 检查buildings已编号且有入口关联
     const buildings = Array.from(gameMap['_buildingRegistry'].values());
     for (const building of buildings) {
-        if (!building.entranceTileIds || building.entranceTileIds.length === 0) {
-            throw new Error(
-                `❌ Building #${building.buildingId} 尚未关联入口tiles！\n\n` +
-                '请先点击 "计算建筑入口" 按钮。\n' +
-                '该按钮会：\n' +
-                '• 验证建筑周围的空地tile\n' +
-                '• 建立building↔tile双向关联\n' +
-                '• 检查入口数量和类型'
-            );
+        if (building.buildingId === undefined) {
+            throw new Error('❌ Building未编号！请先执行计算流程。');
         }
-
-        // 4. 验证入口tile数量
-        const expectedCount = building.size === '1x1' ? 1 : 2;
-        const actualCount = building.entranceTileIds.filter(id => id !== INVALID_TILE_ID).length;
-        if (actualCount !== expectedCount) {
-            throw new Error(
-                `❌ Building #${building.buildingId} 入口数量错误！\n` +
-                `期望 ${expectedCount} 个，实际 ${actualCount} 个。\n\n` +
-                '请重新点击 "计算建筑入口" 按钮。'
-            );
+        if (!building.entranceTileIds || building.entranceTileIds.length === 0) {
+            throw new Error(`❌ Building #${building.buildingId} 未关联入口tiles！`);
         }
     }
 

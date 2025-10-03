@@ -48,18 +48,15 @@ async function onBtnToMoveMapClick(this: any) {
             return;
         }
 
-        // ===== Step 1: 强制执行编号流程 =====
-        console.log('[UIEditor] Step 1: Assigning IDs...');
-        this._gameMap.assignIds();
-        // 内部执行：
-        //   - DFS分配tile编号（从医院开始）
-        //   - 按坐标排序分配building编号
-        //   - 计算tile邻居（w/n/e/s）+ 一致性验证
-        console.log('[UIEditor] ✓ IDs assigned');
-
-        // ===== Step 2: 强制执行建筑入口验证 =====
-        console.log('[UIEditor] Step 2: Validating building entrances...');
+        // ===== Step 1: 完整计算和验证 =====
+        console.log('[UIEditor] Step 1: Running full calculation & validation...');
         const entrancesValid = this._gameMap.calculateBuildingEntrances();
+        // 内部会调用 assignIds()，包含：
+        //   - DFS分配tile编号
+        //   - 分配building编号
+        //   - 计算tile邻居（w/n/e/s）
+        //   - 计算building连街
+        // 然后验证建筑入口
 
         if (!entrancesValid) {
             this.showErrorDialog(
@@ -74,17 +71,17 @@ async function onBtnToMoveMapClick(this: any) {
             );
             return;  // 中止上传
         }
-        console.log('[UIEditor] ✓ Building entrances validated');
+        console.log('[UIEditor] ✓ All calculations and validations passed');
 
-        // ===== Step 3: 输入模板ID =====
+        // ===== Step 2: 输入模板ID =====
         const templateId = await this.promptTemplateId();
         if (templateId === null) {
             console.log('[UIEditor] User cancelled');
             return;
         }
 
-        // ===== Step 4: 导出地图数据 =====
-        console.log('[UIEditor] Step 4: Exporting map template...');
+        // ===== Step 3: 导出地图数据 =====
+        console.log('[UIEditor] Step 3: Exporting map template...');
         let mapTemplate;
         try {
             mapTemplate = exportGameMapToMapTemplate(this._gameMap, templateId);
@@ -98,7 +95,7 @@ async function onBtnToMoveMapClick(this: any) {
         }
         console.log('[UIEditor] ✓ Map template exported');
 
-        // ===== Step 5: 用户确认 =====
+        // ===== Step 4: 用户确认 =====
         const confirmMessage =
             `确认上传地图模板 #${templateId} 到 Sui 链上？\n\n` +
             `✓ 地块数量: ${mapTemplate.tiles_static.size}\n` +
@@ -116,7 +113,7 @@ async function onBtnToMoveMapClick(this: any) {
             return;
         }
 
-        // ===== Step 6: BCS序列化并上传 =====
+        // ===== Step 5: BCS序列化并上传 =====
         this.showLoadingDialog(
             '正在上传地图到 Sui 链上...\n\n' +
             '步骤：\n' +
@@ -138,7 +135,7 @@ async function onBtnToMoveMapClick(this: any) {
             this._keypair
         );
 
-        // ===== Step 7: 成功提示 =====
+        // ===== Step 6: 成功提示 =====
         this.hideLoadingDialog();
 
         const successMessage =

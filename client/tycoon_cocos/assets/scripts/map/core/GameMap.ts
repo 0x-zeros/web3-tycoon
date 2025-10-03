@@ -2134,10 +2134,8 @@ export class GameMap extends Component {
     public calculateBuildingEntrances(): boolean {
         console.log('[GameMap] Calculating building entrances...');
 
-        // 1. 先分配ID（内存中）
-        this.clearAllIds();
-        this.assignTileIds();
-        this.assignBuildingIds();
+        // 1. 调用完整的编号流程（包含邻居和连街计算）
+        this.assignIds();
 
         // 2. 遍历所有建筑，收集入口tiles
         const buildingEntranceMap = new Map<BuildingInfo, MapTile[]>();

@@ -2760,15 +2760,8 @@ fun handle_buff_expired(
 
 // ===== Helper Functions (moved from types) =====
 
-// 计算升级成本 - 使用GameData中的配置
-public fun xxx_calculate_upgrade_cost(game: &mut Game, player: address, position: u16) {
-    let player_index = find_player_index(game, player);
-    let player_data = &mut game.players[player_index as u64];
-    player_data.pos = position;
-}
-
-
-
+// calculate_upgrade_cost 废弃函数已删除
+// 现在使用 calculate_building_price
 
 
 
@@ -2873,29 +2866,8 @@ public fun get_chain_buildings(
     result
 }
 
-// 计算升级成本 - 使用GameData中的配置
-public fun calculate_upgrade_cost(price: u64, level: u8, game: &Game, game_data: &GameData): u64 {
-    let multipliers = tycoon::get_upgrade_multipliers(game_data);
-
-    // 防御性编程：如果配置为空，使用默认倍率 150% (1.5x)
-    if (multipliers.length() == 0) {
-        let price_index = calculate_price_index(game);
-        return (price * 150 * price_index) / 100
-    };
-
-    let idx = (level as u64);
-    let level_multiplier = if (idx >= multipliers.length()) {
-        // 如果等级超出配置，使用最后一个倍率
-        let last_idx = multipliers.length() - 1;
-        multipliers[last_idx]
-    } else {
-        multipliers[idx]
-    };
-
-    // 应用物价指数
-    let price_index = calculate_price_index(game);
-    (price * level_multiplier * price_index) / 100
-}
+// calculate_upgrade_cost 废弃函数已删除（未被调用）
+// 现在使用 calculate_building_price
 
 // 计算当前物价指数（内部函数）
 // 公式: (round / price_rise_days) + 1

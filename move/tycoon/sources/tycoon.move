@@ -31,8 +31,6 @@ public struct GameData has key, store {
 
     // 全局游戏数值配置
     starting_cash: u64,
-    upgrade_multipliers: vector<u64>,  // 升级费用倍率（废弃，保留兼容）
-    toll_multipliers: vector<u64>,     // 租金倍率（废弃，保留兼容）
 
     // ===== 新数值系统配置（×100存储避免浮点运算） =====
     // 小地产租金倍率：[L0空地, L1, L2, L3, L4, L5]
@@ -72,8 +70,6 @@ fun init(ctx: &mut TxContext) {
 
         // 全局游戏数值配置
         starting_cash: 10000,
-        upgrade_multipliers: vector[150, 200, 300, 500],  // 废弃，保留兼容
-        toll_multipliers: vector[100, 150, 200, 300, 500], // 废弃，保留兼容
 
         // 新数值系统配置（×100存储）
         // 小地产租金倍率：L0-L5 对应 [0.5, 1, 2.5, 5, 10, 15]倍
@@ -298,16 +294,6 @@ public(package) fun get_starting_cash(game_data: &GameData): u64 {
     game_data.starting_cash
 }
 
-/// 获取升级倍率
-public(package) fun get_upgrade_multipliers(game_data: &GameData): &vector<u64> {
-    &game_data.upgrade_multipliers
-}
-
-/// 获取租金倍率
-public(package) fun get_toll_multipliers(game_data: &GameData): &vector<u64> {
-    &game_data.toll_multipliers
-}
-
 /// 获取NPC生成权重配置
 public(package) fun get_npc_spawn_weights(game_data: &GameData): &vector<u8> {
     &game_data.npc_spawn_weights
@@ -409,22 +395,5 @@ entry fun update_starting_cash(
     game_data.starting_cash = new_cash;
 }
 
-/// 更新升级倍率（需要AdminCap）
-entry fun update_upgrade_multipliers(
-    game_data: &mut GameData,
-    new_multipliers: vector<u64>,
-    _admin: &AdminCap
-) {
-    assert!(!new_multipliers.is_empty(), 0); // 确保不为空
-    game_data.upgrade_multipliers = new_multipliers;
-}
-
-/// 更新租金倍率（需要AdminCap）
-entry fun update_toll_multipliers(
-    game_data: &mut GameData,
-    new_multipliers: vector<u64>,
-    _admin: &AdminCap
-) {
-    assert!(!new_multipliers.is_empty(), 0); // 确保不为空
-    game_data.toll_multipliers = new_multipliers;
-}
+// update_upgrade_multipliers 和 update_toll_multipliers 已删除
+// 使用新的数值系统配置（rent_multipliers, temple_multipliers等）

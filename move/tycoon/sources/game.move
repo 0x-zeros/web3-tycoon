@@ -120,6 +120,7 @@ public struct BuffEntry has store, copy, drop {
 // - cards: 手牌集合，使用vector存储以优化小集合性能
 // - last_tile_id: 上一步所在的tile_id（用于避免回头）
 // - next_tile_id: 下一步强制目标tile（INVALID_TILE_ID表示无强制，用于转向卡等）
+// - temple_levels: 拥有的土地庙等级列表（用于租金加成计算，Gas优化）
 // - buffs: 当前激活的所有Buff列表
 public struct Player has store {
     owner: address,
@@ -131,6 +132,7 @@ public struct Player has store {
     cards: vector<CardEntry>,  // 改为vector存储
     last_tile_id: u16,  // 上一步的tile（避免回头），初始为spawn_tile的某个邻居
     next_tile_id: u16,  // 下一步强制目标（默认65535=INVALID_TILE_ID）
+    temple_levels: vector<u8>,  // 拥有的土地庙等级（Gas优化缓存）
     buffs: vector<BuffEntry>  // 统一的buff存储
 }
 
@@ -864,6 +866,12 @@ public entry fun buy_building(
     let owner_tiles = table::borrow_mut(&mut game.owner_index, player_index);
     owner_tiles.push_back(tile_id);
 
+    // 维护 temple_levels 缓存（如果购买的是土地庙）
+    if (building_mut.building_type == types::BUILDING_TEMPLE()) {
+        let player_mut = &mut game.players[player_index as u64];
+        player_mut.temple_levels.push_back(1);  // 新购土地庙初始L1
+    };
+
     // 清除待决策状态
     clear_decision_state(game);
 
@@ -929,7 +937,15 @@ public entry fun upgrade_building(
     };
 
     // 提升等级
-    game.buildings[building_id as u64].level = current_level + 1;
+    let new_level = current_level + 1;
+    let building_type = building.building_type;  // 先保存type
+    game.buildings[building_id as u64].level = new_level;
+
+    // 维护 temple_levels 缓存（如果是土地庙）
+    if (building_type == types::BUILDING_TEMPLE()) {
+        // 重建该玩家的 temple_levels 缓存（简单可靠）
+        rebuild_temple_levels_cache(game, player_index);
+    };
 
     // 清除待决策状态
     clear_decision_state(game);
@@ -959,7 +975,8 @@ fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Pl
         bankrupt: false,
         cards: initial_cards,
         last_tile_id: 65535,  // INVALID_TILE_ID，在start()中设置为有效值
-        next_tile_id: 65535   // INVALID_TILE_ID，默认无强制目标
+        next_tile_id: 65535,  // INVALID_TILE_ID，默认无强制目标
+        temple_levels: vector[]  // 初始无土地庙
     }
 }
 
@@ -1857,6 +1874,12 @@ fun handle_bankruptcy(
         // 清空玩家的建筑拥有列表
         let owner_tiles_mut = table::borrow_mut(&mut game.owner_index, player_index);
         *owner_tiles_mut = vector[];
+    };
+
+    // 清空玩家的土地庙缓存
+    {
+        let player_mut = &mut game.players[player_index as u64];
+        player_mut.temple_levels = vector[];
     };
 
     // 步骤3: 发送破产事件，记录破产信息
@@ -2883,80 +2906,6 @@ fun calculate_price_index(game: &Game): u64 {
 }
 
 
-// ===== 新数值系统：连街判定和租金计算 =====
-
-/// 检查从某地块开始的连街情况
-/// 从中心地块向左右各查最多max_range格，找出连续的同owner小建筑
-/// 返回：(是否形成连街, 连街地块列表)
-fun check_chain_tiles(
-    game: &Game,
-    center_tile_id: u16,
-    owner: u8,
-    template: &MapTemplate,
-    max_range: u8  // 左右各查几格，一般传2
-): (bool, vector<u16>) {
-    let mut chain_tiles = vector::empty<u16>();
-
-    // 中心地块必须是小建筑（1x1的建筑）
-    let center_static = map::get_tile(template, center_tile_id);
-    let center_building_id = map::tile_building_id(center_static);
-
-    // 非建筑tile不能连街
-    if (center_building_id == map::no_building()) {
-        return (false, chain_tiles)
-    };
-
-    // 检查是否为小建筑（只有1x1建筑才能连街）
-    let center_building_static = map::get_building(template, center_building_id);
-    let center_size = map::building_size(center_building_static);
-    if (center_size != types::SIZE_1X1()) {
-        return (false, chain_tiles)
-    };
-
-    // 加入中心地块
-    chain_tiles.push_back(center_tile_id);
-
-    // 在新的四方向邻接系统下，连街检测暂时禁用
-    // TODO: 实现基于BFS的连街检测算法
-    // 暂时返回：始终不连街
-    let _ = game;
-    let _ = owner;
-    let _ = max_range;
-
-    (false, chain_tiles)
-}
-
-/// 查找影响某地块的土地庙
-/// 在地块左右range格内查找土地庙
-fun find_nearby_temples(
-    game: &Game,
-    center_tile_id: u16,
-    template: &MapTemplate,
-    range: u8  // 查找范围（左右各几格），一般传3
-): vector<u8> {
-    let mut temple_levels = vector::empty<u8>();
-    let mut checked_tiles = vector::empty<u16>();
-
-    // 检查中心地块自己是否是土地庙
-    let center_static = map::get_tile(template, center_tile_id);
-    let center_building_id = map::tile_building_id(center_static);
-    if (center_building_id != map::no_building()) {
-        let center_building = &game.buildings[center_building_id as u64];
-        if (center_building.building_type == types::BUILDING_TEMPLE() && center_building.owner != NO_OWNER) {
-            temple_levels.push_back(center_building.level);
-        };
-    };
-    checked_tiles.push_back(center_tile_id);
-
-    // 在新的四方向邻接系统下，土地庙范围检测暂时禁用
-    // TODO: 实现基于BFS的范围搜索算法
-    // 暂时返回：只检测中心地块自己
-    let _ = range;
-    let _ = checked_tiles;
-
-    temple_levels
-}
-
 /// 计算单块地的基础租金
 /// 公式：P × 倍率 × I
 /// 其中P为地价，倍率根据等级从rent_multipliers取得，I为物价指数
@@ -3003,89 +2952,93 @@ fun calculate_temple_bonus(
     bonus
 }
 
-/// 计算完整过路费（支持连街和土地庙）
+/// 计算过路费
+/// 按文档流程：
+/// 1. 判断连街（使用 get_chain_buildings，考虑owner）
+/// 2. 逐building计算：base_rent = P × mL[L] × I
+/// 3. 土地庙加成：owner拥有土地庙则全局加成
+/// 4. 连街求和；非连街返回单个
 public fun calculate_toll(
     game: &Game,
     landing_tile_id: u16,
     template: &MapTemplate,
     game_data: &GameData
 ): u64 {
-    // 获取tile和property信息
+    // 获取building信息
     let tile_static = map::get_tile(template, landing_tile_id);
     let building_id = map::tile_building_id(tile_static);
 
     // 非建筑tile不收租
     if (building_id == map::no_building()) return 0;
 
-    let building =&game.buildings[building_id as u64];
+    let building = &game.buildings[building_id as u64];
+    let owner = building.owner;
 
     // 无主建筑不收租
-    if (building.owner == NO_OWNER) return 0;
+    if (owner == NO_OWNER) return 0;
 
     // 物价指数
     let price_index = calculate_price_index(game);
 
-    // 检查连街（左右各查2格）
-    // 注意：连街判定仍然基于tile，但owner信息从building获取
-    let (is_chained, chain_tiles) = check_chain_tiles(
-        game,
-        landing_tile_id,
-        building.owner,
-        template,
-        2  // 左右各查2格
-    );
+    // 1. 获取连街建筑（基于building的连街关系）
+    let chain_buildings = get_chain_buildings(game, template, building_id);
+
+    // 2. 查找owner的土地庙等级（全局加成，不考虑距离）
+    let temple_levels = find_owner_temples(game, owner);
 
     let mut total_rent = 0u64;
 
-    if (!is_chained) {
-        // 非连街：单地计算
-        let building_static = map::get_building(template, building_id);
+    // 3. 遍历所有连街building（单个或多个）
+    let mut i = 0;
+    while (i < chain_buildings.length()) {
+        let b_id = chain_buildings[i];
+        let b_static = map::get_building(template, b_id);
+        let b = &game.buildings[b_id as u64];
+
+        // 基础租金：P × mL[L] × I
         let base_rent = calculate_single_tile_rent(
-            map::building_price(building_static),
-            building.level,
+            map::building_price(b_static),
+            b.level,
             price_index,
             game_data
         );
 
-        // 查找附近的土地庙（左右各3格）
-        let temples = find_nearby_temples(game, landing_tile_id, template, 3);
-        let temple_bonus = calculate_temple_bonus(base_rent, &temples, game_data);
+        // 土地庙加成（分别相加）
+        let temple_bonus = calculate_temple_bonus(base_rent, &temple_levels, game_data);
 
-        total_rent = base_rent + temple_bonus;
-    } else {
-        // 连街：所有连街地块租金总和
-        let mut i = 0;
-        while (i < chain_tiles.length()) {
-            let tile_id = chain_tiles[i];
-            let t_static = map::get_tile(template, tile_id);
-            let t_building_id = map::tile_building_id(t_static);
-
-            // 跳过非建筑tile
-            if (t_building_id == map::no_building()) {
-                i = i + 1;
-                continue
-            };
-
-            let t_building = &game.buildings[t_building_id as u64];
-            let t_building_static = map::get_building(template, t_building_id);
-
-            let base_rent = calculate_single_tile_rent(
-                map::building_price(t_building_static),
-                t_building.level,
-                price_index,
-                game_data
-            );
-
-            // 每个地块独立计算土地庙加成
-            let temples = find_nearby_temples(game, tile_id, template, 3);
-            let temple_bonus = calculate_temple_bonus(base_rent, &temples, game_data);
-
-            total_rent = total_rent + base_rent + temple_bonus;
-            i = i + 1;
-        };
+        total_rent = total_rent + base_rent + temple_bonus;
+        i = i + 1;
     };
 
     total_rent
+}
+
+/// 获取owner的土地庙等级（从Player缓存读取）
+fun find_owner_temples(game: &Game, owner: u8): vector<u8> {
+    let player = &game.players[owner as u64];
+    player.temple_levels  // 直接返回缓存
+}
+
+/// 重建玩家的 temple_levels 缓存
+/// 在购买/升级/破产时调用
+fun rebuild_temple_levels_cache(game: &mut Game, player_index: u8) {
+    let mut new_levels = vector[];
+
+    // 遍历所有building，找该玩家的土地庙
+    let mut i = 0;
+    while (i < game.buildings.length()) {
+        let building = &game.buildings[i];
+        if (building.owner == player_index &&
+            building.building_type == types::BUILDING_TEMPLE() &&
+            building.level > 0) {
+            new_levels.push_back(building.level);
+        };
+        i = i + 1;
+    };
+
+    // 更新缓存
+    let player_mut = &mut game.players[player_index as u64];
+    player_mut.temple_levels = new_levels;
 }
 
 /// 计算物价系数F

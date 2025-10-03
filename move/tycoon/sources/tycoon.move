@@ -47,9 +47,6 @@ public struct GameData has key, store {
     // 基础价格加上这个值再乘以物价系数F
     building_upgrade_costs: vector<u64>,
 
-    // 大建筑租金倍率：[L1, L2, L3, L4, L5]
-    large_building_multipliers: vector<u64>,
-
     // 大建筑升级价格：[L1, L2, L3, L4, L5]
     large_building_costs: vector<u64>,
 
@@ -87,9 +84,6 @@ fun init(ctx: &mut TxContext) {
 
         // 小建筑升级加价表：L0-L5
         building_upgrade_costs: vector[0, 1000, 1500, 6000, 15000, 35000],
-
-        // 大建筑租金倍率：L1-L5
-        large_building_multipliers: vector[150, 200, 300, 500, 800],
 
         // 大建筑升级价格：L1-L5
         large_building_costs: vector[2000, 3000, 7000, 18000, 40000],
@@ -334,11 +328,6 @@ public(package) fun get_temple_multipliers(game_data: &GameData): &vector<u64> {
 /// 获取小建筑升级价格表
 public(package) fun get_building_upgrade_costs(game_data: &GameData): &vector<u64> {
     &game_data.building_upgrade_costs
-}
-
-/// 获取大建筑租金倍率
-public(package) fun get_large_building_multipliers(game_data: &GameData): &vector<u64> {
-    &game_data.large_building_multipliers
 }
 
 /// 获取大建筑升级价格

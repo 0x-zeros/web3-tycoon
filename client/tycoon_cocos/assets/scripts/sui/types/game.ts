@@ -125,20 +125,9 @@ export interface Game {
     status: number;
     /** 地图模板ID */
     template_id: number;
-    /** 最大玩家数 */
-    max_players: number;
-    /** 创建者地址 */
-    creator: string;
-    /** 创建时间（毫秒） */
-    created_at_ms: bigint;
 
-    // 游戏配置
-    /** 起始现金 */
-    starting_cash: bigint;
-    /** 物价提升天数 */
-    price_rise_days: number;
-    /** 最大轮数（0表示无限） */
-    max_rounds: number;
+    /** 玩家列表 */
+    players: Player[];
 
     // 回合状态
     /** 当前轮次 */
@@ -147,34 +136,40 @@ export interface Game {
     turn: number;
     /** 当前活跃玩家索引 */
     active_idx: number;
+    /** 是否已掷骰 */
+    has_rolled: boolean;
 
     // 游戏元素
     /** 地块列表（导航用） */
     tiles: Tile[];
     /** 建筑列表（经济实体） */
     buildings: Building[];
-    /** 玩家列表（key: player_index, value: Player） */
-    players: Map<number, Player>;
-    /** 加入顺序（决定回合顺序） */
-    join_order: number[];
-    /** 所有者索引（key: owner_index, value: building_ids） */
+    /** NPC位置表（key: tile_id, value: NpcInst） */
+    npc_on: Map<number, NpcInst>;
+    /** 所有者索引（key: player_index, value: building_ids） */
     owner_index: Map<number, number[]>;
 
     // NPC管理
     /** NPC生成池 */
     npc_spawn_pool: NpcSpawnEntry[];
 
-    // 决策状态
+    // 配置
+    /** 最大回合数（0表示无限期） */
+    max_rounds: number;
+    /** 物价提升天数 */
+    price_rise_days: number;
+
+    // 额外状态
+    /** 胜利者地址（游戏结束时） */
+    winner?: string;
+
+    // 待决策状态
     /** 待决策类型（0=无，1=买地，2=升级，3=租金决策） */
     pending_decision: number;
     /** 决策相关的地块ID */
     decision_tile: number;
     /** 决策金额 */
     decision_amount: bigint;
-
-    // 游戏结果
-    /** 胜利者地址（游戏结束时） */
-    winner?: string;
 }
 
 /**

@@ -56,25 +56,17 @@ export interface TileStatic {
 /**
  * 地图模板
  * 对应Move: struct MapTemplate
+ * 注：name/description等元数据存储在链外（Walrus等），链上只存储核心数据
  */
 export interface MapTemplate {
     /** 模板ID */
     id: number;
-    /** 模板名称 */
-    name: string;
-    /** 描述 */
-    description: string;
-    /** 创建者 */
-    creator: string;
-    /** 起始地块ID */
-    starting_tile: number;
     /** 地块静态数据表 */
     tiles_static: Map<number, TileStatic>;
     /** 建筑静态数据表 */
     buildings_static: Map<number, BuildingStatic>;
-    /** 支持的玩家数量 */
-    min_players: number;
-    max_players: number;
+    /** 医院地块ID列表（用于送医院功能） */
+    hospital_ids: number[];
 }
 
 /**
@@ -86,8 +78,8 @@ export interface MapRegistry {
     id: string;
     /** 已注册的模板（key: template_id, value: MapTemplate） */
     templates: Map<number, MapTemplate>;
-    /** 下一个模板ID */
-    next_template_id: number;
+    /** 已注册的模板总数 */
+    template_count: number;
 }
 
 /**
@@ -143,21 +135,8 @@ export function hasBuilding(tile: TileStatic): boolean {
     return tile.building_id !== NO_BUILDING;
 }
 
-/**
- * 判断是否为起始地块
- */
-export function isStartingTile(tile: TileStatic, template: MapTemplate): boolean {
-    return template.starting_tile === getTileId(tile);
-}
-
-/**
- * 获取地块ID（从TileStatic推算，实际应该有ID字段）
- */
-function getTileId(tile: TileStatic): number {
-    // 这里需要根据实际实现调整
-    // 可能需要在TileStatic中添加id字段
-    return 0;
-}
+// 辅助函数：isStartingTile 和 getTileId 已删除
+// 起始地块由游戏逻辑或客户端管理，不在MapTemplate中存储
 
 /**
  * 获取地块的所有邻接地块（四方向）

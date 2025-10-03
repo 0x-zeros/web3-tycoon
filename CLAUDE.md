@@ -15,6 +15,7 @@ Web3 Tycoon is a Sui blockchain-based Monopoly game with voxel-style 3D graphics
 
 - **Frontend**: Cocos Creator 3.8.7 with TypeScript + Voxel rendering system
 - **Blockchain**: Sui Network with Move smart contracts (implemented in `move/tycoon/`)
+- **Wallet Integration**: Sui TypeScript SDK (@mysten/sui) + Wallet Standard (@mysten/wallet-standard)
 - **Asset Generation**: OpenAI DALL-E 3 / Google Gemini dual-engine AIGC pipeline
 - **UI Framework**: FairyGUI integration for complex interfaces
 - **Resource System**: Minecraft-style resource pack architecture
@@ -80,15 +81,55 @@ The project uses a sophisticated component-based architecture with voxel renderi
 
 ```typescript
 // Core Managers (Singleton pattern)
-GameInitializer.ts          // Phased initialization system
-MapManager.ts               // Dynamic map loading with MapConfig
-VoxelSystem.ts              // Voxel rendering and chunk management
-CameraManager.ts            // Multi-mode camera (isometric/top/follow)
-UIManager.ts                // FairyGUI-based UI management
-EventBus.ts                 // Global event system (composite pattern)
-RoleManager.ts              // Character and player management
-CardManager.ts              // Card system management
-SkillManager.ts             // Skill system management
+core/
+├── GameInitializer.ts      // Phased initialization system
+
+map/
+├── MapManager.ts           // Dynamic map loading with MapConfig
+├── GameMap.ts              // Map logic with tile/building systems
+└── MapTile.ts              // Individual tile components
+
+voxel/
+├── VoxelWorld.ts           // Main voxel world controller
+├── VoxelRenderer.ts        // Mesh generation and rendering
+├── VoxelChunk.ts           // Chunk-based world management
+├── VoxelInteractionManager.ts // Ray-casting and block interaction
+├── resource_pack/          // Minecraft-style resource loading
+└── lighting/               // Voxel lighting system with AO
+
+camera/
+├── CameraManager.ts        // Multi-mode camera controller
+├── VoxelCameraController.ts // Voxel-specific camera
+└── CameraDebugger.ts       // Camera debugging tools
+
+ui/
+├── UIManager.ts            // FairyGUI-based UI management
+├── game/UIEditor.ts        // Map editor interface
+├── game/UIInGame.ts        // Main game HUD
+└── game/UIWallet.ts        // Wallet connection UI
+
+role/
+├── RoleManager.ts          // Character and player management
+├── Player.ts               // Player entity
+├── NPC.ts                  // NPC entity
+└── Actor.ts                // Base actor class
+
+card/
+├── CardManager.ts          // Card system management
+└── cards/                  // Individual card implementations
+
+sui/
+├── types/                  // TypeScript types matching Move contracts
+├── events/                 // Event indexing and processing
+├── interactions/           // Contract interaction wrappers
+└── pathfinding/            // BFS pathfinding for game board
+
+events/
+├── EventBus.ts             // Global event system (composite pattern)
+└── Blackboard.ts           // Shared state management
+
+skill/
+└── SkillManager.ts         // Skill system management
 ```
 
 ### Move Contract Architecture
@@ -340,10 +381,11 @@ web3-tycoon/
 - Turn-based game mechanics
 
 ### 🚧 In Progress
-- Client-blockchain integration
+- Client-blockchain integration (Sui SDK integrated, wallet UI implemented)
 - Player movement animations
 - Card visual effects
 - Sound system
+- Sui event indexing and synchronization
 
 ### 📋 Planned
 - Multiplayer backend (Node.js)
@@ -370,6 +412,12 @@ web3-tycoon/
 - **Random in Move**: 一个交易使用一个 RandomGenerator，避免多次创建
 - 生成代码时，没有我的指示，不要添加多余的fallback机制，让错误能够早点可见
 - 不要修改cocos的TypeScript的target，因为cocos不支持
+- **Sui Integration**:
+  - TypeScript types in `sui/types/` mirror Move contract structures
+  - Event processing via `sui/events/indexer.ts` with cursor-based polling
+  - Contract interactions wrapped in `sui/interactions/`
+  - Pathfinding logic matches Move contract's BFS implementation
+- **Additional Resources**: See AGENTS.md for repository guidelines and conventions
 
 ## 关键架构决策记录
 

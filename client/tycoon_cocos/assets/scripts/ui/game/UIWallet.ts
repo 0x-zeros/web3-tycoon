@@ -13,6 +13,7 @@ import { bcs } from '@mysten/sui/bcs';
 import {fromHex, toHex} from '@mysten/bcs';
 import { SuiClient } from '@mysten/sui/client';
 import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
+import { UINotification } from "../utils/UINotification";
 
 
 const { ccclass } = _decorator;
@@ -74,7 +75,13 @@ export class UIWallet extends UIBase {
     private _onWalletClick(): void {
         console.log("[UIWallet] Wallet clicked");
 
-        this.testSuiClient();
+        UINotification.info("连接成功");
+        UINotification.success("操作完成", "成功");
+        UINotification.warning("余额不足", "警告", 5000);
+        UINotification.error("网络错误", "错误");
+      
+
+        //this.testSuiClient();
         // this.initWallets();
     }
 

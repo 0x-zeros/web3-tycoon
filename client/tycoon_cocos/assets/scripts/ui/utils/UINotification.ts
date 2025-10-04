@@ -1,4 +1,4 @@
-import { _decorator } from 'cc';
+import { _decorator, Color } from 'cc';
 import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
 
@@ -182,6 +182,18 @@ export class UINotification extends UIBase {
     }
 
     /**
+     * 将16进制颜色值转换为Color对象
+     * @param hex 16进制颜色值（0xAARRGGBB格式）
+     */
+    private _hexToColor(hex: number): Color {
+        const a = ((hex >> 24) & 0xFF) / 255;
+        const r = ((hex >> 16) & 0xFF) / 255;
+        const g = ((hex >> 8) & 0xFF) / 255;
+        const b = (hex & 0xFF) / 255;
+        return new Color(r * 255, g * 255, b * 255, a * 255);
+    }
+
+    /**
      * 设置Toast内容
      */
     private _setupToast(toast: fgui.GComponent, options: NotificationOptions): void {
@@ -193,8 +205,11 @@ export class UINotification extends UIBase {
 
         // 设置背景颜色
         if (bgGraph && options.type) {
-            const color = UINotification.TYPE_COLOR_MAP[options.type] || UINotification.TYPE_COLOR_MAP[NotifyType.DEFAULT];
-            bgGraph.drawRect(0, color, null);
+            const colorHex = UINotification.TYPE_COLOR_MAP[options.type] || UINotification.TYPE_COLOR_MAP[NotifyType.DEFAULT];
+            const color = this._hexToColor(colorHex);
+            // 参数：lineSize=0(无边框), lineColor=透明色, fillColor=color
+            // 注意：fairygui-cc 的 GGraph.drawRect 会调用 Color.set(lineColor)，不允许传入 null
+            bgGraph.drawRect(0, new Color(0, 0, 0, 0), color);
         }
 
         // 设置Icon
@@ -241,27 +256,36 @@ export class UINotification extends UIBase {
      */
     private _playEnterAnimation(toast: fgui.GObject): void {
         // 设置初始状态
-        const originalX = toast.x;
-        toast.x = originalX + 100;
+        const targetX = toast.x;
+        toast.x = targetX + 100;
         toast.alpha = 0;
 
-        // 动画到目标位置
-        fgui.GTween.to2(originalX, 1)
-            .setTarget(toast, toast)
-            .setDuration(0.3)
-            .setEase(fgui.EaseType.QuadOut);
+        // 动画到目标位置（x 与 alpha 同步）
+        fgui.GTween
+            .to2(toast.x, toast.alpha, targetX, 1, 0.3)
+            .setEase(fgui.EaseType.QuadOut)
+            .setTarget(toast)
+            .onUpdate((tweener: fgui.GTweener) => {
+                toast.x = tweener.value.x;
+                toast.alpha = tweener.value.y;
+            });
     }
 
     /**
      * 播放退出动画（向上滑动 + 淡出）
      */
     private _playExitAnimation(toast: fgui.GObject, onComplete: () => void): void {
-        const targetY = toast.y - 50;
+        const startY = toast.y;
+        const targetY = startY - 50;
 
-        fgui.GTween.to2(targetY, 0)
-            .setTarget(toast, toast)
-            .setDuration(0.3)
+        fgui.GTween
+            .to2(startY, toast.alpha, targetY, 0, 0.3)
             .setEase(fgui.EaseType.QuadIn)
+            .setTarget(toast)
+            .onUpdate((tweener: fgui.GTweener) => {
+                toast.y = tweener.value.x;
+                toast.alpha = tweener.value.y;
+            })
             .onComplete(() => {
                 onComplete();
             });

@@ -3,6 +3,7 @@ import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
 import { UIMapElement } from "./UIMapElement";
+import { UIMessage, MessageBoxIcon } from "../utils/UIMessage";
 import * as fgui from "fairygui-cc";
 import { _decorator, find, input, Input, KeyCode } from 'cc';
 import { GameMap } from "../../map/core/GameMap";
@@ -376,16 +377,39 @@ export class UIEditor extends UIBase {
     /**
      * 计算建筑入口按钮点击事件
      */
-    private _onCalcBuildingEntranceClick(): void {
+    private async _onCalcBuildingEntranceClick(): Promise<void> {
         console.log("[UIEditor] Calculate building entrance button clicked");
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
                 const success = mapInfo.component.calculateBuildingEntrances();
+
                 if (success) {
+                    // 获取建筑统计信息
+                    const buildingCount = mapInfo.component.getBuildingCount();
+
+                    // 显示成功提示
+                    await UIMessage.success(
+                        `建筑入口计算完成！\n\n` +
+                        `已处理 ${buildingCount} 个建筑的入口关联`,
+                        "计算成功"
+                    );
+
                     console.log("[UIEditor] ✓ Building entrances calculated successfully");
                 } else {
+                    // 显示失败警告（包含常见问题提示）
+                    await UIMessage.warning(
+                        `建筑入口计算失败\n\n` +
+                        `可能原因：\n` +
+                        `• 入口tile数量不正确\n` +
+                        `  (1x1建筑需要1个，2x2建筑需要2个)\n` +
+                        `• 入口tile类型必须为EMPTY_LAND\n` +
+                        `• 建筑朝向设置有误\n\n` +
+                        `请检查<color=#ffaa00>控制台</color>的详细警告信息`,
+                        "验证失败"
+                    );
+
                     console.error("[UIEditor] ✗ Calculation failed - check warnings above");
                 }
             }
@@ -403,15 +427,40 @@ export class UIEditor extends UIBase {
     /**
      * 分配ID按钮点击事件
      */
-    private _onAssignIdClick(): void {
+    private async _onAssignIdClick(): Promise<void> {
         console.log("[UIEditor] Assign ID button clicked");
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
-                // 调用GameMap的分配ID方法
-                mapInfo.component.assignIds();
-                console.log("[UIEditor] IDs assigned to tiles and properties");
+                try {
+                    // 调用GameMap的分配ID方法
+                    mapInfo.component.assignIds();
+
+                    // 获取统计信息
+                    const tileCount = mapInfo.component.getTileCount();
+                    const buildingCount = mapInfo.component.getBuildingCount();
+                    const totalTiles = mapInfo.component.getTotalTileCount();
+                    const totalBuildings = mapInfo.component.getTotalBuildingCount();
+
+                    // 显示成功提示
+                    await UIMessage.success(
+                        `编号分配完成！\n\n` +
+                        `• Tiles: ${tileCount}/${totalTiles}\n` +
+                        `• Buildings: ${buildingCount}/${totalBuildings}`,
+                        "分配成功"
+                    );
+
+                    console.log("[UIEditor] IDs assigned successfully");
+                } catch (error) {
+                    // 显示错误提示
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    await UIMessage.error(
+                        `编号分配失败：\n${errorMsg}`,
+                        "操作失败"
+                    );
+                    console.error("[UIEditor] Assign ID failed:", error);
+                }
             }
         }
     }

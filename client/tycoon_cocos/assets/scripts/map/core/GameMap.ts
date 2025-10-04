@@ -3160,4 +3160,35 @@ export class GameMap extends Component {
 
         console.log('[GameMap] Chain overlay cleared');
     }
+
+    // ========================= 统计方法（用于UI反馈） =========================
+
+    /**
+     * 获取已分配ID的tile数量
+     */
+    public getTileCount(): number {
+        return this._tiles.filter(t => t.getTileId() !== 65535).length;
+    }
+
+    /**
+     * 获取已分配ID的building数量
+     */
+    public getBuildingCount(): number {
+        return Array.from(this._buildingRegistry.values())
+            .filter(b => b.buildingId !== undefined && b.buildingId !== 65535).length;
+    }
+
+    /**
+     * 获取总tile数量（包括未分配ID的）
+     */
+    public getTotalTileCount(): number {
+        return this._tiles.length;
+    }
+
+    /**
+     * 获取总building数量（包括未分配ID的）
+     */
+    public getTotalBuildingCount(): number {
+        return this._buildingRegistry.size;
+    }
 }

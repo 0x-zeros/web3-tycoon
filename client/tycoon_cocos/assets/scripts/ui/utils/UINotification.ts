@@ -80,16 +80,6 @@ export class UINotification extends UIBase {
     // 静态单例实例（用于全局访问）
     private static _instance: UINotification | null = null;
 
-    // Icon URL映射
-    private static readonly ICON_MAP: Record<NotifyIcon, string> = {
-        [NotifyIcon.NONE]: "",
-        [NotifyIcon.INFO]: "ui://Common/icon_info",
-        [NotifyIcon.SUCCESS]: "ui://Common/icon_success",
-        [NotifyIcon.WARNING]: "ui://Common/icon_warning",
-        [NotifyIcon.ERROR]: "ui://Common/icon_error",
-        [NotifyIcon.CUSTOM]: ""
-    };
-
     // 通知类型颜色映射
     // 使用半透明的淡色（AA为透明度）
     private static readonly TYPE_COLOR_MAP: Record<NotifyType, number> = {
@@ -98,15 +88,6 @@ export class UINotification extends UIBase {
         [NotifyType.WARNING]: 0x33F5A623,   // 淡黄色
         [NotifyType.ERROR]: 0x33D0021B,     // 淡红色
         [NotifyType.DEFAULT]: 0x336699CC    // 淡紫蓝色
-    };
-
-    // 模板无图标节点时的文本前缀（轻量可读，不依赖图片字体）
-    private static readonly TYPE_PREFIX_MAP: Record<NotifyType, string> = {
-        [NotifyType.INFO]: "[i]",
-        [NotifyType.SUCCESS]: "[OK]",
-        [NotifyType.WARNING]: "[!]",
-        [NotifyType.ERROR]: "[x]",
-        [NotifyType.DEFAULT]: ""
     };
 
     // ==================== 生命周期 ====================
@@ -180,7 +161,7 @@ export class UINotification extends UIBase {
             this._removeOldestNotification();
         }
 
-        // 创建NotifyToast对象
+        // 创建NotifyToast对象并添加到列表
         const toast = this._messagesList.addItemFromPool() as fgui.GComponent;
         if (!toast) {
             console.error("[UINotification] Failed to create toast");
@@ -190,8 +171,8 @@ export class UINotification extends UIBase {
         // 设置通知内容
         this._setupToast(toast, options);
 
-        // 添加到列表顶部（index 0）
-        this._messagesList.addChildAt(toast, 0);
+        // 移动到列表顶部（最新的通知在上方）
+        this._messagesList.setChildIndex(toast, 0);
 
         // 播放进入动画
         this._playEnterAnimation(toast);
@@ -223,12 +204,11 @@ export class UINotification extends UIBase {
 
     /**
      * 设置Toast内容
+     * 注意：NotifyToast模板只包含bg和message两个节点
      */
     private _setupToast(toast: fgui.GComponent, options: NotificationOptions): void {
         // 获取子元素
         const bgGraph = toast.getChild("bg") as fgui.GGraph;
-        const iconLoader = toast.getChild("icon") as fgui.GLoader;
-        const titleText = toast.getChild("title") as fgui.GTextField;
         const messageRichText = toast.getChild("message") as fgui.GRichTextField;
 
         // 设置背景颜色
@@ -236,56 +216,15 @@ export class UINotification extends UIBase {
             const colorHex = UINotification.TYPE_COLOR_MAP[options.type] || UINotification.TYPE_COLOR_MAP[NotifyType.DEFAULT];
             const color = this._hexToColor(colorHex);
             // 参数：lineSize=0(无边框), lineColor=透明色, fillColor=color
-            // 注意：fairygui-cc 的 GGraph.drawRect 会调用 Color.set(lineColor)，不允许传入 null
             bgGraph.drawRect(0, new Color(0, 0, 0, 0), color);
         }
 
-        // 设置Icon
-        if (iconLoader) {
-            if (options.icon && options.icon !== NotifyIcon.NONE) {
-                // 判断是预设类型还是自定义URL
-                const iconKeys = Object.values(NotifyIcon);
-                if (iconKeys.includes(options.icon as NotifyIcon)) {
-                    const iconUrl = UINotification.ICON_MAP[options.icon as NotifyIcon];
-                    if (iconUrl) {
-                        iconLoader.url = iconUrl;
-                        iconLoader.visible = true;
-                    } else {
-                        iconLoader.visible = false;
-                    }
-                } else {
-                    // 自定义URL
-                    iconLoader.url = options.icon as string;
-                    iconLoader.visible = true;
-                }
-            } else {
-                iconLoader.visible = false;
-            }
-        }
-
-        // 设置标题（如果有标题节点）
-        if (titleText) {
-            if (options.title) {
-                titleText.text = options.title;
-                titleText.visible = true;
-            } else {
-                titleText.visible = false;
-            }
-        }
-
-        // 设置消息；如果模版删除了 title 节点且仍传入了 title，则将 title 合并到消息中显示
+        // 设置消息（如果有title，合并到消息中显示）
         if (messageRichText) {
-            const merged = !titleText && options.title
+            const text = options.title
                 ? `【${options.title}】 ${options.message}`
                 : options.message;
-
-            // 如无图标节点，按类型添加一个轻量前缀
-            const needPrefix = !iconLoader && options.icon !== NotifyIcon.NONE;
-            const prefix = needPrefix && options.type
-                ? UINotification.TYPE_PREFIX_MAP[options.type] || ""
-                : "";
-
-            messageRichText.text = prefix ? `${prefix} ${merged}` : merged;
+            messageRichText.text = text;
         }
     }
 

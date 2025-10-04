@@ -13,6 +13,7 @@ import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage } from "../utils/UIMessage";
+import { UINotification } from "../utils/UINotification";
 
 /**
  * UI构造函数接口 - Component类构造函数
@@ -765,8 +766,12 @@ export class UIManager {
             UIManager.instance.registerMapSelectUI(UIManager.PRELOAD_PACKAGES[2]);
             UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[3]);
             UIManager.instance.registerMessageBoxUI(); // 注册MessageBox
+            UIManager.instance.registerNotificationUI(); // 注册Notification
 
-            // 4. 显示初始界面
+            // 4. 显示Notification（全局通知中心，始终显示）
+            await UIManager.instance.showUI("Notification");
+
+            // 5. 显示初始界面
             await UIManager.instance.showModeSelect();
 
             console.log("[UISystem] Game UI system initialized completely");
@@ -829,6 +834,18 @@ export class UIManager {
             // 返回UIManager类，避免循环依赖
             return { instance: UIManager.instance };
         });
+    }
+
+    /**
+     * 便捷注册方法 - 注册Notification UI
+     */
+    public registerNotificationUI(packageName: string = "Common", componentName: string = "NotifyCenter"): void {
+        this.registerUI<UINotification>("Notification", {
+            packageName,
+            componentName,
+            cache: true,
+            isWindow: false
+        }, UINotification);
     }
 
     /**

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1920,1080">
+  <displayList>
+    <graph id="n0_bk5i" name="modal_mask" xy="0,0" size="1920,1080" type="rect" fillColor="#00ffffff"/>
+    <graph id="n2_bk5i" name="bg" xy="960,540" pivot="0.5,0.5" anchor="true" size="800,600" type="rect" fillColor="#ff6699cc"/>
+    <loader id="n5_bk5i" name="bgImage" xy="960,540" pivot="0.5,0.5" anchor="true" size="800,600"/>
+    <loader id="n4_bk5i" name="icon" xy="604,258" size="128,128"/>
+    <text id="n6_bk5i" name="title" xy="795,299" size="445,56" fontSize="30" color="#ffffff" autoSize="none" text="标题"/>
+    <richtext id="n7_bk5i" name="message" xy="644,444" size="635,217" fontSize="30" color="#ffffff" autoSize="none" text="这是一个message box， 支持阻挡（Modal）与不阻挡（Modeless）**两种形态"/>
+    <component id="n8_bk5i" name="btn_secondary" src="mumqlc" fileName="components/Button1.xml" xy="644,722" size="218,62"/>
+    <component id="n10_bk5i" name="btn_primary" src="mumqlc" fileName="components/Button1.xml" xy="1061,722" size="218,62"/>
+    <component id="n11_bk5i" name="btn_close" src="mumqlc" fileName="components/Button1.xml" xy="1267,249" size="82,52">
+      <Button title="关闭"/>
+    </component>
+  </displayList>
+</component>

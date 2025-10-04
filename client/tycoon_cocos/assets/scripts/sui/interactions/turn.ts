@@ -79,6 +79,7 @@ export class TurnInteraction {
     async endTurn(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         keypair: Ed25519Keypair
     ): Promise<{
         success: boolean;
@@ -92,8 +93,9 @@ export class TurnInteraction {
             target: `${this.packageId}::game::end_turn`,
             arguments: [
                 tx.object(gameId),          // game: &mut Game
-                tx.object(this.gameDataId), // game_data: &GameData
                 tx.object(seatId),          // seat: &Seat
+                tx.object(this.gameDataId), // game_data: &GameData
+                tx.object(mapTemplateId),   // map: &MapTemplate
                 tx.object('0x8')            // random: &Random
             ]
         });

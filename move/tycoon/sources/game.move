@@ -614,7 +614,7 @@ public entry fun roll_and_step(
     validate_map(game, map);
 
     // 验证并自动处理跳过
-    if (validate_and_auto_skip(game, seat, game_data, r, ctx)) {
+    if (validate_and_auto_skip(game, seat, game_data, map, r, ctx)) {
         return
     };
 
@@ -690,7 +690,7 @@ public entry fun roll_and_step(
     clean_turn_state(game, player_index);
 
     // 结束回合
-    advance_turn(game, game_data, r, ctx);
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 // 决定租金支付方式（使用免租卡或支付现金）
@@ -775,8 +775,9 @@ public entry fun skip_building_decision(
 // 结束回合（手动）
 public entry fun end_turn(
     game: &mut Game,
-    game_data: &GameData,
     seat: &Seat,
+    game_data: &GameData,
+    map: &map::MapTemplate,
     r: &Random,
     ctx: &mut TxContext
 ) {
@@ -801,7 +802,7 @@ public entry fun end_turn(
     );
 
     // 推进回合
-    advance_turn(game, game_data, r, ctx);
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 // 购买建筑
@@ -1043,6 +1044,7 @@ fun validate_and_auto_skip(
     game: &mut Game,
     seat: &Seat,
     game_data: &GameData,
+    map: &map::MapTemplate,
     r: &Random,
     ctx: &mut TxContext
 ): bool {
@@ -1051,7 +1053,7 @@ fun validate_and_auto_skip(
     // 如果需要跳过，自动处理
     if (should_skip_turn(game, seat.player_index)) {
         handle_skip_turn(game, seat.player_index);
-        advance_turn(game, game_data, r, ctx);
+        advance_turn(game, game_data, map, r, ctx);
         return true  // 表示已跳过
     };
     false  // 表示未跳过
@@ -2272,6 +2274,7 @@ fun clean_turn_state(game: &mut Game, player_index: u8) {
 fun advance_turn(
     game: &mut Game,
     game_data: &GameData,
+    map: &map::MapTemplate,
     r: &Random,
     ctx: &mut TxContext
 ) {
@@ -2307,7 +2310,7 @@ fun advance_turn(
         game.round = game.round + 1;  // 增加轮次
 
         // 轮次结束时的刷新操作
-        refresh_at_round_end(game, game_data, r, ctx);
+        refresh_at_round_end(game, game_data, map, r, ctx);
 
         // 步骤4: 检查是否达到最大轮数限制
         if (game.max_rounds > 0) {  // 0表示无限期
@@ -2334,6 +2337,7 @@ fun advance_turn(
 fun refresh_at_round_end(
     game: &mut Game,
     game_data: &GameData,
+    map: &map::MapTemplate,
     r: &Random,
     ctx: &mut TxContext
 ) {
@@ -2341,10 +2345,8 @@ fun refresh_at_round_end(
     clean_expired_npcs(game);
 
     // 生成新的随机NPC（只生成1个）
-    // TODO: spawn_random_npc 需要 MapTemplate 参数，但 advance_turn 不接受 map 参数
-    // 暂时禁用 NPC 生成，直到重构完成
-    let npc_kind = 0u8;
-    let tile_id = 0u16;
+    let mut generator = random::new_generator(r, ctx);
+    let (npc_kind, tile_id) = spawn_random_npc(game, map, &mut generator);
 
     // 发射轮次结束事件
     events::emit_round_ended_event(

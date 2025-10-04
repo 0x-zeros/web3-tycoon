@@ -46,8 +46,7 @@ public struct Card has store, copy, drop {
 // ===== CardRegistry 全局卡牌注册表 =====
 public struct CardRegistry has key, store {
     id: UID,
-    cards: Table<u8, Card>,         // 卡牌定义
-    card_count: u64                   // 卡牌总数
+    cards: vector<Card>  // 卡牌定义（索引即为kind，0-based连续）
 }
 
 // ===== DropConfig 掉落配置表 =====
@@ -90,8 +89,7 @@ public fun target_player_or_tile(): u8 { 3 }
 public(package) fun create_card_registry_internal(ctx: &mut TxContext): CardRegistry {
     let mut registry = CardRegistry {
         id: object::new(ctx),
-        cards: table::new(ctx),
-        card_count: 0
+        cards: vector[]
     };
 
     // 初始化基础卡牌
@@ -274,12 +272,12 @@ fun register_card_internal(
         rarity
     };
 
-    if (table::contains(&registry.cards, kind)) {
-        *table::borrow_mut(&mut registry.cards, kind) = card;
-    } else {
-        table::add(&mut registry.cards, kind, card);
-        registry.card_count = registry.card_count + 1;
-    };
+    // vector索引对齐：cards[kind] = card
+    // 假设按顺序注册（kind = 0, 1, 2, ...）
+    let expected_idx = registry.cards.length();
+    assert!(kind as u64 == expected_idx, 0);  // 必须按顺序
+
+    registry.cards.push_back(card);
 }
 
 // ===== Admin Functions 管理函数 =====
@@ -315,13 +313,13 @@ public(package) fun update_drop_config_for_admin(
 
 // 获取卡牌信息
 public fun get_card(registry: &CardRegistry, kind: u8): &Card {
-    assert!(table::contains(&registry.cards, kind), ECardNotOwned);
-    table::borrow(&registry.cards, kind)
+    assert!((kind as u64) < registry.cards.length(), ECardNotOwned);
+    &registry.cards[kind as u64]
 }
 
 // 检查卡牌是否存在
 public fun has_card(registry: &CardRegistry, kind: u8): bool {
-    table::contains(&registry.cards, kind)
+    (kind as u64) < registry.cards.length()
 }
 
 // ===== Card Management Functions 卡牌管理函数 =====

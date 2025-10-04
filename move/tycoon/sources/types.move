@@ -51,14 +51,14 @@ public fun NPC_FORTUNE_GOD(): u8 { 25 }   // 福神
 public fun NPC_POOR_GOD(): u8 { 26 }      // 穷神
 
 // ===== CardKind 卡牌类型 =====
-public fun CARD_MOVE_CTRL(): u8 { 1 }
-public fun CARD_BARRIER(): u8 { 2 }
-public fun CARD_BOMB(): u8 { 10 }
-public fun CARD_DOG(): u8 { 11 }
-public fun CARD_RENT_FREE(): u8 { 20 }
-public fun CARD_FREEZE(): u8 { 30 }
-public fun CARD_CLEANSE(): u8 { 41 }
-public fun CARD_TURN(): u8 { 50 }  // 转向卡
+public fun CARD_MOVE_CTRL(): u8 { 0 }
+public fun CARD_BARRIER(): u8 { 1 }
+public fun CARD_BOMB(): u8 { 2 }
+public fun CARD_RENT_FREE(): u8 { 3 }
+public fun CARD_FREEZE(): u8 { 4 }
+public fun CARD_DOG(): u8 { 5 }
+public fun CARD_CLEANSE(): u8 { 6 }
+public fun CARD_TURN(): u8 { 7 }  // 转向卡
 
 // ===== BuffKind Buff类型 =====
 public fun BUFF_MOVE_CTRL(): u8 { 1 }

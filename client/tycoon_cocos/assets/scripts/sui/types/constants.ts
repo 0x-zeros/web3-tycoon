@@ -63,16 +63,17 @@ export enum NpcKind {
     POOR_GOD = 26      // 穷神
 }
 
+//使用连续编号，作为move端vector的索引
 // ===== CardKind 卡牌类型 =====
 export enum CardKind {
-    MOVE_CTRL = 1,      // 遥控骰子
-    BARRIER = 2,        // 路障卡
-    BOMB = 10,         // 炸弹卡
-    DOG = 11,          // 恶犬卡
-    RENT_FREE = 20,    // 免租卡
-    FREEZE = 30,       // 冰冻卡
-    CLEANSE = 41,      // 净化卡
-    TURN = 50          // 转向卡
+    MOVE_CTRL = 0,      // 遥控骰子
+    BARRIER = 1,        // 路障卡
+    BOMB = 2,          // 炸弹卡
+    RENT_FREE = 3,     // 免租卡
+    FREEZE = 4,        // 冰冻卡
+    DOG = 5,           // 恶犬卡
+    CLEANSE = 6,       // 净化卡
+    TURN = 7           // 转向卡
 }
 
 // ===== BuffKind Buff类型 =====

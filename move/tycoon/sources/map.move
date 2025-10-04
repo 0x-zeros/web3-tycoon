@@ -131,12 +131,6 @@ public(package) fun create_registry_internal(ctx: &mut TxContext): MapRegistry {
     }
 }
 
-// 创建并共享地图注册表
-public(package) fun create_and_share_registry(ctx: &mut TxContext) {
-    let registry = create_registry_internal(ctx);
-    transfer::share_object(registry);
-}
-
 // ===== Public Functions 公共函数 =====
 
 // 发布地图模板（只能写入，不可修改）

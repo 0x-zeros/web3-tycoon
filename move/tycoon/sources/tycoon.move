@@ -119,27 +119,6 @@ fun create_admin_cap(ctx: &mut TxContext) {
     transfer::public_transfer(admin_cap, ctx.sender());
 }
 
-/// 发布自定义地图模板（通过客户端PTB调用）
-entry fun publish_custom_map_template(
-    game_data: &mut GameData,
-    schema_version: u8,
-    _admin: &AdminCap,
-    ctx: &mut TxContext
-) {
-    let template = map::new_map_template(schema_version, ctx);
-    let tile_count = map::get_tile_count(&template);
-    let template_id = map::get_map_id(&template);
-
-    map::publish_template(&mut game_data.map_registry, template, ctx);
-
-    // 发射事件
-    events::emit_map_template_published_event(
-        template_id,
-        ctx.sender(),
-        tile_count
-    );
-}
-
 /// 验证管理员权限
 public fun verify_admin_cap(_admin: &AdminCap): bool {
     true
@@ -150,7 +129,7 @@ const EInvalidSchemaVersion: u64 = 3021;
 
 /// 从 BCS 编码的数据创建并发布地图模板
 /// 客户端使用 @mysten/sui/bcs 序列化数据，Move 端反序列化
-entry fun create_map_from_bcs(
+entry fun publish_map_from_bcs(
     game_data: &mut GameData,
     schema_version: u8,
     tiles_bcs: vector<u8>,

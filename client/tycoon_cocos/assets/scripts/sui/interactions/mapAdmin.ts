@@ -25,7 +25,7 @@ export class MapAdminInteraction {
      * 上传地图模板到链上
      * 使用 BCS 序列化传递复杂数据结构
      *
-     * 对应Move: entry fun create_map_from_bcs
+     * 对应Move: entry fun publish_map_from_bcs
      *
      * @param mapTemplate 编辑器生成的地图数据
      * @param adminCapId 管理员权限对象ID
@@ -58,7 +58,7 @@ export class MapAdminInteraction {
         const tx = new Transaction();
 
         tx.moveCall({
-            target: `${this.packageId}::tycoon::create_map_from_bcs`,
+            target: `${this.packageId}::tycoon::publish_map_from_bcs`,
             arguments: [
                 tx.object(this.gameDataId),                 // game_data: &mut GameData
                 tx.pure.u16(mapTemplate.id),                // template_id: u16

@@ -141,76 +141,16 @@ entry fun publish_map_from_bcs(
     let expected_version = get_map_schema_version(game_data);
     assert!(schema_version == expected_version, EInvalidSchemaVersion);
 
-    // 创建空模板
-    let mut template = map::new_map_template(schema_version, ctx);
+    let map_id = map::publish_map_from_bcs(schema_version, tiles_bcs, buildings_bcs, ctx);
 
-    // 1. 反序列化 buildings
-    let mut bcs_reader = bcs::new(buildings_bcs);
-    let building_count = bcs_reader.peel_vec_length();
-
-    let mut i = 0;
-    while (i < building_count) {
-        // 按 BuildingStatic 字段顺序 peel：size, price, chain_prev_id, chain_next_id
-        let size = bcs_reader.peel_u8();
-        let price = bcs_reader.peel_u64();
-        let chain_prev_id = bcs_reader.peel_u16();
-        let chain_next_id = bcs_reader.peel_u16();
-
-        let building = map::new_building_static(size, price, chain_prev_id, chain_next_id);
-        map::add_building_to_template(&mut template, building);
-        i = i + 1;
-    };
-
-    // 2. 反序列化 tiles
-    bcs_reader = bcs::new(tiles_bcs);
-    let tile_count = bcs_reader.peel_vec_length();
-
-    i = 0;
-    while (i < tile_count) {
-        // 按 TileStatic 字段顺序 peel：x, y, kind, building_id, special, w, n, e, s
-        let x = bcs_reader.peel_u8();
-        let y = bcs_reader.peel_u8();
-        let kind = bcs_reader.peel_u8();
-        let building_id = bcs_reader.peel_u16();
-        let special = bcs_reader.peel_u64();
-        let w = bcs_reader.peel_u16();
-        let n = bcs_reader.peel_u16();
-        let e = bcs_reader.peel_u16();
-        let s = bcs_reader.peel_u16();
-
-        let tile = map::new_tile_static_with_nav(
-            x, y, kind, building_id, special,
-            w, n, e, s
-        );
-        map::add_tile_to_template(&mut template, (i as u16), tile);
-        i = i + 1;
-    };
-
-    // 3. 反序列化 hospital_ids
-    bcs_reader = bcs::new(hospital_ids_bcs);
-    let hospital_count = bcs_reader.peel_vec_length();
-
-    let mut hospital_ids = vector[];
-    i = 0;
-    while (i < hospital_count) {
-        hospital_ids.push_back(bcs_reader.peel_u16());
-        i = i + 1;
-    };
-
-    // 手动设置 hospital_ids（覆盖自动填充的）
-    map::set_hospital_ids(&mut template, hospital_ids);
-
-    // 获取 map ID 用于事件
-    let map_id = map::get_map_id(&template);
-
-    // 发布模板
-    map::publish_template(&mut game_data.map_registry, template, ctx);
+    //todo 把map_id 添加到map_registry
+    // game_data.map_registry.templates.push_back(map_id);
 
     // 发射事件
     events::emit_map_template_published_event(
         map_id,
         ctx.sender(),
-        tile_count
+        0
     );
 }
 

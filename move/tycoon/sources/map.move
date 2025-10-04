@@ -4,6 +4,8 @@ use sui::table::{Self, Table};
 use sui::object::{Self, UID, ID};
 use sui::tx_context::{Self, TxContext};
 use sui::transfer;
+use sui::bcs;
+
 use tycoon::types;
 
 // ===== Errors =====
@@ -130,19 +132,6 @@ public(package) fun create_registry_internal(ctx: &mut TxContext): MapRegistry {
 
 // ===== Public Functions 公共函数 =====
 
-// 发布地图模板（共享对象并添加到索引）
-public fun publish_template(
-    registry: &mut MapRegistry,
-    template: MapTemplate,
-    _ctx: &mut TxContext
-) {
-    // 获取模板 ID 并添加到索引
-    let template_id = object::uid_to_inner(&template.id);
-    registry.templates.push_back(template_id);
-
-    // 共享对象
-    transfer::share_object(template);
-}
 
 // 获取所有模板 ID（索引）
 public fun get_template_ids(registry: &MapRegistry): &vector<ID> {
@@ -173,7 +162,7 @@ public fun new_tile_static(
 }
 
 // 创建建筑静态信息
-public fun new_building_static(
+fun new_building_static(
     size: u8,
     price: u64,
     chain_prev_id: u16,
@@ -188,7 +177,7 @@ public fun new_building_static(
 }
 
 // 创建地块静态信息（带完整导航信息）
-public fun new_tile_static_with_nav(
+fun new_tile_static_with_nav(
     x: u8,
     y: u8,
     kind: u8,
@@ -228,48 +217,100 @@ public fun new_tile_static_with_nav(
     }
 }
 
-// 创建地图模板
-public fun new_map_template(
+// // 创建地图模板
+// public fun new_map_template(
+//     schema_version: u8,
+//     ctx: &mut TxContext
+// ): MapTemplate {
+//     MapTemplate {
+//         id: object::new(ctx),
+//         schema_version,
+//         tiles_static: vector[],  // 初始化为空 vector
+//         buildings_static: vector[],  // 初始化为空 vector
+//         hospital_ids: vector[]
+//     }
+// }
+
+public(package) fun publish_map_from_bcs(
     schema_version: u8,
+    tiles_bcs: vector<u8>,
+    buildings_bcs: vector<u8>,
     ctx: &mut TxContext
-): MapTemplate {
-    MapTemplate {
+): ID {
+
+    // 1. 反序列化 buildings
+    let mut bcs_reader = bcs::new(buildings_bcs);
+    let building_count = bcs_reader.peel_vec_length();
+
+    let mut buildings: vector<BuildingStatic> = vector[];
+
+    let mut i = 0;
+    while (i < building_count) {
+        // 按 BuildingStatic 字段顺序 peel：size, price, chain_prev_id, chain_next_id
+        let size = bcs_reader.peel_u8();
+        let price = bcs_reader.peel_u64();
+        let chain_prev_id = bcs_reader.peel_u16();
+        let chain_next_id = bcs_reader.peel_u16();
+
+        let building = new_building_static(size, price, chain_prev_id, chain_next_id);
+        buildings.push_back(building);
+        i = i + 1;
+    };
+
+    // 2. 反序列化 tiles
+    bcs_reader = bcs::new(tiles_bcs);
+    let tile_count = bcs_reader.peel_vec_length();
+
+    let mut tiles: vector<TileStatic> = vector[];
+    let mut hospital_ids: vector<u16> = vector[];
+
+    i = 0;
+    while (i < tile_count) {
+        // 按 TileStatic 字段顺序 peel：x, y, kind, building_id, special, w, n, e, s
+        let x = bcs_reader.peel_u8();
+        let y = bcs_reader.peel_u8();
+        let kind = bcs_reader.peel_u8();
+        let building_id = bcs_reader.peel_u16();
+        let special = bcs_reader.peel_u64();
+        let w = bcs_reader.peel_u16();
+        let n = bcs_reader.peel_u16();
+        let e = bcs_reader.peel_u16();
+        let s = bcs_reader.peel_u16();
+
+        let tile = new_tile_static_with_nav(
+            x, y, kind, building_id, special,
+            w, n, e, s
+        );
+        tiles.push_back(tile);
+        if (kind == types::TILE_HOSPITAL()) {
+            hospital_ids.push_back(i as u16);
+        };
+
+        i = i + 1;
+    };
+
+
+    // 获取 map ID 用于事件
+
+    let template = MapTemplate {
         id: object::new(ctx),
         schema_version,
-        tiles_static: vector[],  // 初始化为空 vector
-        buildings_static: vector[],  // 初始化为空 vector
-        hospital_ids: vector[]
-    }
-}
-
-//注意， 关于 tile_id
-// 现有代码依赖顺序 ID
-// 很多地方假设 tile_id 是连续的
-//   cw_next: Table<u64, u64>   // 下一格是 id+1 或回到 0
-
-// 向模板添加地块
-public fun add_tile_to_template(
-    template: &mut MapTemplate,
-    tile_id: u16,
-    mut tile: TileStatic
-) {
-    // 添加tile_id边界检查
-    assert!(tile_id <= MAX_TILE_ID, ETileIdTooLarge);
-
-    // 确保 tile_id 是连续的（必须等于当前 vector 长度）
-    let current_count = template.tiles_static.length() as u16;
-    assert!(tile_id == current_count, ETileIdNotSequential);
-
-    // w/n/e/s默认为INVALID_TILE_ID，表示无邻居
-    // 后续通过set_w/n/e/s建立连接
-
-    template.tiles_static.push_back(tile);
-
-    // 根据地块类型添加到对应的ID列表
-    if (tile.kind == types::TILE_HOSPITAL()) {
-        template.hospital_ids.push_back(tile_id);
+        tiles_static: tiles,
+        buildings_static: buildings,
+        hospital_ids: hospital_ids
     };
+    let map_id = object::uid_to_inner(&template.id);
+
+    // 共享对象
+    transfer::share_object(template);
+
+    //todo mint creator NFT
+
+    //return map_id
+    map_id
 }
+
+
 
 // 设置west方向邻居
 public fun set_w(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
@@ -421,12 +462,6 @@ public fun tile_has_building(tile: &TileStatic): bool {
 // 导出常量供其他模块使用
 public fun no_building(): u16 { NO_BUILDING }
 
-// 手动设置 hospital_ids（供 BCS 反序列化使用）
-public(package) fun set_hospital_ids(
-    template: &mut MapTemplate,
-    hospital_ids: vector<u16>
-) {
-    template.hospital_ids = hospital_ids;
-}
+
 
 // get_chain_buildings 移至 game.move 以避免循环依赖

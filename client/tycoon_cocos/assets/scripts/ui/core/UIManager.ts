@@ -16,6 +16,29 @@ import { UIMessage } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
 
 /**
+ * UI层级枚举
+ * 定义UI的渲染层级，数值越大越靠前
+ */
+export enum UILayer {
+    /** 背景层：全屏背景、装饰元素 */
+    BACKGROUND = 0,
+    /** 场景层：全屏场景UI（ModeSelect/MapSelect/InGame） */
+    SCENE = 100,
+    /** 普通层：常规UI面板（Editor/普通窗口） */
+    NORMAL = 200,
+    /** 弹窗层：非模态弹窗 */
+    POPUP = 300,
+    /** 模态层：MessageBox、确认框（阻挡背景） */
+    MODAL = 400,
+    /** 通知层：Toast通知、飘字（不阻挡） */
+    NOTIFICATION = 500,
+    /** 系统层：Loading、FPS、调试信息 */
+    SYSTEM = 1000,
+    /** 顶层：GM工具、强制最高层 */
+    TOP = 10000
+}
+
+/**
  * UI构造函数接口 - Component类构造函数
  */
 export interface UIConstructor<T extends UIBase = UIBase> {
@@ -36,6 +59,8 @@ export interface UIConfig {
     isWindow?: boolean;
     /** 弹窗是否模态 */
     modal?: boolean;
+    /** UI所在层级（默认NORMAL） */
+    layer?: UILayer;
 }
 
 /**
@@ -59,6 +84,8 @@ export class UIManager {
     
     /** FairyGUI根节点 */
     private _groot: fgui.GRoot | null = null;
+    /** UI层级容器 */
+    private _layers: Map<UILayer, fgui.GComponent> = new Map();
     /** 在resources目录下的UI目录 */
     private static readonly UI_DIR = 'ui/';
     /** 公共依赖包列表 */
@@ -189,6 +216,10 @@ export class UIManager {
             } else {
                 console.warn("[UIManager] FairyGUI根节点无效，跳过UI3DInteractionManager添加");
             }
+
+            // 初始化UI分层容器
+            this._initLayers();
+
         } catch (error) {
             console.error("[UIManager] FairyGUI初始化失败:", error);
             throw error;
@@ -199,6 +230,51 @@ export class UIManager {
             EventBus.setDebug(true);
             Blackboard.instance.setDebug(true);
         }
+    }
+
+    /**
+     * 初始化UI分层容器
+     */
+    private _initLayers(): void {
+        if (!this._groot) {
+            console.error("[UIManager] GRoot not initialized");
+            return;
+        }
+
+        const layerConfigs = [
+            { name: "BackgroundLayer", layer: UILayer.BACKGROUND, touchable: false },
+            { name: "SceneLayer", layer: UILayer.SCENE, touchable: true },
+            { name: "NormalLayer", layer: UILayer.NORMAL, touchable: true },
+            { name: "PopupLayer", layer: UILayer.POPUP, touchable: true },
+            { name: "ModalLayer", layer: UILayer.MODAL, touchable: false },
+            { name: "NotificationLayer", layer: UILayer.NOTIFICATION, touchable: false },
+            { name: "SystemLayer", layer: UILayer.SYSTEM, touchable: false },
+            { name: "TopLayer", layer: UILayer.TOP, touchable: true }
+        ];
+
+        layerConfigs.forEach(config => {
+            const layer = new fgui.GComponent();
+            layer.name = config.name;
+            layer.sortingOrder = config.layer;
+            layer.setSize(this._groot!.width, this._groot!.height);
+            layer.addRelation(this._groot!, fgui.RelationType.Size);
+            layer.touchable = config.touchable;
+            layer.opaque = false;  // 允许点击穿透到下层
+
+            this._groot!.addChild(layer);
+            this._layers.set(config.layer, layer);
+        });
+
+        if (this._config.debug) {
+            console.log("[UIManager] UI layers initialized:", this._layers.size);
+        }
+    }
+
+    /**
+     * 获取指定层级的容器
+     */
+    public getLayer(layer: UILayer): fgui.GComponent | null {
+        return this._layers.get(layer) || null;
     }
 
     /**
@@ -431,7 +507,7 @@ export class UIManager {
             if (config.isWindow) {
                 this._showAsWindow(uiInstance, config);
             } else {
-                this._showAsComponent(uiInstance);
+                this._showAsComponent(uiInstance, config);
             }
 
             uiInstance.show(data);
@@ -792,7 +868,8 @@ export class UIManager {
             packageName,
             componentName,
             cache: true,
-            isWindow: false
+            isWindow: false,
+            layer: UILayer.SCENE
         }, UIModeSelect);
     }
 
@@ -804,7 +881,8 @@ export class UIManager {
             packageName,
             componentName,
             cache: true,
-            isWindow: false
+            isWindow: false,
+            layer: UILayer.SCENE
         }, UIInGame);
     }
 
@@ -814,7 +892,8 @@ export class UIManager {
             packageName,
             componentName,
             cache: true,
-            isWindow: false
+            isWindow: false,
+            layer: UILayer.SCENE
         }, UIMapSelect);
     }
 
@@ -826,7 +905,8 @@ export class UIManager {
             packageName,
             componentName,
             cache: true,
-            isWindow: false
+            isWindow: false,
+            layer: UILayer.MODAL
         }, UIMessage);
 
         // 初始化UIMessage，传入UIManager获取器
@@ -844,7 +924,8 @@ export class UIManager {
             packageName,
             componentName,
             cache: true,
-            isWindow: false
+            isWindow: false,
+            layer: UILayer.NOTIFICATION
         }, UINotification);
     }
 
@@ -982,13 +1063,27 @@ export class UIManager {
     /**
      * 作为组件显示
      */
-    private _showAsComponent(uiInstance: UIBase): void {
+    private _showAsComponent(uiInstance: UIBase, config: UIConfig): void {
         if (!this._groot) {
             throw new Error("GRoot not initialized");
         }
 
-        // 直接添加到GRoot
-        this._groot.addChild(uiInstance.panel);
+        // 获取目标layer（默认NORMAL层）
+        const targetLayer = config.layer !== undefined ? config.layer : UILayer.NORMAL;
+        const layerContainer = this._layers.get(targetLayer);
+
+        if (layerContainer) {
+            // 添加到指定layer
+            layerContainer.addChild(uiInstance.panel);
+
+            if (this._config.debug) {
+                console.log(`[UIManager] Added UI to layer ${targetLayer} (${UILayer[targetLayer]})`);
+            }
+        } else {
+            // 降级：直接添加到GRoot
+            console.warn(`[UIManager] Layer ${targetLayer} not found, adding to GRoot`);
+            this._groot.addChild(uiInstance.panel);
+        }
     }
 
     /**

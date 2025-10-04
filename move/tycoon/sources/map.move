@@ -6,14 +6,9 @@ use sui::tx_context::{Self, TxContext};
 use sui::transfer;
 use tycoon::types;
 
-// ===== Constants =====
-const CURRENT_SCHEMA_VERSION: u8 = 1;  // 当前支持的schema版本
-
 // ===== Errors =====
 const ETileOccupiedByNpc: u64 = 2001;
 const ENoSuchTile: u64 = 2002;
-const ETemplateNotFound: u64 = 3001;
-const ETemplateAlreadyExists: u64 = 3002;
 const ETileAlreadyExists: u64 = 3003;  // 地块已存在
 const ETileIdTooLarge: u64 = 3010;     // tile_id超过最大允许值
 const ETileIdNotSequential: u64 = 3011; // tile_id必须连续
@@ -117,11 +112,10 @@ public struct MapTemplate has key, store {
 //
 // 字段说明：
 // - id: 唯一对象ID
-// - templates: 模板ID到模板对象的映射
-// - template_count: 已注册的模板总数
+// - templates: 模板ID列表
 public struct MapRegistry has key, store {
     id: UID,
-    templates: vector<address>  // MapTemplate 对象的地址列表（纯索引）
+    templates: vector<ID>  // MapTemplate 对象的 ID 列表（纯索引）
 }
 
 // ===== Entry Functions 入口函数 =====
@@ -142,16 +136,16 @@ public fun publish_template(
     template: MapTemplate,
     _ctx: &mut TxContext
 ) {
-    // 获取模板地址并添加到索引
-    let template_addr = object::id_to_address(&object::uid_to_inner(&template.id));
-    registry.templates.push_back(template_addr);
+    // 获取模板 ID 并添加到索引
+    let template_id = object::uid_to_inner(&template.id);
+    registry.templates.push_back(template_id);
 
     // 共享对象
     transfer::share_object(template);
 }
 
-// 获取所有模板地址（索引）
-public fun get_template_addresses(registry: &MapRegistry): &vector<address> {
+// 获取所有模板 ID（索引）
+public fun get_template_ids(registry: &MapRegistry): &vector<ID> {
     &registry.templates
 }
 
@@ -384,11 +378,6 @@ public fun get_map_id(template: &MapTemplate): ID {
 // 获取 schema 版本
 public fun get_schema_version(template: &MapTemplate): u8 {
     template.schema_version
-}
-
-// 验证 schema 版本
-public fun validate_schema_version(template: &MapTemplate) {
-    assert!(template.schema_version == CURRENT_SCHEMA_VERSION, EInvalidSchemaVersion);
 }
 
 // ===== TileStatic Accessors 地块访问器 =====

@@ -50,6 +50,9 @@ public struct GameData has key, store {
 
     // NPC生成配置（权重表）
     npc_spawn_weights: vector<u8>,     // NPC类型的权重列表
+
+    // 地图schema版本配置
+    map_schema_version: u8,            // 当前支持的地图schema版本
 }
 
 // ===== Package Init 包初始化 =====
@@ -96,6 +99,9 @@ fun init(ctx: &mut TxContext) {
             types::NPC_FORTUNE_GOD(), 2,  // 福神 权重1
             types::NPC_POOR_GOD(), 1,     // 穷神 权重2
         ],
+
+        // 地图schema版本
+        map_schema_version: 1,
     };
 
     let game_data_id = object::id(&game_data);
@@ -139,6 +145,9 @@ public fun verify_admin_cap(_admin: &AdminCap): bool {
     true
 }
 
+// 错误码
+const EInvalidSchemaVersion: u64 = 3021;
+
 /// 从 BCS 编码的数据创建并发布地图模板
 /// 客户端使用 @mysten/sui/bcs 序列化数据，Move 端反序列化
 entry fun create_map_from_bcs(
@@ -150,6 +159,10 @@ entry fun create_map_from_bcs(
     _admin: &AdminCap,
     ctx: &mut TxContext
 ) {
+    // 验证 schema 版本
+    let expected_version = get_map_schema_version(game_data);
+    assert!(schema_version == expected_version, EInvalidSchemaVersion);
+
     // 创建空模板
     let mut template = map::new_map_template(schema_version, ctx);
 
@@ -303,6 +316,11 @@ public(package) fun get_starting_cash(game_data: &GameData): u64 {
 /// 获取NPC生成权重配置
 public(package) fun get_npc_spawn_weights(game_data: &GameData): &vector<u8> {
     &game_data.npc_spawn_weights
+}
+
+/// 获取地图schema版本
+public(package) fun get_map_schema_version(game_data: &GameData): u8 {
+    game_data.map_schema_version
 }
 
 // ===== 新数值系统访问函数 =====

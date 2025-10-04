@@ -319,9 +319,6 @@ public entry fun create_game(
     params: vector<u64>,  // 通用参数（params[0]=max_rounds, 0表示无限）
     ctx: &mut TxContext
 ) {
-    // 验证 schema 版本
-    map::validate_schema_version(map);
-
     // 解析参数
     let (starting_cash, price_rise_days, max_rounds) = parse_game_params(&params);
 
@@ -2756,12 +2753,9 @@ fun handle_buff_expired(
 /// 验证传入的 map 是否与 game 创建时的一致
 /// 防止恶意替换地图
 fun validate_map(game: &Game, map: &map::MapTemplate) {
-    // 1. 验证是同一个地图对象
+    // 验证是同一个地图对象
     let map_id = map::get_map_id(map);
     assert!(map_id == game.template_map_id, EMapMismatch);
-
-    // 2. 验证 schema 版本
-    map::validate_schema_version(map);
 }
 
 // Building 访问器（供map模块的get_chain_buildings使用）

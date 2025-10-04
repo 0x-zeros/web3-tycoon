@@ -116,17 +116,19 @@ fun create_admin_cap(ctx: &mut TxContext) {
 /// 发布自定义地图模板（通过客户端PTB调用）
 entry fun publish_custom_map_template(
     game_data: &mut GameData,
-    template_id: u16,
+    schema_version: u8,
     _admin: &AdminCap,
     ctx: &mut TxContext
 ) {
-    let template = map::new_map_template(template_id, ctx);
+    let template = map::new_map_template(schema_version, ctx);
     let tile_count = map::get_tile_count(&template);
 
     map::publish_template(&mut game_data.map_registry, template, ctx);
 
+    // 发射事件 (注意：events.move 中的函数还使用 u16，这里暂时传 0)
+    // TODO: 更新 events.move 使用 ID 类型
     events::emit_map_template_published_event(
-        template_id,
+        0,  // 临时占位，待 events.move 更新
         ctx.sender(),
         tile_count
     );
@@ -141,7 +143,7 @@ public fun verify_admin_cap(_admin: &AdminCap): bool {
 /// 客户端使用 @mysten/sui/bcs 序列化数据，Move 端反序列化
 entry fun create_map_from_bcs(
     game_data: &mut GameData,
-    template_id: u16,
+    schema_version: u8,
     tiles_bcs: vector<u8>,
     buildings_bcs: vector<u8>,
     hospital_ids_bcs: vector<u8>,
@@ -149,7 +151,7 @@ entry fun create_map_from_bcs(
     ctx: &mut TxContext
 ) {
     // 创建空模板
-    let mut template = map::new_map_template(template_id, ctx);
+    let mut template = map::new_map_template(schema_version, ctx);
 
     // 1. 反序列化 buildings
     let mut bcs_reader = bcs::new(buildings_bcs);
@@ -207,12 +209,16 @@ entry fun create_map_from_bcs(
     // 手动设置 hospital_ids（覆盖自动填充的）
     map::set_hospital_ids(&mut template, hospital_ids);
 
+    // 获取 map ID 用于事件
+    let map_id = map::get_map_id(&template);
+
     // 发布模板
     map::publish_template(&mut game_data.map_registry, template, ctx);
 
-    // 发射事件
+    // 发射事件 (注意：events.move 中的函数还使用 u16，这里暂时传 0)
+    // TODO: 更新 events.move 使用 ID 类型
     events::emit_map_template_published_event(
-        template_id,
+        0,  // 临时占位，待 events.move 更新
         ctx.sender(),
         tile_count
     );

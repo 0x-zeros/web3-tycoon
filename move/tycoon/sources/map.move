@@ -6,6 +6,9 @@ use sui::tx_context::{Self, TxContext};
 use sui::transfer;
 use tycoon::types;
 
+// ===== Constants =====
+const CURRENT_SCHEMA_VERSION: u8 = 1;  // 当前支持的schema版本
+
 // ===== Errors =====
 const ETileOccupiedByNpc: u64 = 2001;
 const ENoSuchTile: u64 = 2002;
@@ -16,6 +19,7 @@ const ETileIdTooLarge: u64 = 3010;     // tile_id超过最大允许值
 const ETileIdNotSequential: u64 = 3011; // tile_id必须连续
 const EInvalidNextTileId: u64 = 3012;  // 无效的下一个地块ID
 const ETargetTileNotExist: u64 = 3013; // 目标地块不存在
+const EInvalidSchemaVersion: u64 = 3021;  // 不支持的schema版本
 
 // ===== Constants =====
 const INVALID_TILE_ID: u16 = 65535;    // u16::MAX 作为无效/未设置的tile_id
@@ -93,8 +97,9 @@ public struct TileStatic has store, copy, drop {
 // 特殊地块索引：
 // - hospital_ids: 所有医院地块（用于送医院功能）
 //
-public struct MapTemplate has store {
-    id: u16,
+public struct MapTemplate has key, store {
+    id: UID,
+    schema_version: u8,
     tiles_static: vector<TileStatic>,  // 使用 vector，tile_id 即为索引
     buildings_static: vector<BuildingStatic>, // 建筑静态信息，building_id 即为索引
     // 导航信息已集成到 TileStatic.w/n/e/s 中，不再需要额外的邻接表
@@ -116,8 +121,7 @@ public struct MapTemplate has store {
 // - template_count: 已注册的模板总数
 public struct MapRegistry has key, store {
     id: UID,
-    templates: Table<u16, MapTemplate>,
-    template_count: u64
+    templates: vector<address>  // MapTemplate 对象的地址列表（纯索引）
 }
 
 // ===== Entry Functions 入口函数 =====
@@ -126,38 +130,29 @@ public struct MapRegistry has key, store {
 public(package) fun create_registry_internal(ctx: &mut TxContext): MapRegistry {
     MapRegistry {
         id: object::new(ctx),
-        templates: table::new(ctx),
-        template_count: 0
+        templates: vector[]
     }
 }
 
 // ===== Public Functions 公共函数 =====
 
-// 发布地图模板（只能写入，不可修改）
+// 发布地图模板（共享对象并添加到索引）
 public fun publish_template(
     registry: &mut MapRegistry,
     template: MapTemplate,
     _ctx: &mut TxContext
 ) {
-    let template_id = template.id;
+    // 获取模板地址并添加到索引
+    let template_addr = object::id_to_address(&object::uid_to_inner(&template.id));
+    registry.templates.push_back(template_addr);
 
-    // 检查模板是否已存在
-    assert!(!table::contains(&registry.templates, template_id), ETemplateAlreadyExists);
-
-    // 添加模板到注册表
-    table::add(&mut registry.templates, template_id, template);
-    registry.template_count = registry.template_count + 1;
+    // 共享对象
+    transfer::share_object(template);
 }
 
-// 获取地图模板（只读）
-public fun get_template(registry: &MapRegistry, template_id: u16): &MapTemplate {
-    assert!(table::contains(&registry.templates, template_id), ETemplateNotFound);
-    table::borrow(&registry.templates, template_id)
-}
-
-// 检查模板是否存在
-public fun has_template(registry: &MapRegistry, template_id: u16): bool {
-    table::contains(&registry.templates, template_id)
+// 获取所有模板地址（索引）
+public fun get_template_addresses(registry: &MapRegistry): &vector<address> {
+    &registry.templates
 }
 
 // ===== Template Creation Functions 模板创建函数 =====
@@ -241,11 +236,12 @@ public fun new_tile_static_with_nav(
 
 // 创建地图模板
 public fun new_map_template(
-    id: u16,
-    _ctx: &mut TxContext
+    schema_version: u8,
+    ctx: &mut TxContext
 ): MapTemplate {
     MapTemplate {
-        id,
+        id: object::new(ctx),
+        schema_version,
         tiles_static: vector[],  // 初始化为空 vector
         buildings_static: vector[],  // 初始化为空 vector
         hospital_ids: vector[]
@@ -380,9 +376,19 @@ public fun get_building_count(template: &MapTemplate): u64 {
     template.buildings_static.length()
 }
 
-// 获取模板ID
-public fun get_template_id(template: &MapTemplate): u16 {
-    template.id
+// 获取 map 的对象 ID
+public fun get_map_id(template: &MapTemplate): ID {
+    object::uid_to_inner(&template.id)
+}
+
+// 获取 schema 版本
+public fun get_schema_version(template: &MapTemplate): u8 {
+    template.schema_version
+}
+
+// 验证 schema 版本
+public fun validate_schema_version(template: &MapTemplate) {
+    assert!(template.schema_version == CURRENT_SCHEMA_VERSION, EInvalidSchemaVersion);
 }
 
 // ===== TileStatic Accessors 地块访问器 =====

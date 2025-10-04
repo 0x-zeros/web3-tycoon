@@ -157,8 +157,17 @@ export abstract class UIBase extends Component {
             console.log(`[UIBase] show, adjust size to ${width}x${height}`);
         }
 
+        // 如果节点已经激活，手动调用onShow（缓存复用时）
+        const wasActive = this.node.active;
+
         // 激活节点（会触发onEnable生命周期）
         this.node.active = true;
+
+        // 如果节点之前就是激活状态，onEnable不会触发，需要手动调用onShow
+        if (wasActive && this._inited) {
+            this._isShowing = true;
+            this.onShow(this._data);
+        }
     }
 
     /**

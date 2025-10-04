@@ -764,6 +764,7 @@ export class UIManager {
             UIManager.instance.registerModeSelectUI(UIManager.PRELOAD_PACKAGES[1]);
             UIManager.instance.registerMapSelectUI(UIManager.PRELOAD_PACKAGES[2]);
             UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[3]);
+            UIManager.instance.registerMessageBoxUI(); // 注册MessageBox
 
             // 4. 显示初始界面
             await UIManager.instance.showModeSelect();
@@ -822,6 +823,12 @@ export class UIManager {
             cache: true,
             isWindow: false
         }, UIMessage);
+
+        // 初始化UIMessage，传入UIManager获取器
+        UIMessage.initialize(() => {
+            // 返回UIManager类，避免循环依赖
+            return { instance: UIManager.instance };
+        });
     }
 
     /**

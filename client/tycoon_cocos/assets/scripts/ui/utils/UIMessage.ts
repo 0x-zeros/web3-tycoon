@@ -4,9 +4,6 @@ import * as fgui from "fairygui-cc";
 
 const { ccclass } = _decorator;
 
-// 声明require（Cocos Creator运行时支持）
-declare function require(moduleName: string): any;
-
 // ==================== 类型定义 ====================
 
 /**
@@ -117,6 +114,14 @@ class MessageBoxQueue {
     private _queue: QueueItem[] = [];
     private _currentBox: UIMessage | null = null;
     private _isProcessing: boolean = false;
+    private _uiManagerGetter: (() => any) | null = null;
+
+    /**
+     * 设置UIManager获取器（避免循环依赖）
+     */
+    public setUIManagerGetter(getter: () => any): void {
+        this._uiManagerGetter = getter;
+    }
 
     /**
      * 入队
@@ -165,8 +170,18 @@ class MessageBoxQueue {
      */
     private async _showMessageBox(options: MessageBoxOptions): Promise<MessageBoxResult> {
         return new Promise<MessageBoxResult>((resolve) => {
-            // 延迟导入UIManager避免循环依赖
-            const { UIManager } = require("../core/UIManager");
+            if (!this._uiManagerGetter) {
+                console.error("[MessageBoxQueue] UIManager getter not set");
+                resolve(MessageBoxResult.CLOSE);
+                return;
+            }
+
+            const UIManager = this._uiManagerGetter();
+            if (!UIManager || !UIManager.instance) {
+                console.error("[MessageBoxQueue] UIManager not available");
+                resolve(MessageBoxResult.CLOSE);
+                return;
+            }
 
             UIManager.instance.showUI("MessageBox", options).then((ui: any) => {
                 if (!ui) {
@@ -179,7 +194,7 @@ class MessageBoxQueue {
 
                 // 设置关闭回调
                 const originalOnClose = options.onClose;
-                ui.setCloseCallback((result) => {
+                ui.setCloseCallback((result: MessageBoxResult) => {
                     if (originalOnClose) {
                         originalOnClose(result);
                     }
@@ -525,12 +540,28 @@ export class UIMessage extends UIBase {
         // 隐藏UI
         this.hide();
 
-        // 通知UIManager隐藏
-        const { UIManager } = require("../core/UIManager");
-        UIManager.instance.hideUI("MessageBox");
+        // 通知UIManager隐藏（延迟执行避免循环依赖）
+        setTimeout(() => {
+            const uiManagerGetter = UIMessage._queue['_uiManagerGetter'];
+            if (uiManagerGetter) {
+                const UIManager = uiManagerGetter();
+                if (UIManager && UIManager.instance) {
+                    UIManager.instance.hideUI("MessageBox");
+                }
+            }
+        }, 0);
     }
 
     // ==================== 静态方法 ====================
+
+    /**
+     * 初始化UIMessage（由UIManager调用）
+     * @param uiManagerGetter UIManager获取器函数
+     */
+    public static initialize(uiManagerGetter: () => any): void {
+        UIMessage._queue.setUIManagerGetter(uiManagerGetter);
+        console.log("[UIMessage] Initialized with UIManager getter");
+    }
 
     /**
      * 设置默认皮肤

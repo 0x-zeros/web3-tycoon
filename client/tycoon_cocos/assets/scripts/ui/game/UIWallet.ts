@@ -79,6 +79,8 @@ export class UIWallet extends UIBase {
         UINotification.success("操作完成", "成功");
         UINotification.warning("余额不足", "警告", 5000);
         UINotification.error("网络错误", "错误");
+        UINotification.info("1", "错误");
+        UINotification.info("2", "错误");
       
 
         //this.testSuiClient();

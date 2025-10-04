@@ -51,8 +51,8 @@ export interface NotificationOptions {
 interface NotificationItem {
     /** FairyGUI对象 */
     gObject: fgui.GObject;
-    /** 自动消失定时器 */
-    timer: number | null;
+    /** 自动消失取消器（schedule/timeout通用） */
+    cancel?: (() => void) | null;
     /** 配置选项 */
     options: NotificationOptions;
 }
@@ -75,7 +75,7 @@ export class UINotification extends UIBase {
     private static readonly MAX_NOTIFICATIONS = 5;
 
     // 默认显示时长（毫秒）
-    private static readonly DEFAULT_DURATION = 3000;
+    private static readonly DEFAULT_DURATION = 2000;
 
     // 静态单例实例（用于全局访问）
     private static _instance: UINotification | null = null;
@@ -91,12 +91,22 @@ export class UINotification extends UIBase {
     };
 
     // 通知类型颜色映射
+    // 使用半透明的淡色（AA为透明度）
     private static readonly TYPE_COLOR_MAP: Record<NotifyType, number> = {
-        [NotifyType.INFO]: 0xFF4A90E2,      // 蓝色
-        [NotifyType.SUCCESS]: 0xFF7ED321,   // 绿色
-        [NotifyType.WARNING]: 0xFFF5A623,   // 黄色
-        [NotifyType.ERROR]: 0xFFD0021B,     // 红色
-        [NotifyType.DEFAULT]: 0xFF6699CC    // 默认紫蓝色
+        [NotifyType.INFO]: 0x334A90E2,      // 淡蓝色 (~20% 透明)
+        [NotifyType.SUCCESS]: 0x337ED321,   // 淡绿色
+        [NotifyType.WARNING]: 0x33F5A623,   // 淡黄色
+        [NotifyType.ERROR]: 0x33D0021B,     // 淡红色
+        [NotifyType.DEFAULT]: 0x336699CC    // 淡紫蓝色
+    };
+
+    // 模板无图标节点时的文本前缀（轻量可读，不依赖图片字体）
+    private static readonly TYPE_PREFIX_MAP: Record<NotifyType, string> = {
+        [NotifyType.INFO]: "[i]",
+        [NotifyType.SUCCESS]: "[OK]",
+        [NotifyType.WARNING]: "[!]",
+        [NotifyType.ERROR]: "[x]",
+        [NotifyType.DEFAULT]: ""
     };
 
     // ==================== 生命周期 ====================
@@ -110,9 +120,21 @@ export class UINotification extends UIBase {
             return;
         }
 
+        // 面板不拦截点击，允许透传到底层UI
+        if (this.panel) {
+            this.panel.touchable = false;
+            this.panel.opaque = false;
+        }
+
         // 设置列表属性
         this._messagesList.scrollPane.touchEffect = false; // 禁用触摸效果，让通知不可交互
-        this._messagesList.setVirtual(); // 不使用虚拟列表
+        // 使用实体列表，便于直接 addItemFromPool 管理条目
+        // this._messagesList.setVirtual();
+
+        // 确保通知层在较高的排序层级，避免被其他全屏UI遮挡
+        if (this.panel) {
+            this.panel.sortingOrder = 1000;
+        }
 
         console.log("[UINotification] Initialized");
 
@@ -147,6 +169,12 @@ export class UINotification extends UIBase {
             return;
         }
 
+        // 确保通知层始终位于最顶层
+        if (this.panel && this.panel.parent) {
+            const parent = this.panel.parent;
+            parent.setChildIndex(this.panel, parent.numChildren - 1);
+        }
+
         // 检查数量限制，移除最旧的通知
         if (this._notifications.length >= UINotification.MAX_NOTIFICATIONS) {
             this._removeOldestNotification();
@@ -169,12 +197,12 @@ export class UINotification extends UIBase {
         this._playEnterAnimation(toast);
 
         // 启动自动消失定时器
-        const timer = this._startAutoHideTimer(toast, options);
+        const cancel = this._startAutoHideTimer(toast, options);
 
         // 记录通知项
         this._notifications.push({
             gObject: toast,
-            timer: timer,
+            cancel: cancel,
             options: options
         });
 
@@ -235,7 +263,7 @@ export class UINotification extends UIBase {
             }
         }
 
-        // 设置标题
+        // 设置标题（如果有标题节点）
         if (titleText) {
             if (options.title) {
                 titleText.text = options.title;
@@ -245,9 +273,19 @@ export class UINotification extends UIBase {
             }
         }
 
-        // 设置消息
+        // 设置消息；如果模版删除了 title 节点且仍传入了 title，则将 title 合并到消息中显示
         if (messageRichText) {
-            messageRichText.text = options.message;
+            const merged = !titleText && options.title
+                ? `【${options.title}】 ${options.message}`
+                : options.message;
+
+            // 如无图标节点，按类型添加一个轻量前缀
+            const needPrefix = !iconLoader && options.icon !== NotifyIcon.NONE;
+            const prefix = needPrefix && options.type
+                ? UINotification.TYPE_PREFIX_MAP[options.type] || ""
+                : "";
+
+            messageRichText.text = prefix ? `${prefix} ${merged}` : merged;
         }
     }
 
@@ -294,12 +332,20 @@ export class UINotification extends UIBase {
     /**
      * 启动自动消失定时器
      */
-    private _startAutoHideTimer(toast: fgui.GObject, options: NotificationOptions): number {
-        const duration = options.duration || UINotification.DEFAULT_DURATION;
+    private _startAutoHideTimer(toast: fgui.GObject, options: NotificationOptions): () => void {
+        const durationMs = options.duration ?? UINotification.DEFAULT_DURATION;
+        const seconds = Math.max(0, durationMs) / 1000; // 使用引擎时钟，单位秒
 
-        return window.setTimeout(() => {
+        // 使用 Cocos 的调度器，避免浏览器 setTimeout 在某些平台/失焦时不精准
+        const cb = () => {
             this.removeNotification(toast);
-        }, duration);
+        };
+        this.scheduleOnce(cb, seconds);
+
+        // 返回取消方法
+        return () => {
+            this.unschedule(cb);
+        };
     }
 
     /**
@@ -315,9 +361,9 @@ export class UINotification extends UIBase {
         const item = this._notifications[index];
 
         // 清除定时器
-        if (item.timer !== null) {
-            clearTimeout(item.timer);
-            item.timer = null;
+        if (item.cancel) {
+            try { item.cancel(); } catch { /* ignore */ }
+            item.cancel = null;
         }
 
         // 播放退出动画
@@ -352,8 +398,9 @@ export class UINotification extends UIBase {
         const items = [...this._notifications];
 
         items.forEach(item => {
-            if (item.timer !== null) {
-                clearTimeout(item.timer);
+            if (item.cancel) {
+                try { item.cancel(); } catch { /* ignore */ }
+                item.cancel = null;
             }
         });
 

@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="512,128">
+<component size="769,128">
   <displayList>
-    <graph id="n0_bk5i" name="bg" xy="0,0" size="512,256" type="rect" fillColor="#ff6699cc">
+    <graph id="n0_bk5i" name="bg" xy="0,0" size="769,128" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <loader id="n1_bk5i" name="icon" xy="20,13" size="64,64">
-      <relation target="" sidePair="center-center,middle-middle"/>
-    </loader>
-    <text id="n2_bk5i" name="title" xy="125,13" size="365,62" fontSize="28" color="#ffffff" vAlign="middle" leading="1" autoSize="none" autoClearText="true" text="NotifyToast">
-      <relation target="" sidePair="center-center,middle-middle"/>
-    </text>
-    <richtext id="n3_bk5i" name="message" xy="21,111" size="471,126" fontSize="28" color="#ffffff" leading="1" autoSize="none" autoClearText="true" text="">
+    <richtext id="n3_bk5i" name="message" xy="14,5" size="741,118" fontSize="28" color="#ffffff" vAlign="middle" leading="2" autoSize="none" autoClearText="true" text="现在UINotification应该可以正常显示彩色背景的Toast通知了！ https://backpack.exchange/leaderboard， 游戏内会弹出“物价指数上涨”提示">
       <relation target="" sidePair="center-center,middle-middle"/>
     </richtext>
   </displayList>

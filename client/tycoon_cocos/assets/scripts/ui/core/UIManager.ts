@@ -12,6 +12,7 @@ import { UIInGame } from "../game/UIInGame";
 import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
+import { UIMessage } from "../utils/UIMessage";
 
 /**
  * UI构造函数接口 - Component类构造函数
@@ -809,6 +810,18 @@ export class UIManager {
             cache: true,
             isWindow: false
         }, UIMapSelect);
+    }
+
+    /**
+     * 便捷注册方法 - 注册MessageBox UI
+     */
+    public registerMessageBoxUI(packageName: string = "Common", componentName: string = "MessageBox"): void {
+        this.registerUI<UIMessage>("MessageBox", {
+            packageName,
+            componentName,
+            cache: true,
+            isWindow: false
+        }, UIMessage);
     }
 
     /**

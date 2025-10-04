@@ -8,7 +8,7 @@ use sui::object::ID;
 
 // 地图模板发布事件
 public struct MapTemplatePublishedEvent has copy, drop {
-    template_id: u16,
+    template_id: ID,
     publisher: address,
     tile_count: u64
 }
@@ -30,7 +30,7 @@ public struct GameDataCreatedEvent has copy, drop {
 public struct GameCreatedEvent has copy, drop {
     game: ID,
     creator: address,
-    template_id: u16,
+    template_map_id: ID,
     max_players: u8
 }
 
@@ -223,13 +223,13 @@ public struct RollAndStepActionEvent has copy, drop {
 public(package) fun emit_game_created_event(
     game_id: ID,
     creator: address,
-    template_id: u16,
+    template_map_id: ID,
     max_players: u8
 ) {
     event::emit(GameCreatedEvent {
         game: game_id,
         creator,
-        template_id,
+        template_map_id,
         max_players
     });
 }
@@ -532,7 +532,7 @@ public fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
 
 /// 发射地图模板发布事件
 public fun emit_map_template_published_event(
-    template_id: u16,
+    template_id: ID,
     publisher: address,
     tile_count: u64
 ) {

@@ -39,7 +39,7 @@ export class GameInteraction {
             target: `${this.packageId}::game::create_game`,
             arguments: [
                 tx.object(this.gameDataId),              // game_data: &GameData
-                tx.pure.u16(config.template_id),         // template_id: u16
+                tx.object(config.template_map_id),       // template_map: &MapTemplate
                 tx.pure.u8(config.max_players),          // max_players: u8
                 tx.pure.u64(config.starting_cash || 0),  // starting_cash: u64 (0使用默认值)
                 tx.pure.u8(config.price_rise_days || 0), // price_rise_days: u8
@@ -131,7 +131,7 @@ export class GameInteraction {
      */
     async startGame(
         gameId: string,
-        seatId: string,
+        mapTemplateId: string,
         keypair: Ed25519Keypair
     ): Promise<{
         success: boolean;
@@ -145,9 +145,10 @@ export class GameInteraction {
             target: `${this.packageId}::game::start`,
             arguments: [
                 tx.object(gameId),          // game: &mut Game
-                tx.object(seatId),          // seat: &Seat
                 tx.object(this.gameDataId), // game_data: &GameData
-                tx.object('0x8')            // random: &Random
+                tx.object(mapTemplateId),   // map: &MapTemplate
+                tx.object('0x8'),           // random: &Random
+                tx.object('0x6')            // clock: &Clock
             ]
         });
 
@@ -312,22 +313,19 @@ export class GameInteraction {
         return {
             id: fields.id?.id || '',
             status: fields.status || 0,
-            template_id: fields.template_id || 0,
-            max_players: fields.max_players || 0,
-            creator: fields.creator || '',
-            created_at_ms: BigInt(fields.created_at_ms || 0),
-            starting_cash: BigInt(fields.starting_cash || 0),
-            price_rise_days: fields.price_rise_days || 0,
-            max_rounds: fields.max_rounds || 0,
+            template_map_id: fields.template_map_id || '',
+            players: fields.players || [],
             round: fields.round || 0,
             turn: fields.turn || 0,
             active_idx: fields.active_idx || 0,
+            has_rolled: fields.has_rolled || false,
             tiles: fields.tiles || [],
             buildings: fields.buildings || [],
-            players: new Map(),
-            join_order: fields.join_order || [],
+            npc_on: new Map(),
             owner_index: new Map(),
             npc_spawn_pool: fields.npc_spawn_pool || [],
+            max_rounds: fields.max_rounds || 0,
+            price_rise_days: fields.price_rise_days || 0,
             pending_decision: fields.pending_decision || 0,
             decision_tile: fields.decision_tile || 0,
             decision_amount: BigInt(fields.decision_amount || 0),

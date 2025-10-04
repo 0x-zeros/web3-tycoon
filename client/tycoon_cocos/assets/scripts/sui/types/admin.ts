@@ -20,9 +20,11 @@ export interface AdminCap {
  */
 export interface MapTemplatePublishedEvent {
     /** 模板ID */
-    template_id: number;
+    template_id: string;
     /** 发布者 */
     publisher: string;
+    /** 地块数量 */
+    tile_count: number;
 }
 
 /**

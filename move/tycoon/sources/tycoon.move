@@ -128,13 +128,13 @@ entry fun publish_custom_map_template(
 ) {
     let template = map::new_map_template(schema_version, ctx);
     let tile_count = map::get_tile_count(&template);
+    let template_id = map::get_map_id(&template);
 
     map::publish_template(&mut game_data.map_registry, template, ctx);
 
-    // 发射事件 (注意：events.move 中的函数还使用 u16，这里暂时传 0)
-    // TODO: 更新 events.move 使用 ID 类型
+    // 发射事件
     events::emit_map_template_published_event(
-        0,  // 临时占位，待 events.move 更新
+        template_id,
         ctx.sender(),
         tile_count
     );
@@ -228,10 +228,9 @@ entry fun create_map_from_bcs(
     // 发布模板
     map::publish_template(&mut game_data.map_registry, template, ctx);
 
-    // 发射事件 (注意：events.move 中的函数还使用 u16，这里暂时传 0)
-    // TODO: 更新 events.move 使用 ID 类型
+    // 发射事件
     events::emit_map_template_published_event(
-        0,  // 临时占位，待 events.move 更新
+        map_id,
         ctx.sender(),
         tile_count
     );

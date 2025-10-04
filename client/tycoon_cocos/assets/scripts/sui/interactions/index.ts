@@ -24,21 +24,23 @@ export class PropertyInteraction {
 
     /**
      * 购买地产
-     * 对应Move: public entry fun buy_property
+     * 对应Move: 通过decision system处理
      */
     async buyProperty(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         keypair: Ed25519Keypair
     ): Promise<{ success: boolean; txHash: string }> {
         const tx = new Transaction();
 
         tx.moveCall({
-            target: `${this.packageId}::game::buy_property`,
+            target: `${this.packageId}::game::decide_property_purchase`,
             arguments: [
                 tx.object(gameId),
                 tx.object(seatId),
-                tx.object(this.gameDataId)
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId)
             ]
         });
 
@@ -52,21 +54,23 @@ export class PropertyInteraction {
 
     /**
      * 升级地产
-     * 对应Move: public entry fun upgrade_property
+     * 对应Move: 通过decision system处理
      */
     async upgradeProperty(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         keypair: Ed25519Keypair
     ): Promise<{ success: boolean; txHash: string }> {
         const tx = new Transaction();
 
         tx.moveCall({
-            target: `${this.packageId}::game::upgrade_property`,
+            target: `${this.packageId}::game::decide_property_upgrade`,
             arguments: [
                 tx.object(gameId),
                 tx.object(seatId),
-                tx.object(this.gameDataId)
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId)
             ]
         });
 
@@ -98,6 +102,7 @@ export class CardInteraction {
     async useCard(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         cardKind: number,
         params: number[],
         keypair: Ed25519Keypair
@@ -112,6 +117,7 @@ export class CardInteraction {
                 tx.pure.u8(cardKind),
                 tx.pure.vector('u16', params),
                 tx.object(this.gameDataId),
+                tx.object(mapTemplateId),
                 tx.object('0x8') // Random
             ]
         });

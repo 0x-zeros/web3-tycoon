@@ -27,6 +27,7 @@ export class TurnInteraction {
     async rollAndStep(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         path: number[] = [],
         keypair: Ed25519Keypair
     ): Promise<{
@@ -45,6 +46,7 @@ export class TurnInteraction {
                 tx.object(seatId),          // seat: &Seat
                 tx.pure.vector('u16', path), // path: vector<u16>
                 tx.object(this.gameDataId), // game_data: &GameData
+                tx.object(mapTemplateId),   // map: &MapTemplate
                 tx.object('0x8'),           // random: &Random
                 tx.object('0x6')            // clock: &Clock
             ]
@@ -90,8 +92,8 @@ export class TurnInteraction {
             target: `${this.packageId}::game::end_turn`,
             arguments: [
                 tx.object(gameId),          // game: &mut Game
-                tx.object(seatId),          // seat: &Seat
                 tx.object(this.gameDataId), // game_data: &GameData
+                tx.object(seatId),          // seat: &Seat
                 tx.object('0x8')            // random: &Random
             ]
         });
@@ -157,6 +159,7 @@ export class TurnInteraction {
     async decideRentPayment(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         useRentFree: boolean,
         keypair: Ed25519Keypair
     ): Promise<{
@@ -173,7 +176,8 @@ export class TurnInteraction {
                 tx.object(gameId),          // game: &mut Game
                 tx.object(seatId),          // seat: &Seat
                 tx.pure.bool(useRentFree),  // use_rent_free: bool
-                tx.object(this.gameDataId)  // game_data: &GameData
+                tx.object(this.gameDataId), // game_data: &GameData
+                tx.object(mapTemplateId)    // map: &MapTemplate
             ]
         });
 

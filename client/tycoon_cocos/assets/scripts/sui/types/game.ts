@@ -124,7 +124,7 @@ export interface Game {
     /** 游戏状态（0=准备，1=进行中，2=已结束） */
     status: number;
     /** 地图模板ID */
-    template_id: number;
+    template_map_id: string;
 
     /** 玩家列表 */
     players: Player[];
@@ -208,7 +208,7 @@ export interface PlayerStats {
  */
 export interface GameCreateConfig {
     /** 地图模板ID */
-    template_id: number;
+    template_map_id: string;
     /** 最大玩家数 */
     max_players: number;
     /** 起始现金（0使用默认值） */

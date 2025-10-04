@@ -17,7 +17,7 @@ export interface GameCreatedEvent {
     /** 创建者地址 */
     creator: string;
     /** 地图模板ID */
-    template_id: number;
+    template_map_id: string;
     /** 最大玩家数 */
     max_players: number;
 }

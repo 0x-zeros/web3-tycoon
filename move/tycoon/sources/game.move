@@ -379,11 +379,11 @@ public entry fun create_game(
 
     // 发出游戏创建事件
     let max_players = map::get_tile_count(map);  // 使用地块数量作为最大玩家数
-    // NOTE: events.move 中的函数仍使用 u16 template_id，这里传 0 作为临时占位
+    let template_map_id = map::get_map_id(map);
     events::emit_game_created_event(
         game_id_copy,
         creator,
-        0,  // 临时占位，待 events.move 更新为使用 ID
+        template_map_id,
         (max_players as u8)
     );
 

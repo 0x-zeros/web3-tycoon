@@ -13,10 +13,10 @@
     <loader id="n4_bk5i" name="icon" xy="604,258" size="128,128">
       <relation target="" sidePair="center-center,middle-middle"/>
     </loader>
-    <text id="n6_bk5i" name="title" xy="795,299" size="445,56" fontSize="30" color="#ffffff" autoSize="none" text="标题">
+    <text id="n6_bk5i" name="title" xy="795,299" size="445,56" fontSize="30" color="#ffffff" autoSize="none" autoClearText="true" text="标题">
       <relation target="" sidePair="center-center,middle-middle"/>
     </text>
-    <richtext id="n7_bk5i" name="message" xy="644,444" size="635,217" fontSize="30" color="#ffffff" autoSize="none" text="这是一个message box， 支持阻挡（Modal）与不阻挡（Modeless）**两种形态">
+    <richtext id="n7_bk5i" name="message" xy="644,444" size="635,217" fontSize="30" color="#ffffff" autoSize="none" autoClearText="true" text="这是一个message box， 支持阻挡（Modal）与不阻挡（Modeless）**两种形态">
       <relation target="" sidePair="center-center,middle-middle"/>
     </richtext>
     <component id="n8_bk5i" name="btn_secondary" src="mumqlc" fileName="components/Button1.xml" xy="644,722" size="218,62">

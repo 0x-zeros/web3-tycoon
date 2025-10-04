@@ -11,8 +11,8 @@
     <image id="ja0uolh" name="checkbox.png" path="/images/"/>
     <component id="ja0uoli" name="Button3.xml" path="/components/" exported="true"/>
     <component id="bk5iolj" name="MessageBox.xml" path="/" exported="true"/>
-    <component id="bk5iolk" name="NotifyCenter.xml" path="/"/>
-    <component id="bk5ioll" name="NotifyToast.xml" path="/"/>
+    <component id="bk5iolk" name="NotifyCenter.xml" path="/" exported="true"/>
+    <component id="bk5ioll" name="NotifyToast.xml" path="/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

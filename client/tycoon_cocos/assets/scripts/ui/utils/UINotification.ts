@@ -39,82 +39,176 @@ export interface NotificationOptions {
     message: string;
     /** 图标类型或自定义URL */
     icon?: NotifyIcon | string;
-    /** 显示时长（毫秒，默认3000） */
+    /** 显示时长（毫秒，默认2000） */
     duration?: number;
     /** 通知类型（决定背景色） */
     type?: NotifyType;
 }
 
+// ==================== Toast封装类 ====================
+
 /**
- * 通知项（内部使用）
+ * 单个Toast通知的封装类
+ * 管理单个通知的完整生命周期：创建、显示、动画、自动消失、销毁
  */
-interface NotificationItem {
-    /** FairyGUI对象 */
-    gObject: fgui.GObject;
-    /** 自动消失取消器（schedule/timeout通用） */
-    cancel?: (() => void) | null;
-    /** 配置选项 */
-    options: NotificationOptions;
+class NotificationToast {
+    private _gObject: fgui.GComponent;
+    private _timerId: number | null = null;
+    private _onDestroy?: () => void;
+
+    // 通知类型颜色映射（0xAARRGGBB格式）
+    private static readonly COLOR_MAP: Record<NotifyType, number> = {
+        [NotifyType.INFO]: 0xCC4A90E2,      // 蓝色 (80%透明度)
+        [NotifyType.SUCCESS]: 0xCC7ED321,   // 绿色
+        [NotifyType.WARNING]: 0xCCF5A623,   // 黄色
+        [NotifyType.ERROR]: 0xCCD0021B,     // 红色
+        [NotifyType.DEFAULT]: 0xCC6699CC    // 紫蓝色
+    };
+
+    /**
+     * 构造函数
+     * @param options 通知配置
+     * @param onDestroy 销毁回调
+     */
+    constructor(options: NotificationOptions, onDestroy?: () => void) {
+        this._onDestroy = onDestroy;
+
+        // 创建GObject（不使用对象池，每次创建新对象）
+        this._gObject = fgui.UIPackage.createObject("Common", "NotifyToast").asCom;
+
+        // 设置内容
+        this._setupContent(options);
+
+        // 启动自动消失定时器
+        const duration = options.duration ?? 2000;
+        this._startAutoHide(duration);
+    }
+
+    /**
+     * 设置Toast内容
+     */
+    private _setupContent(options: NotificationOptions): void {
+        const bg = this._gObject.getChild("bg") as fgui.GGraph;
+        const msg = this._gObject.getChild("message") as fgui.GRichTextField;
+
+        // 设置背景颜色
+        if (bg && options.type) {
+            const colorHex = NotificationToast.COLOR_MAP[options.type] || NotificationToast.COLOR_MAP[NotifyType.DEFAULT];
+            const color = this._hexToColor(colorHex);
+            bg.drawRect(0, new Color(0, 0, 0, 0), color);
+        }
+
+        // 设置消息文本（如果有title，合并显示）
+        if (msg) {
+            const text = options.title
+                ? `【${options.title}】 ${options.message}`
+                : options.message;
+            msg.text = text;
+        }
+    }
+
+    /**
+     * 16进制颜色转Color对象
+     */
+    private _hexToColor(hex: number): Color {
+        const a = ((hex >> 24) & 0xFF);
+        const r = ((hex >> 16) & 0xFF);
+        const g = ((hex >> 8) & 0xFF);
+        const b = (hex & 0xFF);
+        return new Color(r, g, b, a);
+    }
+
+    /**
+     * 播放进入动画（淡入）
+     */
+    public playEnterAnimation(): void {
+        this._gObject.alpha = 0;
+        fgui.GTween.to(0, 1, 0.3)
+            .setTarget(this._gObject, this._gObject)
+            .setEase(fgui.EaseType.QuadOut);
+    }
+
+    /**
+     * 启动自动消失定时器
+     */
+    private _startAutoHide(duration: number): void {
+        this._timerId = window.setTimeout(() => {
+            this._timerId = null;
+            this.destroy();
+        }, duration);
+    }
+
+    /**
+     * 销毁Toast
+     */
+    public destroy(): void {
+        // 清除定时器
+        if (this._timerId !== null) {
+            clearTimeout(this._timerId);
+            this._timerId = null;
+        }
+
+        // 播放退出动画后销毁
+        fgui.GTween.to(this._gObject.alpha, 0, 0.3)
+            .setTarget(this._gObject)
+            .setEase(fgui.EaseType.QuadIn)
+            .onComplete(() => {
+                // 完全销毁（不回收到对象池）
+                this._gObject.dispose();
+
+                // 通知父容器
+                if (this._onDestroy) {
+                    this._onDestroy();
+                }
+            });
+    }
+
+    /**
+     * 获取GObject
+     */
+    public get gObject(): fgui.GComponent {
+        return this._gObject;
+    }
 }
 
-// ==================== UINotification类 ====================
+// ==================== UINotification主类 ====================
 
 /**
  * 通知组件
- * 管理Toast通知的显示、动画和自动消失
+ * 管理Toast通知的容器和布局
  */
 @ccclass('UINotification')
 export class UINotification extends UIBase {
-    // GList容器引用
-    private _messagesList: fgui.GList | null = null;
+    // Toast实例数组
+    private _toasts: NotificationToast[] = [];
 
-    // 通知项数组
-    private _notifications: NotificationItem[] = [];
+    // 容器组件（使用NotifyCenter的messages容器）
+    private _container: fgui.GComponent | null = null;
 
     // 最大同时显示数量
     private static readonly MAX_NOTIFICATIONS = 5;
 
-    // 默认显示时长（毫秒）
-    private static readonly DEFAULT_DURATION = 2000;
+    // 通知间距（像素）
+    private static readonly SPACING = 10;
 
-    // 静态单例实例（用于全局访问）
+    // 静态单例实例
     private static _instance: UINotification | null = null;
-
-    // 通知类型颜色映射
-    // 使用半透明的淡色（AA为透明度）
-    private static readonly TYPE_COLOR_MAP: Record<NotifyType, number> = {
-        [NotifyType.INFO]: 0x334A90E2,      // 淡蓝色 (~20% 透明)
-        [NotifyType.SUCCESS]: 0x337ED321,   // 淡绿色
-        [NotifyType.WARNING]: 0x33F5A623,   // 淡黄色
-        [NotifyType.ERROR]: 0x33D0021B,     // 淡红色
-        [NotifyType.DEFAULT]: 0x336699CC    // 淡紫蓝色
-    };
 
     // ==================== 生命周期 ====================
 
     protected onInit(): void {
-        // 获取GList容器
-        this._messagesList = this.getList("messages");
+        // 获取容器（NotifyCenter组件的messages节点）
+        this._container = this.panel?.getChild("messages")?.asCom || this.panel;
 
-        if (!this._messagesList) {
-            console.error("[UINotification] Messages list not found");
+        if (!this._container) {
+            console.error("[UINotification] Container not found");
             return;
         }
 
-        // 面板不拦截点击，允许透传到底层UI
+        // 设置容器属性：不拦截点击，允许透传
         if (this.panel) {
             this.panel.touchable = false;
             this.panel.opaque = false;
-        }
-
-        // 设置列表属性
-        this._messagesList.scrollPane.touchEffect = false; // 禁用触摸效果，让通知不可交互
-        // 使用实体列表，便于直接 addItemFromPool 管理条目
-        // this._messagesList.setVirtual();
-
-        // 确保通知层在较高的排序层级，避免被其他全屏UI遮挡
-        if (this.panel) {
-            this.panel.sortingOrder = 1000;
         }
 
         console.log("[UINotification] Initialized");
@@ -123,17 +217,15 @@ export class UINotification extends UIBase {
         UINotification._instance = this;
     }
 
-    protected onShow(data?: any): void {
-        console.log("[UINotification] Showing notification center");
+    protected onShow(_data?: any): void {
+        // 通知中心始终显示，不需要特殊处理
     }
 
     protected onHide(): void {
-        // 清除所有通知
         this.clearAll();
     }
 
     protected onDestroy(): void {
-        // 清除所有通知和定时器
         this.clearAll();
         UINotification._instance = null;
         super.onDestroy();
@@ -145,221 +237,74 @@ export class UINotification extends UIBase {
      * 添加新通知
      */
     public addNotification(options: NotificationOptions): void {
-        if (!this._messagesList) {
-            console.error("[UINotification] Messages list not available");
+        if (!this._container) {
+            console.error("[UINotification] Container not available");
             return;
         }
 
-        // 确保通知层始终位于最顶层
-        if (this.panel && this.panel.parent) {
-            const parent = this.panel.parent;
-            parent.setChildIndex(this.panel, parent.numChildren - 1);
+        // 检查数量限制，移除最旧的
+        if (this._toasts.length >= UINotification.MAX_NOTIFICATIONS) {
+            const oldest = this._toasts.shift();
+            if (oldest) {
+                oldest.destroy();
+            }
         }
 
-        // 检查数量限制，移除最旧的通知
-        if (this._notifications.length >= UINotification.MAX_NOTIFICATIONS) {
-            this._removeOldestNotification();
-        }
+        // 创建Toast实例（封装了所有生命周期管理）
+        const toast = new NotificationToast(options, () => {
+            // Toast自己销毁时，从数组移除
+            const index = this._toasts.indexOf(toast);
+            if (index !== -1) {
+                this._toasts.splice(index, 1);
+                // 重新布局剩余的通知
+                this._relayout();
+            }
+        });
 
-        // 创建NotifyToast对象并添加到列表
-        const toast = this._messagesList.addItemFromPool() as fgui.GComponent;
-        if (!toast) {
-            console.error("[UINotification] Failed to create toast");
-            return;
-        }
+        // 添加到容器
+        this._container.addChild(toast.gObject);
 
-        // 设置通知内容
-        this._setupToast(toast, options);
+        // 记录到数组
+        this._toasts.push(toast);
 
-        // 移动到列表顶部（最新的通知在上方）
-        this._messagesList.setChildIndex(toast, 0);
+        // 重新布局所有通知
+        this._relayout();
 
         // 播放进入动画
-        this._playEnterAnimation(toast);
-
-        // 启动自动消失定时器
-        const cancel = this._startAutoHideTimer(toast, options);
-
-        // 记录通知项
-        this._notifications.push({
-            gObject: toast,
-            cancel: cancel,
-            options: options
-        });
+        toast.playEnterAnimation();
 
         console.log(`[UINotification] Added notification: ${options.message}`);
     }
 
     /**
-     * 将16进制颜色值转换为Color对象
-     * @param hex 16进制颜色值（0xAARRGGBB格式）
+     * 重新布局所有通知（垂直堆叠）
      */
-    private _hexToColor(hex: number): Color {
-        const a = ((hex >> 24) & 0xFF) / 255;
-        const r = ((hex >> 16) & 0xFF) / 255;
-        const g = ((hex >> 8) & 0xFF) / 255;
-        const b = (hex & 0xFF) / 255;
-        return new Color(r * 255, g * 255, b * 255, a * 255);
-    }
-
-    /**
-     * 设置Toast内容
-     * 注意：NotifyToast模板只包含bg和message两个节点
-     */
-    private _setupToast(toast: fgui.GComponent, options: NotificationOptions): void {
-        // 获取子元素
-        const bgGraph = toast.getChild("bg") as fgui.GGraph;
-        const messageRichText = toast.getChild("message") as fgui.GRichTextField;
-
-        // 设置背景颜色
-        if (bgGraph && options.type) {
-            const colorHex = UINotification.TYPE_COLOR_MAP[options.type] || UINotification.TYPE_COLOR_MAP[NotifyType.DEFAULT];
-            const color = this._hexToColor(colorHex);
-            // 参数：lineSize=0(无边框), lineColor=透明色, fillColor=color
-            bgGraph.drawRect(0, new Color(0, 0, 0, 0), color);
-        }
-
-        // 设置消息（如果有title，合并到消息中显示）
-        if (messageRichText) {
-            const text = options.title
-                ? `【${options.title}】 ${options.message}`
-                : options.message;
-            messageRichText.text = text;
-        }
-    }
-
-    /**
-     * 播放进入动画（从右侧滑入 + 淡入）
-     */
-    private _playEnterAnimation(toast: fgui.GObject): void {
-        // 设置初始状态
-        const targetX = toast.x;
-        toast.x = targetX + 100;
-        toast.alpha = 0;
-
-        // 动画到目标位置（x 与 alpha 同步）
-        fgui.GTween
-            .to2(toast.x, toast.alpha, targetX, 1, 0.3)
-            .setEase(fgui.EaseType.QuadOut)
-            .setTarget(toast)
-            .onUpdate((tweener: fgui.GTweener) => {
-                toast.x = tweener.value.x;
-                toast.alpha = tweener.value.y;
-            });
-    }
-
-    /**
-     * 播放退出动画（向上滑动 + 淡出）
-     */
-    private _playExitAnimation(toast: fgui.GObject, onComplete: () => void): void {
-        const startY = toast.y;
-        const targetY = startY - 50;
-
-        fgui.GTween
-            .to2(startY, toast.alpha, targetY, 0, 0.3)
-            .setEase(fgui.EaseType.QuadIn)
-            .setTarget(toast)
-            .onUpdate((tweener: fgui.GTweener) => {
-                toast.y = tweener.value.x;
-                toast.alpha = tweener.value.y;
-            })
-            .onComplete(() => {
-                onComplete();
-            });
-    }
-
-    /**
-     * 启动自动消失定时器
-     */
-    private _startAutoHideTimer(toast: fgui.GObject, options: NotificationOptions): () => void {
-        const durationMs = options.duration ?? UINotification.DEFAULT_DURATION;
-        const seconds = Math.max(0, durationMs) / 1000; // 使用引擎时钟，单位秒
-
-        // 使用 Cocos 的调度器，避免浏览器 setTimeout 在某些平台/失焦时不精准
-        const cb = () => {
-            this.removeNotification(toast);
-        };
-        this.scheduleOnce(cb, seconds);
-
-        // 返回取消方法
-        return () => {
-            this.unschedule(cb);
-        };
-    }
-
-    /**
-     * 移除通知
-     */
-    public removeNotification(toast: fgui.GObject): void {
-        // 查找通知项
-        const index = this._notifications.findIndex(item => item.gObject === toast);
-        if (index === -1) {
-            return;
-        }
-
-        const item = this._notifications[index];
-
-        // 清除定时器
-        if (item.cancel) {
-            try { item.cancel(); } catch { /* ignore */ }
-            item.cancel = null;
-        }
-
-        // 播放退出动画
-        this._playExitAnimation(toast, () => {
-            // 从列表移除
-            if (this._messagesList) {
-                this._messagesList.removeChild(toast, true); // true表示回收到对象池
-            }
-
-            // 从数组移除
-            this._notifications.splice(index, 1);
-
-            console.log(`[UINotification] Removed notification`);
+    private _relayout(): void {
+        let y = 0;
+        this._toasts.forEach(toast => {
+            toast.gObject.x = 0;
+            toast.gObject.y = y;
+            y += toast.gObject.height + UINotification.SPACING;
         });
-    }
-
-    /**
-     * 移除最旧的通知
-     */
-    private _removeOldestNotification(): void {
-        if (this._notifications.length > 0) {
-            const oldest = this._notifications[0];
-            this.removeNotification(oldest.gObject);
-        }
     }
 
     /**
      * 清除所有通知
      */
     public clearAll(): void {
-        // 复制数组避免迭代时修改
-        const items = [...this._notifications];
-
-        items.forEach(item => {
-            if (item.cancel) {
-                try { item.cancel(); } catch { /* ignore */ }
-                item.cancel = null;
-            }
-        });
-
-        this._notifications = [];
-
-        if (this._messagesList) {
-            this._messagesList.removeChildrenToPool();
-        }
-
-        console.log("[UINotification] Cleared all notifications");
+        // 销毁所有Toast
+        this._toasts.forEach(toast => toast.destroy());
+        this._toasts = [];
     }
 
     // ==================== 静态便捷方法 ====================
 
     /**
-     * 获取通知中心实例
+     * 获取实例
      */
     private static _getInstance(): UINotification | null {
         if (!UINotification._instance) {
-            console.error("[UINotification] Instance not initialized. Make sure to register and show NotificationCenter first.");
+            console.error("[UINotification] Not initialized. Register Notification UI first.");
         }
         return UINotification._instance;
     }
@@ -373,7 +318,6 @@ export class UINotification extends UIBase {
             instance.addNotification({
                 title,
                 message,
-                icon: NotifyIcon.INFO,
                 type: NotifyType.INFO,
                 duration
             });
@@ -389,7 +333,6 @@ export class UINotification extends UIBase {
             instance.addNotification({
                 title,
                 message,
-                icon: NotifyIcon.SUCCESS,
                 type: NotifyType.SUCCESS,
                 duration
             });
@@ -405,7 +348,6 @@ export class UINotification extends UIBase {
             instance.addNotification({
                 title,
                 message,
-                icon: NotifyIcon.WARNING,
                 type: NotifyType.WARNING,
                 duration
             });
@@ -421,7 +363,6 @@ export class UINotification extends UIBase {
             instance.addNotification({
                 title,
                 message,
-                icon: NotifyIcon.ERROR,
                 type: NotifyType.ERROR,
                 duration
             });

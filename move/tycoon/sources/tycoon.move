@@ -135,7 +135,6 @@ entry fun publish_map_from_bcs(
     tiles_bcs: vector<u8>,
     buildings_bcs: vector<u8>,
     hospital_ids_bcs: vector<u8>,
-    _admin: &AdminCap,
     ctx: &mut TxContext
 ) {
     // 验证 schema 版本

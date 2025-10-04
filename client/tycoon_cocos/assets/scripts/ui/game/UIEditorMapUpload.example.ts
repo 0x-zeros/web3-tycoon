@@ -15,7 +15,6 @@ import type { GameMap } from '../../map/core/GameMap';
 // private _suiClient: SuiClient;  // Sui 客户端
 // private _packageId: string;  // 合约包ID
 // private _gameDataId: string;  // GameData 对象ID
-// private _adminCapId: string;  // AdminCap 对象ID
 // private _keypair: Ed25519Keypair;  // 签名密钥
 
 // ===== btn_toMoveMap 按钮点击处理 =====
@@ -42,7 +41,7 @@ async function onBtnToMoveMapClick(this: any) {
             return;
         }
 
-        if (!this._suiClient || !this._packageId || !this._gameDataId || !this._adminCapId || !this._keypair) {
+        if (!this._suiClient || !this._packageId || !this._gameDataId || !this._keypair) {
             console.error('[UIEditor] Sui configuration incomplete');
             this.showErrorToast('请先配置 Sui 连接');
             return;
@@ -131,7 +130,6 @@ async function onBtnToMoveMapClick(this: any) {
 
         const result = await mapAdmin.uploadMapTemplate(
             mapTemplate,
-            this._adminCapId,
             this._keypair
         );
 
@@ -261,7 +259,6 @@ function showErrorToast(this: any, message: string): void {
  *    private _suiClient: SuiClient;
  *    private _packageId: string;
  *    private _gameDataId: string;
- *    private _adminCapId: string;
  *    private _keypair: Ed25519Keypair;
  *
  * 3. 在 onLoad() 中初始化 Sui 配置

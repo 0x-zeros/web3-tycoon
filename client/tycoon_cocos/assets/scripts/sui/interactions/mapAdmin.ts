@@ -28,13 +28,11 @@ export class MapAdminInteraction {
      * 对应Move: entry fun publish_map_from_bcs
      *
      * @param mapTemplate 编辑器生成的地图数据
-     * @param adminCapId 管理员权限对象ID
      * @param keypair 签名密钥
      * @returns 交易哈希和模板ID
      */
     async uploadMapTemplate(
         mapTemplate: MapTemplate,
-        adminCapId: string,
         keypair: Ed25519Keypair
     ): Promise<{
         txHash: string;
@@ -61,11 +59,10 @@ export class MapAdminInteraction {
             target: `${this.packageId}::tycoon::publish_map_from_bcs`,
             arguments: [
                 tx.object(this.gameDataId),                 // game_data: &mut GameData
-                tx.pure.u16(mapTemplate.id),                // template_id: u16
+                tx.pure.u8(mapTemplate.schema_version),     // schema_version: u8
                 tx.pure.vector('u8', encoded.tilesBytes),   // tiles_bcs: vector<u8>
                 tx.pure.vector('u8', encoded.buildingsBytes), // buildings_bcs: vector<u8>
-                tx.pure.vector('u8', encoded.hospitalIdsBytes), // hospital_ids_bcs: vector<u8>
-                tx.object(adminCapId)                       // _admin: &AdminCap
+                tx.pure.vector('u8', encoded.hospitalIdsBytes) // hospital_ids_bcs: vector<u8>
             ]
         });
 

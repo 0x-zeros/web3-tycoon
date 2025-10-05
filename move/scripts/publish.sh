@@ -37,14 +37,25 @@ for i in jq $SUI; do
 done
 
 # 检查是否提供了环境参数（如testnet、mainnet）
-if [ -z "$1" ]; then
+if [ "$#" -lt 1 ]; then
     echo "Error: No environment provided."
+    echo "Usage: $0 <environment>"
+    echo "Environment can be: testnet, mainnet, local, localnet"
     exit 1
 fi
 # 保存环境参数并移除已处理的参数
 ENV="$1"; shift
 # 切换到指定的Sui网络环境
 $SUI client switch --env "$ENV"
+
+# If on testnet or local/localnet, request gas from faucet
+if [[ "$ENV" == "testnet" || "$ENV" == "localnet" || "$ENV" == "local" ]]; then
+  echo "Requesting gas from faucet for $ENV..."
+  $SUI client faucet
+  sleep 2 #wait for faucet to be ready， 2s
+  $SUI client addresses
+  $SUI client balance
+fi
 
 # 发布Move合约并获取JSON格式的结果
 # ../tycoon指定要发布的Move包目录，--json以JSON格式输出，"$@"传递所有剩余参数
@@ -94,7 +105,7 @@ echo "Game Objects Analysis:"
 echo "------------------------------------------------"
 
 # 提取 AdminCap
-ADMIN_CAP=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("admin::AdminCap")) | .objectId' | head -1)
+ADMIN_CAP=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("tycoon::AdminCap")) | .objectId' | head -1)
 if [ -n "${ADMIN_CAP:-}" ]; then
     echo "AdminCap Object ID: $ADMIN_CAP"
 else

@@ -25,8 +25,9 @@ const { ccclass } = _decorator;
 @ccclass('UIWallet')
 export class UIWallet extends UIBase {
 
-    private m_data:fgui.GTextField;      // 数据列表
-    private m_btn_wallet:fgui.GButton;    // 物体列表
+    private m_btn_wallet:fgui.GButton;   
+    private m_btn_connect:fgui.GButton;
+    private m_btn_disconnect:fgui.GButton;
 
     /**
      * 初始化回调
@@ -40,9 +41,9 @@ export class UIWallet extends UIBase {
      */
     private _setupComponents(): void {
 
-        // 获取数据
-        this.m_data = this.getText("data");
         this.m_btn_wallet = this.getButton("btn_wallet");
+        this.m_btn_connect = this.getButton("btn_connect");
+        this.m_btn_disconnect = this.getButton("btn_disconnect");
     }
     
     /**
@@ -52,6 +53,14 @@ export class UIWallet extends UIBase {
         // 绑定按钮点击事件
         if (this.m_btn_wallet) {
             this.m_btn_wallet.onClick(this._onWalletClick, this);
+        }
+        
+        if (this.m_btn_connect) {
+            this.m_btn_connect.onClick(this._onConnectClick, this);
+        }
+
+        if (this.m_btn_disconnect) {
+            this.m_btn_disconnect.onClick(this._onDisconnectClick, this);
         }
     }
 
@@ -65,8 +74,30 @@ export class UIWallet extends UIBase {
             this.m_btn_wallet.offClick(this._onWalletClick, this);
         }
 
+        if (this.m_btn_connect) {
+            this.m_btn_connect.offClick(this._onConnectClick, this);
+        }
+
+        if (this.m_btn_disconnect) {
+            this.m_btn_disconnect.offClick(this._onDisconnectClick, this);
+        }
+
         // 调用父类解绑
         super.unbindEvents();
+    }
+
+    private _onConnectClick(): void {
+        console.log("[UIWallet] Connect clicked");
+
+        const suiWallets = this.getSuiWallets();
+        // console.log("suiWallets: ", suiWallets);
+
+        //todo 使用suiWallets， Fairygui的Commmon的WalletList， 显示sui钱包列表
+
+    }
+
+    private _onDisconnectClick(): void {
+        console.log("[UIWallet] Disconnect clicked");
     }
 
     /**
@@ -82,7 +113,6 @@ export class UIWallet extends UIBase {
       
 
         // this.testSuiClient();
-        this.initWallets();
     }
 
     private async testSuiClient(): Promise<void> {
@@ -101,10 +131,10 @@ export class UIWallet extends UIBase {
         console.log("wallet data: ", data);
         console.log("wallet error: ", error);
 
-        this.m_data.text = JSON.stringify(data);
+        // this.m_data.text = JSON.stringify(data);
     }
 
-    private async initWallets(): Promise<void> {
+    private getSuiWallets(): Wallet[] {
         const wallets = getWallets().get();
         console.log("wallets length: ", wallets.length);
         console.log("getWallets: ", wallets);
@@ -114,14 +144,16 @@ export class UIWallet extends UIBase {
         // }
 
         //选出所有的sui钱包
-        const suiWallets = this._getSuiWallets(wallets);
+        const suiWallets = this._filterSuiWallets(wallets);
         console.log("suiWallets length: ", suiWallets.length);
         console.log("suiWallets: ", suiWallets);
 
-        for (const wallet of suiWallets) {
-            console.log(`wallet index: ${suiWallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
-            console.log(wallet);
-        }
+        // for (const wallet of suiWallets) {
+        //     console.log(`wallet index: ${suiWallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
+        //     console.log(wallet);
+        // }
+
+        return suiWallets;
 
         //todo 显示sui钱包列表
 
@@ -132,7 +164,7 @@ export class UIWallet extends UIBase {
         // }
     }
 
-    private _getSuiWallets(wallets: readonly Wallet[]): readonly Wallet[] {
+    private _filterSuiWallets(wallets: readonly Wallet[]): Wallet[] {
         // return wallets.filter((wallet) => wallet.name === "Suiet");
 
         return wallets.filter((wallet) => {

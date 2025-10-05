@@ -24,7 +24,7 @@
       <Button checked="true"/>
     </component>
     <text id="n8_ja0u" name="n8" xy="1184,900" size="463,61" fontSize="30" color="#ffffff" autoSize="none" text="优先从浏览器localStorage加载"/>
-    <component id="n9_nev8" name="n9" src="lambos" fileName="Wallet.xml" pkg="82r0pzop" xy="1578,3">
+    <component id="n9_nev8" name="wallet" src="lambos" fileName="Wallet.xml" pkg="82r0pzop" xy="1578,3">
       <relation target="" sidePair="right-right,top-top"/>
     </component>
   </displayList>

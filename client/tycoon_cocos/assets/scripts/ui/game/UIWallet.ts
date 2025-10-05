@@ -75,15 +75,13 @@ export class UIWallet extends UIBase {
     private _onWalletClick(): void {
         console.log("[UIWallet] Wallet clicked");
 
-        UINotification.info("连接成功");
-        UINotification.success("操作完成", "成功");
-        UINotification.warning("余额不足", "警告", 5000);
-        UINotification.error("网络错误", "错误");
-        UINotification.info("1", "错误");
-        UINotification.info("2", "错误");
+        // UINotification.setAnchor("center");
+        // UINotification.info("连接成功");
+        // UINotification.warning("余额不足", "警告", 3000);
+        // UINotification.error("网络错误", "");
       
 
-        //this.testSuiClient();
+        this.testSuiClient();
         // this.initWallets();
     }
 

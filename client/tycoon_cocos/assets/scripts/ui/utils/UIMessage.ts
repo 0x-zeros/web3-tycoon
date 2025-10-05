@@ -594,7 +594,7 @@ export class UIMessage extends UIBase {
     /**
      * 信息提示
      */
-    public static info(message: string, title: string = "信息"): Promise<MessageBoxResult> {
+    public static info(message: string, title: string = ""): Promise<MessageBoxResult> {
         return UIMessage.show({
             title,
             message,
@@ -610,7 +610,7 @@ export class UIMessage extends UIBase {
     /**
      * 成功提示
      */
-    public static success(message: string, title: string = "成功"): Promise<MessageBoxResult> {
+    public static success(message: string, title: string = ""): Promise<MessageBoxResult> {
         return UIMessage.show({
             title,
             message,
@@ -626,7 +626,7 @@ export class UIMessage extends UIBase {
     /**
      * 警告提示
      */
-    public static warning(message: string, title: string = "警告"): Promise<MessageBoxResult> {
+    public static warning(message: string, title: string = ""): Promise<MessageBoxResult> {
         return UIMessage.show({
             title,
             message,
@@ -642,7 +642,7 @@ export class UIMessage extends UIBase {
     /**
      * 错误提示
      */
-    public static error(message: string, title: string = "错误"): Promise<MessageBoxResult> {
+    public static error(message: string, title: string = ""): Promise<MessageBoxResult> {
         return UIMessage.show({
             title,
             message,

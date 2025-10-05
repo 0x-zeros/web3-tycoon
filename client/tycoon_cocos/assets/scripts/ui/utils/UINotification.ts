@@ -54,6 +54,7 @@ export interface NotificationOptions {
 class NotificationToast {
     private _gObject: fgui.GComponent;
     private _onDestroy?: () => void;
+    private _isBottomToTop: boolean;
 
     // 通知类型颜色映射（0xAARRGGBB格式）- 约45%不透明度
     private static readonly COLOR_MAP: Record<NotifyType, number> = {
@@ -67,9 +68,11 @@ class NotificationToast {
     /**
      * 构造函数
      * @param options 通知配置
+     * @param isBottomToTop 是否从下往上堆叠（决定退出动画方向）
      * @param onDestroy 销毁回调
      */
-    constructor(options: NotificationOptions, onDestroy?: () => void) {
+    constructor(options: NotificationOptions, isBottomToTop: boolean, onDestroy?: () => void) {
+        this._isBottomToTop = isBottomToTop;
         this._onDestroy = onDestroy;
 
         // 创建GObject（不使用对象池，每次创建新对象）
@@ -163,16 +166,21 @@ class NotificationToast {
     }
 
     /**
-     * 销毁Toast
+     * 销毁Toast（快速滑动淡出）
      */
     public destroy(): void {
-        // 播放退出动画后销毁
-        fgui.GTween
-            .to(this._gObject.alpha, 0, 0.3)
-            .setEase(fgui.EaseType.QuadIn)
+        // 根据堆叠方向决定滑动方向
+        const targetY = this._isBottomToTop
+            ? this._gObject.y + 50   // 从下往上堆叠：向下滑出
+            : this._gObject.y - 50;  // 从上往下堆叠：向上滑出
+
+        // 同时滑动和淡出（0.25秒，快速）
+        fgui.GTween.to2(this._gObject.y, this._gObject.alpha, targetY, 0, 0.25)
             .setTarget(this._gObject)
+            .setEase(fgui.EaseType.QuadIn)
             .onUpdate((tweener: fgui.GTweener) => {
-                this._gObject.alpha = tweener.value.x;
+                this._gObject.y = tweener.value.x;
+                this._gObject.alpha = tweener.value.y;
             })
             .onComplete(() => {
                 // 完全销毁（不回收到对象池）
@@ -215,7 +223,7 @@ export class UINotification extends UIBase {
     private _container: fgui.GComponent | null = null;
 
     // 最大同时显示数量
-    private static readonly MAX_NOTIFICATIONS = 5;
+    private static readonly MAX_NOTIFICATIONS = 3;
 
     // 通知间距（像素）——按需改为无间隔
     private static readonly SPACING = 0;
@@ -294,14 +302,14 @@ export class UINotification extends UIBase {
             }
         }
 
-        // 创建Toast实例（封装了所有生命周期管理）
-        const toast = new NotificationToast(options, () => {
+        // 创建Toast实例（传入堆叠方向，决定退出动画方向）
+        const toast = new NotificationToast(options, this._isBottomToTop(), () => {
             // Toast自己销毁时，从数组移除
             const index = this._toasts.indexOf(toast);
             if (index !== -1) {
                 this._toasts.splice(index, 1);
-                // 重新布局剩余的通知
-                this._relayout();
+                // 重新布局剩余的通知（带动画）
+                this._relayout(true);
             }
         });
 
@@ -310,6 +318,28 @@ export class UINotification extends UIBase {
 
         // 记录到数组
         this._toasts.push(toast);
+
+        // 设置初始位置（在第一条消息的位置）
+        const anchor = this.panel?.getChild(this._currentAnchor);
+        if (anchor) {
+            if (this._isBottomToTop()) {
+                // 从下往上：初始位置在anchor底部（最新消息的最终位置）
+                toast.gObject.x = anchor.x;
+                toast.gObject.y = anchor.y - toast.gObject.height;
+            } else {
+                // 从上往下：初始位置在anchor顶部
+                toast.gObject.x = anchor.x;
+                toast.gObject.y = anchor.y;
+            }
+        }
+
+        // 播放淡入动画
+        toast.playEnterAnimation();
+
+        // 延迟触发布局动画（让所有toast滑动到新位置，产生挤入效果）
+        setTimeout(() => {
+            this._relayout(true);  // animated = true
+        }, 50);
 
         // 调度自动消失
         const durationMs = options.duration ?? 2000;
@@ -321,20 +351,34 @@ export class UINotification extends UIBase {
         this.scheduleOnce(cb, seconds);
         this._autoHideCancels.set(toast, () => this.unschedule(cb));
 
-        // 重新布局所有通知
-        this._relayout();
-
-        // 播放进入动画
-        toast.playEnterAnimation();
-
         console.log(`[UINotification] Added notification: ${options.message}`);
     }
 
     /**
-     * 重新布局所有通知（垂直堆叠）
-     * 基于当前anchor的位置计算toast坐标
+     * 判断当前anchor是否需要从下往上堆叠
      */
-    private _relayout(): void {
+    private _isBottomToTop(): boolean {
+        return this._currentAnchor.includes("bottom") || this._currentAnchor === "center";
+    }
+
+    /**
+     * Tween移动到目标位置
+     */
+    private _tweenToPosition(obj: fgui.GObject, targetX: number, targetY: number, duration: number): void {
+        fgui.GTween.to2(obj.x, obj.y, targetX, targetY, duration)
+            .setTarget(obj)
+            .setEase(fgui.EaseType.QuadOut)
+            .onUpdate((tweener: fgui.GTweener) => {
+                obj.x = tweener.value.x;
+                obj.y = tweener.value.y;
+            });
+    }
+
+    /**
+     * 重新布局所有通知（垂直堆叠）
+     * @param animated 是否使用动画过渡
+     */
+    private _relayout(animated: boolean = false): void {
         // 获取当前anchor的位置作为起点
         const anchor = this.panel?.getChild(this._currentAnchor);
         if (!anchor) {
@@ -342,13 +386,43 @@ export class UINotification extends UIBase {
             return;
         }
 
-        let offsetY = 0;
-        this._toasts.forEach(toast => {
-            // Toast位置 = anchor位置 + 偏移
-            toast.gObject.x = anchor.x;
-            toast.gObject.y = anchor.y + offsetY;
-            offsetY += toast.gObject.height + UINotification.SPACING;
-        });
+        const isBottomToTop = this._isBottomToTop();
+
+        if (isBottomToTop) {
+            // 从下往上堆叠：最新的在底部（anchor位置），旧的向上
+            let offsetY = 0;
+            // 从最新到最旧遍历（倒序）
+            for (let i = this._toasts.length - 1; i >= 0; i--) {
+                const toast = this._toasts[i];
+                const targetX = anchor.x;
+                const targetY = anchor.y - offsetY - toast.gObject.height;
+
+                if (animated) {
+                    this._tweenToPosition(toast.gObject, targetX, targetY, 0.2);
+                } else {
+                    toast.gObject.x = targetX;
+                    toast.gObject.y = targetY;
+                }
+
+                offsetY += toast.gObject.height + UINotification.SPACING;
+            }
+        } else {
+            // 从上往下堆叠：最新的在顶部（anchor位置），旧的向下
+            let offsetY = 0;
+            this._toasts.forEach(toast => {
+                const targetX = anchor.x;
+                const targetY = anchor.y + offsetY;
+
+                if (animated) {
+                    this._tweenToPosition(toast.gObject, targetX, targetY, 0.2);
+                } else {
+                    toast.gObject.x = targetX;
+                    toast.gObject.y = targetY;
+                }
+
+                offsetY += toast.gObject.height + UINotification.SPACING;
+            });
+        }
     }
 
     /**

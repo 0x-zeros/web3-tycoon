@@ -53,16 +53,15 @@ export interface NotificationOptions {
  */
 class NotificationToast {
     private _gObject: fgui.GComponent;
-    private _timerId: number | null = null;
     private _onDestroy?: () => void;
 
-    // 通知类型颜色映射（0xAARRGGBB格式）
+    // 通知类型颜色映射（0xAARRGGBB格式）- 约45%不透明度
     private static readonly COLOR_MAP: Record<NotifyType, number> = {
-        [NotifyType.INFO]: 0xCC4A90E2,      // 蓝色 (80%透明度)
-        [NotifyType.SUCCESS]: 0xCC7ED321,   // 绿色
-        [NotifyType.WARNING]: 0xCCF5A623,   // 黄色
-        [NotifyType.ERROR]: 0xCCD0021B,     // 红色
-        [NotifyType.DEFAULT]: 0xCC6699CC    // 紫蓝色
+        [NotifyType.INFO]: 0x734A90E2,      // 蓝色 (~45% 不透明)
+        [NotifyType.SUCCESS]: 0x737ED321,   // 绿色
+        [NotifyType.WARNING]: 0x73F5A623,   // 黄色
+        [NotifyType.ERROR]: 0x73D0021B,     // 红色
+        [NotifyType.DEFAULT]: 0x736699CC    // 紫蓝色
     };
 
     /**
@@ -79,9 +78,7 @@ class NotificationToast {
         // 设置内容
         this._setupContent(options);
 
-        // 启动自动消失定时器
-        const duration = options.duration ?? 2000;
-        this._startAutoHide(duration);
+        // 定时由 UINotification 统一调度（scheduleOnce），此处不再启动计时
     }
 
     /**
@@ -89,7 +86,7 @@ class NotificationToast {
      */
     private _setupContent(options: NotificationOptions): void {
         const bg = (this._gObject.getChild("bg") as fgui.GGraph) || this._findFirstGraph(this._gObject);
-        const msg = (this._gObject.getChild("message") as fgui.GRichTextField) || this._findFirstRichText(this._gObject);
+        const msg = this._findFirstText(this._gObject);
 
         // 设置背景颜色
         if (bg && options.type) {
@@ -103,16 +100,17 @@ class NotificationToast {
             const text = options.title
                 ? `【${options.title}】 ${options.message}`
                 : options.message;
-            msg.text = text;
+            (msg as any).text = text;
         }
     }
 
-    /** 递归查找第一个 GRichTextField */
-    private _findFirstRichText(root: fgui.GComponent): fgui.GRichTextField | null {
+    /** 递归查找第一个文本控件（Rich 或普通） */
+    private _findFirstText(root: fgui.GComponent): fgui.GTextField | fgui.GRichTextField | null {
         const stack: fgui.GObject[] = [root];
         while (stack.length) {
             const cur = stack.pop()!;
             if (cur instanceof fgui.GRichTextField) return cur;
+            if (cur instanceof fgui.GTextField) return cur;
             const com = (cur as fgui.GComponent).asCom;
             if (com) {
                 for (let i = 0; i < com.numChildren; i++) {
@@ -165,25 +163,9 @@ class NotificationToast {
     }
 
     /**
-     * 启动自动消失定时器
-     */
-    private _startAutoHide(duration: number): void {
-        this._timerId = window.setTimeout(() => {
-            this._timerId = null;
-            this.destroy();
-        }, duration);
-    }
-
-    /**
      * 销毁Toast
      */
     public destroy(): void {
-        // 清除定时器
-        if (this._timerId !== null) {
-            clearTimeout(this._timerId);
-            this._timerId = null;
-        }
-
         // 播放退出动画后销毁
         fgui.GTween
             .to(this._gObject.alpha, 0, 0.3)
@@ -201,6 +183,11 @@ class NotificationToast {
                     this._onDestroy();
                 }
             });
+    }
+
+    /** 主动关闭 */
+    public close(): void {
+        this.destroy();
     }
 
     /**
@@ -221,6 +208,8 @@ class NotificationToast {
 export class UINotification extends UIBase {
     // Toast实例数组
     private _toasts: NotificationToast[] = [];
+    // 自动消失取消器
+    private _autoHideCancels: Map<NotificationToast, () => void> = new Map();
 
     // 容器组件（使用NotifyCenter的messages容器）
     private _container: fgui.GComponent | null = null;
@@ -228,8 +217,8 @@ export class UINotification extends UIBase {
     // 最大同时显示数量
     private static readonly MAX_NOTIFICATIONS = 5;
 
-    // 通知间距（像素）
-    private static readonly SPACING = 10;
+    // 通知间距（像素）——按需改为无间隔
+    private static readonly SPACING = 0;
 
     // 静态单例实例
     private static _instance: UINotification | null = null;
@@ -300,6 +289,7 @@ export class UINotification extends UIBase {
         if (this._toasts.length >= UINotification.MAX_NOTIFICATIONS) {
             const oldest = this._toasts.shift();
             if (oldest) {
+                this._cancelAutoHide(oldest);
                 oldest.destroy();
             }
         }
@@ -320,6 +310,16 @@ export class UINotification extends UIBase {
 
         // 记录到数组
         this._toasts.push(toast);
+
+        // 调度自动消失
+        const durationMs = options.duration ?? 2000;
+        const seconds = Math.max(0, durationMs) / 1000;
+        const cb = () => {
+            this._autoHideCancels.delete(toast);
+            toast.destroy();
+        };
+        this.scheduleOnce(cb, seconds);
+        this._autoHideCancels.set(toast, () => this.unschedule(cb));
 
         // 重新布局所有通知
         this._relayout();
@@ -356,8 +356,20 @@ export class UINotification extends UIBase {
      */
     public clearAll(): void {
         // 销毁所有Toast
-        this._toasts.forEach(toast => toast.destroy());
+        this._toasts.forEach(toast => {
+            this._cancelAutoHide(toast);
+            toast.destroy();
+        });
         this._toasts = [];
+    }
+
+    /** 取消某个 toast 的自动隐藏调度 */
+    private _cancelAutoHide(toast: NotificationToast): void {
+        const cancel = this._autoHideCancels.get(toast);
+        if (cancel) {
+            try { cancel(); } catch {}
+            this._autoHideCancels.delete(toast);
+        }
     }
 
     // ==================== 静态便捷方法 ====================

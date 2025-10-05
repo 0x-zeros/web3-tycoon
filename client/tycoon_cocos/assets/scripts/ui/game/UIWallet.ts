@@ -20,6 +20,16 @@ import { UINotification } from "../utils/UINotification";
 const { ccclass } = _decorator;
 
 /**
+ * localStorage存储的钱包连接信息
+ */
+interface WalletConnection {
+    walletName: string;
+    accountAddress: string;
+}
+
+const STORAGE_KEY = 'sui_wallet_connection';
+
+/**
  * 钱包界面 - 玩家查看钱包
  * 参考 https://docs.sui.io/standards/wallet-standard
  */
@@ -30,6 +40,13 @@ export class UIWallet extends UIBase {
     private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
 
+    // Controller控制disconnected/connected状态
+    private m_controller: fgui.Controller | null = null;
+
+    // 当前连接的钱包和账户
+    private m_connectedWallet: Wallet | null = null;
+    private m_connectedAccount: WalletAccount | null = null;
+
     // WalletList组件引用
     private m_walletListComponent: fgui.GComponent | null = null;
 
@@ -38,16 +55,27 @@ export class UIWallet extends UIBase {
      */
     protected onInit(): void {
         this._setupComponents();
+        this._tryAutoConnect();
     }
 
     /**
      * 设置组件引用
      */
     private _setupComponents(): void {
-
         this.m_btn_wallet = this.getButton("btn_wallet");
         this.m_btn_connect = this.getButton("btn_connect");
         this.m_btn_disconnect = this.getButton("btn_disconnect");
+
+        // 获取controller
+        this.m_controller = this.getController("wallet");
+        if (!this.m_controller) {
+            console.error("[UIWallet] Controller 'wallet' not found");
+        }
+
+        // btn_disconnect初始隐藏
+        if (this.m_btn_disconnect) {
+            this.m_btn_disconnect.visible = false;
+        }
     }
     
     /**
@@ -102,8 +130,49 @@ export class UIWallet extends UIBase {
         this._showWalletList(suiWallets);
     }
 
-    private _onDisconnectClick(): void {
+    /**
+     * 断开连接点击事件
+     */
+    private async _onDisconnectClick(): Promise<void> {
         console.log("[UIWallet] Disconnect clicked");
+
+        if (!this.m_connectedWallet) {
+            console.warn("[UIWallet] No wallet connected");
+            return;
+        }
+
+        try {
+            // 尝试调用钱包的disconnect功能（如果支持）
+            const disconnectFeature = this.m_connectedWallet.features['standard:disconnect'] as any;
+            if (disconnectFeature && typeof disconnectFeature.disconnect === 'function') {
+                await disconnectFeature.disconnect();       //todo suiet里好像没有删掉（revoke）已经连接的账户的信息; 而且只会返回当前的一个
+                console.log(`[UIWallet] Disconnected from ${this.m_connectedWallet.name}`);
+            }
+
+            // 清除localStorage
+            this._clearConnection();
+
+            // 清空连接状态
+            this.m_connectedWallet = null;
+            this.m_connectedAccount = null;
+
+            // 切换controller状态为disconnected
+            if (this.m_controller) {
+                this.m_controller.selectedIndex = 0;
+            }
+
+            // 隐藏disconnect按钮
+            if (this.m_btn_disconnect) {
+                this.m_btn_disconnect.visible = false;
+            }
+
+            // 显示断开成功通知
+            UINotification.info("钱包已断开");
+
+        } catch (error) {
+            console.error("[UIWallet] Failed to disconnect:", error);
+            UINotification.error("断开钱包失败");
+        }
     }
 
     /**
@@ -112,13 +181,20 @@ export class UIWallet extends UIBase {
     private _onWalletClick(): void {
         console.log("[UIWallet] Wallet clicked");
 
-        // UINotification.setAnchor("center");
-        // UINotification.info("连接成功");
-        // UINotification.warning("余额不足", "警告", 3000);
-        // UINotification.error("网络错误", "");
-      
+        // 检查controller状态
+        if (!this.m_controller) {
+            console.error("[UIWallet] Controller not initialized");
+            return;
+        }
 
-        // this.testSuiClient();
+        // 如果是connected状态，toggle btn_disconnect的显示/隐藏
+        if (this.m_controller.selectedIndex === 1) {
+            if (this.m_btn_disconnect) {
+                this.m_btn_disconnect.visible = !this.m_btn_disconnect.visible;
+                console.log(`[UIWallet] Toggle disconnect button to ${this.m_btn_disconnect.visible ? 'visible' : 'hidden'}`);
+            }
+        }
+        // disconnected状态下不做任何事（或保持原有逻辑）
     }
 
     private async testSuiClient(): Promise<void> {
@@ -251,8 +327,42 @@ export class UIWallet extends UIBase {
 
         try {
             // 调用钱包连接
-            const accounts = await wallet.features['standard:connect'].connect();
-            console.log(`[UIWallet] Connected to ${wallet.name}, accounts:`, accounts);
+            const connectFeature = wallet.features['standard:connect'] as any;
+            if (!connectFeature || typeof connectFeature.connect !== 'function') {
+                console.error('[UIWallet] Wallet does not support standard:connect');
+                UINotification.error(`钱包不支持连接功能`);
+                return;
+            }
+
+            const accountsObj = await connectFeature.connect();
+            console.log(`[UIWallet] Connected to ${wallet.name}, accounts:`, accountsObj);
+
+            const accounts = accountsObj.accounts as WalletAccount[];
+            if (!accounts || accounts.length === 0) {
+                console.error('[UIWallet] No accounts returned');
+                UINotification.error(`未获取到账户信息`);
+                return;
+            }
+
+            // 取第一个账户
+            const account = accounts[0];
+
+            // 保存到localStorage
+            this._saveConnection(wallet.name, account.address);
+
+            // 保存连接状态
+            this.m_connectedWallet = wallet;
+            this.m_connectedAccount = account;
+
+            // 切换controller状态为connected
+            if (this.m_controller) {
+                this.m_controller.selectedIndex = 1;
+            }
+
+            // 设置btn_wallet的title为缩略地址
+            if (this.m_btn_wallet) {
+                this.m_btn_wallet.title = this._shortenAddress(account.address);
+            }
 
             // 关闭WalletList
             this._closeWalletList();
@@ -261,7 +371,10 @@ export class UIWallet extends UIBase {
             UINotification.success(`已连接到 ${wallet.name}`);
 
             // 监听钱包变化
-            wallet.features['standard:events'].on('change', this._onWalletChange.bind(this));
+            const eventsFeature = wallet.features['standard:events'] as any;
+            if (eventsFeature && typeof eventsFeature.on === 'function') {
+                eventsFeature.on('change', this._onWalletChange.bind(this));
+            }
 
         } catch (error) {
             console.error(`[UIWallet] Failed to connect to ${wallet.name}:`, error);
@@ -270,24 +383,87 @@ export class UIWallet extends UIBase {
     }
 
     private _filterSuiWallets(wallets: readonly Wallet[]): Wallet[] {
-        // return wallets.filter((wallet) => wallet.name === "Suiet");
-
         return wallets.filter((wallet) => {
             return typeof wallet.features['sui:signTransaction']?.['signTransaction'] === 'function';
         });
+    }
 
-        // wallet.features['sui:signTransaction'].signTransaction({
-        //     transaction: <Transaction>,
-        //     account: <WalletAccount>
-        //   })
+    /**
+     * 尝试自动连接钱包（从localStorage恢复）
+     */
+    private async _tryAutoConnect(): Promise<void> {
+        if (!this.m_controller) {
+            console.error('[UIWallet] Controller not initialized');
+            return;
+        }
 
+        // 从localStorage读取连接信息
+        const savedConnection = this._loadConnection();
+        if (!savedConnection) {
+            console.log('[UIWallet] No saved connection, set to disconnected state');
+            this.m_controller.selectedIndex = 0; // disconnected
+            return;
+        }
 
-        // const client: SuiClient
-        // client.executeTransactionBlock({
-        //     transactionBlock: bytes,
-        //     signature: signature,
-        //     options: {}
-        // })
+        try {
+            // 获取所有Sui钱包
+            const wallets = getWallets().get();
+            const suiWallets = this._filterSuiWallets(wallets);
+
+            // 找到保存的钱包
+            const targetWallet = suiWallets.find(w => w.name === savedConnection.walletName);
+            if (!targetWallet) {
+                console.log(`[UIWallet] Saved wallet '${savedConnection.walletName}' not found`);
+                this._clearConnection();
+                this.m_controller.selectedIndex = 0; // disconnected
+                return;
+            }
+
+            // 连接钱包
+            const connectFeature = targetWallet.features['standard:connect'] as any;
+            if (!connectFeature || typeof connectFeature.connect !== 'function') {
+                console.error('[UIWallet] Wallet does not support standard:connect');
+                this._clearConnection();
+                this.m_controller.selectedIndex = 0;
+                return;
+            }
+
+            const accountsObj = await connectFeature.connect();
+            console.log(`[UIWallet] Auto-connect to ${targetWallet.name}, accounts:`, accountsObj);
+            const accounts = accountsObj.accounts as WalletAccount[];
+
+            // 检查保存的账户是否存在
+            const targetAccount = accounts.find(acc => acc.address === savedConnection.accountAddress);
+            if (!targetAccount) {
+                console.log(`[UIWallet] Saved account '${savedConnection.accountAddress}' not found in accounts`);
+                this._clearConnection();
+                this.m_controller.selectedIndex = 0; // disconnected
+                return;
+            }
+
+            // 自动连接成功
+            this.m_connectedWallet = targetWallet;
+            this.m_connectedAccount = targetAccount;
+            this.m_controller.selectedIndex = 1; // connected
+
+            // 更新UI
+            if (this.m_btn_wallet) {
+                this.m_btn_wallet.title = this._shortenAddress(targetAccount.address);
+            }
+
+            // 监听钱包变化
+            const eventsFeature = targetWallet.features['standard:events'] as any;
+            if (eventsFeature && typeof eventsFeature.on === 'function') {
+                eventsFeature.on('change', this._onWalletChange.bind(this));
+            }
+
+            console.log(`[UIWallet] Auto-connected to ${targetWallet.name} with account ${targetAccount.address}`);
+
+        } catch (error) {
+            console.error('[UIWallet] Auto-connect failed:', error);
+            this._clearConnection();
+            this.m_controller.selectedIndex = 0; // disconnected
+        }
     }
 
 
@@ -366,6 +542,58 @@ export class UIWallet extends UIBase {
     //  }
     private _onWalletChange(event: { accounts: WalletAccount[], chains: IdentifierArray, features: IdentifierRecord<unknown> }): void {
         console.log('onWalletChange: ', event);
+    }
+
+    // ================== localStorage辅助方法 ==================
+
+    /**
+     * 保存钱包连接信息到localStorage
+     */
+    private _saveConnection(walletName: string, accountAddress: string): void {
+        const connection: WalletConnection = { walletName, accountAddress };
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(connection));
+            console.log('[UIWallet] Connection saved:', connection);
+        } catch (error) {
+            console.error('[UIWallet] Failed to save connection:', error);
+        }
+    }
+
+    /**
+     * 从localStorage读取钱包连接信息
+     */
+    private _loadConnection(): WalletConnection | null {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (!data) return null;
+
+            const connection = JSON.parse(data) as WalletConnection;
+            console.log('[UIWallet] Connection loaded:', connection);
+            return connection;
+        } catch (error) {
+            console.error('[UIWallet] Failed to load connection:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 清除localStorage中的钱包连接信息
+     */
+    private _clearConnection(): void {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            console.log('[UIWallet] Connection cleared');
+        } catch (error) {
+            console.error('[UIWallet] Failed to clear connection:', error);
+        }
+    }
+
+    /**
+     * 缩短地址显示（0x1234...5678格式）
+     */
+    private _shortenAddress(address: string): string {
+        if (!address || address.length < 10) return address;
+        return `${address.slice(0, 6)}...${address.slice(-4)}`;
     }
 
 }

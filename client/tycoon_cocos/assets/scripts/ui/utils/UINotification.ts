@@ -88,8 +88,8 @@ class NotificationToast {
      * 设置Toast内容
      */
     private _setupContent(options: NotificationOptions): void {
-        const bg = this._gObject.getChild("bg") as fgui.GGraph;
-        const msg = this._gObject.getChild("message") as fgui.GRichTextField;
+        const bg = (this._gObject.getChild("bg") as fgui.GGraph) || this._findFirstGraph(this._gObject);
+        const msg = (this._gObject.getChild("message") as fgui.GRichTextField) || this._findFirstRichText(this._gObject);
 
         // 设置背景颜色
         if (bg && options.type) {
@@ -105,6 +105,38 @@ class NotificationToast {
                 : options.message;
             msg.text = text;
         }
+    }
+
+    /** 递归查找第一个 GRichTextField */
+    private _findFirstRichText(root: fgui.GComponent): fgui.GRichTextField | null {
+        const stack: fgui.GObject[] = [root];
+        while (stack.length) {
+            const cur = stack.pop()!;
+            if (cur instanceof fgui.GRichTextField) return cur;
+            const com = (cur as fgui.GComponent).asCom;
+            if (com) {
+                for (let i = 0; i < com.numChildren; i++) {
+                    stack.push(com.getChildAt(i));
+                }
+            }
+        }
+        return null;
+    }
+
+    /** 递归查找第一个 GGraph */
+    private _findFirstGraph(root: fgui.GComponent): fgui.GGraph | null {
+        const stack: fgui.GObject[] = [root];
+        while (stack.length) {
+            const cur = stack.pop()!;
+            if (cur instanceof fgui.GGraph) return cur;
+            const com = (cur as fgui.GComponent).asCom;
+            if (com) {
+                for (let i = 0; i < com.numChildren; i++) {
+                    stack.push(com.getChildAt(i));
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -123,9 +155,13 @@ class NotificationToast {
      */
     public playEnterAnimation(): void {
         this._gObject.alpha = 0;
-        fgui.GTween.to(0, 1, 0.3)
-            .setTarget(this._gObject, this._gObject)
-            .setEase(fgui.EaseType.QuadOut);
+        fgui.GTween
+            .to(0, 1, 0.3)
+            .setEase(fgui.EaseType.QuadOut)
+            .setTarget(this._gObject)
+            .onUpdate((tweener: fgui.GTweener) => {
+                this._gObject.alpha = tweener.value.x;
+            });
     }
 
     /**
@@ -149,9 +185,13 @@ class NotificationToast {
         }
 
         // 播放退出动画后销毁
-        fgui.GTween.to(this._gObject.alpha, 0, 0.3)
-            .setTarget(this._gObject)
+        fgui.GTween
+            .to(this._gObject.alpha, 0, 0.3)
             .setEase(fgui.EaseType.QuadIn)
+            .setTarget(this._gObject)
+            .onUpdate((tweener: fgui.GTweener) => {
+                this._gObject.alpha = tweener.value.x;
+            })
             .onComplete(() => {
                 // 完全销毁（不回收到对象池）
                 this._gObject.dispose();
@@ -194,24 +234,38 @@ export class UINotification extends UIBase {
     // 静态单例实例
     private static _instance: UINotification | null = null;
 
+    // 默认使用的anchor名称
+    private static readonly DEFAULT_ANCHOR = "rightbottom";
+    private _currentAnchor = UINotification.DEFAULT_ANCHOR;
+
     // ==================== 生命周期 ====================
 
     protected onInit(): void {
-        // 获取容器（NotifyCenter组件的messages节点）
-        this._container = this.panel?.getChild("messages")?.asCom || this.panel;
+        // 所有anchor名称
+        const anchorNames = ["lefttop", "righttop", "center", "leftbottom", "rightbottom"];
+
+        // 设置所有anchor为不拦截点击
+        anchorNames.forEach(name => {
+            const anchor = this.panel?.getChild(name);
+            if (anchor) {
+                anchor.touchable = false;
+                anchor.opaque = false;
+            }
+        });
+
+        // 使用panel作为容器（anchor只是位置标记）
+        this._container = this.panel;
 
         if (!this._container) {
-            console.error("[UINotification] Container not found");
+            console.error("[UINotification] Panel not found");
             return;
         }
 
-        // 设置容器属性：不拦截点击，允许透传
-        if (this.panel) {
-            this.panel.touchable = false;
-            this.panel.opaque = false;
-        }
+        // 设置panel不拦截点击
+        this._container.touchable = false;
+        this._container.opaque = false;
 
-        console.log("[UINotification] Initialized");
+        console.log("[UINotification] Initialized with anchor:", this._currentAnchor);
 
         // 设置静态实例
         UINotification._instance = this;
@@ -278,13 +332,22 @@ export class UINotification extends UIBase {
 
     /**
      * 重新布局所有通知（垂直堆叠）
+     * 基于当前anchor的位置计算toast坐标
      */
     private _relayout(): void {
-        let y = 0;
+        // 获取当前anchor的位置作为起点
+        const anchor = this.panel?.getChild(this._currentAnchor);
+        if (!anchor) {
+            console.warn("[UINotification] Anchor not found:", this._currentAnchor);
+            return;
+        }
+
+        let offsetY = 0;
         this._toasts.forEach(toast => {
-            toast.gObject.x = 0;
-            toast.gObject.y = y;
-            y += toast.gObject.height + UINotification.SPACING;
+            // Toast位置 = anchor位置 + 偏移
+            toast.gObject.x = anchor.x;
+            toast.gObject.y = anchor.y + offsetY;
+            offsetY += toast.gObject.height + UINotification.SPACING;
         });
     }
 
@@ -386,6 +449,28 @@ export class UINotification extends UIBase {
         const instance = this._getInstance();
         if (instance) {
             instance.clearAll();
+        }
+    }
+
+    /**
+     * 设置通知显示位置
+     * @param anchorName anchor节点名称
+     */
+    public static setAnchor(anchorName: "lefttop" | "righttop" | "center" | "leftbottom" | "rightbottom"): void {
+        const instance = this._getInstance();
+        if (instance && instance.panel) {
+            const anchor = instance.panel.getChild(anchorName);
+            if (anchor) {
+                // 切换anchor
+                instance._currentAnchor = anchorName;
+
+                // 重新布局现有通知（移动到新位置）
+                instance._relayout();
+
+                console.log("[UINotification] Switched to anchor:", anchorName);
+            } else {
+                console.error("[UINotification] Anchor not found:", anchorName);
+            }
         }
     }
 }

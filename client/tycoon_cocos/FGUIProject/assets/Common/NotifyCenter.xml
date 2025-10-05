@@ -7,5 +7,20 @@
       <item/>
       <item/>
     </list>
+    <graph id="n1_nev8" name="lefttop" xy="12,8" size="512,512" type="rect" lineSize="0" fillColor="#00ffffff">
+      <relation target="" sidePair="left-left,top-top"/>
+    </graph>
+    <graph id="n5_nev8" name="righttop" xy="1400,10" size="512,512" type="rect" lineSize="0" fillColor="#00ffffff">
+      <relation target="" sidePair="right-right,top-top"/>
+    </graph>
+    <graph id="n4_nev8" name="center" xy="706,282" size="512,512" type="rect" lineSize="0" fillColor="#00ffffff">
+      <relation target="" sidePair="center-center,middle-middle"/>
+    </graph>
+    <graph id="n3_nev8" name="leftbottom" xy="8,558" size="512,512" type="rect" lineSize="0" fillColor="#00ffffff">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+    </graph>
+    <graph id="n2_nev8" name="rightbottom" xy="1402,563" size="512,512" type="rect" lineSize="0" fillColor="#00ffffff">
+      <relation target="" sidePair="right-right,bottom-bottom"/>
+    </graph>
   </displayList>
 </component>

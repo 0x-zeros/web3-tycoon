@@ -81,8 +81,8 @@ export class UIWallet extends UIBase {
         // UINotification.error("网络错误", "");
       
 
-        this.testSuiClient();
-        // this.initWallets();
+        // this.testSuiClient();
+        this.initWallets();
     }
 
     private async testSuiClient(): Promise<void> {

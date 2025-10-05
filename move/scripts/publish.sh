@@ -101,28 +101,12 @@ else
     echo "AdminCap Object ID: Not found"
 fi
 
-# 提取 MapRegistry
-MAP_REGISTRY=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("map::MapRegistry")) | .objectId' | head -1)
-if [ -n "${MAP_REGISTRY:-}" ]; then
-    echo "MapRegistry Object ID: $MAP_REGISTRY"
+# 提取 GameData（统一的游戏数据容器，包含所有注册表）
+GAME_DATA=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("tycoon::GameData")) | .objectId' | head -1)
+if [ -n "${GAME_DATA:-}" ]; then
+    echo "GameData Object ID: $GAME_DATA"
 else
-    echo "MapRegistry Object ID: Not found"
-fi
-
-# 提取 CardRegistry
-CARD_REGISTRY=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("cards::CardRegistry")) | .objectId' | head -1)
-if [ -n "${CARD_REGISTRY:-}" ]; then
-    echo "CardRegistry Object ID: $CARD_REGISTRY"
-else
-    echo "CardRegistry Object ID: Not found"
-fi
-
-# 提取 DropConfig
-DROP_CONFIG=$(printf '%s' "$PUBLISH" | jq -r '.objectChanges[] | select(.type == "created") | select(.objectType | contains("cards::DropConfig")) | .objectId' | head -1)
-if [ -n "${DROP_CONFIG:-}" ]; then
-    echo "DropConfig Object ID: $DROP_CONFIG"
-else
-    echo "DropConfig Object ID: Not found"
+    echo "GameData Object ID: Not found"
 fi
 
 echo "================================================================================================"
@@ -145,7 +129,7 @@ const env = {
     packageId: '$PACKAGE_ID',
     upgradeCap: '$UPGRADE_CAP',
     adminCap: '$ADMIN_CAP',
-    mapRegistry: '$MAP_REGISTRY',
+    gameData: '$GAME_DATA',
 };
 
 export default env;
@@ -164,7 +148,7 @@ export const SuiEnvConfig = {
     packageId: '$PACKAGE_ID',
     upgradeCap: '$UPGRADE_CAP',
     adminCap: '$ADMIN_CAP',
-    mapRegistry: '$MAP_REGISTRY',
+    gameData: '$GAME_DATA',
     network: '$CONFIG_ENV',
 };
 EOF
@@ -184,7 +168,7 @@ echo "------------------------------------------------"
 echo "Package ID: $PACKAGE_ID"
 echo "Upgrade Cap: $UPGRADE_CAP"
 echo "Admin Cap: $ADMIN_CAP"
-echo "Map Registry: $MAP_REGISTRY"
+echo "Game Data: $GAME_DATA"
 echo "================================================================================================"
 echo "Tycoon Game Contract Deployment finished!"
 echo "CLI config written to: $CLI_CONFIG"

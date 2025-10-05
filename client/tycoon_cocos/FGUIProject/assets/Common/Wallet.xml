@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="336,170">
+  <controller name="wallet" pages="0,unconnect,1,connected" selected="1"/>
+  <displayList>
+    <component id="n1_lamb" name="btn_connect" src="mumqlc" fileName="components/Button1.xml" xy="4,8" size="328,66">
+      <gearDisplay controller="wallet" pages="0"/>
+      <Button title="Connect Wallet"/>
+    </component>
+    <component id="n8_nev8" name="btn_wallet" src="mumqlc" fileName="components/Button1.xml" xy="4,8" size="328,66">
+      <gearDisplay controller="wallet" pages="1"/>
+      <Button title="Connected Wallet"/>
+    </component>
+    <component id="n7_nev8" name="btn_disconnect" src="nev8olo" fileName="components/Button11.xml" xy="4,81" size="330,84">
+      <gearDisplay controller="wallet" pages="1"/>
+      <Button title="Disconnect"/>
+    </component>
+  </displayList>
+</component>

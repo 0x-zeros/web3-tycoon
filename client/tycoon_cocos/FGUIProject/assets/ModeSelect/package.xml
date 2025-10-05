@@ -4,7 +4,6 @@
     <component id="b7yg0" name="Main.xml" path="/" exported="true"/>
     <image id="mumq5" name="bg.png" path="/images/"/>
     <image id="mumq7" name="logo.png" path="/images/"/>
-    <component id="lambos" name="Wallet.xml" path="/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

@@ -13,6 +13,10 @@
     <component id="bk5iolj" name="MessageBox.xml" path="/" exported="true"/>
     <component id="bk5iolk" name="NotifyCenter.xml" path="/" exported="true"/>
     <component id="bk5ioll" name="NotifyToast.xml" path="/" exported="true"/>
+    <component id="nev8olm" name="WalletItem.xml" path="/components/"/>
+    <component id="nev8oln" name="WalletList.xml" path="/" exported="true"/>
+    <component id="lambos" name="Wallet.xml" path="/" exported="true"/>
+    <component id="nev8olo" name="Button11.xml" path="/components/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

@@ -3,7 +3,7 @@ import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
-import { _decorator, SpriteFrame, Rect, Size } from 'cc';
+import { _decorator, SpriteFrame, Rect, Size, assetManager, Sprite, Texture2D, ImageAsset } from 'cc';
 import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
 
@@ -108,17 +108,79 @@ export class UIWallet extends UIBase {
         const wallets = getWallets().get();
         console.log("wallets length: ", wallets.length);
         console.log("getWallets: ", wallets);
-        for (const wallet of wallets) {
-            console.log(`wallet index: ${wallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
+        // for (const wallet of wallets) {
+        //     console.log(`wallet index: ${wallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
+        //     console.log(wallet);
+        // }
+
+        //选出所有的sui钱包
+        const suiWallets = this._getSuiWallets(wallets);
+        console.log("suiWallets length: ", suiWallets.length);
+        console.log("suiWallets: ", suiWallets);
+
+        for (const wallet of suiWallets) {
+            console.log(`wallet index: ${suiWallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
             console.log(wallet);
         }
 
-        //find wallet by name
-        const wallet = wallets.find((wallet) => wallet.name === "Suiet");//"Suiet"
-        if (wallet) {
-            this.logWallet(wallet);
-        }
+        //todo 显示sui钱包列表
+
+        // //find wallet by name
+        // const wallet = wallets.find((wallet) => wallet.name === "Suiet");//"Suiet"
+        // if (wallet) {
+        //     this.logWallet(wallet);
+        // }
     }
+
+    private _getSuiWallets(wallets: readonly Wallet[]): readonly Wallet[] {
+        // return wallets.filter((wallet) => wallet.name === "Suiet");
+
+        return wallets.filter((wallet) => {
+            return typeof wallet.features['sui:signTransaction']?.['signTransaction'] === 'function';
+        });
+
+        // wallet.features['sui:signTransaction'].signTransaction({
+        //     transaction: <Transaction>,
+        //     account: <WalletAccount>
+        //   })
+
+
+        // const client: SuiClient
+        // client.executeTransactionBlock({
+        //     transactionBlock: bytes,
+        //     signature: signature,
+        //     options: {}
+        // })
+    }
+
+
+
+    /**
+     * 从 data URL 创建 SpriteFrame（异步加载）
+     * @param dataURL - base64 图片数据或远程 URL
+     * @returns Promise<SpriteFrame | null>
+     */
+    private async createSpriteFrameFromDataURL(dataURL: string): Promise<SpriteFrame | null> {
+        return new Promise((resolve, reject) => {
+            assetManager.loadRemote<ImageAsset>(dataURL, { ext: '.png' }, (err, imageAsset) => {
+                if (err) {
+                    console.error('[UIWallet] assetManager.loadRemote failed:', err);
+                    reject(err);
+                    return;
+                }
+
+                const tex = new Texture2D();
+                tex.image = imageAsset;
+
+                const sf = new SpriteFrame();
+                sf.texture = tex;
+
+                resolve(sf);
+            });
+        });
+    }
+
+    
 
     private async logWallet(wallet: Wallet): Promise<void> {
         // console.log('logWallet: ', wallet);

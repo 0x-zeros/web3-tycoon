@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="256,128" pivot="0.5,0.5" extention="Button">
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
+  <displayList>
+    <graph id="n5_nev8" name="n5" xy="0,0" size="256,128" type="rect" lineSize="0" fillColor="#ff666699">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <text id="n4_mumq" name="title" xy="17,34" size="222,66" font="宋体" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="按钮">
+      <relation target="" sidePair="center-center,middle-middle"/>
+    </text>
+  </displayList>
+  <Button downEffect="dark" downEffectValue="0.8"/>
+</component>

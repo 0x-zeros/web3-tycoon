@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="512,128">
   <displayList>
-    <graph id="n0_nev8" name="n0" xy="0,0" size="512,128" type="rect" fillColor="#ff6699cc"/>
-    <loader id="n1_nev8" name="icon" xy="0,0" size="128,128"/>
+    <graph id="n0_nev8" name="n0" xy="2,0" size="508,128" type="rect" lineSize="2" fillColor="#ff6699cc"/>
+    <loader id="n1_nev8" name="icon" xy="33,21" size="80,80" fill="scaleFree"/>
     <text id="n2_nev8" name="title" xy="146,29" size="346,73" fontSize="38" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="Slush Wallet"/>
   </displayList>
 </component>

@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="512,768">
+<component size="512,512">
   <displayList>
-    <graph id="n0_nev8" name="n0" xy="0,0" size="512,768" type="rect" fillColor="#ff6699cc"/>
-    <text id="n1_nev8" name="n1" xy="101,31" size="289,52" fontSize="28" color="#ffffff" autoSize="none" text="Connect a Wallet"/>
-    <list id="n2_nev8" name="wallets" xy="0,128" size="512,636" overflow="scroll" defaultItem="ui://82r0pzopnev8olm" autoClearItems="true">
-      <item/>
-      <item/>
+    <graph id="n0_nev8" name="n0" xy="0,0" size="512,512" type="rect" fillColor="#ff6699cc">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <text id="n1_nev8" name="n1" xy="13,16" size="289,52" fontSize="28" color="#ffffff" autoSize="none" text="Connect a Wallet">
+      <relation target="" sidePair="center-center,top-top"/>
+    </text>
+    <list id="n2_nev8" name="wallets" xy="1,111" size="512,398" overflow="scroll" lineGap="5" defaultItem="ui://82r0pzopnev8olm" autoClearItems="true">
+      <relation target="" sidePair="center-center,bottom-bottom"/>
       <item/>
       <item/>
       <item/>

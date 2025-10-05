@@ -6,6 +6,7 @@ import * as fgui from "fairygui-cc";
 import { _decorator, SpriteFrame, Rect, Size, assetManager, Sprite, Texture2D, ImageAsset } from 'cc';
 import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
+import { UIManager, UILayer } from "../core/UIManager";
 
 
 
@@ -25,9 +26,12 @@ const { ccclass } = _decorator;
 @ccclass('UIWallet')
 export class UIWallet extends UIBase {
 
-    private m_btn_wallet:fgui.GButton;   
+    private m_btn_wallet:fgui.GButton;
     private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
+
+    // WalletList组件引用
+    private m_walletListComponent: fgui.GComponent | null = null;
 
     /**
      * 初始化回调
@@ -82,6 +86,9 @@ export class UIWallet extends UIBase {
             this.m_btn_disconnect.offClick(this._onDisconnectClick, this);
         }
 
+        // 清理WalletList
+        this._closeWalletList();
+
         // 调用父类解绑
         super.unbindEvents();
     }
@@ -90,10 +97,9 @@ export class UIWallet extends UIBase {
         console.log("[UIWallet] Connect clicked");
 
         const suiWallets = this.getSuiWallets();
-        // console.log("suiWallets: ", suiWallets);
 
-        //todo 使用suiWallets， Fairygui的Commmon的WalletList， 显示sui钱包列表
-
+        // 创建并显示WalletList
+        this._showWalletList(suiWallets);
     }
 
     private _onDisconnectClick(): void {
@@ -138,30 +144,129 @@ export class UIWallet extends UIBase {
         const wallets = getWallets().get();
         console.log("wallets length: ", wallets.length);
         console.log("getWallets: ", wallets);
-        // for (const wallet of wallets) {
-        //     console.log(`wallet index: ${wallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
-        //     console.log(wallet);
-        // }
 
         //选出所有的sui钱包
         const suiWallets = this._filterSuiWallets(wallets);
         console.log("suiWallets length: ", suiWallets.length);
         console.log("suiWallets: ", suiWallets);
 
-        // for (const wallet of suiWallets) {
-        //     console.log(`wallet index: ${suiWallets.indexOf(wallet)}, wallet name: ${wallet.name}, wallet icon: ${wallet.icon}`);
-        //     console.log(wallet);
-        // }
-
         return suiWallets;
+    }
 
-        //todo 显示sui钱包列表
+    /**
+     * 显示钱包列表
+     */
+    private _showWalletList(suiWallets: Wallet[]): void {
+        // 如果已经有WalletList在显示，先关闭
+        if (this.m_walletListComponent) {
+            this._closeWalletList();
+        }
 
-        // //find wallet by name
-        // const wallet = wallets.find((wallet) => wallet.name === "Suiet");//"Suiet"
-        // if (wallet) {
-        //     this.logWallet(wallet);
-        // }
+        // 创建WalletList组件
+        this.m_walletListComponent = fgui.UIPackage.createObject("Common", "WalletList").asCom;
+        if (!this.m_walletListComponent) {
+            console.error("[UIWallet] Failed to create WalletList component");
+            return;
+        }
+
+        // 获取wallets列表
+        const walletsList = this.m_walletListComponent.getChild("wallets") as fgui.GList;
+        if (!walletsList) {
+            console.error("[UIWallet] Failed to get wallets list from WalletList component");
+            return;
+        }
+
+        // 设置列表数据
+        walletsList.numItems = suiWallets.length;
+
+        // 填充每个item
+        for (let i = 0; i < suiWallets.length; i++) {
+            const wallet = suiWallets[i];
+            const item = walletsList.getChildAt(i).asCom;
+
+            // 设置title
+            const titleText = item.getChild("title") as fgui.GTextField;
+            if (titleText) {
+                titleText.text = wallet.name;
+            }
+
+            // 设置icon
+            const iconLoader = item.getChild("icon") as fgui.GLoader;
+            if (iconLoader && wallet.icon) {
+                this._loadWalletIcon(wallet.icon, iconLoader);
+            }
+
+            // 添加点击事件
+            item.onClick(() => this._onWalletItemClick(wallet), this);
+        }
+
+        // 添加到POPUP层并居中显示
+        const popupLayer = UIManager.instance.getLayer(UILayer.POPUP);
+        if (!popupLayer) {
+            console.error("[UIWallet] POPUP layer not found");
+            return;
+        }
+
+        popupLayer.addChild(this.m_walletListComponent);
+
+        // 居中显示
+        const groot = fgui.GRoot.inst;
+        const x = (groot.width - this.m_walletListComponent.width) / 2;
+        const y = (groot.height - this.m_walletListComponent.height) / 2;
+        this.m_walletListComponent.setPosition(x, y);
+
+        console.log(`[UIWallet] WalletList displayed with ${suiWallets.length} wallets`);
+    }
+
+    /**
+     * 加载钱包图标
+     */
+    private _loadWalletIcon(iconDataURL: string, iconLoader: fgui.GLoader): void {
+        this.createSpriteFrameFromDataURL(iconDataURL, (err, spriteFrame) => {
+            if (err || !spriteFrame) {
+                console.error("[UIWallet] Failed to load wallet icon:", err);
+                return;
+            }
+
+            iconLoader.texture = spriteFrame;
+        });
+    }
+
+    /**
+     * 关闭钱包列表
+     */
+    private _closeWalletList(): void {
+        if (this.m_walletListComponent) {
+            this.m_walletListComponent.removeFromParent();
+            this.m_walletListComponent.dispose();
+            this.m_walletListComponent = null;
+        }
+    }
+
+    /**
+     * 钱包item点击事件
+     */
+    private async _onWalletItemClick(wallet: Wallet): Promise<void> {
+        console.log(`[UIWallet] Wallet clicked: ${wallet.name}`);
+
+        try {
+            // 调用钱包连接
+            const accounts = await wallet.features['standard:connect'].connect();
+            console.log(`[UIWallet] Connected to ${wallet.name}, accounts:`, accounts);
+
+            // 关闭WalletList
+            this._closeWalletList();
+
+            // 显示连接成功通知
+            UINotification.success(`已连接到 ${wallet.name}`);
+
+            // 监听钱包变化
+            wallet.features['standard:events'].on('change', this._onWalletChange.bind(this));
+
+        } catch (error) {
+            console.error(`[UIWallet] Failed to connect to ${wallet.name}:`, error);
+            UINotification.error(`连接 ${wallet.name} 失败`);
+        }
     }
 
     private _filterSuiWallets(wallets: readonly Wallet[]): Wallet[] {
@@ -188,27 +293,25 @@ export class UIWallet extends UIBase {
 
 
     /**
-     * 从 data URL 创建 SpriteFrame（异步加载）
+     * 从 data URL 创建 SpriteFrame（callback方式）
      * @param dataURL - base64 图片数据或远程 URL
-     * @returns Promise<SpriteFrame | null>
+     * @param callback - 回调函数 (err, spriteFrame)
      */
-    private async createSpriteFrameFromDataURL(dataURL: string): Promise<SpriteFrame | null> {
-        return new Promise((resolve, reject) => {
-            assetManager.loadRemote<ImageAsset>(dataURL, { ext: '.png' }, (err, imageAsset) => {
-                if (err) {
-                    console.error('[UIWallet] assetManager.loadRemote failed:', err);
-                    reject(err);
-                    return;
-                }
+    private createSpriteFrameFromDataURL(dataURL: string, callback: (err: Error | null, spriteFrame: SpriteFrame | null) => void): void {
+        assetManager.loadRemote<ImageAsset>(dataURL, { ext: '.png' }, (err, imageAsset) => {
+            if (err) {
+                console.error('[UIWallet] assetManager.loadRemote failed:', err);
+                callback(err, null);
+                return;
+            }
 
-                const tex = new Texture2D();
-                tex.image = imageAsset;
+            const tex = new Texture2D();
+            tex.image = imageAsset;
 
-                const sf = new SpriteFrame();
-                sf.texture = tex;
+            const sf = new SpriteFrame();
+            sf.texture = tex;
 
-                resolve(sf);
-            });
+            callback(null, sf);
         });
     }
 

@@ -16,6 +16,7 @@ import { SuiClient } from '@mysten/sui/client';
 import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
+import { getExplorerUrl, getNetworkDisplayName, NetworkType } from "../../sui/config/SuiConfig";
 
 
 const { ccclass } = _decorator;
@@ -41,6 +42,7 @@ export class UIWallet extends UIBase {
     private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
     private m_balance:fgui.GTextField | null = null;  // 余额显示
+    private m_chain:fgui.GTextField | null = null;    // 链名称显示
 
     // Controller控制disconnected/connected状态
     private m_controller: fgui.Controller | null = null;
@@ -68,12 +70,22 @@ export class UIWallet extends UIBase {
         this.m_btn_connect = this.getButton("btn_connect");
         this.m_btn_disconnect = this.getButton("btn_disconnect");
         this.m_balance = this.getText("balance");
+        this.m_chain = this.getText("chain");
+
+        // 为 balance 添加点击事件（点击打开 Explorer）
+        if (this.m_balance) {
+            // 将 GTextField 转换为可点击
+            this.m_balance.asButton.onClick(this._onBalanceClick, this);
+        }
 
         // 获取controller
         this.m_controller = this.getController("wallet");
         if (!this.m_controller) {
             console.error("[UIWallet] Controller 'wallet' not found");
         }
+
+        // 设置 chain 显示
+        this._updateChainDisplay();
 
         // btn_disconnect初始隐藏
         if (this.m_btn_disconnect) {
@@ -165,10 +177,6 @@ export class UIWallet extends UIBase {
             // 清除 SuiManager 的签名器
             SuiManager.instance.clearSigner();
             console.log('[UIWallet] SuiManager signer cleared');
-
-            // 清除 Blackboard 中的资产数据
-            Blackboard.instance.set("sui_balance", BigInt(0), true);
-            Blackboard.instance.set("sui_seats", [], true);
 
             // 清除余额显示
             if (this.m_balance) {
@@ -606,11 +614,52 @@ export class UIWallet extends UIBase {
     /**
      * 格式化余额显示
      * @param balance MIST 数量（1 SUI = 10^9 MIST）
-     * @returns 格式化字符串（如 "123.45 SUI"）
+     * @returns 格式化字符串（如 "123.4567 SUI"）
      */
     private _formatBalance(balance: bigint): string {
         const sui = Number(balance) / 1_000_000_000;
-        return sui.toFixed(2) + ' SUI';
+        return sui.toFixed(4) + ' SUI';
+    }
+
+    /**
+     * 更新 chain 显示
+     */
+    private _updateChainDisplay(): void {
+        if (!this.m_chain) return;
+
+        const network = SuiManager.instance.config?.network || 'unknown';
+        this.m_chain.text = getNetworkDisplayName(network);
+    }
+
+    /**
+     * 余额点击事件 - 打开地址浏览器
+     */
+    private _onBalanceClick(): void {
+        if (!this.m_connectedAccount) {
+            console.warn('[UIWallet] No account connected');
+            return;
+        }
+
+        const network = SuiManager.instance.config?.network || 'localnet';
+        const address = this.m_connectedAccount.address;
+        const explorerUrl = getExplorerUrl(network as NetworkType, address, 'address');
+
+        console.log('[UIWallet] Opening explorer:', explorerUrl);
+        UINotification.info("正在打开区块链浏览器...");
+
+        // 在浏览器中打开
+        this._openUrl(explorerUrl);
+    }
+
+    /**
+     * 在浏览器中打开 URL
+     */
+    private _openUrl(url: string): void {
+        if (typeof window !== 'undefined' && window.open) {
+            window.open(url, '_blank');
+        } else {
+            console.log('[UIWallet] URL to open:', url);
+        }
     }
 
     // ================== localStorage辅助方法 ==================

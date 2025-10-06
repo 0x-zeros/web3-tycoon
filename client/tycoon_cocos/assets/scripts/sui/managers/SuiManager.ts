@@ -869,10 +869,10 @@ export class SuiManager {
     /**
      * 格式化 SUI 数量
      * @param mist MIST 数量
-     * @returns 格式化字符串（如 "123.45"）
+     * @returns 格式化字符串（如 "123.4567"）
      */
     private _formatSuiAmount(mist: bigint): string {
-        return AssetService.formatSuiAmount(mist, 2);
+        return AssetService.formatSuiAmount(mist, 4);
     }
 
     /**

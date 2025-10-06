@@ -227,10 +227,10 @@ export class AssetService {
     /**
      * 格式化 SUI 数量（MIST → SUI）
      * @param mist MIST 数量（1 SUI = 10^9 MIST）
-     * @param decimals 小数位数（默认 2）
-     * @returns 格式化后的字符串（如 "123.45"）
+     * @param decimals 小数位数（默认 4）
+     * @returns 格式化后的字符串（如 "123.4567"）
      */
-    public static formatSuiAmount(mist: bigint, decimals: number = 2): string {
+    public static formatSuiAmount(mist: bigint, decimals: number = 4): string {
         const sui = Number(mist) / 1_000_000_000;
         return sui.toFixed(decimals);
     }

@@ -20,6 +20,93 @@ export class GameInteraction {
         private gameDataId: string  // GameData共享对象ID
     ) {}
 
+    // ============ 新版本：返回 Transaction（推荐使用）============
+
+    /**
+     * 构建创建游戏的交易
+     * @param config 游戏创建配置
+     * @param senderAddress 发送者地址（用于 transferObjects）
+     * @returns Transaction 对象
+     */
+    buildCreateGameTx(config: GameCreateConfig, senderAddress: string): Transaction {
+        const tx = new Transaction();
+
+        // 调用create_game函数
+        const [game, seat] = tx.moveCall({
+            target: `${this.packageId}::game::create_game`,
+            arguments: [
+                tx.object(this.gameDataId),              // game_data: &GameData
+                tx.object(config.template_map_id),       // template_map: &MapTemplate
+                tx.pure.u8(config.max_players),          // max_players: u8
+                tx.pure.u64(config.starting_cash || 0),  // starting_cash: u64 (0使用默认值)
+                tx.pure.u8(config.price_rise_days || 0), // price_rise_days: u8
+                tx.pure.u8(config.max_rounds || 0)       // max_rounds: u8
+            ]
+        });
+
+        // 分享游戏对象
+        tx.moveCall({
+            target: '0x2::transfer::public_share_object',
+            typeArguments: [`${this.packageId}::game::Game`],
+            arguments: [game]
+        });
+
+        // 将座位转移给创建者
+        tx.transferObjects([seat], senderAddress);
+
+        return tx;
+    }
+
+    /**
+     * 构建加入游戏的交易
+     * @param gameId 游戏 ID
+     * @param senderAddress 发送者地址
+     * @returns Transaction 对象
+     */
+    buildJoinGameTx(gameId: string, senderAddress: string): Transaction {
+        const tx = new Transaction();
+
+        // 调用join函数
+        const seat = tx.moveCall({
+            target: `${this.packageId}::game::join`,
+            arguments: [
+                tx.object(gameId),       // game: &mut Game
+                tx.object(this.gameDataId) // game_data: &GameData
+            ]
+        });
+
+        // 将座位转移给加入者
+        tx.transferObjects([seat], senderAddress);
+
+        return tx;
+    }
+
+    /**
+     * 构建开始游戏的交易
+     * @param gameId 游戏 ID
+     * @param mapTemplateId 地图模板 ID
+     * @returns Transaction 对象
+     */
+    buildStartGameTx(gameId: string, mapTemplateId: string): Transaction {
+        const tx = new Transaction();
+
+        // 调用start函数
+        tx.moveCall({
+            target: `${this.packageId}::game::start`,
+            arguments: [
+                tx.object(gameId),          // game: &mut Game
+                tx.object(this.gameDataId), // game_data: &GameData
+                tx.object(mapTemplateId),   // map: &MapTemplate
+                tx.object('0x8'),           // random: &Random
+                tx.object('0x6')            // clock: &Clock
+            ]
+        });
+
+        return tx;
+    }
+
+    // ============ 旧版本：直接签名执行（已弃用，保持兼容）============
+
     /**
      * 创建游戏
      * 对应Move: public entry fun create_game

@@ -17,6 +17,8 @@ import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { fromEntries } from '../utils/object-utils';
 import { MapManager } from '../map/MapManager';
+import { SuiManager } from '../sui/managers/SuiManager';
+import { CURRENT_SUI_CONFIG } from '../sui/config';
 
 const { ccclass, property } = _decorator;
 
@@ -281,6 +283,9 @@ export class GameInitializer extends Component {
             // 初始化事件系统
             this.initializeEventSystem();
 
+            // 初始化 SuiManager
+            await this.initializeSuiManager();
+
             // 设置全局访问器
             this.setupGlobalAccessors();
 
@@ -299,6 +304,27 @@ export class GameInitializer extends Component {
                 phase: InitializationPhase.SYSTEMS_INIT,
                 error: `系统初始化异常: ${error}`
             };
+        }
+    }
+
+    /**
+     * 初始化 Sui Manager
+     */
+    private async initializeSuiManager(): Promise<void> {
+        console.log('[GameInitializer] Initializing SuiManager...');
+
+        try {
+            await SuiManager.instance.init(CURRENT_SUI_CONFIG, {
+                debug: true  // 开发阶段启用调试日志
+            });
+
+            console.log('[GameInitializer] SuiManager initialized successfully');
+            console.log('  Network:', CURRENT_SUI_CONFIG.network);
+            console.log('  PackageID:', CURRENT_SUI_CONFIG.packageId);
+            console.log('  GameDataID:', CURRENT_SUI_CONFIG.gameDataId);
+        } catch (error) {
+            console.error('[GameInitializer] Failed to initialize SuiManager:', error);
+            throw error;
         }
     }
 

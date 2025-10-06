@@ -21,6 +21,47 @@ export class MapAdminInteraction {
         private gameDataId: string
     ) {}
 
+    // ============ 新版本：返回 Transaction（推荐使用）============
+
+    /**
+     * 构建上传地图模板的交易
+     * @param mapTemplate 地图模板数据
+     * @returns Transaction 对象
+     */
+    buildUploadMapTemplateTx(mapTemplate: MapTemplate): Transaction {
+        console.log('[MapAdmin] Building upload map template transaction...');
+        console.log(`Template ID: ${mapTemplate.id}`);
+        console.log(`Tiles: ${mapTemplate.tiles_static.size}`);
+        console.log(`Buildings: ${mapTemplate.buildings_static.size}`);
+        console.log(`Hospital IDs: ${mapTemplate.hospital_ids.length}`);
+
+        // 1. BCS 序列化
+        console.log('[MapAdmin] Encoding map template to BCS...');
+        const encoded = encodeMapTemplateToBCS(mapTemplate);
+
+        console.log(`Encoded tiles: ${encoded.tilesBytes.length} bytes`);
+        console.log(`Encoded buildings: ${encoded.buildingsBytes.length} bytes`);
+        console.log(`Encoded hospital_ids: ${encoded.hospitalIdsBytes.length} bytes`);
+
+        // 2. 构建交易
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::tycoon::publish_map_from_bcs`,
+            arguments: [
+                tx.object(this.gameDataId),                 // game_data: &mut GameData
+                tx.pure.u8(mapTemplate.schema_version),     // schema_version: u8
+                tx.pure.vector('u8', encoded.tilesBytes),   // tiles_bcs: vector<u8>
+                tx.pure.vector('u8', encoded.buildingsBytes), // buildings_bcs: vector<u8>
+                tx.pure.vector('u8', encoded.hospitalIdsBytes) // hospital_ids_bcs: vector<u8>
+            ]
+        });
+
+        return tx;
+    }
+
+    // ============ 旧版本：直接签名执行（已弃用，保持兼容）============
+
     /**
      * 上传地图模板到链上
      * 使用 BCS 序列化传递复杂数据结构
@@ -30,6 +71,7 @@ export class MapAdminInteraction {
      * @param mapTemplate 编辑器生成的地图数据
      * @param keypair 签名密钥
      * @returns 交易哈希和模板ID
+     * @deprecated 使用 buildUploadMapTemplateTx 代替
      */
     async uploadMapTemplate(
         mapTemplate: MapTemplate,

@@ -15,6 +15,7 @@ import {fromHex, toHex} from '@mysten/bcs';
 import { SuiClient } from '@mysten/sui/client';
 import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
 import { UINotification } from "../utils/UINotification";
+import { SuiManager } from "../../sui/managers/SuiManager";
 
 
 const { ccclass } = _decorator;
@@ -155,6 +156,10 @@ export class UIWallet extends UIBase {
             // 清空连接状态
             this.m_connectedWallet = null;
             this.m_connectedAccount = null;
+
+            // 清除 SuiManager 的签名器
+            SuiManager.instance.clearSigner();
+            console.log('[UIWallet] SuiManager signer cleared');
 
             // 切换controller状态为disconnected
             if (this.m_controller) {
@@ -370,6 +375,10 @@ export class UIWallet extends UIBase {
             // 显示连接成功通知
             UINotification.success(`已连接到 ${wallet.name}`);
 
+            // 设置 SuiManager 的签名器
+            SuiManager.instance.setWalletSigner(wallet, account);
+            console.log(`[UIWallet] SuiManager signer updated`);
+
             // 监听钱包变化
             const eventsFeature = wallet.features['standard:events'] as any;
             if (eventsFeature && typeof eventsFeature.on === 'function') {
@@ -451,6 +460,10 @@ export class UIWallet extends UIBase {
             if (this.m_btn_wallet) {
                 this.m_btn_wallet.title = this._shortenAddress(targetAccount.address);
             }
+
+            // 设置 SuiManager 的签名器
+            SuiManager.instance.setWalletSigner(targetWallet, targetAccount);
+            console.log(`[UIWallet] SuiManager signer updated (auto-connect)`);
 
             // 监听钱包变化
             const eventsFeature = targetWallet.features['standard:events'] as any;

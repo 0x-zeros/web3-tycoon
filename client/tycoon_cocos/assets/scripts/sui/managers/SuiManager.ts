@@ -1,0 +1,563 @@
+/**
+ * Sui 交互管理器（单例）
+ * 统一管理所有 Sui 链上交互，包括签名、查询、交易执行等
+ */
+
+import { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
+import { Transaction } from '@mysten/sui/transactions';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { Wallet, WalletAccount } from '@mysten/wallet-standard';
+
+import { SuiConfig, getNetworkRpcUrl } from '../config';
+import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
+import { TycoonGameClient } from '../interactions';
+import { MapAdminInteraction } from '../interactions/mapAdmin';
+import { QueryService, GameListItem } from '../services';
+import type { Game, Seat, GameCreateConfig } from '../types/game';
+import type { MapTemplate } from '../types/map';
+
+/**
+ * Sui Manager 配置选项
+ */
+export interface SuiManagerOptions {
+    /** 是否启用调试日志 */
+    debug?: boolean;
+}
+
+/**
+ * Sui Manager 单例
+ * 负责管理 Sui 链交互的生命周期
+ */
+export class SuiManager {
+    private static _instance: SuiManager | null = null;
+
+    // 核心组件
+    private _client: SuiClient | null = null;
+    private _signer: SignerProvider | null = null;
+    private _gameClient: TycoonGameClient | null = null;
+    private _mapAdmin: MapAdminInteraction | null = null;
+    private _queryService: QueryService | null = null;
+
+    // 配置
+    private _config: SuiConfig | null = null;
+    private _options: SuiManagerOptions = {};
+
+    // 状态
+    private _initialized: boolean = false;
+    private _currentAddress: string | null = null;
+    private _currentSeat: Seat | null = null;
+
+    /**
+     * 私有构造函数（单例模式）
+     */
+    private constructor() {}
+
+    /**
+     * 获取单例实例
+     */
+    public static get instance(): SuiManager {
+        if (!SuiManager._instance) {
+            SuiManager._instance = new SuiManager();
+        }
+        return SuiManager._instance;
+    }
+
+    // ============ 初始化方法 ============
+
+    /**
+     * 初始化 Sui Manager
+     * @param config Sui 配置
+     * @param options 可选配置
+     */
+    public async init(config: SuiConfig, options?: SuiManagerOptions): Promise<void> {
+        if (this._initialized) {
+            console.warn('[SuiManager] Already initialized');
+            return;
+        }
+
+        this._config = config;
+        this._options = { ...options };
+
+        // 创建 Sui Client
+        const rpcUrl = getNetworkRpcUrl(config.network, config.rpcUrl);
+        this._client = new SuiClient({ url: rpcUrl });
+
+        // 创建 TycoonGameClient
+        this._gameClient = new TycoonGameClient(
+            this._client,
+            config.packageId,
+            config.gameDataId
+        );
+
+        // 创建 MapAdminInteraction
+        this._mapAdmin = new MapAdminInteraction(
+            this._client,
+            config.packageId,
+            config.gameDataId
+        );
+
+        // 创建 QueryService
+        this._queryService = new QueryService(
+            this._client,
+            config.packageId,
+            config.gameDataId
+        );
+
+        this._initialized = true;
+
+        this._log('[SuiManager] Initialized successfully', {
+            network: config.network,
+            rpcUrl,
+            packageId: config.packageId,
+            gameDataId: config.gameDataId
+        });
+    }
+
+    /**
+     * 检查是否已初始化
+     */
+    private _ensureInitialized(): void {
+        if (!this._initialized || !this._client || !this._gameClient || !this._mapAdmin || !this._queryService) {
+            throw new Error('[SuiManager] Not initialized. Call init() first.');
+        }
+    }
+
+    // ============ 签名器管理 ============
+
+    /**
+     * 设置 Wallet 签名器
+     * @param wallet 钱包实例
+     * @param account 账户信息
+     */
+    public setWalletSigner(wallet: Wallet, account: WalletAccount): void {
+        this._signer = new WalletSigner(wallet, account);
+        this._currentAddress = account.address;
+
+        this._log('[SuiManager] Wallet signer set', {
+            wallet: wallet.name,
+            address: account.address
+        });
+    }
+
+    /**
+     * 设置 Keypair 签名器
+     * @param keypair 密钥对
+     */
+    public setKeypairSigner(keypair: Ed25519Keypair): void {
+        this._signer = new KeypairSigner(keypair);
+        this._currentAddress = keypair.toSuiAddress();
+
+        this._log('[SuiManager] Keypair signer set', {
+            address: this._currentAddress
+        });
+    }
+
+    /**
+     * 清除签名器
+     */
+    public clearSigner(): void {
+        this._signer = null;
+        this._currentAddress = null;
+        this._currentSeat = null;
+
+        this._log('[SuiManager] Signer cleared');
+    }
+
+    /**
+     * 检查签名器是否可用
+     */
+    private _ensureSigner(): void {
+        if (!this._signer) {
+            throw new Error('[SuiManager] No signer set. Call setWalletSigner() or setKeypairSigner() first.');
+        }
+    }
+
+    // ============ 交易执行 ============
+
+    /**
+     * 签名并执行交易
+     * @param tx 交易对象
+     * @returns 交易结果
+     */
+    public async signAndExecuteTransaction(tx: Transaction): Promise<SuiTransactionBlockResponse> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        this._log('[SuiManager] Executing transaction...');
+
+        const result = await this._signer!.signAndExecuteTransaction(tx, this._client!);
+
+        this._log('[SuiManager] Transaction executed', {
+            digest: result.digest,
+            status: result.effects?.status?.status
+        });
+
+        return result;
+    }
+
+    // ============ 游戏交互 API ============
+
+    /**
+     * 创建游戏
+     * @param config 游戏创建配置
+     * @returns 游戏 ID 和座位 ID
+     */
+    public async createGame(config: GameCreateConfig): Promise<{
+        gameId: string;
+        seatId: string;
+        txHash: string;
+    }> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        this._log('[SuiManager] Creating game...', config);
+
+        // 构建交易
+        const address = this._signer!.getAddress();
+        const tx = this._gameClient!.game.buildCreateGameTx(config, address);
+
+        // 签名并执行
+        const result = await this.signAndExecuteTransaction(tx);
+
+        // 解析结果
+        const gameId = this._extractObjectId(result, 'Game');
+        const seatId = this._extractObjectId(result, 'Seat');
+
+        const response = {
+            gameId,
+            seatId,
+            txHash: result.digest
+        };
+
+        this._log('[SuiManager] Game created', response);
+
+        return response;
+    }
+
+    /**
+     * 加入游戏
+     * @param gameId 游戏 ID
+     * @returns 座位 ID 和玩家索引
+     */
+    public async joinGame(gameId: string): Promise<{
+        seatId: string;
+        playerIndex: number;
+        txHash: string;
+    }> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        this._log('[SuiManager] Joining game...', { gameId });
+
+        // 构建交易
+        const address = this._signer!.getAddress();
+        const tx = this._gameClient!.game.buildJoinGameTx(gameId, address);
+
+        // 签名并执行
+        const result = await this.signAndExecuteTransaction(tx);
+
+        // 解析结果
+        const seatId = this._extractObjectId(result, 'Seat');
+        const playerIndex = this._extractPlayerIndex(result);
+
+        // 保存当前座位
+        this._currentSeat = {
+            id: seatId,
+            game: gameId,
+            player: this._currentAddress!,
+            player_index: playerIndex
+        };
+
+        const response = {
+            seatId,
+            playerIndex,
+            txHash: result.digest
+        };
+
+        this._log('[SuiManager] Joined game', response);
+
+        return response;
+    }
+
+    /**
+     * 开始游戏
+     * @param gameId 游戏 ID
+     * @param mapTemplateId 地图模板 ID
+     */
+    public async startGame(gameId: string, mapTemplateId: string): Promise<{
+        success: boolean;
+        startingPlayer: string;
+        txHash: string;
+    }> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        this._log('[SuiManager] Starting game...', { gameId, mapTemplateId });
+
+        // 构建交易
+        const tx = this._gameClient!.game.buildStartGameTx(gameId, mapTemplateId);
+
+        // 签名并执行
+        const result = await this.signAndExecuteTransaction(tx);
+
+        // 解析事件获取起始玩家
+        const startingPlayer = this._extractStartingPlayer(result);
+
+        const response = {
+            success: true,
+            startingPlayer,
+            txHash: result.digest
+        };
+
+        this._log('[SuiManager] Game started', response);
+
+        return response;
+    }
+
+    /**
+     * 获取游戏状态
+     * @param gameId 游戏 ID
+     * @returns 游戏对象
+     */
+    public async getGameState(gameId: string): Promise<Game | null> {
+        this._ensureInitialized();
+
+        return await this._gameClient!.game.getGameState(gameId);
+    }
+
+    /**
+     * 获取当前玩家的座位
+     * @param gameId 游戏 ID
+     * @returns 座位对象
+     */
+    public async getPlayerSeat(gameId: string): Promise<Seat | null> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        const address = this._signer!.getAddress();
+        return await this._gameClient!.game.getPlayerSeat(address, gameId);
+    }
+
+    // ============ 地图交互 API ============
+
+    /**
+     * 发布地图模板
+     * @param mapTemplate 地图模板数据
+     * @returns 模板 ID 和交易哈希
+     */
+    public async publishMapTemplate(mapTemplate: MapTemplate): Promise<{
+        txHash: string;
+        templateId: number;
+    }> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        this._log('[SuiManager] Publishing map template...', {
+            templateId: mapTemplate.id
+        });
+
+        // 构建交易
+        const tx = this._mapAdmin!.buildUploadMapTemplateTx(mapTemplate);
+
+        // 签名并执行
+        const result = await this.signAndExecuteTransaction(tx);
+
+        // 解析事件获取模板 ID
+        const templateId = this._extractTemplateId(result);
+
+        const response = {
+            txHash: result.digest,
+            templateId
+        };
+
+        this._log('[SuiManager] Map template published', response);
+
+        return response;
+    }
+
+    // ============ 查询 API ============
+
+    /**
+     * 获取可加入的游戏列表
+     * - 过滤 STATUS_READY（准备中）的游戏
+     * - 自己创建的游戏排在第一位
+     * - 返回前 6 个
+     *
+     * @returns 游戏列表（最多 6 个）
+     */
+    public async getAvailableGames(): Promise<Game[]> {
+        this._ensureInitialized();
+
+        this._log('[SuiManager] Querying available games...');
+
+        // 查询所有 READY 状态的游戏
+        let games = await this._queryService!.getReadyGames(
+            this._currentAddress || undefined,
+            50  // 查询更多以便筛选
+        );
+
+        this._log(`[SuiManager] Found ${games.length} READY games`);
+
+        // 排序：自己创建的放第一位，其他按创建时间降序
+        games.sort((a, b) => {
+            // 自己创建的优先
+            if (a.isMyCreation && !b.isMyCreation) return -1;
+            if (!a.isMyCreation && b.isMyCreation) return 1;
+
+            // 按创建时间降序（最新的在前）
+            return b.createdAt - a.createdAt;
+        });
+
+        // 只返回前 6 个
+        const topGames = games.slice(0, 6);
+
+        this._log(`[SuiManager] Returning top ${topGames.length} games`);
+
+        return topGames.map(item => item.game);
+    }
+
+    /**
+     * 获取地图模板列表
+     * @returns 地图模板列表
+     */
+    public async getMapTemplates(): Promise<{ id: number; name: string }[]> {
+        this._ensureInitialized();
+
+        this._log('[SuiManager] Querying map templates...');
+
+        const templates = await this._queryService!.getMapTemplates();
+
+        this._log(`[SuiManager] Found ${templates.length} map templates`);
+
+        return templates;
+    }
+
+    /**
+     * 获取 GameData
+     * @returns GameData 对象
+     */
+    public async getGameData(): Promise<any> {
+        this._ensureInitialized();
+
+        return await this._queryService!.getGameData();
+    }
+
+    // ============ 访问器 ============
+
+    /**
+     * 获取 Sui Client
+     */
+    public get client(): SuiClient {
+        this._ensureInitialized();
+        return this._client!;
+    }
+
+    /**
+     * 获取 TycoonGameClient
+     */
+    public get gameClient(): TycoonGameClient {
+        this._ensureInitialized();
+        return this._gameClient!;
+    }
+
+    /**
+     * 获取当前配置
+     */
+    public get config(): SuiConfig {
+        this._ensureInitialized();
+        return this._config!;
+    }
+
+    /**
+     * 获取当前地址
+     */
+    public get currentAddress(): string | null {
+        return this._currentAddress;
+    }
+
+    /**
+     * 获取当前座位
+     */
+    public get currentSeat(): Seat | null {
+        return this._currentSeat;
+    }
+
+    /**
+     * 是否已连接签名器
+     */
+    public get isConnected(): boolean {
+        return this._signer !== null;
+    }
+
+    // ============ 辅助方法 ============
+
+    /**
+     * 从交易结果中提取对象 ID
+     */
+    private _extractObjectId(result: SuiTransactionBlockResponse, objectType: string): string {
+        const changes = result.objectChanges || [];
+        for (const change of changes) {
+            if (change.type === 'created' && change.objectType?.includes(objectType)) {
+                return (change as any).objectId;
+            }
+        }
+        throw new Error(`[SuiManager] Failed to extract ${objectType} ID from transaction`);
+    }
+
+    /**
+     * 从交易结果中提取玩家索引
+     */
+    private _extractPlayerIndex(result: SuiTransactionBlockResponse): number {
+        const events = result.events || [];
+        for (const event of events) {
+            if (event.type.includes('PlayerJoinedEvent')) {
+                return (event.parsedJson as any)?.player_index || 0;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 从交易结果中提取起始玩家
+     */
+    private _extractStartingPlayer(result: SuiTransactionBlockResponse): string {
+        const events = result.events || [];
+        for (const event of events) {
+            if (event.type.includes('GameStartedEvent')) {
+                return (event.parsedJson as any)?.starting_player || '';
+            }
+        }
+        return '';
+    }
+
+    /**
+     * 从交易结果中提取模板 ID
+     */
+    private _extractTemplateId(result: SuiTransactionBlockResponse): number {
+        const events = result.events || [];
+        for (const event of events) {
+            if (event.type.includes('MapTemplatePublishedEvent')) {
+                return (event.parsedJson as any)?.template_id || 0;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 调试日志
+     */
+    private _log(message: string, data?: any): void {
+        if (this._options.debug) {
+            if (data) {
+                console.log(message, data);
+            } else {
+                console.log(message);
+            }
+        }
+    }
+}
+
+/**
+ * 便捷的全局访问器
+ */
+export const suiManager = SuiManager.instance;

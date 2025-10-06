@@ -8,7 +8,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Wallet, WalletAccount } from '@mysten/wallet-standard';
 
-import { SuiConfig, getNetworkRpcUrl } from '../config';
+import { SuiConfig, getNetworkRpcUrl, getExplorerUrl, getNetworkDisplayName, ExplorerItemType } from '../config';
 import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
 import { TycoonGameClient } from '../interactions';
 import { MapAdminInteraction } from '../interactions/mapAdmin';
@@ -901,6 +901,55 @@ export class SuiManager {
      */
     public get defiAssets(): DeFiAssets {
         return this._cachedDeFiAssets;
+    }
+
+    // ============ Explorer 工具方法 ============
+
+    /**
+     * 获取 Explorer URL
+     * @param id 对象ID/交易哈希/地址
+     * @param type 类型（默认 address）
+     * @returns Explorer URL
+     */
+    public getExplorer(id: string, type: ExplorerItemType = 'address'): string {
+        this._ensureInitialized();
+        return getExplorerUrl(this._config!.network, id, type);
+    }
+
+    /**
+     * 获取当前网络的显示名称
+     * @returns 网络名称（如 "Localnet", "Testnet"）
+     */
+    public getNetworkName(): string {
+        this._ensureInitialized();
+        return getNetworkDisplayName(this._config!.network);
+    }
+
+    /**
+     * 打开当前连接地址的 Explorer
+     */
+    public openCurrentAddressExplorer(): void {
+        if (!this._currentAddress) {
+            console.warn('[SuiManager] No address connected');
+            UINotification.warning("请先连接钱包");
+            return;
+        }
+
+        const url = this.getExplorer(this._currentAddress, 'address');
+        this.openUrl(url);
+    }
+
+    /**
+     * 在浏览器中打开 URL
+     * @param url URL 地址
+     */
+    public openUrl(url: string): void {
+        if (typeof window !== 'undefined' && window.open) {
+            window.open(url, '_blank');
+            console.log('[SuiManager] Opened URL:', url);
+        } else {
+            console.log('[SuiManager] URL to open:', url);
+        }
     }
 }
 

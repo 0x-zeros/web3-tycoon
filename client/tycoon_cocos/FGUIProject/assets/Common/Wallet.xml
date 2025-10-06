@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="336,250">
-  <controller name="wallet" pages="0,disconnected,1,connected" selected="0"/>
+  <controller name="wallet" pages="0,disconnected,1,connected" selected="1"/>
   <displayList>
-    <component id="n1_lamb" name="btn_connect" src="mumqlc" fileName="components/Button1.xml" xy="4,93" size="328,66">
+    <component id="n1_lamb" name="btn_connect" src="mumqlc" fileName="components/Button1.xml" xy="4,113" size="328,66">
       <gearDisplay controller="wallet" pages="0"/>
       <Button title="Connect Wallet"/>
     </component>
-    <component id="n8_nev8" name="btn_wallet" src="mumqlc" fileName="components/Button1.xml" xy="5,93" size="328,66">
+    <component id="n8_nev8" name="btn_wallet" src="mumqlc" fileName="components/Button1.xml" xy="5,114" size="328,66">
       <gearDisplay controller="wallet" pages="1"/>
       <Button title="Connected Wallet"/>
     </component>
-    <component id="n7_nev8" name="btn_disconnect" src="nev8olo" fileName="components/Button11.xml" xy="10,175" size="320,66">
+    <component id="n7_nev8" name="btn_disconnect" src="nev8olo" fileName="components/Button11.xml" xy="8,183" size="320,66">
       <gearDisplay controller="wallet" pages="1"/>
       <Button title="Disconnect"/>
     </component>
-    <text id="n9_su9z" name="chain" xy="6,5" size="316,38" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="localnet"/>
-    <text id="n10_pseu" name="balance" xy="6,52" size="319,38" fontSize="25" color="#ffffff" autoSize="none" underline="true" autoClearText="true" text="sui 1.5601"/>
+    <text id="n9_su9z" name="chain" xy="6,5" size="316,38" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="mainnet"/>
+    <component id="n11_pseu" name="btn_balance" src="pseuolp" fileName="components/Button12.xml" xy="5,52" size="320,54">
+      <Button title="sui 1.5601"/>
+    </component>
   </displayList>
 </component>

@@ -17,6 +17,7 @@
     <component id="nev8oln" name="WalletList.xml" path="/" exported="true"/>
     <component id="lambos" name="Wallet.xml" path="/" exported="true"/>
     <component id="nev8olo" name="Button11.xml" path="/components/" exported="true"/>
+    <component id="pseuolp" name="Button12.xml" path="/components/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

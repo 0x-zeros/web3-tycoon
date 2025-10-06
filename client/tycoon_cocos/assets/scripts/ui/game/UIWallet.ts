@@ -16,7 +16,6 @@ import { SuiClient } from '@mysten/sui/client';
 import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
-import { getExplorerUrl, getNetworkDisplayName, NetworkType } from "../../sui/config/SuiConfig";
 
 
 const { ccclass } = _decorator;
@@ -41,8 +40,8 @@ export class UIWallet extends UIBase {
     private m_btn_wallet:fgui.GButton;
     private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
-    private m_balance:fgui.GTextField | null = null;  // 余额显示
-    private m_chain:fgui.GTextField | null = null;    // 链名称显示
+    private m_btn_balance:fgui.GButton | null = null;  // 余额按钮
+    private m_txt_chain:fgui.GTextField | null = null;  // 链名称显示
 
     // Controller控制disconnected/connected状态
     private m_controller: fgui.Controller | null = null;
@@ -69,14 +68,8 @@ export class UIWallet extends UIBase {
         this.m_btn_wallet = this.getButton("btn_wallet");
         this.m_btn_connect = this.getButton("btn_connect");
         this.m_btn_disconnect = this.getButton("btn_disconnect");
-        this.m_balance = this.getText("balance");
-        this.m_chain = this.getText("chain");
-
-        // 为 balance 添加点击事件（点击打开 Explorer）
-        if (this.m_balance) {
-            // 将 GTextField 转换为可点击
-            this.m_balance.asButton.onClick(this._onBalanceClick, this);
-        }
+        this.m_btn_balance = this.getButton("btn_balance");
+        this.m_txt_chain = this.getText("chain");
 
         // 获取controller
         this.m_controller = this.getController("wallet");
@@ -110,6 +103,10 @@ export class UIWallet extends UIBase {
             this.m_btn_disconnect.onClick(this._onDisconnectClick, this);
         }
 
+        if (this.m_btn_balance) {
+            this.m_btn_balance.onClick(this._onBalanceClick, this);
+        }
+
         // 监听 SUI 余额变化
         Blackboard.instance.watch("sui_balance", this._onBalanceChanged, this);
     }
@@ -130,6 +127,10 @@ export class UIWallet extends UIBase {
 
         if (this.m_btn_disconnect) {
             this.m_btn_disconnect.offClick(this._onDisconnectClick, this);
+        }
+
+        if (this.m_btn_balance) {
+            this.m_btn_balance.offClick(this._onBalanceClick, this);
         }
 
         // 清理WalletList
@@ -179,8 +180,8 @@ export class UIWallet extends UIBase {
             console.log('[UIWallet] SuiManager signer cleared');
 
             // 清除余额显示
-            if (this.m_balance) {
-                this.m_balance.text = "";
+            if (this.m_btn_balance) {
+                this.m_btn_balance.title = "";
             }
 
             // 切换controller状态为disconnected
@@ -606,8 +607,8 @@ export class UIWallet extends UIBase {
     private _onBalanceChanged(balance: bigint): void {
         console.log('[UIWallet] Balance changed:', balance);
 
-        if (this.m_balance) {
-            this.m_balance.text = this._formatBalance(balance);
+        if (this.m_btn_balance) {
+            this.m_btn_balance.title = this._formatBalance(balance);
         }
     }
 
@@ -625,10 +626,10 @@ export class UIWallet extends UIBase {
      * 更新 chain 显示
      */
     private _updateChainDisplay(): void {
-        if (!this.m_chain) return;
+        if (!this.m_txt_chain) return;
 
-        const network = SuiManager.instance.config?.network || 'unknown';
-        this.m_chain.text = getNetworkDisplayName(network);
+        // 直接从 SuiManager 获取网络名称
+        this.m_txt_chain.text = SuiManager.instance.getNetworkName();
     }
 
     /**
@@ -640,26 +641,11 @@ export class UIWallet extends UIBase {
             return;
         }
 
-        const network = SuiManager.instance.config?.network || 'localnet';
-        const address = this.m_connectedAccount.address;
-        const explorerUrl = getExplorerUrl(network as NetworkType, address, 'address');
-
-        console.log('[UIWallet] Opening explorer:', explorerUrl);
+        console.log('[UIWallet] Balance clicked, opening explorer');
         UINotification.info("正在打开区块链浏览器...");
 
-        // 在浏览器中打开
-        this._openUrl(explorerUrl);
-    }
-
-    /**
-     * 在浏览器中打开 URL
-     */
-    private _openUrl(url: string): void {
-        if (typeof window !== 'undefined' && window.open) {
-            window.open(url, '_blank');
-        } else {
-            console.log('[UIWallet] URL to open:', url);
-        }
+        // 直接调用 SuiManager 方法
+        SuiManager.instance.openCurrentAddressExplorer();
     }
 
     // ================== localStorage辅助方法 ==================

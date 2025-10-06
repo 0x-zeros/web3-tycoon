@@ -4,6 +4,9 @@ import { EventTypes } from "../../events/EventTypes";
 import { MapManager } from "../../map/MapManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIMessage, MessageBoxIcon } from "../utils/UIMessage";
+import { UINotification } from "../utils/UINotification";
+import { SuiManager } from "../../sui/managers/SuiManager";
+import { exportGameMapToMapTemplate } from "../../map/utils/MapTemplateExporter";
 import * as fgui from "fairygui-cc";
 import { _decorator, find, input, Input, KeyCode } from 'cc';
 import { GameMap } from "../../map/core/GameMap";
@@ -33,6 +36,9 @@ export class UIEditor extends UIBase {
 
     /** 计算建筑入口按钮 */
     private m_btn_calcBuildingEntrance: fgui.GButton;
+
+    /** 发布到 Move 按钮 */
+    private m_btn_toMoveMap: fgui.GButton;
 
     /** ID显示状态 */
     private _isShowingIds: boolean = false;
@@ -72,6 +78,7 @@ export class UIEditor extends UIBase {
         this.m_btn_assignId = this.getChild('btn_assignId') as fgui.GButton;
         this.m_btn_showIds = this.getChild('btn_showIds') as fgui.GButton;
         this.m_btn_calcBuildingEntrance = this.getChild('btn_calcBuildingEntrance') as fgui.GButton;
+        this.m_btn_toMoveMap = this.getChild('btn_toMoveMap') as fgui.GButton;
 
         // 获取tile组件及其子组件
         this.m_tile = this.getChild('tile').asCom;
@@ -122,6 +129,9 @@ export class UIEditor extends UIBase {
         if (this.m_btn_calcBuildingEntrance) {
             this.m_btn_calcBuildingEntrance.onClick(this._onCalcBuildingEntranceClick, this);
         }
+        if (this.m_btn_toMoveMap) {
+            this.m_btn_toMoveMap.onClick(this._onPublishMapClick, this);
+        }
 
         // 绑定tile点击事件
         if (this.m_tile) {
@@ -158,6 +168,9 @@ export class UIEditor extends UIBase {
         }
         if (this.m_btn_calcBuildingEntrance) {
             this.m_btn_calcBuildingEntrance.offClick(this._onCalcBuildingEntranceClick, this);
+        }
+        if (this.m_btn_toMoveMap) {
+            this.m_btn_toMoveMap.offClick(this._onPublishMapClick, this);
         }
 
         // 解绑tile点击事件
@@ -413,6 +426,127 @@ export class UIEditor extends UIBase {
                     console.error("[UIEditor] ✗ Calculation failed - check warnings above");
                 }
             }
+        }
+    }
+
+    /**
+     * 发布地图到 Move 按钮点击
+     */
+    private async _onPublishMapClick(): Promise<void> {
+        console.log("[UIEditor] Publish map to Move clicked");
+
+        try {
+            // Step 1: 检查钱包连接
+            if (!SuiManager.instance.isConnected) {
+                await UIMessage.warning(
+                    "请先连接钱包\n\n" +
+                    "需要钱包签名才能发布地图到链上",
+                    "未连接钱包"
+                );
+                return;
+            }
+
+            // Step 2: 获取 GameMap
+            const mapManager = MapManager.getInstance();
+            if (!mapManager) {
+                await UIMessage.error("地图管理器未初始化", "错误");
+                return;
+            }
+
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (!mapInfo || !mapInfo.component) {
+                await UIMessage.error("当前没有加载的地图", "错误");
+                return;
+            }
+
+            const gameMap = mapInfo.component;
+
+            // Step 3: 验证地图（强制执行完整计算）
+            console.log('[UIEditor] Validating map...');
+            const entrancesValid = gameMap.calculateBuildingEntrances();
+
+            if (!entrancesValid) {
+                await UIMessage.error(
+                    "建筑入口验证失败！\n\n" +
+                    "请检查控制台中的警告信息\n\n" +
+                    "常见问题：\n" +
+                    "• 建筑周围缺少空地 tile\n" +
+                    "• 入口 tile 的类型不是 EMPTY_LAND\n" +
+                    "• 1x1 建筑应有 1 个入口\n" +
+                    "• 2x2 建筑应有 2 个入口\n\n" +
+                    "修复后地图会自动保存，然后重新点击此按钮",
+                    "验证失败"
+                );
+                return;
+            }
+
+            console.log('[UIEditor] ✓ Map validation passed');
+
+            // Step 4: 导出 MapTemplate
+            console.log('[UIEditor] Exporting map template...');
+            const mapTemplate = exportGameMapToMapTemplate(gameMap, 0);  // templateId=0，Move 端自动生成
+            console.log('[UIEditor] ✓ Map template exported');
+
+            // Step 5: 显示确认对话框
+            const confirmMessage =
+                `确认发布地图到 Sui 链上？\n\n` +
+                `✓ 地块数量: ${mapTemplate.tiles_static.size}\n` +
+                `✓ 建筑数量: ${mapTemplate.buildings_static.size}\n` +
+                `✓ 医院数量: ${mapTemplate.hospital_ids.length}\n\n` +
+                `注意：\n` +
+                `• 发布后无法修改\n` +
+                `• 需要消耗 Gas 费用\n` +
+                `• 数据已通过完整验证\n\n` +
+                `确认继续？`;
+
+            const confirmed = await UIMessage.confirm({
+                message: confirmMessage,
+                title: "确认发布",
+                okText: "确认",
+                cancelText: "取消"
+            });
+
+            if (!confirmed) {
+                console.log('[UIEditor] User cancelled');
+                return;
+            }
+
+            // Step 6: 发布到链上
+            UINotification.info("正在发布地图到链上，请在钱包中确认...");
+
+            const result = await SuiManager.instance.publishMapTemplate(mapTemplate);
+
+            console.log('[UIEditor] ✓ Map published successfully');
+            console.log('  Template ID:', result.templateId);
+            console.log('  Tx Hash:', result.txHash);
+
+            // Step 7: 显示成功消息
+            const explorerUrl = SuiManager.instance.getExplorer(result.txHash, 'txblock');
+
+            await UIMessage.success(
+                `地图发布成功！\n\n` +
+                `模板 ID: ${result.templateId}\n` +
+                `交易哈希: ${result.txHash.slice(0, 20)}...\n\n` +
+                `✓ 数据已写入区块链\n` +
+                `✓ 玩家现在可以使用此地图创建游戏\n\n` +
+                `点击确定查看交易详情`,
+                "发布成功"
+            );
+
+            // 打开 Explorer
+            UINotification.info("正在打开区块链浏览器...");
+            SuiManager.instance.openUrl(explorerUrl);
+
+        } catch (error) {
+            console.error('[UIEditor] Failed to publish map:', error);
+
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            await UIMessage.error(
+                `发布失败\n\n` +
+                `${errorMsg}\n\n` +
+                `详细错误信息已输出到控制台`,
+                "发布失败"
+            );
         }
     }
 

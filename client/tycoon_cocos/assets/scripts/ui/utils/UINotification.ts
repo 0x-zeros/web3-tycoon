@@ -231,6 +231,10 @@ export class UINotification extends UIBase {
     // 静态单例实例
     private static _instance: UINotification | null = null;
 
+    // 消息缓存队列（UI 未 ready 时缓存）
+    private static _pendingMessages: NotificationOptions[] = [];
+    private static _isReady: boolean = false;
+
     // 默认使用的anchor名称
     private static readonly DEFAULT_ANCHOR = "rightbottom";
     private _currentAnchor = UINotification.DEFAULT_ANCHOR;
@@ -266,6 +270,31 @@ export class UINotification extends UIBase {
 
         // 设置静态实例
         UINotification._instance = this;
+
+        // 标记为 ready
+        UINotification._isReady = true;
+
+        // 播放缓存的消息
+        this._playPendingMessages();
+    }
+
+    /**
+     * 播放缓存的待处理消息
+     */
+    private _playPendingMessages(): void {
+        if (UINotification._pendingMessages.length === 0) {
+            return;
+        }
+
+        console.log(`[UINotification] Playing ${UINotification._pendingMessages.length} pending messages`);
+
+        // 延迟一点播放，确保 UI 完全 ready
+        setTimeout(() => {
+            UINotification._pendingMessages.forEach(options => {
+                this.addNotification(options);
+            });
+            UINotification._pendingMessages = [];
+        }, 100);
     }
 
     protected onShow(_data?: any): void {
@@ -452,80 +481,82 @@ export class UINotification extends UIBase {
      * 获取实例
      */
     private static _getInstance(): UINotification | null {
-        if (!UINotification._instance) {
-            console.error("[UINotification] Not initialized. Register Notification UI first.");
-        }
         return UINotification._instance;
+    }
+
+    /**
+     * 添加消息（支持缓存和降级）
+     */
+    private static _addMessage(options: NotificationOptions): void {
+        const instance = this._getInstance();
+
+        if (instance && this._isReady) {
+            // UI 已 ready，直接显示
+            instance.addNotification(options);
+        } else {
+            // UI 未 ready，缓存消息
+            this._pendingMessages.push(options);
+
+            // 降级到 console（开发阶段可见）
+            const prefix = options.type?.toUpperCase() || 'INFO';
+            const title = options.title ? `[${options.title}] ` : '';
+            console.log(`[${prefix}] ${title}${options.message}`);
+        }
     }
 
     /**
      * 信息通知（蓝色）
      */
     public static info(message: string, title?: string, duration?: number): void {
-        const instance = this._getInstance();
-        if (instance) {
-            instance.addNotification({
-                title,
-                message,
-                type: NotifyType.INFO,
-                duration
-            });
-        }
+        this._addMessage({
+            title,
+            message,
+            type: NotifyType.INFO,
+            duration
+        });
     }
 
     /**
      * 成功通知（绿色）
      */
     public static success(message: string, title?: string, duration?: number): void {
-        const instance = this._getInstance();
-        if (instance) {
-            instance.addNotification({
-                title,
-                message,
-                type: NotifyType.SUCCESS,
-                duration
-            });
-        }
+        this._addMessage({
+            title,
+            message,
+            type: NotifyType.SUCCESS,
+            duration
+        });
     }
 
     /**
      * 警告通知（黄色）
      */
     public static warning(message: string, title?: string, duration?: number): void {
-        const instance = this._getInstance();
-        if (instance) {
-            instance.addNotification({
-                title,
-                message,
-                type: NotifyType.WARNING,
-                duration
-            });
-        }
+        this._addMessage({
+            title,
+            message,
+            type: NotifyType.WARNING,
+            duration
+        });
     }
 
     /**
      * 错误通知（红色）
      */
     public static error(message: string, title?: string, duration?: number): void {
-        const instance = this._getInstance();
-        if (instance) {
-            instance.addNotification({
-                title,
-                message,
-                type: NotifyType.ERROR,
-                duration
-            });
-        }
+        this._addMessage({
+            title,
+            message,
+            type: NotifyType.ERROR,
+            duration
+        });
     }
 
     /**
      * 自定义通知
      */
     public static show(options: NotificationOptions): void {
-        const instance = this._getInstance();
-        if (instance) {
-            instance.addNotification(options);
-        }
+        this._addMessage(options);
     }
 
     /**

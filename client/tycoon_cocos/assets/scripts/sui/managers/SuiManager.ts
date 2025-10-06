@@ -12,13 +12,15 @@ import { SuiConfig, getNetworkRpcUrl } from '../config';
 import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
 import { TycoonGameClient } from '../interactions';
 import { MapAdminInteraction } from '../interactions/mapAdmin';
-import { QueryService, GameListItem } from '../services';
+import { QueryService, GameListItem, AssetService } from '../services';
 import { TycoonEventIndexer } from '../events/indexer';
 import { EventType } from '../events/types';
 import type { Game, Seat, GameCreateConfig } from '../types/game';
 import type { MapTemplate } from '../types/map';
+import type { SeatNFT, MapTemplateNFT, DeFiAssets } from '../types/assets';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
+import { Blackboard } from '../../events/Blackboard';
 import { UINotification } from '../../ui/utils/UINotification';
 
 /**
@@ -42,6 +44,7 @@ export class SuiManager {
     private _gameClient: TycoonGameClient | null = null;
     private _mapAdmin: MapAdminInteraction | null = null;
     private _queryService: QueryService | null = null;
+    private _assetService: AssetService | null = null;
 
     // 配置
     private _config: SuiConfig | null = null;
@@ -52,11 +55,18 @@ export class SuiManager {
     private _currentAddress: string | null = null;
     private _currentSeat: Seat | null = null;
 
-    // 缓存数据
+    // 缓存数据（链上数据）
     private _cachedGameData: any = null;
     private _cachedGames: Game[] = [];
     private _cachedMapTemplates: { id: number; name: string }[] = [];
     private _cacheTimestamp: number = 0;
+
+    // 缓存数据（玩家资产）
+    private _cachedSuiBalance: bigint = 0n;
+    private _cachedSeats: SeatNFT[] = [];
+    private _cachedMapTemplateNFTs: MapTemplateNFT[] = [];
+    private _cachedDeFiAssets: DeFiAssets = {};
+    private _assetsCacheTimestamp: number = 0;
 
     // 事件监听器
     private _eventIndexer: TycoonEventIndexer | null = null;
@@ -121,6 +131,12 @@ export class SuiManager {
             config.gameDataId
         );
 
+        // 创建 AssetService
+        this._assetService = new AssetService(
+            this._client,
+            config.packageId
+        );
+
         this._initialized = true;
 
         this._log('[SuiManager] Initialized successfully', {
@@ -135,7 +151,7 @@ export class SuiManager {
      * 检查是否已初始化
      */
     private _ensureInitialized(): void {
-        if (!this._initialized || !this._client || !this._gameClient || !this._mapAdmin || !this._queryService) {
+        if (!this._initialized || !this._client || !this._gameClient || !this._mapAdmin || !this._queryService || !this._assetService) {
             throw new Error('[SuiManager] Not initialized. Call init() first.');
         }
     }
@@ -209,6 +225,13 @@ export class SuiManager {
             digest: result.digest,
             status: result.effects?.status?.status
         });
+
+        // 交易成功后，异步刷新余额（不阻塞）
+        if (result.effects?.status?.status === 'success') {
+            this._refreshBalanceAsync().catch(error => {
+                console.error('[SuiManager] Failed to refresh balance after tx:', error);
+            });
+        }
 
         return result;
     }
@@ -771,6 +794,113 @@ export class SuiManager {
      */
     public get isPreloadCompleted(): boolean {
         return this._preloadCompleted;
+    }
+
+    // ============ 玩家资产管理 ============
+
+    /**
+     * 加载当前玩家的资产
+     * 在连接钱包后自动调用
+     */
+    public async loadPlayerAssets(): Promise<void> {
+        if (!this._currentAddress) {
+            console.warn('[SuiManager] No wallet connected, skip loading assets');
+            return;
+        }
+
+        this._ensureInitialized();
+
+        console.log('[SuiManager] Loading player assets for:', this._currentAddress);
+        UINotification.info("正在查询钱包资产...");
+
+        try {
+            // 并行查询所有资产
+            const [balance, seats] = await Promise.all([
+                this._assetService!.getSuiBalance(this._currentAddress),
+                this._assetService!.getPlayerSeats(this._currentAddress)
+                // 预留：Map Template NFTs
+                // this._assetService!.getMapTemplateNFTs(this._currentAddress),
+                // 预留：DeFi 资产
+                // this._assetService!.getDeFiAssets(this._currentAddress)
+            ]);
+
+            // 更新缓存
+            this._cachedSuiBalance = balance;
+            this._cachedSeats = seats;
+            this._assetsCacheTimestamp = Date.now();
+
+            console.log('[SuiManager] Player assets loaded', {
+                balance: balance.toString(),
+                seats: seats.length
+            });
+
+            // 通过 Blackboard 通知 UI 更新
+            Blackboard.instance.set("sui_balance", balance, true);
+            Blackboard.instance.set("sui_seats", seats, true);
+
+            const formattedBalance = this._formatSuiAmount(balance);
+            UINotification.success(`资产加载完成：${formattedBalance} SUI`);
+
+        } catch (error) {
+            console.error('[SuiManager] Failed to load player assets:', error);
+            UINotification.error("资产查询失败");
+        }
+    }
+
+    /**
+     * 刷新 SUI 余额（异步，不阻塞）
+     */
+    private async _refreshBalanceAsync(): Promise<void> {
+        if (!this._currentAddress) return;
+
+        try {
+            const balance = await this._assetService!.getSuiBalance(this._currentAddress);
+
+            if (balance !== this._cachedSuiBalance) {
+                this._cachedSuiBalance = balance;
+                Blackboard.instance.set("sui_balance", balance, true);
+                console.log('[SuiManager] Balance updated:', balance.toString());
+            }
+        } catch (error) {
+            console.error('[SuiManager] Failed to refresh balance:', error);
+        }
+    }
+
+    /**
+     * 格式化 SUI 数量
+     * @param mist MIST 数量
+     * @returns 格式化字符串（如 "123.45"）
+     */
+    private _formatSuiAmount(mist: bigint): string {
+        return AssetService.formatSuiAmount(mist, 2);
+    }
+
+    /**
+     * 获取缓存的 SUI 余额
+     */
+    public get suiBalance(): bigint {
+        return this._cachedSuiBalance;
+    }
+
+    /**
+     * 获取缓存的 Seat NFTs
+     */
+    public get seats(): SeatNFT[] {
+        return this._cachedSeats;
+    }
+
+    /**
+     * 获取缓存的 Map Template NFTs（预留）
+     */
+    public get mapTemplateNFTs(): MapTemplateNFT[] {
+        return this._cachedMapTemplateNFTs;
+    }
+
+    /**
+     * 获取缓存的 DeFi 资产（预留）
+     */
+    public get defiAssets(): DeFiAssets {
+        return this._cachedDeFiAssets;
     }
 }
 

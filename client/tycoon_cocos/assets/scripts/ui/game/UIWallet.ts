@@ -40,6 +40,7 @@ export class UIWallet extends UIBase {
     private m_btn_wallet:fgui.GButton;
     private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
+    private m_balance:fgui.GTextField | null = null;  // 余额显示
 
     // Controller控制disconnected/connected状态
     private m_controller: fgui.Controller | null = null;
@@ -66,6 +67,7 @@ export class UIWallet extends UIBase {
         this.m_btn_wallet = this.getButton("btn_wallet");
         this.m_btn_connect = this.getButton("btn_connect");
         this.m_btn_disconnect = this.getButton("btn_disconnect");
+        this.m_balance = this.getText("balance");
 
         // 获取controller
         this.m_controller = this.getController("wallet");
@@ -87,7 +89,7 @@ export class UIWallet extends UIBase {
         if (this.m_btn_wallet) {
             this.m_btn_wallet.onClick(this._onWalletClick, this);
         }
-        
+
         if (this.m_btn_connect) {
             this.m_btn_connect.onClick(this._onConnectClick, this);
         }
@@ -95,6 +97,9 @@ export class UIWallet extends UIBase {
         if (this.m_btn_disconnect) {
             this.m_btn_disconnect.onClick(this._onDisconnectClick, this);
         }
+
+        // 监听 SUI 余额变化
+        Blackboard.instance.watch("sui_balance", this._onBalanceChanged, this);
     }
 
     /**
@@ -160,6 +165,15 @@ export class UIWallet extends UIBase {
             // 清除 SuiManager 的签名器
             SuiManager.instance.clearSigner();
             console.log('[UIWallet] SuiManager signer cleared');
+
+            // 清除 Blackboard 中的资产数据
+            Blackboard.instance.set("sui_balance", BigInt(0), true);
+            Blackboard.instance.set("sui_seats", [], true);
+
+            // 清除余额显示
+            if (this.m_balance) {
+                this.m_balance.text = "";
+            }
 
             // 切换controller状态为disconnected
             if (this.m_controller) {
@@ -379,6 +393,11 @@ export class UIWallet extends UIBase {
             SuiManager.instance.setWalletSigner(wallet, account);
             console.log(`[UIWallet] SuiManager signer updated`);
 
+            // 加载玩家资产（不阻塞）
+            SuiManager.instance.loadPlayerAssets().catch(error => {
+                console.error('[UIWallet] Failed to load player assets:', error);
+            });
+
             // 监听钱包变化
             const eventsFeature = wallet.features['standard:events'] as any;
             if (eventsFeature && typeof eventsFeature.on === 'function') {
@@ -464,6 +483,11 @@ export class UIWallet extends UIBase {
             // 设置 SuiManager 的签名器
             SuiManager.instance.setWalletSigner(targetWallet, targetAccount);
             console.log(`[UIWallet] SuiManager signer updated (auto-connect)`);
+
+            // 加载玩家资产（不阻塞）
+            SuiManager.instance.loadPlayerAssets().catch(error => {
+                console.error('[UIWallet] Failed to load player assets:', error);
+            });
 
             // 监听钱包变化
             const eventsFeature = targetWallet.features['standard:events'] as any;
@@ -564,6 +588,29 @@ export class UIWallet extends UIBase {
             console.log('[UIWallet] Accounts changed:', event.accounts);
             // 你可以在这里做 UI 更新、重新拉取数据等
         }
+    }
+
+    // ================== 余额显示 ==================
+
+    /**
+     * 余额变化回调（Blackboard 监听）
+     */
+    private _onBalanceChanged(balance: bigint): void {
+        console.log('[UIWallet] Balance changed:', balance);
+
+        if (this.m_balance) {
+            this.m_balance.text = this._formatBalance(balance);
+        }
+    }
+
+    /**
+     * 格式化余额显示
+     * @param balance MIST 数量（1 SUI = 10^9 MIST）
+     * @returns 格式化字符串（如 "123.45 SUI"）
+     */
+    private _formatBalance(balance: bigint): string {
+        const sui = Number(balance) / 1_000_000_000;
+        return sui.toFixed(2) + ' SUI';
     }
 
     // ================== localStorage辅助方法 ==================

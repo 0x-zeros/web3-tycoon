@@ -17,6 +17,9 @@ export * from './cards';
 // 导出管理类型
 export * from './admin';
 
+// 导出资产类型
+export * from './assets';
+
 // 导出GameData类型（来自tycoon.move）
 export interface GameData {
     /** 对象ID */

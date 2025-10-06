@@ -374,6 +374,7 @@ export class UIWallet extends UIBase {
             const eventsFeature = wallet.features['standard:events'] as any;
             if (eventsFeature && typeof eventsFeature.on === 'function') {
                 eventsFeature.on('change', this._onWalletChange.bind(this));
+                console.log(`[UIWallet] Listening to wallet change for ${wallet.name}`);
             }
 
         } catch (error) {
@@ -455,6 +456,7 @@ export class UIWallet extends UIBase {
             const eventsFeature = targetWallet.features['standard:events'] as any;
             if (eventsFeature && typeof eventsFeature.on === 'function') {
                 eventsFeature.on('change', this._onWalletChange.bind(this));
+                console.log(`[UIWallet] Listening to wallet change for ${targetWallet.name}`);
             }
 
             console.log(`[UIWallet] Auto-connected to ${targetWallet.name} with account ${targetAccount.address}`);
@@ -515,6 +517,7 @@ export class UIWallet extends UIBase {
 
         //This call returns a function that can be called to unsubscribe from listening to the events.
         const unsubscribe = wallet.features['standard:events'].on('change', this._onWalletChange.bind(this));
+        console.log(`[UIWallet] Listening to wallet change for ${wallet.name}`);
         //unsubscribe();//on destroy
 
 
@@ -541,7 +544,13 @@ export class UIWallet extends UIBase {
         // features: IdentifierRecord<unknown>
     //  }
     private _onWalletChange(event: { accounts: WalletAccount[], chains: IdentifierArray, features: IdentifierRecord<unknown> }): void {
-        console.log('onWalletChange: ', event);
+        console.log('[UIWallet] onWalletChange: ', event);
+
+        if (event.accounts && event.accounts.length > 0) {
+            // 账号发生变化
+            console.log('[UIWallet] Accounts changed:', event.accounts);
+            // 你可以在这里做 UI 更新、重新拉取数据等
+        }
     }
 
     // ================== localStorage辅助方法 ==================

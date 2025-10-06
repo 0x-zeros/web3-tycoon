@@ -29,8 +29,5 @@
       <relation target="" sidePair="right-right,top-top"/>
       <Button title="退出游戏"/>
     </component>
-    <component id="n10_nev8" name="wallet" src="lambos" fileName="Wallet.xml" pkg="82r0pzop" xy="1579,5">
-      <relation target="" sidePair="right-right,top-top"/>
-    </component>
   </displayList>
 </component>

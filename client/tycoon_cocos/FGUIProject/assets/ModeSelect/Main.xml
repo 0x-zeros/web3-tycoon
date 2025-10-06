@@ -9,8 +9,5 @@
       <Button title="开始游戏"/>
     </component>
     <image id="n12_mumq" name="n12" src="mumq7" fileName="images/logo.png" xy="-154,-148" size="993,993"/>
-    <component id="n13_lamb" name="wallet" src="lambos" fileName="Wallet.xml" pkg="82r0pzop" xy="1240,110">
-      <relation target="" sidePair="right-right,top-top"/>
-    </component>
   </displayList>
 </component>

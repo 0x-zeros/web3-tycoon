@@ -11,6 +11,7 @@ import { UIModeSelect } from "../game/UIModeSelect";
 import { UIInGame } from "../game/UIInGame";
 import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
+import { UIWallet } from "../game/UIWallet";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
@@ -26,6 +27,8 @@ export enum UILayer {
     SCENE = 100,
     /** 普通层：常规UI面板（Editor/普通窗口） */
     NORMAL = 200,
+    /** 钱包层：持久化钱包UI（位于NORMAL和POPUP之间） */
+    WALLET = 250,
     /** 弹窗层：非模态弹窗 */
     POPUP = 300,
     /** 模态层：MessageBox、确认框（阻挡背景） */
@@ -81,7 +84,7 @@ export interface UIManagerConfig {
  */
 export class UIManager {
     private static _instance: UIManager | null = null;
-    
+
     /** FairyGUI根节点 */
     private _groot: fgui.GRoot | null = null;
     /** UI层级容器 */
@@ -98,6 +101,8 @@ export class UIManager {
     private _uiConstructors: Map<string, UIConstructor> = new Map();
     /** 当前显示的UI实例 */
     private _activeUIs: Map<string, UIBase> = new Map();
+    /** 全局持久化的 Wallet UI 实例 */
+    private _walletUI: UIWallet | null = null;
     /** UI缓存池 */
     private _uiCache: Map<string, UIBase> = new Map();
     /** 已加载的包 */
@@ -245,6 +250,7 @@ export class UIManager {
             { name: "BackgroundLayer", layer: UILayer.BACKGROUND, touchable: false },
             { name: "SceneLayer", layer: UILayer.SCENE, touchable: true },
             { name: "NormalLayer", layer: UILayer.NORMAL, touchable: true },
+            { name: "WalletLayer", layer: UILayer.WALLET, touchable: true },
             { name: "PopupLayer", layer: UILayer.POPUP, touchable: true },
             { name: "ModalLayer", layer: UILayer.MODAL, touchable: false },
             { name: "NotificationLayer", layer: UILayer.NOTIFICATION, touchable: false },
@@ -847,6 +853,9 @@ export class UIManager {
             // 4. 显示Notification（全局通知中心，始终显示）
             await UIManager.instance.showUI("Notification");
 
+            // 4.5. 初始化全局 Wallet UI（持久化显示）
+            await UIManager.instance.initWalletUI();
+
             // 5. 显示初始界面
             await UIManager.instance.showModeSelect();
 
@@ -927,6 +936,60 @@ export class UIManager {
             isWindow: false,
             layer: UILayer.NOTIFICATION
         }, UINotification);
+    }
+
+    /**
+     * 初始化全局 Wallet UI（持久化显示）
+     */
+    public async initWalletUI(packageName: string = "Common", componentName: string = "Wallet"): Promise<void> {
+        if (this._walletUI) {
+            console.warn("[UIManager] Wallet UI already initialized");
+            return;
+        }
+
+        try {
+            // 加载 Common package（如果未加载）
+            const loaded = await this.loadPackage(packageName);
+            if (!loaded) {
+                console.error(`[UIManager] Failed to load package: ${packageName}`);
+                return;
+            }
+
+            // 创建 Wallet UI
+            const walletComponent = fgui.UIPackage.createObject(packageName, componentName);
+            if (!walletComponent) {
+                console.error(`[UIManager] Failed to create ${packageName}.${componentName}`);
+                return;
+            }
+
+            const walletCom = walletComponent.asCom;
+            this._walletUI = walletCom.node.addComponent(UIWallet);
+            this._walletUI.setUIName("Wallet");
+            this._walletUI.setPanel(walletCom);
+            this._walletUI.init();
+
+            // 添加到 WALLET Layer
+            const walletLayer = this.getLayer(UILayer.WALLET);
+            if (!walletLayer) {
+                console.error("[UIManager] Wallet layer not found");
+                return;
+            }
+
+            walletLayer.addChild(walletCom);
+
+            // 设置位置（右上角）
+            if (this._groot) {
+                walletCom.setPosition(
+                    this._groot.width - walletCom.width - 20,
+                    20
+                );
+            }
+
+            console.log("[UIManager] Wallet UI initialized successfully");
+
+        } catch (error) {
+            console.error("[UIManager] Failed to initialize Wallet UI:", error);
+        }
     }
 
     /**

@@ -13,8 +13,13 @@ import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
 import { TycoonGameClient } from '../interactions';
 import { MapAdminInteraction } from '../interactions/mapAdmin';
 import { QueryService, GameListItem } from '../services';
+import { TycoonEventIndexer } from '../events/indexer';
+import { EventType } from '../events/types';
 import type { Game, Seat, GameCreateConfig } from '../types/game';
 import type { MapTemplate } from '../types/map';
+import { EventBus } from '../../events/EventBus';
+import { EventTypes } from '../../events/EventTypes';
+import { UINotification } from '../../ui/utils/UINotification';
 
 /**
  * Sui Manager 配置选项
@@ -46,6 +51,19 @@ export class SuiManager {
     private _initialized: boolean = false;
     private _currentAddress: string | null = null;
     private _currentSeat: Seat | null = null;
+
+    // 缓存数据
+    private _cachedGameData: any = null;
+    private _cachedGames: Game[] = [];
+    private _cachedMapTemplates: { id: number; name: string }[] = [];
+    private _cacheTimestamp: number = 0;
+
+    // 事件监听器
+    private _eventIndexer: TycoonEventIndexer | null = null;
+
+    // 预加载状态
+    private _preloadStarted: boolean = false;
+    private _preloadCompleted: boolean = false;
 
     /**
      * 私有构造函数（单例模式）
@@ -379,16 +397,29 @@ export class SuiManager {
 
     /**
      * 获取可加入的游戏列表
+     * - 优先使用缓存数据
      * - 过滤 STATUS_READY（准备中）的游戏
      * - 自己创建的游戏排在第一位
      * - 返回前 6 个
      *
+     * @param forceRefresh 是否强制刷新（默认 false）
      * @returns 游戏列表（最多 6 个）
      */
-    public async getAvailableGames(): Promise<Game[]> {
+    public async getAvailableGames(forceRefresh: boolean = false): Promise<Game[]> {
         this._ensureInitialized();
 
-        this._log('[SuiManager] Querying available games...');
+        // 优先使用缓存
+        if (!forceRefresh && this._cachedGames.length > 0) {
+            this._log('[SuiManager] Returning cached games', {
+                count: this._cachedGames.length,
+                cacheAge: Date.now() - this._cacheTimestamp
+            });
+            return this._cachedGames;
+        }
+
+        // 实时查询
+        this._log('[SuiManager] Querying available games (cache miss or force refresh)...');
+        UINotification.info("正在查询游戏列表...");
 
         // 查询所有 READY 状态的游戏
         let games = await this._queryService!.getReadyGames(
@@ -398,22 +429,13 @@ export class SuiManager {
 
         this._log(`[SuiManager] Found ${games.length} READY games`);
 
-        // 排序：自己创建的放第一位，其他按创建时间降序
-        games.sort((a, b) => {
-            // 自己创建的优先
-            if (a.isMyCreation && !b.isMyCreation) return -1;
-            if (!a.isMyCreation && b.isMyCreation) return 1;
+        // 更新缓存
+        this._cachedGames = this._sortAndLimitGames(games);
+        this._cacheTimestamp = Date.now();
 
-            // 按创建时间降序（最新的在前）
-            return b.createdAt - a.createdAt;
-        });
+        this._log(`[SuiManager] Returning ${this._cachedGames.length} games`);
 
-        // 只返回前 6 个
-        const topGames = games.slice(0, 6);
-
-        this._log(`[SuiManager] Returning top ${topGames.length} games`);
-
-        return topGames.map(item => item.game);
+        return this._cachedGames;
     }
 
     /**
@@ -554,6 +576,201 @@ export class SuiManager {
                 console.log(message);
             }
         }
+    }
+
+    // ============ 后台数据预加载和事件监听 ============
+
+    /**
+     * 启动后台数据同步
+     * 包括数据预加载和事件监听
+     */
+    public async startBackgroundSync(): Promise<void> {
+        if (this._preloadStarted) {
+            console.warn('[SuiManager] Background sync already started');
+            return;
+        }
+
+        this._preloadStarted = true;
+        console.log('[SuiManager] Starting background sync...');
+
+        // 异步预加载数据（不阻塞）
+        this._preloadData();
+
+        // 启动事件监听
+        this._startEventListener();
+    }
+
+    /**
+     * 预加载数据
+     */
+    private async _preloadData(): Promise<void> {
+        this._ensureInitialized();
+
+        console.log('[SuiManager] Starting data preload...');
+        UINotification.info("正在加载链上数据...");
+
+        try {
+            // 并行查询所有数据
+            const [gameData, games, templates] = await Promise.all([
+                this._queryService!.getGameData(),
+                this._queryService!.getReadyGames(this._currentAddress || undefined, 50),
+                this._queryService!.getMapTemplates()
+            ]);
+
+            // 更新缓存
+            this._cachedGameData = gameData;
+            this._cachedGames = this._sortAndLimitGames(games);
+            this._cachedMapTemplates = templates;
+            this._cacheTimestamp = Date.now();
+            this._preloadCompleted = true;
+
+            console.log('[SuiManager] Preload completed', {
+                games: this._cachedGames.length,
+                templates: this._cachedMapTemplates.length
+            });
+
+            UINotification.info(`数据加载完成：${this._cachedGames.length} 个游戏，${this._cachedMapTemplates.length} 个模板`);
+
+            // 发送预加载完成事件
+            EventBus.emit(EventTypes.Sui.DataPreloaded, {
+                gamesCount: this._cachedGames.length,
+                templatesCount: this._cachedMapTemplates.length
+            });
+
+        } catch (error) {
+            console.error('[SuiManager] Preload failed:', error);
+            UINotification.error("数据加载失败");
+        }
+    }
+
+    /**
+     * 启动事件监听器
+     */
+    private _startEventListener(): void {
+        this._ensureInitialized();
+
+        console.log('[SuiManager] Starting event listener...');
+
+        this._eventIndexer = new TycoonEventIndexer({
+            client: this._client!,
+            packageId: this._config!.packageId,
+            autoStart: true,
+            pollInterval: 5000  // 每 5 秒轮询一次
+        });
+
+        // 监听游戏创建事件
+        this._eventIndexer.on(EventType.GAME_CREATED, (event) => {
+            console.log('[SuiManager] New game created event:', event);
+            UINotification.info("发现新游戏！");
+            this._refreshGamesCache();
+        });
+
+        // 监听游戏开始事件（从列表移除）
+        this._eventIndexer.on(EventType.GAME_STARTED, (event) => {
+            console.log('[SuiManager] Game started event:', event);
+            this._onGameStarted(event);
+        });
+
+        console.log('[SuiManager] Event listener started');
+    }
+
+    /**
+     * 刷新游戏列表缓存
+     */
+    private async _refreshGamesCache(): Promise<void> {
+        try {
+            const games = await this._queryService!.getReadyGames(
+                this._currentAddress || undefined,
+                50
+            );
+
+            this._cachedGames = this._sortAndLimitGames(games);
+            this._cacheTimestamp = Date.now();
+
+            console.log('[SuiManager] Games cache refreshed:', this._cachedGames.length);
+
+            // 发送缓存更新事件
+            EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                games: this._cachedGames
+            });
+
+        } catch (error) {
+            console.error('[SuiManager] Failed to refresh games cache:', error);
+        }
+    }
+
+    /**
+     * 游戏开始事件处理（从 READY 列表移除）
+     */
+    private _onGameStarted(event: any): void {
+        const gameId = event.data?.game;
+        if (!gameId) return;
+
+        // 从缓存中移除已开始的游戏
+        const index = this._cachedGames.findIndex(g => g.id === gameId);
+        if (index >= 0) {
+            this._cachedGames.splice(index, 1);
+            console.log(`[SuiManager] Removed started game ${gameId} from cache`);
+
+            // 通知 UI 更新
+            EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                games: this._cachedGames
+            });
+        }
+    }
+
+    /**
+     * 排序并限制游戏列表
+     */
+    private _sortAndLimitGames(games: GameListItem[]): Game[] {
+        // 排序：自己创建的优先，其他按时间降序
+        games.sort((a, b) => {
+            if (a.isMyCreation && !b.isMyCreation) return -1;
+            if (!a.isMyCreation && b.isMyCreation) return 1;
+            return b.createdAt - a.createdAt;
+        });
+
+        // 只保留前 6 个
+        return games.slice(0, 6).map(item => item.game);
+    }
+
+    /**
+     * 停止事件监听器
+     */
+    public stopEventListener(): void {
+        if (this._eventIndexer) {
+            this._eventIndexer.stop();
+            this._eventIndexer = null;
+            console.log('[SuiManager] Event listener stopped');
+        }
+    }
+
+    /**
+     * 获取缓存的游戏列表
+     */
+    public getCachedGames(): Game[] {
+        return this._cachedGames;
+    }
+
+    /**
+     * 获取缓存的地图模板列表
+     */
+    public getCachedMapTemplates(): { id: number; name: string }[] {
+        return this._cachedMapTemplates;
+    }
+
+    /**
+     * 获取缓存的 GameData
+     */
+    public getCachedGameData(): any {
+        return this._cachedGameData;
+    }
+
+    /**
+     * 预加载是否完成
+     */
+    public get isPreloadCompleted(): boolean {
+        return this._preloadCompleted;
     }
 }
 

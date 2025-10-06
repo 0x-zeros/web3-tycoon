@@ -322,6 +322,14 @@ export class GameInitializer extends Component {
             console.log('  Network:', CURRENT_SUI_CONFIG.network);
             console.log('  PackageID:', CURRENT_SUI_CONFIG.packageId);
             console.log('  GameDataID:', CURRENT_SUI_CONFIG.gameDataId);
+
+            // 启动后台数据同步（不等待完成）
+            SuiManager.instance.startBackgroundSync().catch(error => {
+                console.error('[GameInitializer] Background sync failed:', error);
+            });
+
+            console.log('[GameInitializer] Background data sync started');
+
         } catch (error) {
             console.error('[GameInitializer] Failed to initialize SuiManager:', error);
             throw error;

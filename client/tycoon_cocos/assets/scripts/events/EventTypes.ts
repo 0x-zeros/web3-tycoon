@@ -360,6 +360,18 @@ export const EventTypes = {
         IndexerStopped: "sui_chain_indexer_stopped"
     },
 
+    /** Sui 客户端事件（数据同步、缓存更新） */
+    Sui: {
+        /** 数据预加载完成 */
+        DataPreloaded: "sui_data_preloaded",
+        /** 游戏列表更新 */
+        GamesListUpdated: "sui_games_list_updated",
+        /** 地图模板列表更新 */
+        MapTemplatesUpdated: "sui_map_templates_updated",
+        /** 新游戏创建（客户端通知） */
+        NewGameCreated: "sui_new_game_created"
+    },
+
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */
     Input3D: {
         /** 鼠标按下 */

@@ -1,6 +1,8 @@
 import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
+import { SuiManager } from "../../sui/managers/SuiManager";
+import { UINotification } from "../utils/UINotification";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -84,7 +86,13 @@ export class UIModeSelect extends UIBase {
     private _onStartClick(): void {
         console.log("[UIModeSelect] Start clicked");
 
-        // 显示地图选择界面
+        // 检查钱包连接
+        if (!SuiManager.instance.isConnected) {
+            UINotification.warning("请先连接钱包");
+            return;
+        }
+
+        // 显示地图选择界面（不传递数据，MapSelect 会自己从 SuiManager 获取缓存）
         EventBus.emit(EventTypes.UI.ShowMapSelect, {
             source: "mode_select"
         });

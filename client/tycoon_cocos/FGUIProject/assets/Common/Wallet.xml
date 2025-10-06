@@ -14,7 +14,7 @@
       <gearDisplay controller="wallet" pages="1"/>
       <Button title="Disconnect"/>
     </component>
-    <text id="n9_su9z" name="chain" xy="13,13" size="136,52" fontSize="28" color="#ffffff" autoSize="none" text="localnet"/>
-    <text id="n10_pseu" name="balance" xy="168,13" size="155,51" fontSize="28" color="#ffffff" autoSize="none" text="sui 1.5601"/>
+    <text id="n9_su9z" name="chain" xy="6,5" size="316,38" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="localnet"/>
+    <text id="n10_pseu" name="balance" xy="6,52" size="319,38" fontSize="25" color="#ffffff" autoSize="none" underline="true" autoClearText="true" text="sui 1.5601"/>
   </displayList>
 </component>

@@ -1,84 +1,180 @@
-# Sui集成模块
+# Sui 交互模块
 
-这是Web3 Tycoon游戏的Sui区块链集成模块，完全对应Move端的合约结构。
+完整的 Sui 链上交互管理系统，支持钱包签名和查询服务。
 
 ## 📁 文件结构
 
 ```
 sui/
-├── types/                    # 类型定义（对应Move端的struct）
-│   ├── constants.ts         # 所有常量（对应types.move）
-│   ├── game.ts             # Game相关类型（对应game.move）
-│   ├── map.ts              # Map相关类型（对应map.move）
-│   ├── cards.ts            # Card相关类型（对应cards.move）
-│   ├── admin.ts            # Admin相关类型（对应admin.move）
-│   └── index.ts            # 统一导出
+├── config/                  # 配置管理
+│   ├── SuiConfig.ts        # 配置接口和工具
+│   └── index.ts            # 加载 env.localnet.ts
 │
-├── events/                  # 事件系统
-│   ├── types.ts            # 基础事件类型（对应events.move）
-│   └── aggregated.ts       # 聚合事件类型（RollAndStepActionEvent等）
+├── signers/                # 签名器抽象
+│   ├── SignerProvider.ts  # 统一签名接口
+│   ├── WalletSigner.ts    # 浏览器钱包签名（推荐）
+│   ├── KeypairSigner.ts   # 本地密钥对签名（测试）
+│   └── index.ts
 │
-├── interactions/           # 链交互封装
-│   ├── game.ts            # 游戏操作（create、join、start等）
-│   ├── turn.ts            # 回合操作（roll_and_step、end_turn等）
-│   └── index.ts           # 包含property、cards、admin交互
+├── managers/               # 核心管理器
+│   ├── SuiManager.ts      # 统一管理器（单例）
+│   └── index.ts
 │
-├── pathfinding/           # 路径查找（保持现有）
+├── services/               # 查询服务
+│   ├── QueryService.ts    # 链上数据查询
+│   └── index.ts
+│
+├── interactions/           # 交互封装
+│   ├── game.ts            # 游戏交互（create/join/start）
+│   ├── turn.ts            # 回合交互（roll/step）
+│   ├── mapAdmin.ts        # 地图管理（publish）
+│   └── index.ts
+│
+├── types/                  # 类型定义（对应Move端的struct）
+│   ├── constants.ts        # 所有常量（对应types.move）
+│   ├── game.ts            # Game相关类型（对应game.move）
+│   ├── map.ts             # Map相关类型（对应map.move）
+│   ├── cards.ts           # Card相关类型（对应cards.move）
+│   ├── admin.ts           # Admin相关类型（对应admin.move）
+│   └── index.ts           # 统一导出
+│
+├── events/                 # 事件索引
+│   ├── indexer.ts         # 事件监听器
+│   ├── types.ts           # 事件类型
+│   └── aggregated.ts      # 聚合事件
+│
+├── utils/                  # 工具函数
+│   └── mapBcsEncoder.ts   # BCS 编码
+│
+├── pathfinding/           # 路径查找
 │   ├── MapGraph.ts
 │   ├── BFSPathfinder.ts
 │   └── PathChoiceGenerator.ts
 │
-└── index.ts              # 主入口，统一导出
+├── INTEGRATION_EXAMPLE.md  # 集成示例文档
+└── README.md              # 本文件
 ```
 
-## 🎮 快速开始
+## 🚀 快速开始
+
+### 新架构（推荐使用）
 
 ```typescript
-import { createTycoonClient, TileKind, CardKind } from '@/scripts/sui';
+import { SuiManager } from '@/scripts/sui/managers/SuiManager';
+import { UINotification } from '@/scripts/ui/utils/UINotification';
+
+// 1. 初始化（GameInitializer 中自动完成）
+// await SuiManager.instance.init(CURRENT_SUI_CONFIG, { debug: true });
+
+// 2. 连接钱包（UIWallet 中自动完成）
+// SuiManager.instance.setWalletSigner(wallet, account);
+
+// 3. 查询可加入的游戏
+const games = await SuiManager.instance.getAvailableGames();
+console.log(`找到 ${games.length} 个可加入的游戏`);
+
+// 4. 创建游戏
+const {gameId, seatId} = await SuiManager.instance.createGame({
+    template_map_id: '0x...',
+    max_players: 4
+});
+console.log(`游戏创建成功: ${gameId}`);
+
+// 5. 加入游戏
+const {seatId, playerIndex} = await SuiManager.instance.joinGame(gameId);
+console.log(`已加入游戏，玩家 #${playerIndex}`);
+
+// 6. 开始游戏
+await SuiManager.instance.startGame(gameId, mapTemplateId);
+console.log("游戏已开始");
+
+// 7. 发布地图
+const {templateId} = await SuiManager.instance.publishMapTemplate(mapTemplate);
+console.log(`地图发布成功，ID: ${templateId}`);
+```
+
+### 旧 API（仍然可用）
+
+```typescript
+import { TycoonGameClient } from '@/scripts/sui';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
-// 1. 创建客户端
-const client = createTycoonClient({
+// 使用 Keypair 直接签名
+const client = TycoonGameClient.create({
     network: 'testnet',
-    packageId: '0xYOUR_PACKAGE_ID',
-    gameDataId: '0xGAME_DATA_ID'
+    packageId: '0x...',
+    gameDataId: '0x...'
 });
 
-// 2. 准备密钥对
 const keypair = Ed25519Keypair.generate();
-
-// 3. 创建游戏
-const { gameId, seatId } = await client.game.createGame({
-    template_id: 1,
-    max_players: 4,
-    starting_cash: 100000n
-}, keypair);
-
-// 4. 加入游戏
-const joinResult = await client.game.joinGame(gameId, keypair);
-
-// 5. 开始游戏
-await client.game.startGame(gameId, seatId, keypair);
-
-// 6. 游戏操作
-// 掷骰移动
-await client.turn.rollAndStep(gameId, seatId, [], keypair);
-
-// 购买地产
-await client.property.buyProperty(gameId, seatId, keypair);
-
-// 使用卡牌
-await client.card.useCard(
-    gameId,
-    seatId,
-    CardKind.MOVE_CTRL,
-    [6], // 参数：骰子点数为6
-    keypair
-);
-
-// 结束回合
-await client.turn.endTurn(gameId, seatId, keypair);
+const result = await client.game.createGame(config, keypair);
 ```
+
+---
+
+## 🏗️ 架构设计
+
+### 统一签名接口
+
+```
+SignerProvider (接口)
+    ├── WalletSigner       → 浏览器钱包扩展（推荐）
+    └── KeypairSigner      → 本地密钥对（测试）
+```
+
+**优势：**
+- UI 代码无需关心签名实现细节
+- 可以无缝切换签名方式
+- 支持 Wallet Standard 的所有钱包
+
+### 交互层设计
+
+```
+UI 层
+  ↓ 调用
+SuiManager（高级 API）
+  ↓ 使用
+├── QueryService（查询）
+├── GameInteraction（游戏交互）
+├── MapAdminInteraction（地图管理）
+└── SignerProvider（签名）
+  ↓ 执行
+Sui 链
+```
+
+### SuiManager 核心功能
+
+```typescript
+class SuiManager {
+    // === 初始化 ===
+    async init(config: SuiConfig)
+
+    // === 签名器管理 ===
+    setWalletSigner(wallet, account)
+    setKeypairSigner(keypair)
+    clearSigner()
+
+    // === 游戏交互 ===
+    async createGame(config): Promise<{gameId, seatId}>
+    async joinGame(gameId): Promise<{seatId, playerIndex}>
+    async startGame(gameId, mapTemplateId)
+
+    // === 查询服务 ===
+    async getAvailableGames(): Promise<Game[]>
+    async getMapTemplates()
+    async getGameData()
+
+    // === 地图管理 ===
+    async publishMapTemplate(mapTemplate)
+
+    // === 状态访问 ===
+    get isConnected: boolean
+    get currentAddress: string | null
+    get currentSeat: Seat | null
+}
+```
+
+---
 
 ## 📊 类型系统
 

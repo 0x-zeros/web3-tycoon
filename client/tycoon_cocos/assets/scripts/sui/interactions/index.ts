@@ -9,6 +9,8 @@ import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { MapTemplate } from '../types/map';
+import { GameInteraction } from './game';
+import { TurnInteraction } from './turn';
 
 // ===== Property Interactions 地产交互 =====
 

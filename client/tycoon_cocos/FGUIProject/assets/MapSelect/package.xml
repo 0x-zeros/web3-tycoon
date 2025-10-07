@@ -2,7 +2,10 @@
 <packageDescription id="8joqc56j">
   <resources>
     <component id="105vo0" name="Main.xml" path="/" exported="true"/>
-    <component id="105vo1" name="Map.xml" path="/components/"/>
+    <component id="105vo1" name="Map_json.xml" path="/components/"/>
+    <component id="pseuo2" name="Map.xml" path="/" exported="true"/>
+    <component id="pseuo3" name="Game.xml" path="/components/"/>
+    <component id="pseuo4" name="Map.xml" path="/components/"/>
   </resources>
   <publish name=""/>
 </packageDescription>

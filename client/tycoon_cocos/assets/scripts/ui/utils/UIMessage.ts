@@ -268,9 +268,10 @@ export class UIMessage extends UIBase {
         this._btnSecondary = this.getButton("btn_secondary");
         this._btnClose = this.getButton("btn_close");
 
-        // 确保 panel 可触摸
+        // 确保 panel 可触摸但不阻挡底层
         if (this._panel) {
-            this._panel.touchable = true;
+            this._panel.touchable = true;   // MessageBox 可点击
+            this._panel.opaque = false;     // 空白区域穿透到底层
         }
 
         // 调试输出

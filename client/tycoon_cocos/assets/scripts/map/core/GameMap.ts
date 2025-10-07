@@ -1171,6 +1171,10 @@ export class GameMap extends Component {
             }
 
             console.log(`[GameMap] Map loaded successfully: ${loadedTiles} tiles, ${loadedObjects} objects`);
+
+            // 设置相机看向地图中心
+            this.focusCameraOnMapCenter();
+
             return true;
             
         } catch (error) {
@@ -3299,5 +3303,64 @@ export class GameMap extends Component {
         }
 
         return true;
+    }
+
+    /**
+     * 计算地图中心（基于所有 tiles 的 gridPos）
+     * @returns 地图中心的世界坐标
+     */
+    private calculateMapCenter(): Vec3 {
+        // 默认中心（没有 tiles 时）
+        const defaultGridX = 15;
+        const defaultGridZ = 15;
+
+        if (this._tiles.length === 0) {
+            console.log('[GameMap] No tiles, using default center (15, 15)');
+            const defaultPos = new Vec2(defaultGridX, defaultGridZ);
+            return new Vec3(defaultPos.x + 0.5, 0, defaultPos.y + 0.5);
+        }
+
+        // 计算所有 tiles 的 gridPos 平均值
+        let sumX = 0;
+        let sumZ = 0;
+
+        this._tiles.forEach(tile => {
+            const gridPos = tile.getGridPosition();
+            sumX += gridPos.x;
+            sumZ += gridPos.y;  // Vec2.y 是 z 坐标
+        });
+
+        const avgX = Math.floor(sumX / this._tiles.length);
+        const avgZ = Math.floor(sumZ / this._tiles.length);
+
+        console.log(`[GameMap] Map center calculated: grid(${avgX}, ${avgZ}) from ${this._tiles.length} tiles`);
+
+        // 转换为世界坐标（格子中心）
+        return new Vec3(avgX + 0.5, 0, avgZ + 0.5);
+    }
+
+    /**
+     * 设置相机看向地图中心
+     */
+    private focusCameraOnMapCenter(): void {
+        // 计算地图中心
+        const center = this.calculateMapCenter();
+
+        // 获取 CameraController
+        const cameraNode = find('Main Camera');
+        if (!cameraNode) {
+            console.warn('[GameMap] No Main Camera found');
+            return;
+        }
+
+        const cameraController = cameraNode.getComponent(CameraController);
+        if (!cameraController) {
+            console.warn('[GameMap] No CameraController found');
+            return;
+        }
+
+        // 设置相机看向中心（平滑过渡）
+        cameraController.lookAt(center, false);
+        console.log(`[GameMap] Camera focused on map center: world(${center.x.toFixed(1)}, ${center.y.toFixed(1)}, ${center.z.toFixed(1)})`);
     }
 }

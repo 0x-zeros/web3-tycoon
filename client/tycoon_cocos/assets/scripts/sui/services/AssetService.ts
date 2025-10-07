@@ -29,7 +29,7 @@ export class AssetService {
                 coinType: '0x2::sui::SUI'
             });
 
-            console.log(`[AssetService] SUI balance for ${address}:`, balance.totalBalance);
+            // console.log(`[AssetService] SUI balance for ${address}:`, balance.totalBalance);
             return BigInt(balance.totalBalance);
 
         } catch (error) {

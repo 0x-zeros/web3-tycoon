@@ -54,6 +54,9 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
             const address = keypair.toSuiAddress();
             console.log('  Address:', address);
 
+            // Step 4: 检查余额并请求 faucet（如果需要）
+            await checkBalanceAndRequestFaucet(address);
+
             console.log('[KeystoreLoader] === SUCCESS (LOADED) ===');
             console.log('='.repeat(60));
             return keypair;
@@ -221,4 +224,46 @@ function exportKeypairToBase64(keypair: Ed25519Keypair): string {
 export function clearStoredKeypair(): void {
     localStorage.removeItem(STORAGE_KEY);
     console.log('[KeystoreLoader] Stored keypair cleared');
+}
+
+/**
+ * 检查余额，如果少于 10 SUI 则请求 faucet
+ * @param address 地址
+ */
+async function checkBalanceAndRequestFaucet(address: string): Promise<void> {
+    console.log('[KeystoreLoader] Step 4: Checking balance');
+
+    try {
+        // 创建临时 client 查询余额
+        const { SuiClient } = await import('@mysten/sui/client');
+        const client = new SuiClient({ url: 'http://127.0.0.1:9000' });
+
+        const balanceResult = await client.getBalance({
+            owner: address,
+            coinType: '0x2::sui::SUI'
+        });
+
+        const balance = BigInt(balanceResult.totalBalance);
+        const balanceInSui = Number(balance) / 1_000_000_000;
+
+        console.log('  Balance:', balanceInSui.toFixed(4), 'SUI');
+
+        // 少于 10 SUI 则请求 faucet
+        if (balance < 10_000_000_000n) {
+            console.log('[KeystoreLoader] Balance too low (< 10 SUI), requesting faucet');
+            UINotification.warning(`余额不足（${balanceInSui.toFixed(4)} SUI），正在请求测试币...`);
+
+            const success = await requestSuiFromFaucet(address, 'localnet');
+            if (success) {
+                UINotification.success("测试币获取成功");
+            } else {
+                UINotification.warning("测试币获取失败，请手动获取");
+            }
+        } else {
+            console.log('[KeystoreLoader] Balance sufficient (>= 10 SUI)');
+        }
+    } catch (error) {
+        console.error('[KeystoreLoader] Failed to check balance:', error);
+        // 忽略错误，不影响 keypair 加载
+    }
 }

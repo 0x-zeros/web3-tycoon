@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="192,48" extention="ProgressBar">
+  <displayList>
+    <image id="n0_pseu" name="n0" src="pseuonf" fileName="kenney_ui-pack/Grey/bar_round_gloss_large.png" pkg="82r0pzop" xy="0,0" size="192,48">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <image id="n1_pseu" name="bar" src="pseuosp" fileName="kenney_ui-pack/Blue/bar_round_gloss_large.png" pkg="82r0pzop" xy="0,0" size="192,48"/>
+    <text id="n2_pseu" name="title" xy="2,52" size="192,48" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="">
+      <relation target="" sidePair="right-right"/>
+    </text>
+  </displayList>
+  <ProgressBar/>
+</component>

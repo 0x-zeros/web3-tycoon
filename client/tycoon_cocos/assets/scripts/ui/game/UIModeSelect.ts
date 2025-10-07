@@ -86,11 +86,11 @@ export class UIModeSelect extends UIBase {
     private _onStartClick(): void {
         console.log("[UIModeSelect] Start clicked");
 
-        // 检查钱包连接
-        if (!SuiManager.instance.isConnected) {
-            UINotification.warning("请先连接钱包");
-            return;
-        }
+        // // 检查钱包连接
+        // if (!SuiManager.instance.isConnected) {
+        //     UINotification.warning("请先连接钱包");
+        //     return;
+        // }
 
         // 显示地图选择界面（不传递数据，MapSelect 会自己从 SuiManager 获取缓存）
         EventBus.emit(EventTypes.UI.ShowMapSelect, {

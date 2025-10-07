@@ -19,6 +19,7 @@ import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { Blackboard } from '../../events/Blackboard';
 import { GridGround } from '../GridGround';
+import { GridBoundary } from '../GridBoundary';
 import { MapInteractionManager, MapInteractionData, MapInteractionEvent } from '../interaction/MapInteractionManager';
 import { getWeb3BlockByBlockId, isWeb3Object, isWeb3Tile, isWeb3Building, getBuildingSize, Web3TileType } from '../../voxel/Web3BlockTypes';
 import { Vec2 } from 'cc';
@@ -28,6 +29,7 @@ import { PaperActor } from '../../role/PaperActor';
 import { ActorConfigManager } from '../../role/ActorConfig';
 import { BlockOverlayManager } from '../../voxel/overlay/BlockOverlayManager';
 import { OverlayConfig, OverlayFace } from '../../voxel/overlay/OverlayTypes';
+import { UINotification } from '../../ui/utils/UINotification';
 import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerator';
 
 // Building信息接口
@@ -62,7 +64,11 @@ export class GameMap extends Component {
     // 常量定义
     private readonly MAP_DATA_DIR = 'data/maps/';
     private readonly DEFAULT_MAP_ID = 'default_map';
-    
+
+    // Move 端坐标限制（u8 范围）
+    private static readonly MIN_GRID_COORD = 0;
+    private static readonly MAX_GRID_COORD = 255;
+
     // ========================= 编辑器属性 =========================
     
     @property({ displayName: "地图ID", tooltip: "地图的唯一标识符" })
@@ -318,8 +324,23 @@ export class GameMap extends Component {
                 camera: this.mainCamera
             });
         }
-        
+
         console.log('[GameMap] Edit mode grid created with GridGround component');
+
+        // 创建边界可视化节点（标识 u8 坐标范围 0-255）
+        const boundaryNode = new Node('GridBoundary');
+        boundaryNode.setParent(this.node);
+
+        // 添加 GridBoundary 组件
+        const boundary = boundaryNode.addComponent(GridBoundary);
+        boundary.cam = this.mainCamera;
+        boundary.minCoord = 0;
+        boundary.maxCoord = 255;
+        boundary.y = 0.05;  // 稍高于 grid，低于 tile
+        boundary.showOriginMarker = true;
+        boundary.enabled = true;
+
+        console.log('[GameMap] Grid boundary (0-255) created for u8 coordinate validation');
     }
     
     /**
@@ -534,6 +555,11 @@ export class GameMap extends Component {
      * 在指定位置放置地块
      */
     private async placeTileAt(blockId: string, gridPos: Vec2): Promise<void> {
+        // 验证坐标范围（u8 限制）
+        if (!this.validateGridPosition(gridPos)) {
+            return;  // 坐标超出范围，阻止放置
+        }
+
         const key = `${gridPos.x}_${gridPos.y}`;
 
         // 如果该位置已有地块，先移除
@@ -1407,6 +1433,11 @@ export class GameMap extends Component {
      */
     private async placeBuildingAt(blockId: string, gridPos: Vec2, size: 1 | 2): Promise<void> {
         console.log(`[GameMap] Placing building ${blockId} at (${gridPos.x}, ${gridPos.y}) with size ${size}`);
+
+        // 0. 验证建筑位置是否在 u8 范围内
+        if (!this.validateBuildingPosition(gridPos, size)) {
+            return;  // 坐标超出范围，阻止放置
+        }
 
         // 1. 检查所有占用格子是否可用
         const key = `${gridPos.x}_${gridPos.y}`;
@@ -3204,5 +3235,68 @@ export class GameMap extends Component {
      */
     public getBuildingRegistry(): Map<string, BuildingInfo> {
         return this._buildingRegistry;
+    }
+
+    /**
+     * 验证网格坐标是否在 u8 范围内 (0-255)
+     * @param gridPos 网格坐标
+     * @returns true=有效, false=无效
+     */
+    private validateGridPosition(gridPos: Vec2): boolean {
+        const x = gridPos.x;
+        const z = gridPos.y;
+
+        // 检查范围和整数
+        const inRange =
+            x >= GameMap.MIN_GRID_COORD && x <= GameMap.MAX_GRID_COORD &&
+            z >= GameMap.MIN_GRID_COORD && z <= GameMap.MAX_GRID_COORD &&
+            Number.isInteger(x) && Number.isInteger(z);
+
+        if (!inRange) {
+            UINotification.warning(
+                `坐标超出范围！\n\n` +
+                `位置: (${x}, ${z})\n` +
+                `有效范围: 0-255\n\n` +
+                `Move 链使用 u8 存储坐标，\n` +
+                `只支持 0-255 范围内的整数坐标`
+            );
+
+            console.warn(
+                `[GameMap] Grid position out of range: (${x}, ${z}), ` +
+                `valid range: [${GameMap.MIN_GRID_COORD}, ${GameMap.MAX_GRID_COORD}]`
+            );
+        }
+
+        return inRange;
+    }
+
+    /**
+     * 验证建筑位置是否在 u8 范围内
+     * @param position 建筑左下角坐标
+     * @param size 建筑大小（1 或 2）
+     * @returns true=有效, false=无效
+     */
+    private validateBuildingPosition(position: Vec2, size: number): boolean {
+        // 1x1: 只检查 position
+        if (!this.validateGridPosition(position)) {
+            return false;
+        }
+
+        // 2x2: 检查占用的 4 个格子
+        if (size === 2) {
+            const positions = [
+                new Vec2(position.x + 1, position.y),
+                new Vec2(position.x, position.y + 1),
+                new Vec2(position.x + 1, position.y + 1)
+            ];
+
+            for (const pos of positions) {
+                if (!this.validateGridPosition(pos)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

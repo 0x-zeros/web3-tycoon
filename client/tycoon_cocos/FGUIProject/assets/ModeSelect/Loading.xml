@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1920,1080">
+  <displayList>
+    <graph id="n11_mumq" name="n11" xy="0,0" size="1920,1080" type="rect" lineSize="0" fillColor="#ffa4ceda">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <image id="n12_mumq" name="n12" src="mumq7" fileName="images/logo.png" xy="579,173" size="547,547" aspect="true"/>
+    <text id="n13_pseu" name="n13" xy="293,143" size="436,67" fontSize="32" color="#ffffff" autoSize="none" text="Loading......"/>
+    <component id="n14_pseu" name="n14" src="pseu9" fileName="components/LoadingProgressBar.xml" xy="86,916" size="1735,46">
+      <ProgressBar value="50" max="100"/>
+    </component>
+  </displayList>
+</component>

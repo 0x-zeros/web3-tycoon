@@ -28,6 +28,8 @@ export interface SuiConfig {
     upgradeCapId?: string;
     /** 自定义 RPC URL（可选，覆盖默认网络 URL） */
     rpcUrl?: string;
+    /** 签名器类型（wallet=钱包签名，keypair=本地密钥对，默认 wallet） */
+    signerType?: 'wallet' | 'keypair';
 }
 
 /**

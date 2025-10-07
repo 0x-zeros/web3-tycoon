@@ -8,4 +8,7 @@ export const SuiEnvConfig = {
     adminCap: '0x0eadf61cae808582c11527881e933181505d621e1d022841911c3200536e1822',
     gameData: '0xb7e41d18fcb1bd42f91afad756196118741c31df6596fc85020949b97e65f558',
     network: 'localnet',
+
+    // 开发环境使用 Keypair 签名
+    signerType: 'keypair' as const
 };

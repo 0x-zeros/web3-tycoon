@@ -50,6 +50,9 @@ export class UIWallet extends UIBase {
     private m_connectedWallet: Wallet | null = null;
     private m_connectedAccount: WalletAccount | null = null;
 
+    // Keypair 模式标识
+    private _isKeypairMode: boolean = false;
+
     // WalletList组件引用
     private m_walletListComponent: fgui.GComponent | null = null;
 
@@ -109,6 +112,9 @@ export class UIWallet extends UIBase {
 
         // 监听 SUI 余额变化
         Blackboard.instance.watch("sui_balance", this._onBalanceChanged, this);
+
+        // 监听 Keypair 连接（开发模式）
+        Blackboard.instance.watch("sui_keypair_connected", this._onKeypairConnected, this);
     }
 
     /**
@@ -209,20 +215,24 @@ export class UIWallet extends UIBase {
     private _onWalletClick(): void {
         console.log("[UIWallet] Wallet clicked");
 
-        // 检查controller状态
         if (!this.m_controller) {
             console.error("[UIWallet] Controller not initialized");
             return;
         }
 
-        // 如果是connected状态，toggle btn_disconnect的显示/隐藏
+        // Keypair 模式：不允许操作（开发模式自动连接）
+        if (this._isKeypairMode) {
+            console.log('[UIWallet] Keypair mode: no disconnect allowed');
+            return;
+        }
+
+        // Wallet 模式：toggle disconnect 按钮
         if (this.m_controller.selectedIndex === 1) {
             if (this.m_btn_disconnect) {
                 this.m_btn_disconnect.visible = !this.m_btn_disconnect.visible;
                 console.log(`[UIWallet] Toggle disconnect button to ${this.m_btn_disconnect.visible ? 'visible' : 'hidden'}`);
             }
         }
-        // disconnected状态下不做任何事（或保持原有逻辑）
     }
 
     private async testSuiClient(): Promise<void> {
@@ -628,15 +638,22 @@ export class UIWallet extends UIBase {
     private _updateChainDisplay(): void {
         if (!this.m_txt_chain) return;
 
-        // 直接从 SuiManager 获取网络名称
-        this.m_txt_chain.text = SuiManager.instance.getNetworkName();
+        const network = SuiManager.instance.getNetworkName();
+        const signerType = SuiManager.instance.getSignerType();
+
+        // Keypair 模式：添加 (Dev) 标识
+        if (signerType === 'keypair') {
+            this.m_txt_chain.text = `${network} (Dev)`;
+        } else {
+            this.m_txt_chain.text = network;
+        }
     }
 
     /**
      * 余额点击事件 - 打开地址浏览器
      */
     private _onBalanceClick(): void {
-        if (!this.m_connectedAccount) {
+        if (!this.m_connectedAccount && !this._isKeypairMode) {
             console.warn('[UIWallet] No account connected');
             return;
         }
@@ -646,6 +663,46 @@ export class UIWallet extends UIBase {
 
         // 直接调用 SuiManager 方法
         SuiManager.instance.openCurrentAddressExplorer();
+    }
+
+    /**
+     * Keypair 连接回调（开发模式）
+     */
+    private _onKeypairConnected(connected: boolean): void {
+        if (!connected) return;
+
+        console.log('[UIWallet] Keypair connected (dev mode)');
+
+        // 标记为 Keypair 模式
+        this._isKeypairMode = true;
+
+        // 获取地址
+        const address = Blackboard.instance.get<string>("sui_current_address");
+        if (!address) {
+            console.error('[UIWallet] No address in Blackboard');
+            return;
+        }
+
+        // 更新 UI 状态（切换到 connected）
+        if (this.m_controller) {
+            this.m_controller.selectedIndex = 1;
+        }
+
+        // 设置地址显示
+        if (this.m_btn_wallet) {
+            this.m_btn_wallet.title = this._shortenAddress(address);
+        }
+
+        // Keypair 模式：隐藏 disconnect 按钮（不允许断开）
+        if (this.m_btn_disconnect) {
+            this.m_btn_disconnect.visible = false;
+        }
+
+        // 更新 chain 显示
+        this._updateChainDisplay();
+
+        console.log('[UIWallet] UI updated for Keypair mode');
+        console.log('  Address:', address);
     }
 
     // ================== localStorage辅助方法 ==================

@@ -143,8 +143,43 @@ export class SuiManager {
             network: config.network,
             rpcUrl,
             packageId: config.packageId,
-            gameDataId: config.gameDataId
+            gameDataId: config.gameDataId,
+            signerType: config.signerType || 'wallet'
         });
+
+        // 根据配置自动设置签名器
+        await this._autoConfigureSigner(config);
+    }
+
+    /**
+     * 根据配置自动设置签名器
+     */
+    private async _autoConfigureSigner(config: SuiConfig): Promise<void> {
+        if (config.signerType === 'keypair') {
+            try {
+                const { loadKeypairFromKeystore } = await import('../utils/KeystoreLoader');
+                const keypair = await loadKeypairFromKeystore();
+                this.setKeypairSigner(keypair);
+
+                console.log('[SuiManager] ✓ Auto-configured with KeypairSigner');
+                console.log('  Address:', this._currentAddress);
+
+                // 通过 Blackboard 通知 UI（Keypair 模式连接）
+                Blackboard.instance.set("sui_keypair_connected", true, true);
+                Blackboard.instance.set("sui_current_address", this._currentAddress, true);
+
+                // 加载玩家资产
+                this.loadPlayerAssets().catch(error => {
+                    console.error('[SuiManager] Failed to load assets:', error);
+                });
+
+            } catch (error) {
+                console.error('[SuiManager] Failed to load keypair:', error);
+                console.log('[SuiManager] Falling back to wallet connection...');
+            }
+        } else {
+            console.log('[SuiManager] Waiting for wallet connection (signerType: wallet)');
+        }
     }
 
     /**
@@ -532,6 +567,15 @@ export class SuiManager {
      */
     public get isConnected(): boolean {
         return this._signer !== null;
+    }
+
+    /**
+     * 获取当前签名器类型
+     * @returns 'wallet' | 'keypair' | null
+     */
+    public getSignerType(): 'wallet' | 'keypair' | null {
+        if (!this._signer) return null;
+        return this._signer.getType();
     }
 
     // ============ 辅助方法 ============

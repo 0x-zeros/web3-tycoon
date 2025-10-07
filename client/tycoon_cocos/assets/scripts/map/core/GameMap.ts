@@ -303,22 +303,23 @@ export class GameMap extends Component {
         
         // 添加GridGround组件
         const gridGround = gridNode.addComponent(GridGround);
-        
-        // 配置网格参数
+
+        // 配置网格参数（使用 0-50 范围）
         gridGround.step = 1;
-        gridGround.halfSize = 50;
+        gridGround.minCoord = 0;
+        gridGround.maxCoord = 50;  // 51x51 网格，足够编辑使用
         gridGround.color = new Color(130, 130, 130, 255);
         gridGround.y = 0;
         gridGround.enableClickDetection = true;
         gridGround.enableSnapping = true;
         gridGround.debugMode = this.debugMode;
         gridGround.cam = this.mainCamera;
-        
+
         // 手动调用初始化（如果组件还没有start）
         if (this.mainCamera) {
             gridGround.createWithConfig({
                 step: 1,
-                halfSize: 50,
+                halfSize: 50,  // 保留兼容（不再使用）
                 color: new Color(130, 130, 130, 255),
                 y: 0,
                 camera: this.mainCamera

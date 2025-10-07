@@ -72,7 +72,13 @@ export class GridGround extends Component {
     @property({ tooltip: '网格间距（单位）' })
     public step: number = 1;
 
-    @property({ tooltip: '半尺寸（共绘制 2*halfSize/step + 1 条线）' })
+    @property({ tooltip: '最小坐标' })
+    public minCoord: number = 0;
+
+    @property({ tooltip: '最大坐标' })
+    public maxCoord: number = 50;
+
+    @property({ tooltip: '半尺寸（已废弃，使用 min/maxCoord）' })
     public halfSize: number = 50;
 
     @property({ tooltip: '网格颜色' })
@@ -176,28 +182,30 @@ export class GridGround extends Component {
      */
     private createMeshGrid(): void {
         this.log('Creating mesh grid for visualization...');
-        
+
         // 创建容器节点
         if (!this._meshGridContainer) {
             this._meshGridContainer = new Node('MeshGridContainer');
             this._meshGridContainer.setParent(this.node);
         }
-        
-        // 计算网格数量和起始位置（确保对齐到整数网格）
-        const gridSize = Math.floor(this.halfSize / this.step);
-        const gridCount = gridSize * 2 + 1; // 包括中心格子
-        const startX = -gridSize * this.step;
-        const startZ = -gridSize * this.step;
+
+        // 使用 min/max 范围计算网格数量
+        const minX = this.minCoord;
+        const maxX = this.maxCoord;
+        const minZ = this.minCoord;
+        const maxZ = this.maxCoord;
+        const gridCountX = Math.floor((maxX - minX) / this.step) + 1;
+        const gridCountZ = Math.floor((maxZ - minZ) / this.step) + 1;
         
         // 创建材质（半透明）
         const material = new Material();
         material.initialize({ effectName: 'builtin-unlit' });
-        
+
         // 为每个网格单元创建一个平面
-        for (let i = 0; i < gridCount; i++) {
-            for (let j = 0; j < gridCount; j++) {
-                const x = startX + i * this.step;
-                const z = startZ + j * this.step;
+        for (let i = 0; i < gridCountX; i++) {
+            for (let j = 0; j < gridCountZ; j++) {
+                const x = minX + i * this.step;
+                const z = minZ + j * this.step;
                 const key = `${i}_${j}`;
                 
                 // 创建网格单元节点
@@ -265,14 +273,12 @@ export class GridGround extends Component {
                 meshRenderer.material.setProperty('mainColor', this.meshGridColor);
             }
         }
-        
-        // 找到对应的网格单元
-        const gridSize = Math.floor(this.halfSize / this.step);
-        const startIndex = -gridSize;
-        const i = gridX - startIndex;
-        const j = gridZ - startIndex;
+
+        // 找到对应的网格单元（使用 min/max 范围）
+        const i = gridX - this.minCoord;
+        const j = gridZ - this.minCoord;
         const key = `${i}_${j}`;
-        
+
         const gridNode = this._meshGridNodes.get(key);
         if (gridNode) {
             const meshRenderer = gridNode.getComponent(MeshRenderer);
@@ -281,7 +287,7 @@ export class GridGround extends Component {
                 const highlightColor = new Color(0, 255, 0, 180);
                 meshRenderer.material.setProperty('mainColor', highlightColor);
                 this._highlightedGrid = gridNode;
-                
+
                 // 3秒后恢复原色
                 setTimeout(() => {
                     if (this._highlightedGrid === gridNode && meshRenderer.material) {
@@ -320,29 +326,36 @@ export class GridGround extends Component {
      */
     private drawGrid(): void {
         if (!this._isInitialized) return;
-        
+
         const gr = this.cam?.camera?.geometryRenderer;
         if (!gr) return;
 
         const y = this.y;
         const s = Math.max(0.001, this.step);
-        
-        // 计算网格范围（确保在整数边界上）
-        const gridCount = Math.floor(this.halfSize / this.step);
-        const minX = -gridCount * this.step;
-        const maxX = gridCount * this.step;
-        const minZ = -gridCount * this.step;
-        const maxZ = gridCount * this.step;
+
+        // 使用 min/max 坐标范围（支持非对称范围，如 0-50）
+        const minX = this.minCoord;
+        const maxX = this.maxCoord;
+        const minZ = this.minCoord;
+        const maxZ = this.maxCoord;
 
         // 画 X 方向的平行线（沿 Z 轴方向）
-        // 网格线在整数位置，对应格子的边界
-        for (let x = minX; x <= maxX; x += s) {
-            gr.addLine(new Vec3(x, y, minZ), new Vec3(x, y, maxZ), this.color);
+        // 网格线在格子边界上，+0.5 偏移到格子中心对齐
+        for (let x = minX; x <= maxX + 1; x += s) {
+            gr.addLine(
+                new Vec3(x, y, minZ),
+                new Vec3(x, y, maxZ + 1),
+                this.color
+            );
         }
-        
+
         // 画 Z 方向的平行线（沿 X 轴方向）
-        for (let z = minZ; z <= maxZ; z += s) {
-            gr.addLine(new Vec3(minX, y, z), new Vec3(maxX, y, z), this.color);
+        for (let z = minZ; z <= maxZ + 1; z += s) {
+            gr.addLine(
+                new Vec3(minX, y, z),
+                new Vec3(maxX + 1, y, z),
+                this.color
+            );
         }
     }
 
@@ -571,8 +584,8 @@ export class GridGround extends Component {
      * 检查网格索引是否在范围内
      */
     public isValidGridIndex(gridX: number, gridZ: number): boolean {
-        const maxIndex = Math.floor(this.halfSize / this.step);
-        return Math.abs(gridX) <= maxIndex && Math.abs(gridZ) <= maxIndex;
+        return gridX >= this.minCoord && gridX <= this.maxCoord &&
+               gridZ >= this.minCoord && gridZ <= this.maxCoord;
     }
 
     /**

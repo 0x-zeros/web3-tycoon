@@ -62,6 +62,9 @@ export class UIWallet extends UIBase {
     protected onInit(): void {
         this._setupComponents();
         this._tryAutoConnect();
+
+        // 主动检查 SuiManager 状态（处理初始化时序问题）
+        this._checkSuiManagerState();
     }
 
     /**
@@ -641,9 +644,9 @@ export class UIWallet extends UIBase {
         const network = SuiManager.instance.getNetworkName();
         const signerType = SuiManager.instance.getSignerType();
 
-        // Keypair 模式：添加 (Dev) 标识
+        // Keypair 模式：添加 (Keypair) 标识
         if (signerType === 'keypair') {
-            this.m_txt_chain.text = `${network} (Dev)`;
+            this.m_txt_chain.text = `${network} (Keypair)`;
         } else {
             this.m_txt_chain.text = network;
         }
@@ -672,6 +675,11 @@ export class UIWallet extends UIBase {
         if (!connected) return;
 
         console.log('[UIWallet] Keypair connected (dev mode)');
+
+        // 清除 wallet 连接状态
+        this.m_connectedWallet = null;
+        this.m_connectedAccount = null;
+        this._clearConnection();  // 清除 localStorage 中的 wallet 连接信息
 
         // 标记为 Keypair 模式
         this._isKeypairMode = true;
@@ -703,6 +711,52 @@ export class UIWallet extends UIBase {
 
         console.log('[UIWallet] UI updated for Keypair mode');
         console.log('  Address:', address);
+    }
+
+    /**
+     * 检查 SuiManager 状态（处理初始化时序问题）
+     * 主动检查 SuiManager 是否已使用 Keypair
+     */
+    private _checkSuiManagerState(): void {
+        // 延迟执行，确保 SuiManager 已初始化
+        setTimeout(() => {
+            try {
+                const signerType = SuiManager.instance.getSignerType();
+                const address = SuiManager.instance.currentAddress;
+
+                if (signerType === 'keypair' && address) {
+                    console.log('[UIWallet] Detected existing Keypair connection on init');
+
+                    // 主动触发 Keypair 连接处理（不依赖 Blackboard 事件）
+                    this._isKeypairMode = true;
+
+                    // 清除可能存在的 wallet 自动连接
+                    this.m_connectedWallet = null;
+                    this.m_connectedAccount = null;
+
+                    // 更新 UI
+                    if (this.m_controller) {
+                        this.m_controller.selectedIndex = 1;
+                    }
+
+                    if (this.m_btn_wallet) {
+                        this.m_btn_wallet.title = this._shortenAddress(address);
+                    }
+
+                    if (this.m_btn_disconnect) {
+                        this.m_btn_disconnect.visible = false;
+                    }
+
+                    this._updateChainDisplay();
+
+                    console.log('[UIWallet] UI updated for existing Keypair');
+                    console.log('  Address:', address);
+                }
+            } catch (error) {
+                // SuiManager 可能还未初始化，忽略
+                console.log('[UIWallet] SuiManager not ready yet, will wait for Blackboard event');
+            }
+        }, 200);  // 延迟 200ms
     }
 
     // ================== localStorage辅助方法 ==================

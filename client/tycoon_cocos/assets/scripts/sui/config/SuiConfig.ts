@@ -41,13 +41,15 @@ export function fromEnvConfig(envConfig: {
     gameData: string;
     adminCap?: string;
     upgradeCap?: string;
+    signerType?: 'wallet' | 'keypair';
 }): SuiConfig {
     return {
         network: envConfig.network,
         packageId: envConfig.packageId,
         gameDataId: envConfig.gameData,
         adminCapId: envConfig.adminCap,
-        upgradeCapId: envConfig.upgradeCap
+        upgradeCapId: envConfig.upgradeCap,
+        signerType: envConfig.signerType
     };
 }
 

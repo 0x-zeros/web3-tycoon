@@ -1,18 +1,12 @@
 /**
  * Sui Faucet 工具
- * 用于请求测试网的 SUI 代币
+ * 使用官方 SDK 的 requestSuiFromFaucetV2
+ *
+ * Localnet: 需要运行 sui-test-validator --with-faucet
+ * 文档: https://docs.sui.io/guides/developer/getting-started/local-network
  */
 
-/**
- * Faucet API 响应类型
- */
-interface FaucetResponse {
-    transferredGasObjects?: Array<{
-        amount: number;
-        id: string;
-    }>;
-    error?: string;
-}
+import { getFaucetHost, requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
 
 /**
  * 从 Sui Faucet 请求测试币
@@ -24,66 +18,37 @@ export async function requestSuiFromFaucet(
     address: string,
     network: 'localnet' | 'devnet' | 'testnet'
 ): Promise<boolean> {
-    // Faucet API URLs
-    const faucetUrls: Record<string, string> = {
-        localnet: 'http://127.0.0.1:9123/gas',
-        devnet: 'https://faucet.devnet.sui.io/gas',
-        testnet: 'https://faucet.testnet.sui.io/gas'
-    };
-
-    const url = faucetUrls[network];
-    if (!url) {
-        console.error(`[Faucet] Unknown network: ${network}`);
-        return false;
-    }
-
     console.log(`[Faucet] Requesting SUI from ${network} faucet...`);
     console.log(`  Recipient: ${address}`);
-    console.log(`  Faucet URL: ${url}`);
 
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                FixedAmountRequest: {
-                    recipient: address
-                }
-            })
+        // 使用官方 SDK 的 requestSuiFromFaucetV2
+        const host = getFaucetHost(network);
+        console.log(`  Faucet host: ${host}`);
+
+        const result = await requestSuiFromFaucetV2({
+            host,
+            recipient: address
         });
 
-        if (!response.ok) {
-            console.error(`[Faucet] Request failed: ${response.status} ${response.statusText}`);
-            return false;
-        }
+        console.log('[Faucet] ✓ Request successful');
+        console.log('  Result:', result);
 
-        const result: FaucetResponse = await response.json();
-
-        if (result.error) {
-            console.error(`[Faucet] Error: ${result.error}`);
-            return false;
-        }
-
-        if (result.transferredGasObjects && result.transferredGasObjects.length > 0) {
-            const totalAmount = result.transferredGasObjects.reduce(
-                (sum, obj) => sum + obj.amount,
-                0
-            );
-
-            console.log('[Faucet] ✓ Request successful');
-            console.log(`  Received: ${totalAmount / 1_000_000_000} SUI`);
-            console.log(`  Objects: ${result.transferredGasObjects.length}`);
-
-            return true;
-        }
-
-        console.warn('[Faucet] No gas objects transferred');
-        return false;
+        return true;
 
     } catch (error) {
-        console.error('[Faucet] Request error:', error);
+        console.error('[Faucet] Request failed:', error);
+
+        // 给出友好提示
+        if (network === 'localnet') {
+            console.log('[Faucet] 提示：确保 sui-test-validator 正在运行');
+            console.log('  启动命令：RUST_LOG="off,sui_node=info" sui-test-validator --with-faucet');
+            console.log('  或：sui start --with-faucet');
+        } else if (network === 'testnet') {
+            console.log('[Faucet] 提示：Testnet faucet 可能有限流');
+            console.log('  建议使用 Web UI: https://faucet.sui.io');
+        }
+
         return false;
     }
 }

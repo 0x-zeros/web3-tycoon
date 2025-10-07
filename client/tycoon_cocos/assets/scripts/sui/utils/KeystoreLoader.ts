@@ -8,6 +8,7 @@
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { encryptWithPassword, decryptWithPassword } from './CryptoUtils';
 import { requestSuiFromFaucet } from './FaucetUtils';
+import { UINotification } from '../../ui/utils/UINotification';
 
 // 存储键和开发密码
 const STORAGE_KEY = 'web3_tycoon_sui_encrypted_keypair';
@@ -39,6 +40,9 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
             console.log('[KeystoreLoader] ✓ Keypair decrypted and loaded');
             console.log('  Address:', keypair.toSuiAddress());
 
+            // 通知用户
+            UINotification.info("开发密钥加载成功");
+
             return keypair;
         }
 
@@ -50,16 +54,24 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
         console.log('[KeystoreLoader] ✓ Generated new keypair');
         console.log('  Address:', address);
 
+        // 通知用户
+        UINotification.info("生成新开发密钥");
+
         // 5. 请求 faucet（异步，不阻塞）
         console.log('[KeystoreLoader] Requesting SUI from faucet...');
+        UINotification.info("正在从水龙头获取测试币...");
+
         requestSuiFromFaucet(address, 'localnet').then(success => {
             if (success) {
                 console.log('[KeystoreLoader] ✓ Faucet request successful');
+                UINotification.success("测试币获取成功");
             } else {
-                console.warn('[KeystoreLoader] ⚠️  Faucet request failed (this is OK for testing)');
+                console.warn('[KeystoreLoader] ⚠️  Faucet request failed');
+                UINotification.warning("测试币获取失败（可能需要手动获取）");
             }
         }).catch(error => {
             console.error('[KeystoreLoader] Faucet error:', error);
+            UINotification.error("测试币请求出错");
         });
 
         // 6. 加密并保存（不等待 faucet 完成）

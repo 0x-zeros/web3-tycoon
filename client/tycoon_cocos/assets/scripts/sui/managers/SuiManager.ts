@@ -22,6 +22,7 @@ import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { Blackboard } from '../../events/Blackboard';
 import { UINotification } from '../../ui/utils/UINotification';
+import { loadKeypairFromKeystore } from '../utils/KeystoreLoader';
 
 /**
  * Sui Manager 配置选项
@@ -156,8 +157,10 @@ export class SuiManager {
      */
     private async _autoConfigureSigner(config: SuiConfig): Promise<void> {
         if (config.signerType === 'keypair') {
+            console.log('[SuiManager] Config signerType is keypair, loading...');
+            UINotification.info("检测到 Keypair 模式");
+
             try {
-                const { loadKeypairFromKeystore } = await import('../utils/KeystoreLoader');
                 const keypair = await loadKeypairFromKeystore();
                 this.setKeypairSigner(keypair);
 
@@ -175,6 +178,7 @@ export class SuiManager {
 
             } catch (error) {
                 console.error('[SuiManager] Failed to load keypair:', error);
+                UINotification.error("Keypair 加载失败");
                 console.log('[SuiManager] Falling back to wallet connection...');
             }
         } else {

@@ -24,68 +24,111 @@ const DEV_PASSWORD = 'web3-tycoon-dev-2024';  // 硬编码开发密码（仅测�
  * @returns Ed25519Keypair
  */
 export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
+    console.log('='.repeat(60));
+    console.log('[KeystoreLoader] === START ===');
+    console.log('  Timestamp:', new Date().toISOString());
+    console.log('  Storage key:', STORAGE_KEY);
+    console.log('='.repeat(60));
+
     try {
-        // 1. 尝试从 localStorage 获取加密的私钥
+        // Step 1: 检查 localStorage
+        console.log('[KeystoreLoader] Step 1: Checking localStorage');
         const encryptedData = localStorage.getItem(STORAGE_KEY);
+        console.log('  Encrypted data exists:', !!encryptedData);
+        if (encryptedData) {
+            console.log('  Encrypted data length:', encryptedData.length);
+        }
 
         if (encryptedData) {
-            console.log('[KeystoreLoader] Found encrypted keypair, decrypting...');
+            UINotification.info("加载已有密钥");
 
-            // 2. 解密
+            // Step 2: 解密
+            console.log('[KeystoreLoader] Step 2: Decrypting');
             const privateKeyBase64 = await decryptWithPassword(encryptedData, DEV_PASSWORD);
+            console.log('  Decryption successful');
+            console.log('  Decrypted data length:', privateKeyBase64.length);
 
-            // 3. 解析 keypair
+            // Step 3: 解析
+            console.log('[KeystoreLoader] Step 3: Parsing keypair');
             const keypair = parseKeypairFromBase64(privateKeyBase64);
+            const address = keypair.toSuiAddress();
+            console.log('  Address:', address);
 
-            console.log('[KeystoreLoader] ✓ Keypair decrypted and loaded');
-            console.log('  Address:', keypair.toSuiAddress());
-
-            // 通知用户
-            UINotification.info("开发密钥加载成功");
-
+            console.log('[KeystoreLoader] === SUCCESS (LOADED) ===');
+            console.log('='.repeat(60));
             return keypair;
         }
 
-        // 4. 没有找到 → 生成新的
-        console.log('[KeystoreLoader] No keypair found, generating new one...');
-        const newKeypair = Ed25519Keypair.generate();
-        const address = newKeypair.toSuiAddress();
-
-        console.log('[KeystoreLoader] ✓ Generated new keypair');
-        console.log('  Address:', address);
-
-        // 通知用户
+        // 没有找到 → 生成新的
+        console.log('[KeystoreLoader] No saved keypair found');
         UINotification.info("生成新开发密钥");
 
-        // 5. 请求 faucet（异步，不阻塞）
-        console.log('[KeystoreLoader] Requesting SUI from faucet...');
+        // Step 4: 生成
+        console.log('[KeystoreLoader] Step 4: Generating new keypair');
+        const newKeypair = Ed25519Keypair.generate();
+        const address = newKeypair.toSuiAddress();
+        console.log('  Generated address:', address);
+
+        // Step 5: Faucet（异步）
+        console.log('[KeystoreLoader] Step 5: Requesting faucet (async)');
         UINotification.info("正在从水龙头获取测试币...");
 
         requestSuiFromFaucet(address, 'localnet').then(success => {
+            console.log('[KeystoreLoader] Faucet callback, success:', success);
             if (success) {
-                console.log('[KeystoreLoader] ✓ Faucet request successful');
                 UINotification.success("测试币获取成功");
             } else {
-                console.warn('[KeystoreLoader] ⚠️  Faucet request failed');
-                UINotification.warning("测试币获取失败（可能需要手动获取）");
+                UINotification.warning("测试币获取失败");
             }
         }).catch(error => {
-            console.error('[KeystoreLoader] Faucet error:', error);
-            UINotification.error("测试币请求出错");
+            console.error('[KeystoreLoader] Faucet callback error:', error);
         });
 
-        // 6. 加密并保存（不等待 faucet 完成）
+        // Step 6: 导出
+        console.log('[KeystoreLoader] Step 6: Exporting keypair to base64');
         const privateKeyBase64 = exportKeypairToBase64(newKeypair);
-        const encrypted = await encryptWithPassword(privateKeyBase64, DEV_PASSWORD);
-        localStorage.setItem(STORAGE_KEY, encrypted);
+        console.log('  Exported length:', privateKeyBase64.length);
 
-        console.log('[KeystoreLoader] ✓ Keypair encrypted and saved to localStorage');
-        console.log('  Storage key:', STORAGE_KEY);
+        // Step 7: 加密
+        console.log('[KeystoreLoader] Step 7: Encrypting');
+        const encrypted = await encryptWithPassword(privateKeyBase64, DEV_PASSWORD);
+        console.log('  Encrypted length:', encrypted.length);
+
+        // Step 8: 保存
+        console.log('[KeystoreLoader] Step 8: Saving to localStorage');
+        localStorage.setItem(STORAGE_KEY, encrypted);
+        console.log('  Saved');
+
+        // Step 9: 验证保存
+        console.log('[KeystoreLoader] Step 9: Verifying save');
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const verified = saved === encrypted;
+        console.log('  Verification result:', verified ? 'SUCCESS' : 'FAILED');
+        console.log('  Saved data exists:', !!saved);
+        if (saved) {
+            console.log('  Saved data length:', saved.length);
+            console.log('  Matches encrypted:', saved === encrypted);
+        }
+
+        if (!verified) {
+            console.error('[KeystoreLoader] ✗ Save verification FAILED!');
+            UINotification.error("密钥保存失败");
+        }
+
+        console.log('[KeystoreLoader] === SUCCESS (GENERATED) ===');
+        console.log('='.repeat(60));
 
         return newKeypair;
 
     } catch (error) {
-        console.error('[KeystoreLoader] Error:', error);
+        console.error('='.repeat(60));
+        console.error('[KeystoreLoader] === ERROR ===');
+        console.error('  Error:', error);
+        console.error('  Error message:', (error as Error).message);
+        console.error('  Error stack:', (error as Error).stack);
+        console.error('='.repeat(60));
+
+        UINotification.error(`密钥加载失败: ${error}`);
         throw error;
     }
 }
@@ -113,20 +156,63 @@ function parseKeypairFromBase64(base64: string): Ed25519Keypair {
 }
 
 /**
- * 导出 keypair 为 base64
+ * 导出 keypair 为 base64（兼容 Sui keystore 格式）
  * @param keypair Ed25519Keypair
- * @returns Base64 字符串（33 字节）
+ * @returns Base64 字符串
  */
 function exportKeypairToBase64(keypair: Ed25519Keypair): string {
-    const exported = keypair.export();
-    const secretKey = exported.privateKey;
+    console.log('[KeystoreLoader] exportKeypairToBase64: START');
+
+    // 使用 getSecretKey() 获取私钥
+    const secretKey = keypair.getSecretKey();
+    console.log('  Secret key type:', secretKey.constructor.name);
+    console.log('  Secret key length:', secretKey.length);
+    console.log('  Secret key sample (first 10 bytes):', Array.from(secretKey.slice(0, 10)));
+
+    // Sui SDK 的 getSecretKey() 返回格式：
+    // - 可能是 32 字节（纯私钥）
+    // - 可能是 64 字节（seed + key）
+    // - 可能是 70 字节（未知格式）
+
+    // 尝试不同的处理方式
+    let privateKey: Uint8Array;
+
+    if (secretKey.length === 32) {
+        console.log('  Format: 32 bytes (pure private key)');
+        privateKey = secretKey;
+    } else if (secretKey.length === 64) {
+        console.log('  Format: 64 bytes (seed + key)');
+        privateKey = secretKey.slice(0, 32);  // 取前 32 字节
+    } else if (secretKey.length === 70) {
+        console.log('  Format: 70 bytes (unknown, trying bcs encoding)');
+        // 可能是 BCS 编码，跳过前几个字节
+        // 尝试跳过前 38 字节（70 - 32）
+        privateKey = secretKey.slice(38);
+    } else {
+        console.error('[KeystoreLoader] Unexpected secret key length:', secretKey.length);
+        console.error('  Trying to use last 32 bytes as fallback');
+        // 尝试使用最后 32 字节
+        privateKey = secretKey.slice(secretKey.length - 32);
+    }
+
+    console.log('  Extracted private key length:', privateKey.length);
+
+    if (privateKey.length !== 32) {
+        console.error('[KeystoreLoader] Failed to extract 32-byte private key');
+        throw new Error(`Invalid private key length: ${privateKey.length}, expected 32`);
+    }
 
     // 添加类型标识符（0x00 for Ed25519）
     const withFlag = new Uint8Array(33);
     withFlag[0] = 0x00;
-    withFlag.set(secretKey, 1);
+    withFlag.set(privateKey, 1);
+    console.log('  With flag length:', withFlag.length);
 
-    return btoa(String.fromCharCode(...withFlag));
+    const result = btoa(String.fromCharCode(...withFlag));
+    console.log('  Base64 result length:', result.length);
+    console.log('[KeystoreLoader] exportKeypairToBase64: SUCCESS');
+
+    return result;
 }
 
 /**

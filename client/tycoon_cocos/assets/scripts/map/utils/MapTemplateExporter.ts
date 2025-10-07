@@ -43,24 +43,16 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
 
     // 1. 收集所有 Tiles
     const tilesMap = new Map<number, TileStatic>();
-    const tilesContainer = gameMap['_tilesContainer'];  // 访问私有字段
+    const tiles = gameMap.getTiles();  // 使用公共 getter
 
-    if (!tilesContainer) {
-        throw new Error('TilesContainer not found in GameMap');
-    }
-
-    tilesContainer.children.forEach(node => {
-        const tile = node.getComponent('MapTile') as MapTile;
-        if (!tile) return;
-
+    tiles.forEach(tile => {
         const tileId = tile.getTileId();
         if (tileId === INVALID_TILE_ID) {
-            console.warn(`[MapExporter] Skipping tile without ID at ${node.name}`);
+            console.warn(`[MapExporter] Skipping tile without ID`);
             return;
         }
 
         const gridPos = tile.getGridPosition();
-
         const tileKind = tile.getTypeId();
 
         tilesMap.set(tileId, {
@@ -80,7 +72,7 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
 
     // 2. 收集所有 Buildings
     const buildingsMap = new Map<number, BuildingStatic>();
-    const buildingRegistry = gameMap['_buildingRegistry'];  // Map<string, BuildingInfo>
+    const buildingRegistry = gameMap.getBuildingRegistry();  // 使用公共 getter
 
     if (buildingRegistry) {
         buildingRegistry.forEach((info, key) => {
@@ -139,13 +131,13 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number 
  */
 function checkPrerequisites(gameMap: GameMap): void {
     // 1. 检查是否有tiles
-    const tilesContainer = gameMap['_tilesContainer'];
-    if (!tilesContainer || tilesContainer.children.length === 0) {
+    const tiles = gameMap.getTiles();
+    if (!tiles || tiles.length === 0) {
         throw new Error('❌ 地图没有tiles！请先放置地块。');
     }
 
     // 2. 检查tiles已编号（抽查第一个）
-    const firstTile = tilesContainer.children[0]?.getComponent('MapTile') as MapTile;
+    const firstTile = tiles[0];
     if (!firstTile || firstTile.getTileId() === INVALID_TILE_ID) {
         throw new Error(
             '❌ Tiles尚未编号！\n\n' +
@@ -155,7 +147,8 @@ function checkPrerequisites(gameMap: GameMap): void {
     }
 
     // 3. 检查buildings已编号且有入口关联
-    const buildings = Array.from(gameMap['_buildingRegistry'].values());
+    const buildingRegistry = gameMap.getBuildingRegistry();
+    const buildings = Array.from(buildingRegistry.values());
     for (const building of buildings) {
         if (building.buildingId === undefined) {
             throw new Error('❌ Building未编号！请先执行计算流程。');

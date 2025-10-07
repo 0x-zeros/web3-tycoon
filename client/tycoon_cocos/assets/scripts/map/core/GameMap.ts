@@ -3191,4 +3191,18 @@ export class GameMap extends Component {
     public getTotalBuildingCount(): number {
         return this._buildingRegistry.size;
     }
+
+    /**
+     * 获取所有 tiles（用于导出）
+     */
+    public getTiles(): MapTile[] {
+        return this._tiles;
+    }
+
+    /**
+     * 获取 building registry（用于导出）
+     */
+    public getBuildingRegistry(): Map<string, BuildingInfo> {
+        return this._buildingRegistry;
+    }
 }

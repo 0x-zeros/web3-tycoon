@@ -709,6 +709,15 @@ export class UIWallet extends UIBase {
         // 更新 chain 显示
         this._updateChainDisplay();
 
+        // 主动获取并显示余额（修复初始化时序问题）
+        const currentBalance = Blackboard.instance.get<bigint>("sui_balance");
+        if (currentBalance !== undefined && currentBalance !== null) {
+            console.log('[UIWallet] Setting initial balance from Blackboard:', currentBalance);
+            this._onBalanceChanged(currentBalance);
+        } else {
+            console.log('[UIWallet] No balance in Blackboard yet, will wait for update');
+        }
+
         console.log('[UIWallet] UI updated for Keypair mode');
         console.log('  Address:', address);
     }
@@ -748,6 +757,15 @@ export class UIWallet extends UIBase {
                     }
 
                     this._updateChainDisplay();
+
+                    // 主动获取并显示余额（修复初始化时序问题）
+                    const currentBalance = Blackboard.instance.get<bigint>("sui_balance");
+                    if (currentBalance !== undefined && currentBalance !== null) {
+                        console.log('[UIWallet] Setting initial balance from Blackboard:', currentBalance);
+                        this._onBalanceChanged(currentBalance);
+                    } else {
+                        console.log('[UIWallet] No balance in Blackboard yet');
+                    }
 
                     console.log('[UIWallet] UI updated for existing Keypair');
                     console.log('  Address:', address);

@@ -15,6 +15,7 @@ import { SkillManager } from '../skill/SkillManager';
 import { UIManager } from '../ui/core/UIManager';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
+import { Blackboard } from '../events/Blackboard';
 import { fromEntries } from '../utils/object-utils';
 import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
@@ -448,6 +449,16 @@ export class GameInitializer extends Component {
             globalWindow.game.configLoader = this.configLoader;
             globalWindow.game.mapManager = this.mapManager;
             globalWindow.game.initializer = this;
+
+            // Sui 相关（调试用）
+            globalWindow.game.sui = SuiManager.instance;
+            globalWindow.game.blackboard = Blackboard.instance;
+
+            console.log('[GameInitializer] Global accessors set up');
+            console.log('  Available in console:');
+            console.log('    window.game.sui        - SuiManager');
+            console.log('    window.game.blackboard - Blackboard');
+            console.log('    window.game.mapManager - MapManager');
         }
     }
 

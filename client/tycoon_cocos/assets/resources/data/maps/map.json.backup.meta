@@ -2,9 +2,9 @@
   "ver": "1.0.0",
   "importer": "*",
   "imported": true,
-  "uuid": "9b9c3acb-fdcc-458c-9689-b562bd6ffce1",
+  "uuid": "e8925aa1-8306-4f75-92f8-1eb45276d373",
   "files": [
-    ".bak",
+    ".backup",
     ".json"
   ],
   "subMetas": {},

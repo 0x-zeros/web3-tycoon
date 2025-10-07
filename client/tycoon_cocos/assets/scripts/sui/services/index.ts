@@ -4,3 +4,4 @@
 
 export * from './QueryService';
 export * from './AssetService';
+export * from './DataPollingService';

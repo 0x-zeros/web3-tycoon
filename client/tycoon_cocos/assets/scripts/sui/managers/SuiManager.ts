@@ -12,7 +12,7 @@ import { SuiConfig, getNetworkRpcUrl, getExplorerUrl, getNetworkDisplayName, Exp
 import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
 import { TycoonGameClient } from '../interactions';
 import { MapAdminInteraction } from '../interactions/mapAdmin';
-import { QueryService, GameListItem, AssetService } from '../services';
+import { QueryService, GameListItem, AssetService, DataPollingService } from '../services';
 import { TycoonEventIndexer } from '../events/indexer';
 import { EventType } from '../events/types';
 import type { Game, Seat, GameCreateConfig } from '../types/game';
@@ -46,6 +46,7 @@ export class SuiManager {
     private _mapAdmin: MapAdminInteraction | null = null;
     private _queryService: QueryService | null = null;
     private _assetService: AssetService | null = null;
+    private _pollingService: DataPollingService | null = null;
 
     // 配置
     private _config: SuiConfig | null = null;
@@ -138,6 +139,9 @@ export class SuiManager {
             config.packageId
         );
 
+        // 创建 DataPollingService
+        this._pollingService = new DataPollingService();
+
         this._initialized = true;
 
         this._log('[SuiManager] Initialized successfully', {
@@ -210,6 +214,9 @@ export class SuiManager {
             wallet: wallet.name,
             address: account.address
         });
+
+        // 启动资产轮询
+        this.startAssetPolling();
     }
 
     /**
@@ -223,12 +230,18 @@ export class SuiManager {
         this._log('[SuiManager] Keypair signer set', {
             address: this._currentAddress
         });
+
+        // 启动资产轮询
+        this.startAssetPolling();
     }
 
     /**
      * 清除签名器
      */
     public clearSigner(): void {
+        // 停止资产轮询
+        this.stopAssetPolling();
+
         this._signer = null;
         this._currentAddress = null;
         this._currentSeat = null;
@@ -997,6 +1010,60 @@ export class SuiManager {
             console.log('[SuiManager] Opened URL:', url);
         } else {
             console.log('[SuiManager] URL to open:', url);
+        }
+    }
+
+    // ============ 数据轮询管理 ============
+
+    /**
+     * 启动资产数据轮询
+     * 在连接钱包或 keypair 后自动调用
+     */
+    private startAssetPolling(): void {
+        if (!this._pollingService || !this._currentAddress) {
+            console.warn('[SuiManager] Cannot start polling: service or address missing');
+            return;
+        }
+
+        console.log('[SuiManager] Starting asset polling...');
+
+        // 注册余额轮询（2 秒一次）
+        this._pollingService.registerSimple(
+            'sui_balance',
+            async () => {
+                const balance = await this._assetService!.getSuiBalance(this._currentAddress!);
+                return balance;
+            },
+            2000,  // 2 秒
+            'sui_balance'  // 自动更新 Blackboard
+        );
+
+        // // 注册 Seat NFT 轮询（10 秒一次，不需要太频繁）
+        // this._pollingService.registerSimple(
+        //     'sui_seats',
+        //     async () => {
+        //         const seats = await this._assetService!.getPlayerSeats(this._currentAddress!);
+        //         return seats;
+        //     },
+        //     10000,  // 10 秒
+        //     'sui_seats'
+        // );
+
+        // 启动轮询
+        this._pollingService.start();
+
+        console.log('[SuiManager] Asset polling started');
+        console.log('  Balance: every 2s');
+        console.log('  Seats: every 10s');
+    }
+
+    /**
+     * 停止资产轮询
+     */
+    private stopAssetPolling(): void {
+        if (this._pollingService) {
+            this._pollingService.clear();
+            console.log('[SuiManager] Asset polling stopped and cleared');
         }
     }
 }

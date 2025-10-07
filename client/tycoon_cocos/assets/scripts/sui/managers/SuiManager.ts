@@ -445,12 +445,19 @@ export class SuiManager {
         this._ensureInitialized();
         this._ensureSigner();
 
+        // 获取 GameData 的 schema_version
+        const gameData = this._cachedGameData || await this._queryService!.getGameData();
+        const schemaVersion = gameData?.map_schema_version || 1;  // 默认 1
+
         this._log('[SuiManager] Publishing map template...', {
-            templateId: mapTemplate.id
+            templateId: mapTemplate.id,
+            schemaVersion: schemaVersion
         });
 
-        // 构建交易
-        const tx = this._mapAdmin!.buildUploadMapTemplateTx(mapTemplate);
+        console.log('[SuiManager] Using schema_version from GameData:', schemaVersion);
+
+        // 构建交易（传入 schema_version）
+        const tx = this._mapAdmin!.buildUploadMapTemplateTx(mapTemplate, schemaVersion);
 
         // 签名并执行
         const result = await this.signAndExecuteTransaction(tx);
@@ -700,6 +707,14 @@ export class SuiManager {
                 this._queryService!.getReadyGames(this._currentAddress || undefined, 50),
                 this._queryService!.getMapTemplates()
             ]);
+
+            // 打印 GameData
+            console.log('[SuiManager] GameData loaded:');
+            console.log('  Full GameData:', gameData);
+            if (gameData) {
+                console.log('  map_schema_version:', gameData.map_schema_version);
+                console.log('  starting_cash:', gameData.starting_cash);
+            }
 
             // 更新缓存
             this._cachedGameData = gameData;

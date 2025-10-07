@@ -26,11 +26,13 @@ export class MapAdminInteraction {
     /**
      * 构建上传地图模板的交易
      * @param mapTemplate 地图模板数据
+     * @param schemaVersion schema 版本（从 GameData 获取）
      * @returns Transaction 对象
      */
-    buildUploadMapTemplateTx(mapTemplate: MapTemplate): Transaction {
+    buildUploadMapTemplateTx(mapTemplate: MapTemplate, schemaVersion: number): Transaction {
         console.log('[MapAdmin] Building upload map template transaction...');
         console.log(`Template ID: ${mapTemplate.id}`);
+        console.log(`Schema version: ${schemaVersion}`);
         console.log(`Tiles: ${mapTemplate.tiles_static.size}`);
         console.log(`Buildings: ${mapTemplate.buildings_static.size}`);
         console.log(`Hospital IDs: ${mapTemplate.hospital_ids.length}`);
@@ -50,7 +52,7 @@ export class MapAdminInteraction {
             target: `${this.packageId}::tycoon::publish_map_from_bcs`,
             arguments: [
                 tx.object(this.gameDataId),                 // game_data: &mut GameData
-                tx.pure.u8(mapTemplate.schema_version),     // schema_version: u8
+                tx.pure.u8(schemaVersion),                  // schema_version: u8（从 GameData 获取）
                 tx.pure.vector('u8', encoded.tilesBytes),   // tiles_bcs: vector<u8>
                 tx.pure.vector('u8', encoded.buildingsBytes), // buildings_bcs: vector<u8>
                 tx.pure.vector('u8', encoded.hospitalIdsBytes) // hospital_ids_bcs: vector<u8>

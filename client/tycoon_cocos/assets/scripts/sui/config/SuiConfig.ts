@@ -10,7 +10,7 @@ export type NetworkType = "localnet" | "devnet" | "testnet" | "mainnet";
 /**
  * Explorer 类型定义
  */
-export type ExplorerItemType = 'object' | 'txblock' | 'address';
+export type ExplorerItemType = 'object' | 'txblock' | 'address' | 'tx';
 
 /**
  * Sui 配置接口
@@ -97,6 +97,10 @@ export function getExplorerUrl(
     if (networkType === 'localnet') {
         const localnetUrl = 'http://127.0.0.1:9000';
         const encodedUrl = encodeURIComponent(localnetUrl);
+        //'txblock' -> 'tx'
+        if (type === 'txblock') {
+            type = 'tx';
+        }
         return `https://custom.suiscan.xyz/custom/${type}/${id}?network=${encodedUrl}`;
     }
 

@@ -6,10 +6,10 @@
     </component>
     <component id="n1_105vo" name="tile" src="105voq" fileName="components/Tile.xml" xy="14,38" scale="0.8,0.8"/>
     <text id="n2_105vo" name="n2" xy="2,2" size="263,51" alpha="0.8" fontSize="18" color="#ffffff" align="center" vAlign="middle" text="- F1: 切换到45度Isometric视角&#xA; - F2: 切换到俯视Top-Down视角"/>
-    <component id="n3_9pk1" name="btn_toMoveMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,465" size="230,50">
+    <component id="n3_9pk1" name="btn_toMoveMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="37,612" size="230,50">
       <Button title="发布为Move地图"/>
     </component>
-    <component id="n4_w84m" name="btn_calcBuildingEntrance" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,404" size="230,50">
+    <component id="n4_w84m" name="btn_calcBuildingEntrance" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="34,544" size="230,50">
       <Button title="计算建筑入口"/>
     </component>
     <component id="n5_w84m" name="btn_download" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,338" size="230,50">
@@ -18,10 +18,10 @@
     <component id="n6_w84m" name="btn_clearAll" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,725" size="230,50" visible="false">
       <Button title="清除地图(!!!)"/>
     </component>
-    <component id="n8_w84m" name="btn_assignId" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,532" size="230,50">
+    <component id="n8_w84m" name="btn_assignId" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="31,422" size="230,50">
       <Button title="编号"/>
     </component>
-    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,597" size="230,50">
+    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="34,476" size="230,50">
       <Button title="显示编号"/>
     </component>
   </displayList>

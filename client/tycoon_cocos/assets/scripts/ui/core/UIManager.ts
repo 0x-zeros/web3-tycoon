@@ -252,7 +252,7 @@ export class UIManager {
             { name: "NormalLayer", layer: UILayer.NORMAL, touchable: true },
             { name: "WalletLayer", layer: UILayer.WALLET, touchable: true },
             { name: "PopupLayer", layer: UILayer.POPUP, touchable: true },
-            { name: "ModalLayer", layer: UILayer.MODAL, touchable: false },
+            { name: "ModalLayer", layer: UILayer.MODAL, touchable: true },  // 改为 true，让 MessageBox 可以接收点击
             { name: "NotificationLayer", layer: UILayer.NOTIFICATION, touchable: false },
             { name: "SystemLayer", layer: UILayer.SYSTEM, touchable: false },
             { name: "TopLayer", layer: UILayer.TOP, touchable: true }

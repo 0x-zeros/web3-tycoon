@@ -64,8 +64,6 @@ export interface MessageBoxOptions {
     message: string;
     /** 图标类型或自定义URL */
     icon?: MessageBoxIcon | string;
-    /** 是否模态（阻挡背景点击，默认true） */
-    modal?: boolean;
 
     /** 按钮配置 */
     buttons?: {
@@ -239,7 +237,6 @@ class MessageBoxQueue {
 @ccclass('UIMessage')
 export class UIMessage extends UIBase {
     // UI元素引用
-    private _modalMask: fgui.GGraph | null = null;
     private _bg: fgui.GGraph | null = null;
     private _bgImage: fgui.GLoader | null = null;
     private _icon: fgui.GLoader | null = null;
@@ -262,7 +259,6 @@ export class UIMessage extends UIBase {
 
     protected onInit(): void {
         // 获取UI元素引用
-        this._modalMask = this.getChild("modal_mask") as fgui.GGraph;
         this._bg = this.getChild("bg") as fgui.GGraph;
         this._bgImage = this.getLoader("bgImage");
         this._icon = this.getLoader("icon");
@@ -271,6 +267,17 @@ export class UIMessage extends UIBase {
         this._btnPrimary = this.getButton("btn_primary");
         this._btnSecondary = this.getButton("btn_secondary");
         this._btnClose = this.getButton("btn_close");
+
+        // 确保 panel 可触摸
+        if (this._panel) {
+            this._panel.touchable = true;
+        }
+
+        // 调试输出
+        console.log('[UIMessage] Initialized');
+        console.log('  btn_primary:', !!this._btnPrimary);
+        console.log('  btn_secondary:', !!this._btnSecondary);
+        console.log('  btn_close:', !!this._btnClose);
 
         // 绑定按钮事件
         this._bindButtonEvents();
@@ -343,9 +350,6 @@ export class UIMessage extends UIBase {
             this._message.text = options.message || "";
         }
 
-        // 设置Modal模式
-        this._setModal(options.modal !== false); // 默认true
-
         // 设置Icon
         this._setIcon(options.icon);
 
@@ -355,17 +359,6 @@ export class UIMessage extends UIBase {
         // 应用皮肤
         const finalSkin = { ...UIMessage._defaultSkin, ...options.skin };
         this._applySkin(finalSkin);
-    }
-
-    /**
-     * 设置Modal模式
-     */
-    private _setModal(modal: boolean): void {
-        if (this._modalMask) {
-            // true: 拦截点击（Modal）
-            // false: 透传点击（Modeless）
-            this._modalMask.touchable = modal;
-        }
     }
 
     /**

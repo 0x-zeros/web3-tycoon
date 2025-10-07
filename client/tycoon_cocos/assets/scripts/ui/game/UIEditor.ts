@@ -502,7 +502,7 @@ export class UIEditor extends UIBase {
             const confirmed = await UIMessage.confirm({
                 message: confirmMessage,
                 title: "确认发布",
-                okText: "确认",
+                confirmText: "确认",
                 cancelText: "取消"
             });
 

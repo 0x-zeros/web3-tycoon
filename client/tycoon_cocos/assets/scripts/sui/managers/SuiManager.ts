@@ -15,7 +15,7 @@ import { MapAdminInteraction } from '../interactions/mapAdmin';
 import { QueryService, GameListItem, AssetService, DataPollingService } from '../services';
 import { TycoonEventIndexer } from '../events/indexer';
 import { EventType } from '../events/types';
-import type { Game, Seat, GameCreateConfig } from '../types/game';
+import type { Game, Player, Seat, GameCreateConfig } from '../types/game';
 import type { MapTemplate } from '../types/map';
 import type { SeatNFT, MapTemplateNFT, DeFiAssets } from '../types/assets';
 import { EventBus } from '../../events/EventBus';
@@ -859,6 +859,17 @@ export class SuiManager {
             EventBus.emit(EventTypes.Move.GameCreated, event.data);
         });
 
+        // 监听玩家加入事件
+        this._eventIndexer.on(EventType.PLAYER_JOINED, (event) => {
+            console.log('[SuiManager] PlayerJoinedEvent from chain:', event.data);
+
+            // 增量更新游戏列表缓存
+            this._onPlayerJoined(event);
+
+            // 转发到 EventBus
+            EventBus.emit(EventTypes.Move.PlayerJoined, event.data);
+        });
+
         // 监听游戏开始事件
         this._eventIndexer.on(EventType.GAME_STARTED, (event) => {
             console.log('[SuiManager] GameStartedEvent from chain:', event.data);
@@ -895,6 +906,66 @@ export class SuiManager {
 
         } catch (error) {
             console.error('[SuiManager] Failed to refresh games cache:', error);
+        }
+    }
+
+    /**
+     * 玩家加入事件处理（增量更新 Game 对象）
+     */
+    private _onPlayerJoined(event: any): void {
+        const gameId = event.data?.game;
+        const playerAddress = event.data?.player;
+        const playerIndex = event.data?.player_index;
+
+        if (!gameId || !playerAddress) {
+            console.warn('[SuiManager] Invalid PlayerJoinedEvent data');
+            return;
+        }
+
+        // 1. 查找缓存中的 Game
+        const game = this._cachedGames.find(g => g.id === gameId);
+        if (!game) {
+            console.warn('[SuiManager] Game not found in cache:', gameId);
+            return;
+        }
+
+        // 2. 创建新 Player 对象（使用初始值，对应 Move 端的 create_player_with_cash）
+        const startingCash = game.players.length > 0
+            ? game.players[0].cash  // 复制第一个玩家的现金
+            : BigInt(this._cachedGameData?.starting_cash || 10000);
+
+        const newPlayer: Player = {
+            owner: playerAddress,
+            pos: 0,
+            cash: startingCash,
+            bankrupt: false,
+            in_hospital_turns: 0,
+            in_prison_turns: 0,
+            last_tile_id: 65535,  // INVALID_TILE_ID
+            next_tile_id: 65535,  // INVALID_TILE_ID
+            buffs: [],
+            cards: new Map()  // 初始卡牌在客户端可以省略
+        };
+
+        // 3. 添加到 players 数组
+        game.players.push(newPlayer);
+
+        console.log('[SuiManager] Player added to game cache');
+        console.log('  Game:', gameId);
+        console.log('  Player:', playerAddress);
+        console.log('  Index:', playerIndex);
+        console.log('  Total players:', game.players.length);
+        console.log('  Starting cash:', startingCash.toString());
+
+        // 4. 触发 UI 更新事件
+        EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+            games: this._cachedGames
+        });
+
+        // 5. 如果是当前游戏，同步更新 _currentGame
+        if (this._currentGame?.id === gameId) {
+            this._currentGame = game;
+            console.log('[SuiManager] Current game updated');
         }
     }
 

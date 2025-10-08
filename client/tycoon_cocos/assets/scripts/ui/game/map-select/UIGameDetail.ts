@@ -8,6 +8,8 @@ import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
 import { UIMessage } from "../../utils/UIMessage";
 import { IdFormatter } from "../../utils/IdFormatter";
+import { EventBus } from "../../../events/EventBus";
+import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
 import { DEFAULT_MAX_PLAYERS } from "../../../sui/types/constants";
 import * as fgui from "fairygui-cc";
@@ -68,6 +70,9 @@ export class UIGameDetail extends UIBase {
         this.m_btn_ok?.onClick(this._onOkClick, this);
         this.m_btn_quitGame?.onClick(this._onQuitGameClick, this);
         this.m_btn_startGame?.onClick(this._onStartGameClick, this);
+
+        // 监听玩家加入事件（用于实时更新显示）
+        EventBus.on(EventTypes.Move.PlayerJoined, this._onPlayerJoinedEvent, this);
     }
 
     /**
@@ -77,6 +82,7 @@ export class UIGameDetail extends UIBase {
         this.m_btn_ok?.offClick(this._onOkClick, this);
         this.m_btn_quitGame?.offClick(this._onQuitGameClick, this);
         this.m_btn_startGame?.offClick(this._onStartGameClick, this);
+        EventBus.off(EventTypes.Move.PlayerJoined, this._onPlayerJoinedEvent, this);
         super.unbindEvents();
     }
 
@@ -256,12 +262,9 @@ export class UIGameDetail extends UIBase {
                 "加入成功"
             );
 
-            // 重新查询游戏详情并刷新显示
-            const updatedGame = await SuiManager.instance.getGameState(game.id);
-            if (updatedGame) {
-                (SuiManager.instance as any)._currentGame = updatedGame;
-                this.showGame();  // 刷新显示
-            }
+            // ✅ 不需要重新查询 Game
+            // PlayerJoinedEvent 会触发 SuiManager 增量更新
+            // 然后通过 Move.PlayerJoined 事件通知 UI 刷新
 
         } catch (error) {
             console.error('[UIGameDetail] Failed to join game:', error);
@@ -274,6 +277,20 @@ export class UIGameDetail extends UIBase {
                 `请检查网络连接或稍后重试`,
                 "加入失败"
             );
+        }
+    }
+
+    /**
+     * 玩家加入事件处理（实时更新显示）
+     */
+    private _onPlayerJoinedEvent(eventData: any): void {
+        const game = SuiManager.instance.currentGame;
+        if (!game) return;
+
+        // 只处理当前游戏的事件
+        if (eventData.game === game.id) {
+            console.log('[UIGameDetail] PlayerJoined event for current game, refreshing');
+            this.showGame();  // 刷新显示
         }
     }
 }

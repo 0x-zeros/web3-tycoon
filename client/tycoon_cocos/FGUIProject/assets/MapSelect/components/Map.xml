@@ -8,7 +8,7 @@
     <text id="n12_pseu" name="tile" xy="48,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="110"/>
     <text id="n13_pseu" name="building" xy="295,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="50"/>
     <text id="n16_pseu" name="n16" xy="47,146" size="93,32" fontSize="22" color="#ffffff" autoSize="none" text="tiles:"/>
-    <text id="n18_pseu" name="n18" xy="294,147" size="107,32" fontSize="22" color="#ffffff" text="buildings:"/>
+    <text id="n18_pseu" name="n18" xy="294,147" size="107,31" fontSize="22" color="#ffffff" text="buildings:"/>
   </displayList>
-  <Button downEffect="scale" downEffectValue="0.8"/>
+  <Button downEffect="dark" downEffectValue="0.8"/>
 </component>

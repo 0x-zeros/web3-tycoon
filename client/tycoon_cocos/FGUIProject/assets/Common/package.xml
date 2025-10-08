@@ -282,7 +282,7 @@
     <image id="pseuosz" name="bar_square_small_m.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuot0" name="bar_square_small_l.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuot1" name="bar_square_small.png" path="/kenney_ui-pack/Blue/"/>
-    <image id="pseuot2" name="bar_square_large_square.png" path="/kenney_ui-pack/Blue/" scale="9grid" scale9grid="12,12,24,24"/>
+    <image id="pseuot2" name="bar_square_large_square.png" path="/kenney_ui-pack/Blue/" exported="true" scale="9grid" scale9grid="12,12,24,24"/>
     <image id="pseuot3" name="bar_shadow_square_outline_large_square.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuot4" name="bar_square_large_r.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuot5" name="bar_square_large_l.png" path="/kenney_ui-pack/Blue/"/>

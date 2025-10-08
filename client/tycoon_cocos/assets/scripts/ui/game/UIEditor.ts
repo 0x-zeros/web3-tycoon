@@ -570,6 +570,7 @@ export class UIEditor extends UIBase {
 
     /**
      * 返回到 UIMapSelect 并选中刚发布的模板
+     * 参考 UIInGame._onExitGameClick() 的实现
      */
     private _returnToMapSelectWithTemplate(): void {
         const templateId = SuiManager.instance.lastPublishedTemplateId;
@@ -582,12 +583,20 @@ export class UIEditor extends UIBase {
         console.log('[UIEditor] Returning to UIMapSelect');
         console.log('  Template ID:', templateId);
 
-        // 发送事件显示 UIMapSelect
+        // 1. 请求卸载当前地图（如果有）
+        EventBus.emit(EventTypes.Game.RequestMapChange, {
+            toMapId: null
+        });
+
+        // 2. 显示 UIMapSelect（带参数）
         EventBus.emit(EventTypes.UI.ShowMapSelect, {
             category: 1,  // Map 列表（map_id）
             selectTemplateId: templateId,
             source: "editor_publish_success"
         });
+
+        // 注意：不需要 this.hide()
+        // UIInGame 会监听 ShowMapSelect 事件并隐藏（包括子组件 UIEditor）
     }
 
     /**

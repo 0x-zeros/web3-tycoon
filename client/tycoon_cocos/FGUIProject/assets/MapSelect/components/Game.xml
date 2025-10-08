@@ -11,10 +11,10 @@
     <text id="n13_pseu" name="player_1" xy="295,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
     <text id="n14_pseu" name="player_2" xy="550,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
     <text id="n15_pseu" name="player_3" xy="801,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
-    <text id="n16_pseu" name="n16" xy="47,146" size="23,32" fontSize="22" color="#ffffff" text="0:"/>
-    <text id="n18_pseu" name="n18" xy="294,147" size="23,32" fontSize="22" color="#ffffff" text="1:"/>
+    <text id="n16_pseu" name="n16" xy="47,146" size="23,31" fontSize="22" color="#ffffff" text="0:"/>
+    <text id="n18_pseu" name="n18" xy="294,147" size="23,31" fontSize="22" color="#ffffff" text="1:"/>
     <text id="n19_pseu" name="n19" xy="548,145" size="23,32" fontSize="22" color="#ffffff" autoSize="none" text="2:"/>
-    <text id="n20_pseu" name="n20" xy="803,147" size="23,32" fontSize="22" color="#ffffff" text="3:"/>
+    <text id="n20_pseu" name="n20" xy="803,147" size="23,31" fontSize="22" color="#ffffff" text="3:"/>
   </displayList>
-  <Button downEffect="scale" downEffectValue="0.8"/>
+  <Button downEffect="dark" downEffectValue="0.8"/>
 </component>

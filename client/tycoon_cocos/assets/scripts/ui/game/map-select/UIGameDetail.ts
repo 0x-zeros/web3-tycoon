@@ -6,6 +6,7 @@
 import { UIBase } from "../../core/UIBase";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
+import { IdFormatter } from "../../utils/IdFormatter";
 import type { Game } from "../../../sui/types/game";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
@@ -99,12 +100,12 @@ export class UIGameDetail extends UIBase {
 
         // 显示游戏 ID
         if (this.m_gameid) {
-            this.m_gameid.text = game.id.slice(0, 10) + '...';
+            this.m_gameid.text = game.id;  // ✅ 完整显示
         }
 
         // 显示地图 ID
         if (this.m_mapid) {
-            this.m_mapid.text = game.template_map_id.slice(0, 10) + '...';
+            this.m_mapid.text = game.template_map_id;  // ✅ 完整显示
         }
 
         // 显示玩家列表
@@ -116,7 +117,7 @@ export class UIGameDetail extends UIBase {
             if (playerField) {
                 if (i < game.players.length) {
                     const player = game.players[i];
-                    playerField.text = player.owner.slice(0, 8) + '...';
+                    playerField.text = IdFormatter.shortenAddress(player.owner);  // ✅ 短地址
 
                     // 检查是否是当前玩家
                     if (player.owner === currentAddress) {

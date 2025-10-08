@@ -548,7 +548,7 @@ export class SuiManager {
             // 显示成功 MessageBox
             await UIMessage.success(
                 `游戏创建成功！\n\n` +
-                `游戏 ID: ${result.gameId.slice(0, 20)}...\n\n` +
+                `游戏 ID: ${result.gameId}\n\n` +  // ✅ 完整显示
                 `等待链上确认和其他玩家加入...`,
                 "创建成功"
             );

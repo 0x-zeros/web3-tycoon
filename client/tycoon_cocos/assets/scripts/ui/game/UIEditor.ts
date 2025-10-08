@@ -528,7 +528,7 @@ export class UIEditor extends UIBase {
                 message:
                     `地图发布成功！\n\n` +
                     `模板 ID: ${result.templateId}\n` +
-                    `交易哈希: ${result.txHash.slice(0, 20)}...\n\n` +
+                    `交易哈希: ${result.txHash}\n\n` +  // ✅ 完整显示
                     `✓ 数据已写入区块链\n` +
                     `✓ 玩家现在可以使用此地图创建游戏`,
                 icon: MessageBoxIcon.SUCCESS,

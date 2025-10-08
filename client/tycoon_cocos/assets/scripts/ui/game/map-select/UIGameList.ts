@@ -11,6 +11,7 @@
 import { UIBase } from "../../core/UIBase";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
+import { IdFormatter } from "../../utils/IdFormatter";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
@@ -115,12 +116,12 @@ export class UIGameList extends UIBase {
         // 根据 FairyGUI 的实际组件名称设置
         const gameidText = button.getChild("gameid") as fgui.GTextField;
         if (gameidText) {
-            gameidText.text = game.id.slice(0, 10) + '...';  // 截短显示
+            gameidText.text = game.id;  // ✅ 完整显示
         }
 
         const mapidText = button.getChild("mapid") as fgui.GTextField;
         if (mapidText) {
-            mapidText.text = game.template_map_id ? game.template_map_id.slice(0, 10) + '...' : 'N/A';
+            mapidText.text = game.template_map_id || 'N/A';  // ✅ 完整显示
         }
 
         // 显示玩家列表（player_0, player_1, player_2, player_3）
@@ -129,7 +130,7 @@ export class UIGameList extends UIBase {
             if (playerText) {
                 if (i < game.players.length) {
                     const player = game.players[i];
-                    playerText.text = player.owner.slice(0, 8) + '...';
+                    playerText.text = IdFormatter.shortenAddress(player.owner);  // ✅ 短地址
                 } else {
                     playerText.text = '---';  // 空位
                 }

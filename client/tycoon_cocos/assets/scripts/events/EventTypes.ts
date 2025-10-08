@@ -83,7 +83,9 @@ export const EventTypes = {
         TurnEnd: "game_turn_end",
         /** 轮次结束 */
         RoundEnded: "game_round_ended",
-        
+        /** 显示游戏详情 */
+        ShowGameDetail: "game_show_game_detail",
+
         // 地图相关事件
         /** 地图被选择 */
         MapSelected: "game_map_selected",

@@ -361,7 +361,7 @@
     <image id="pseuov6" name="bar_shadow_square_small_m.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuov7" name="bar_shadow_square_small_l.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuov8" name="bar_shadow_square_small.png" path="/kenney_ui-pack/Extra/"/>
-    <image id="pseuov9" name="bar_shadow_square_outline_small_square.png" path="/kenney_ui-pack/Extra/"/>
+    <image id="pseuov9" name="bar_shadow_square_outline_small_square.png" path="/kenney_ui-pack/Extra/" exported="true" scale="9grid" scale9grid="8,8,16,16"/>
     <image id="pseuova" name="bar_shadow_square_outline_small_r.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuovb" name="cursor_e.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuovc" name="cursor_f.png" path="/kenney_ui-pack/Extra/"/>

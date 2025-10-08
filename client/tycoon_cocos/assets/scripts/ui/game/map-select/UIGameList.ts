@@ -58,6 +58,9 @@ export class UIGameList extends UIBase {
      */
     protected bindEvents(): void {
         this.m_btn_joinGame?.onClick(this._onJoinGameClick, this);
+
+        // 监听游戏列表更新事件（缓存更新时自动刷新）
+        EventBus.on(EventTypes.Sui.GamesListUpdated, this._onGamesListUpdated, this);
     }
 
     /**
@@ -65,6 +68,7 @@ export class UIGameList extends UIBase {
      */
     protected unbindEvents(): void {
         this.m_btn_joinGame?.offClick(this._onJoinGameClick, this);
+        EventBus.off(EventTypes.Sui.GamesListUpdated, this._onGamesListUpdated, this);
         super.unbindEvents();
     }
 
@@ -206,13 +210,59 @@ export class UIGameList extends UIBase {
     }
 
     /**
+     * 根据游戏 ID 选中（用于外部调用）
+     */
+    public selectGameById(gameId: string): void {
+        console.log('[UIGameList] selectGameById:', gameId);
+
+        const index = this._games.findIndex(g => g.id === gameId);
+
+        if (index >= 0) {
+            this._selectGame(index);
+
+            // 滚动到该项
+            if (this.m_list?.scrollToView) {
+                this.m_list.scrollToView(index);
+            }
+        } else {
+            console.warn('[UIGameList] Game not found in list:', gameId);
+        }
+    }
+
+    /**
      * 列表项点击（统一处理，避免重复绑定多个闭包）
      */
     private _onItemClick(evt: fgui.Event): void {
         const btn = evt.sender as fgui.GButton;
         const index = (btn?.data as number) ?? -1;
-        if (index >= 0) {
+
+        if (index >= 0 && index < this._games.length) {
             this._selectGame(index);
+
+            // ✅ 点击后显示 GameDetail
+            const game = this._games[index];
+            this._showGameDetail(game);
         }
+    }
+
+    /**
+     * 显示游戏详情
+     */
+    private _showGameDetail(game: Game): void {
+        console.log('[UIGameList] Showing game detail:', game.id);
+
+        // 1. 缓存游戏到 SuiManager
+        (SuiManager.instance as any)._currentGame = game;
+
+        // 2. 发送事件，让父容器显示 GameDetail
+        EventBus.emit(EventTypes.Game.ShowGameDetail, { gameId: game.id });
+    }
+
+    /**
+     * 游戏列表更新事件（缓存已更新）
+     */
+    private _onGamesListUpdated(): void {
+        console.log('[UIGameList] GamesListUpdated event received');
+        this.refresh();  // 刷新显示
     }
 }

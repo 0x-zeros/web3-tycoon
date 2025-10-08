@@ -78,37 +78,25 @@ export class UIMapSelect extends UIBase {
     private _initSubModules(): void {
         // 3个子模块都挂载在data组件上
         // 子模块 1: UIGameList（链上 Game 列表）
-        // const gameIdComp = this.m_dataComponent.getChild('game_id').asCom;
         this.m_gameListUI = this.m_dataComponent.node.addComponent(UIGameList);
         this.m_gameListUI.setUIName("GameList");
         this.m_gameListUI.setPanel(this.m_dataComponent);
-        // 触发一次 onEnable，确保子模块完成事件绑定
-        this.m_gameListUI.enabled = false;
-        this.m_gameListUI.enabled = true;
 
         // 子模块 2: UIMapList（链上 MapTemplate 列表）
-        // const mapIdComp = this.m_dataComponent.getChild('map_id').asCom;
         this.m_mapListUI = this.m_dataComponent.node.addComponent(UIMapList);
         this.m_mapListUI.setUIName("MapList");
         this.m_mapListUI.setPanel(this.m_dataComponent);
-        this.m_mapListUI.enabled = false;
-        this.m_mapListUI.enabled = true;
 
         // 子模块 3: UIMapAssetList（本地地图资源）
-        // const mapJsonComp = this.m_dataComponent.getChild('map_json').asCom;
         this.m_mapAssetListUI = this.m_dataComponent.node.addComponent(UIMapAssetList);
         this.m_mapAssetListUI.setUIName("MapAssetList");
         this.m_mapAssetListUI.setPanel(this.m_dataComponent);
-        this.m_mapAssetListUI.enabled = false;
-        this.m_mapAssetListUI.enabled = true;
 
         // 子模块 4: UIGameDetail（游戏详情）
         this.m_gameDetailUI = this.m_gameDetailComponent.node.addComponent(UIGameDetail);
         this.m_gameDetailUI.setUIName("GameDetail");
         this.m_gameDetailUI.setPanel(this.m_gameDetailComponent);
         this.m_gameDetailUI.setParentUI(this);
-        this.m_gameDetailUI.enabled = false;
-        this.m_gameDetailUI.enabled = true;
 
         console.log('[UIMapSelect] Sub-modules initialized');
     }
@@ -125,6 +113,9 @@ export class UIMapSelect extends UIBase {
 
         // 监听 Move 链上游戏创建事件（由 EventIndexer 转发）
         EventBus.on(EventTypes.Move.GameCreated, this._onMoveGameCreated, this);
+
+        // 监听显示游戏详情事件（由 UIGameList 触发）
+        EventBus.on(EventTypes.Game.ShowGameDetail, this._onShowGameDetail, this);
     }
 
     /**
@@ -134,6 +125,7 @@ export class UIMapSelect extends UIBase {
         EventBus.off(EventTypes.Game.MapSelected, this._onMapSelected, this);
         EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
         EventBus.off(EventTypes.Move.GameCreated, this._onMoveGameCreated, this);
+        EventBus.off(EventTypes.Game.ShowGameDetail, this._onShowGameDetail, this);
         super.unbindEvents();
     }
 
@@ -187,21 +179,20 @@ export class UIMapSelect extends UIBase {
                     (SuiManager.instance as any)._currentGame = game;
                     console.log('[UIMapSelect] Game cached, showing detail');
 
-                    // 隐藏主界面
-                    if (this.m_dataComponent) {
-                        this.m_dataComponent.visible = false;
-                    }
-
-                    // 显示游戏详情
-                    if (this.m_gameDetailComponent && this.m_gameDetailUI) {
-                        this.m_gameDetailComponent.visible = true;
-                        this.m_gameDetailUI.showGame();
-                    }
+                    // ✅ 显示 GameDetail（使用统一方法）
+                    this.showGameDetail(eventData.game);
                 }
             }).catch(error => {
                 console.error('[UIMapSelect] Failed to query game:', error);
             });
         }
+    }
+
+    /**
+     * 显示游戏详情事件处理（由 UIGameList 触发）
+     */
+    private _onShowGameDetail(data: any): void {
+        this.showGameDetail(data.gameId);
     }
 
     /**
@@ -277,14 +268,39 @@ export class UIMapSelect extends UIBase {
     public showMainPanel(): void {
         console.log('[UIMapSelect] Showing main panel');
 
-        // 隐藏游戏详情
+        // 只隐藏游戏详情
         if (this.m_gameDetailComponent) {
             this.m_gameDetailComponent.visible = false;
         }
 
-        // 显示主界面
+        // data 始终保持可见，不需要额外设置
+    }
+
+    /**
+     * 显示游戏详情
+     * @param gameId 游戏 ID
+     */
+    public showGameDetail(gameId: string): void {
+        console.log('[UIMapSelect] Showing game detail:', gameId);
+
+        // 1. 保持 data 可见（不隐藏）
         if (this.m_dataComponent) {
             this.m_dataComponent.visible = true;
+        }
+
+        // 2. 切换到 Game 列表 tab（controller = 0）
+        if (this.m_categoryController) {
+            this.m_categoryController.selectedIndex = 0;
+            console.log('  Category set to: 0 (Game list)');
+        }
+
+        // 3. Game 列表选中对应游戏
+        this.m_gameListUI?.selectGameById(gameId);
+
+        // 4. 显示 GameDetail
+        if (this.m_gameDetailComponent && this.m_gameDetailUI) {
+            this.m_gameDetailComponent.visible = true;
+            this.m_gameDetailUI.showGame();
         }
     }
 

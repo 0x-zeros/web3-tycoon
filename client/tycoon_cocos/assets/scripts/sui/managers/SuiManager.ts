@@ -70,6 +70,9 @@ export class SuiManager {
     private _cachedDeFiAssets: DeFiAssets = {};
     private _assetsCacheTimestamp: number = 0;
 
+    // 最近发布的模板 ID
+    private _lastPublishedTemplateId: number | null = null;
+
     // 事件监听器
     private _eventIndexer: TycoonEventIndexer | null = null;
 
@@ -465,6 +468,10 @@ export class SuiManager {
         // 解析事件获取模板 ID
         const templateId = this._extractTemplateId(result);
 
+        // 记录最新发布的模板 ID
+        this._lastPublishedTemplateId = templateId;
+        console.log('[SuiManager] Recorded last published template ID:', templateId);
+
         const response = {
             txHash: result.digest,
             templateId
@@ -473,6 +480,13 @@ export class SuiManager {
         this._log('[SuiManager] Map template published', response);
 
         return response;
+    }
+
+    /**
+     * 获取最近发布的模板 ID
+     */
+    public get lastPublishedTemplateId(): number | null {
+        return this._lastPublishedTemplateId;
     }
 
     // ============ 查询 API ============

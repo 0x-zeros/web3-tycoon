@@ -201,6 +201,29 @@ export class UIMapList extends UIBase {
     }
 
     /**
+     * 根据模板 ID 选中（用于发布后返回）
+     */
+    public selectTemplateById(templateId: number): void {
+        console.log('[UIMapList] selectTemplateById:', templateId);
+
+        // 查找模板索引
+        const index = this._templates.findIndex(t => t.id === templateId);
+
+        if (index >= 0) {
+            console.log('  Found template at index:', index);
+            this._selectTemplate(index);
+
+            // 滚动到该项
+            if (this.m_list && this.m_list.scrollToView) {
+                this.m_list.scrollToView(index);
+            }
+        } else {
+            console.warn('  Template not found in current list');
+            console.log('  Current templates:', this._templates.map(t => t.id));
+        }
+    }
+
+    /**
      * 列表项点击（统一处理）
      */
     private _onItemClick(evt: fgui.Event): void {

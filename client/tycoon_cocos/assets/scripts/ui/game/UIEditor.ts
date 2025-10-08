@@ -520,22 +520,40 @@ export class UIEditor extends UIBase {
             console.log('  Template ID:', result.templateId);
             console.log('  Tx Hash:', result.txHash);
 
-            // Step 7: 显示成功消息
+            // Step 7: 显示成功消息（双按钮）
             const explorerUrl = SuiManager.instance.getExplorer(result.txHash, 'txblock');
 
-            await UIMessage.success(
-                `地图发布成功！\n\n` +
-                `模板 ID: ${result.templateId}\n` +
-                `交易哈希: ${result.txHash.slice(0, 20)}...\n\n` +
-                `✓ 数据已写入区块链\n` +
-                `✓ 玩家现在可以使用此地图创建游戏\n\n` +
-                `点击确定查看交易详情`,
-                "发布成功"
-            );
-
-            // 打开 Explorer
-            UINotification.info("正在打开区块链浏览器...");
-            SuiManager.instance.openUrl(explorerUrl);
+            await UIMessage.show({
+                title: "发布成功",
+                message:
+                    `地图发布成功！\n\n` +
+                    `模板 ID: ${result.templateId}\n` +
+                    `交易哈希: ${result.txHash.slice(0, 20)}...\n\n` +
+                    `✓ 数据已写入区块链\n` +
+                    `✓ 玩家现在可以使用此地图创建游戏`,
+                icon: MessageBoxIcon.SUCCESS,
+                buttons: {
+                    primary: {
+                        text: "返回创建游戏",
+                        callback: () => {
+                            // 返回 UIMapSelect 并选中刚发布的模板
+                            this._returnToMapSelectWithTemplate();
+                        }
+                    },
+                    secondary: {
+                        text: "查看详情",
+                        visible: true,
+                        callback: () => {
+                            // 打开 Explorer
+                            UINotification.info("正在打开区块链浏览器...");
+                            SuiManager.instance.openUrl(explorerUrl);
+                        }
+                    },
+                    close: {
+                        visible: false
+                    }
+                }
+            });
 
         } catch (error) {
             console.error('[UIEditor] Failed to publish map:', error);
@@ -548,6 +566,28 @@ export class UIEditor extends UIBase {
                 "发布失败"
             );
         }
+    }
+
+    /**
+     * 返回到 UIMapSelect 并选中刚发布的模板
+     */
+    private _returnToMapSelectWithTemplate(): void {
+        const templateId = SuiManager.instance.lastPublishedTemplateId;
+
+        if (templateId === null) {
+            console.warn('[UIEditor] No lastPublishedTemplateId');
+            return;
+        }
+
+        console.log('[UIEditor] Returning to UIMapSelect');
+        console.log('  Template ID:', templateId);
+
+        // 发送事件显示 UIMapSelect
+        EventBus.emit(EventTypes.UI.ShowMapSelect, {
+            category: 1,  // Map 列表（map_id）
+            selectTemplateId: templateId,
+            source: "editor_publish_success"
+        });
     }
 
     /**

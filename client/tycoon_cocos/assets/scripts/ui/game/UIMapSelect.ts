@@ -136,6 +136,7 @@ export class UIMapSelect extends UIBase {
      */
     protected onShow(data?: any): void {
         console.log("[UIMapSelect] Showing");
+        console.log("  Data:", data);
 
         // 播放背景音乐
         EventBus.emit(EventTypes.Audio.PlayBGM, {
@@ -143,15 +144,26 @@ export class UIMapSelect extends UIBase {
             loop: true
         });
 
-        // 默认显示第一个页面（Game 列表）
+        // 根据参数切换 category（默认 0 = Game 列表）
+        const category = data?.category ?? 0;
         if (this.m_categoryController) {
-            this.m_categoryController.selectedIndex = 0;
+            this.m_categoryController.selectedIndex = category;
+            console.log('  Category set to:', category);
         }
 
         // 刷新所有子模块数据
         this.m_gameListUI?.refresh();
         this.m_mapListUI?.refresh();
         this.m_mapAssetListUI?.refresh();
+
+        // 如果指定了要选中的模板 ID
+        if (data?.selectTemplateId !== undefined) {
+            console.log('  Will select template:', data.selectTemplateId);
+            // 延迟一帧执行，确保列表已刷新
+            setTimeout(() => {
+                this.m_mapListUI?.selectTemplateById(data.selectTemplateId);
+            }, 100);
+        }
 
         // 播放显示动画
         this._playShowAnimation();

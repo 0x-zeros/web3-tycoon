@@ -3,18 +3,19 @@
   <controller name="button" pages="0,up,1,down,2,over" selected="0"/>
   <displayList>
     <image id="n6_pseu" name="n6" src="pseuot2" fileName="kenney_ui-pack/Blue/bar_square_large_square.png" pkg="82r0pzop" xy="0,0" size="1024,256"/>
-    <text id="n9_pseu" name="n1" xy="25,23" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id"/>
-    <text id="n10_pseu" name="n2" xy="24,96" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
-    <text id="n5_pseu" name="gameid" xy="151,20" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
-    <text id="n8_pseu" name="mapid" xy="151,94" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
-    <text id="n12_pseu" name="player_0" xy="48,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
-    <text id="n13_pseu" name="player_1" xy="295,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
-    <text id="n14_pseu" name="player_2" xy="550,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
-    <text id="n15_pseu" name="player_3" xy="801,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
-    <text id="n16_pseu" name="n16" xy="47,146" size="23,31" fontSize="22" color="#ffffff" text="0:"/>
-    <text id="n18_pseu" name="n18" xy="294,147" size="23,31" fontSize="22" color="#ffffff" text="1:"/>
-    <text id="n19_pseu" name="n19" xy="548,145" size="23,32" fontSize="22" color="#ffffff" autoSize="none" text="2:"/>
-    <text id="n20_pseu" name="n20" xy="803,147" size="23,31" fontSize="22" color="#ffffff" text="3:"/>
+    <text id="n9_pseu" name="n1" xy="25,54" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id"/>
+    <text id="n10_pseu" name="n2" xy="24,119" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
+    <text id="n5_pseu" name="gameid" xy="151,51" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
+    <text id="n8_pseu" name="mapid" xy="151,117" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
+    <text id="n12_pseu" name="player_0" xy="48,209" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n13_pseu" name="player_1" xy="295,209" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n14_pseu" name="player_2" xy="550,209" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n15_pseu" name="player_3" xy="801,209" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n16_pseu" name="n16" xy="47,169" size="23,31" fontSize="22" color="#ffffff" text="0:"/>
+    <text id="n18_pseu" name="n18" xy="294,170" size="23,31" fontSize="22" color="#ffffff" text="1:"/>
+    <text id="n19_pseu" name="n19" xy="548,168" size="23,32" fontSize="22" color="#ffffff" autoSize="none" text="2:"/>
+    <text id="n20_pseu" name="n20" xy="803,170" size="23,31" fontSize="22" color="#ffffff" text="3:"/>
+    <text id="n21_qh36" name="index" xy="7,4" size="103,32" fontSize="22" color="#ffffff" text="index 100"/>
   </displayList>
   <Button downEffect="dark" downEffectValue="0.8"/>
 </component>

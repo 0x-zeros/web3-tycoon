@@ -152,6 +152,12 @@ export class UIMapAssetList extends UIBase {
 
         console.log(`  Rendering map: ${mapConfig.name}`);
 
+        // 显示索引（从 1 开始）
+        const indexText = button.getChild("index") as fgui.GTextField;
+        if (indexText) {
+            indexText.text = (index + 1).toString();
+        }
+
         // 根据 FairyGUI 的实际组件名称设置
         const nameText = button.getChild("mapName") as fgui.GTextField;
         if (nameText) {

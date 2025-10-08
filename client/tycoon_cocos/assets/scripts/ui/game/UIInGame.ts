@@ -212,6 +212,9 @@ export class UIInGame extends UIBase {
         EventBus.on(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
         EventBus.on(EventTypes.UI.ScreenSizeChanged, this._onScreenSizeChanged, this);
 
+        // 监听显示地图选择事件，隐藏游戏界面
+        EventBus.on(EventTypes.UI.ShowMapSelect, this._onShowMapSelect, this);
+
         // 监听玩家数据变化
         Blackboard.instance.watch("playerMoney", this._onPlayerMoneyChange, this);
         Blackboard.instance.watch("playerLevel", this._onPlayerLevelChange, this);
@@ -262,6 +265,7 @@ export class UIInGame extends UIBase {
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.off(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
         EventBus.off(EventTypes.UI.ScreenSizeChanged, this._onScreenSizeChanged, this);
+        EventBus.off(EventTypes.UI.ShowMapSelect, this._onShowMapSelect, this);
         
 
         // 调用父类解绑
@@ -393,18 +397,27 @@ export class UIInGame extends UIBase {
      */
     private _onExitGameClick(): void {
         console.log("[UIInGame] Exit game button clicked");
-        
+
         // 发送请求切换地图事件（不指定目标地图toMapId: null表示卸载当前地图）
         //fromMapId: string; toMapId: string, isEdit?: boolean }
         EventBus.emit(EventTypes.Game.RequestMapChange, {
             toMapId: null
         });
-        
+
         // 发送请求显示地图选择界面事件
         EventBus.emit(EventTypes.UI.ShowMapSelect);
         this.hide();
-        
+
         console.log("[UIInGame] Sent events to exit to map selection");
+    }
+
+    /**
+     * 显示地图选择事件（退出游戏/返回地图选择）
+     */
+    private _onShowMapSelect(data?: any): void {
+        console.log('[UIInGame] ShowMapSelect event received, hiding');
+        console.log('  Data:', data);
+        this.hide();
     }
     
 

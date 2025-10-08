@@ -3,12 +3,13 @@
   <controller name="button" pages="0,up,1,down,2,over" selected="0"/>
   <displayList>
     <image id="n6_pseu" name="n6" src="pseuot2" fileName="kenney_ui-pack/Blue/bar_square_large_square.png" pkg="82r0pzop" xy="0,0" size="1024,256"/>
-    <text id="n10_pseu" name="n2" xy="24,31" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
-    <text id="n8_pseu" name="mapid" xy="151,29" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
+    <text id="n10_pseu" name="n2" xy="24,66" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
+    <text id="n8_pseu" name="mapid" xy="151,66" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
     <text id="n12_pseu" name="tile" xy="48,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="110"/>
     <text id="n13_pseu" name="building" xy="295,186" size="165,51" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="50"/>
     <text id="n16_pseu" name="n16" xy="47,146" size="93,32" fontSize="22" color="#ffffff" autoSize="none" text="tiles:"/>
     <text id="n18_pseu" name="n18" xy="294,147" size="107,31" fontSize="22" color="#ffffff" text="buildings:"/>
+    <text id="n19_qh36" name="index" xy="7,7" size="103,31" fontSize="22" color="#ffffff" text="index 100"/>
   </displayList>
   <Button downEffect="dark" downEffectValue="0.8"/>
 </component>

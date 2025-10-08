@@ -63,26 +63,31 @@ export class UIMapSelect extends UIBase {
      * 初始化子模块
      */
     private _initSubModules(): void {
+        // 3个子模块都挂载在data组件上
         // 子模块 1: UIGameList（链上 Game 列表）
-        const gameIdComp = this.m_dataComponent.getChild('game_id').asCom;
-        this.m_gameListUI = gameIdComp.node.addComponent(UIGameList);
+        // const gameIdComp = this.m_dataComponent.getChild('game_id').asCom;
+        this.m_gameListUI = this.m_dataComponent.node.addComponent(UIGameList);
         this.m_gameListUI.setUIName("GameList");
-        this.m_gameListUI.setPanel(gameIdComp);
-        this.m_gameListUI.init();
+        this.m_gameListUI.setPanel(this.m_dataComponent);
+        // 触发一次 onEnable，确保子模块完成事件绑定
+        this.m_gameListUI.enabled = false;
+        this.m_gameListUI.enabled = true;
 
         // 子模块 2: UIMapList（链上 MapTemplate 列表）
-        const mapIdComp = this.m_dataComponent.getChild('map_id').asCom;
-        this.m_mapListUI = mapIdComp.node.addComponent(UIMapList);
+        // const mapIdComp = this.m_dataComponent.getChild('map_id').asCom;
+        this.m_mapListUI = this.m_dataComponent.node.addComponent(UIMapList);
         this.m_mapListUI.setUIName("MapList");
-        this.m_mapListUI.setPanel(mapIdComp);
-        this.m_mapListUI.init();
+        this.m_mapListUI.setPanel(this.m_dataComponent);
+        this.m_mapListUI.enabled = false;
+        this.m_mapListUI.enabled = true;
 
         // 子模块 3: UIMapAssetList（本地地图资源）
-        const mapJsonComp = this.m_dataComponent.getChild('map_json').asCom;
-        this.m_mapAssetListUI = mapJsonComp.node.addComponent(UIMapAssetList);
+        // const mapJsonComp = this.m_dataComponent.getChild('map_json').asCom;
+        this.m_mapAssetListUI = this.m_dataComponent.node.addComponent(UIMapAssetList);
         this.m_mapAssetListUI.setUIName("MapAssetList");
-        this.m_mapAssetListUI.setPanel(mapJsonComp);
-        this.m_mapAssetListUI.init();
+        this.m_mapAssetListUI.setPanel(this.m_dataComponent);
+        this.m_mapAssetListUI.enabled = false;
+        this.m_mapAssetListUI.enabled = true;
 
         console.log('[UIMapSelect] Sub-modules initialized');
     }

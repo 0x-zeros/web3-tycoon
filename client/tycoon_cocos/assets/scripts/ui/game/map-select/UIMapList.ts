@@ -47,12 +47,10 @@ export class UIMapList extends UIBase {
         }
 
         // 获取列表
-        this.m_list = this.getList("list");
+        this.m_list = this.getList("map_id");
 
-        // 设置列表渲染器
-        if (this.m_list) {
-            this.m_list.itemRenderer = this._renderItem.bind(this);
-        }
+        // 使用非虚拟列表的填充方式：numItems + getChildAt(i)
+        // 与项目中其它列表保持一致，避免依赖 setVirtual/itemRenderer
 
         console.log('[UIMapList] Components setup');
     }
@@ -85,7 +83,16 @@ export class UIMapList extends UIBase {
 
         // 更新列表
         if (this.m_list) {
+            // 设置数量并填充
             this.m_list.numItems = this._templates.length;
+
+            console.log('  List updated, numItems:', this.m_list.numItems);
+
+            for (let i = 0; i < this._templates.length; i++) {
+                const item = this.m_list.getChildAt(i);
+                if (!item) continue;
+                this._renderItem(i, item);
+            }
 
             // 默认选择第一个
             if (this._templates.length > 0) {
@@ -103,23 +110,32 @@ export class UIMapList extends UIBase {
         const template = this._templates[index];
         const button = item.asCom as fgui.GButton;
 
-        // 设置显示信息
-        const title = button.getChild("title") as fgui.GTextField;
-        if (title) {
-            title.text = template.name || `地图模板 #${template.id}`;
+        // 根据 FairyGUI 的实际组件名称设置
+        const mapidText = button.getChild("mapid") as fgui.GTextField;
+        if (mapidText) {
+            mapidText.text = template.id.toString();
         }
 
-        const info = button.getChild("info") as fgui.GTextField;
-        if (info) {
-            info.text = `模板 ID: ${template.id}`;
+        const tileText = button.getChild("tile") as fgui.GTextField;
+        if (tileText) {
+            // TODO: 需要完整的 MapTemplate 对象才能获取 tiles_static.size
+            // 当前缓存只有 {id, name}，暂时显示 N/A
+            tileText.text = 'N/A';
+        }
+
+        const buildingText = button.getChild("building") as fgui.GTextField;
+        if (buildingText) {
+            // TODO: 需要完整的 MapTemplate 对象才能获取 buildings_static.size
+            buildingText.text = 'N/A';
         }
 
         // 设置选中状态
         button.selected = (index === this._selectedIndex);
 
-        // 绑定数据和点击事件
+        // 绑定数据和点击事件（先清理旧的监听，再绑定统一的处理函数）
         button.data = index;
-        button.onClick(() => this._selectTemplate(index), this);
+        button.offClick(this._onItemClick, this);
+        button.onClick(this._onItemClick, this);
     }
 
     /**
@@ -136,7 +152,7 @@ export class UIMapList extends UIBase {
 
         // 刷新列表显示选中状态
         if (this.m_list) {
-            this.m_list.refreshVirtualList();
+            this.m_list.selectedIndex = index;
         }
     }
 
@@ -185,6 +201,17 @@ export class UIMapList extends UIBase {
         } catch (error) {
             console.error('[UIMapList] Failed to create game:', error);
             UINotification.error("创建游戏失败");
+        }
+    }
+
+    /**
+     * 列表项点击（统一处理）
+     */
+    private _onItemClick(evt: fgui.Event): void {
+        const btn = evt.sender as fgui.GButton;
+        const index = (btn?.data as number) ?? -1;
+        if (index >= 0) {
+            this._selectTemplate(index);
         }
     }
 }

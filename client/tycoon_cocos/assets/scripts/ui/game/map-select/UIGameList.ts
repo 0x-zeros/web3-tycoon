@@ -48,13 +48,12 @@ export class UIGameList extends UIBase {
         }
 
         // 获取列表
-        this.m_list = this.getList("list");
+        this.m_list = this.getList("game_id");
 
-        // 设置列表渲染器
-        if (this.m_list) {
-            this.m_list.itemRenderer = this._renderItem.bind(this);
-        }
-
+        // 说明：这里使用“非虚拟列表”的填充方式，
+        // 直接通过 numItems + getChildAt(i) 设置内容，避免依赖 setVirtual/itemRenderer
+        // 这样与项目中 Wallet 列表的用法保持一致。
+        
         console.log('[UIGameList] Components setup');
     }
 
@@ -86,7 +85,15 @@ export class UIGameList extends UIBase {
 
         // 更新列表
         if (this.m_list) {
+            // 设置数量并填充
             this.m_list.numItems = this._games.length;
+            console.log('  List updated, numItems:', this.m_list.numItems);
+
+            for (let i = 0; i < this._games.length; i++) {
+                const item = this.m_list.getChildAt(i);
+                if (!item) continue;
+                this._renderItem(i, item);
+            }
 
             // 默认选择第一个
             if (this._games.length > 0) {
@@ -104,23 +111,37 @@ export class UIGameList extends UIBase {
         const game = this._games[index];
         const button = item.asCom as fgui.GButton;
 
-        // 设置显示信息
-        const title = button.getChild("title") as fgui.GTextField;
-        if (title) {
-            title.text = `游戏 #${index + 1} (${game.players.length}/${game.players.length} 人)`;
+        // 根据 FairyGUI 的实际组件名称设置
+        const gameidText = button.getChild("gameid") as fgui.GTextField;
+        if (gameidText) {
+            gameidText.text = game.id.slice(0, 10) + '...';  // 截短显示
         }
 
-        const info = button.getChild("info") as fgui.GTextField;
-        if (info) {
-            info.text = `状态: 等待中`;
+        const mapidText = button.getChild("mapid") as fgui.GTextField;
+        if (mapidText) {
+            mapidText.text = game.template_map_id ? game.template_map_id.slice(0, 10) + '...' : 'N/A';
+        }
+
+        // 显示玩家列表（player_0, player_1, player_2, player_3）
+        for (let i = 0; i < 4; i++) {
+            const playerText = button.getChild(`player_${i}`) as fgui.GTextField;
+            if (playerText) {
+                if (i < game.players.length) {
+                    const player = game.players[i];
+                    playerText.text = player.owner.slice(0, 8) + '...';
+                } else {
+                    playerText.text = '---';  // 空位
+                }
+            }
         }
 
         // 设置选中状态
         button.selected = (index === this._selectedIndex);
 
-        // 绑定数据和点击事件
+        // 绑定数据和点击事件（先清理旧的监听，再绑定统一的处理函数）
         button.data = index;
-        button.onClick(() => this._selectGame(index), this);
+        button.offClick(this._onItemClick, this);
+        button.onClick(this._onItemClick, this);
     }
 
     /**
@@ -137,7 +158,7 @@ export class UIGameList extends UIBase {
 
         // 刷新列表显示选中状态
         if (this.m_list) {
-            this.m_list.refreshVirtualList();
+            this.m_list.selectedIndex = index;
         }
     }
 
@@ -179,6 +200,17 @@ export class UIGameList extends UIBase {
         } catch (error) {
             console.error('[UIGameList] Failed to join game:', error);
             UINotification.error("加入游戏失败");
+        }
+    }
+
+    /**
+     * 列表项点击（统一处理，避免重复绑定多个闭包）
+     */
+    private _onItemClick(evt: fgui.Event): void {
+        const btn = evt.sender as fgui.GButton;
+        const index = (btn?.data as number) ?? -1;
+        if (index >= 0) {
+            this._selectGame(index);
         }
     }
 }

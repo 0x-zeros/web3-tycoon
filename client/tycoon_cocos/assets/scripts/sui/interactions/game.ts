@@ -31,28 +31,35 @@ export class GameInteraction {
     buildCreateGameTx(config: GameCreateConfig, senderAddress: string): Transaction {
         const tx = new Transaction();
 
-        // 调用create_game函数
-        const [game, seat] = tx.moveCall({
+        // 构建 params 向量（根据 Move 端的 parse_game_params）
+        // params[0] = starting_cash
+        // params[1] = price_rise_days
+        // params[2] = max_rounds
+        // 注意：上层 SuiManager 已确保传入正确的默认值，这里直接使用
+        const params = [
+            Number(config.starting_cash),     // 上层已填充 GameData.starting_cash
+            config.price_rise_days,           // 上层已填充 15
+            config.max_rounds                 // 上层已填充 0
+        ];
+
+        console.log('[GameInteraction] buildCreateGameTx params:', params);
+        console.log('  starting_cash:', config.starting_cash);
+
+        // 调用 create_game 函数（entry fun，不返回值）
+        // 合约内部已处理 share_object 和 transfer
+        tx.moveCall({
             target: `${this.packageId}::game::create_game`,
             arguments: [
-                tx.object(this.gameDataId),              // game_data: &GameData
-                tx.object(config.template_map_id),       // template_map: &MapTemplate
-                tx.pure.u8(config.max_players),          // max_players: u8
-                tx.pure.u64(config.starting_cash || 0),  // starting_cash: u64 (0使用默认值)
-                tx.pure.u8(config.price_rise_days || 0), // price_rise_days: u8
-                tx.pure.u8(config.max_rounds || 0)       // max_rounds: u8
+                tx.object(this.gameDataId),           // game_data: &GameData
+                tx.object(config.template_map_id),    // map: &MapTemplate
+                tx.pure.vector('u64', params)         // params: vector<u64>
             ]
         });
 
-        // 分享游戏对象
-        tx.moveCall({
-            target: '0x2::transfer::public_share_object',
-            typeArguments: [`${this.packageId}::game::Game`],
-            arguments: [game]
-        });
-
-        // 将座位转移给创建者
-        tx.transferObjects([seat], senderAddress);
+        // entry fun 内部已调用：
+        // - transfer::share_object(game)
+        // - transfer::transfer(seat, creator)
+        // 所以不需要手动处理
 
         return tx;
     }

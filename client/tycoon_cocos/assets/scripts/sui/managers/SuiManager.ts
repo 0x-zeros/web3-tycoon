@@ -512,15 +512,22 @@ export class SuiManager {
             throw new Error('Not connected');
         }
 
+        // 获取 GameData 的默认值
+        const gameData = this._cachedGameData || await this._queryService!.getGameData();
+        const defaultStartingCash = gameData?.starting_cash || BigInt(10000);
+
+        console.log('[SuiManager] Using defaults from GameData:');
+        console.log('  starting_cash:', defaultStartingCash);
+
         UINotification.info("正在创建游戏...");
 
         try {
             const result = await this.createGame({
                 template_map_id: templateId.toString(),
                 max_players: options?.maxPlayers || 4,
-                starting_cash: options?.startingCash || 0n,
-                price_rise_days: options?.priceRiseDays || 0,
-                max_rounds: options?.maxRounds || 0
+                starting_cash: options?.startingCash || defaultStartingCash,  // 从 GameData
+                price_rise_days: options?.priceRiseDays || 15,                // DEFAULT_PRICE_RISE_DAYS
+                max_rounds: options?.maxRounds || 0                           // 0 = 无限
             });
 
             console.log('[SuiManager] Game created successfully');

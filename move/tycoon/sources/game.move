@@ -378,13 +378,13 @@ public entry fun create_game(
     game.players.push_back(player);
 
     // 发出游戏创建事件
-    let max_players = map::get_tile_count(map);  // 使用地块数量作为最大玩家数
+    let max_players = types::DEFAULT_MAX_PLAYERS();
     let template_map_id = map::get_map_id(map);
     events::emit_game_created_event(
         game_id_copy,
         creator,
         template_map_id,
-        (max_players as u8)
+        max_players
     );
 
     // 创建座位凭证（索引为 0）
@@ -410,7 +410,9 @@ public entry fun join(
 
     // 验证游戏状态
     assert!(game.status == types::STATUS_READY(), EAlreadyStarted);
-    // 暂时移除最大玩家数限制（或使用地图模板的某个属性）
+    // 最大玩家数限制
+    assert!(game.players.length() < types::DEFAULT_MAX_PLAYERS() as u64, EJoinFull);
+
 
     // 检查是否已加入
     let mut i = 0;

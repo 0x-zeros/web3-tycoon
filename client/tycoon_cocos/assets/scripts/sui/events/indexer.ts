@@ -40,8 +40,12 @@ export class TycoonEventIndexer {
     private isRunning: boolean = false;
     private pollTimer?: NodeJS.Timeout;
     private lastEventSeq: number = 0;
+    // 跟踪最新游标，以便从上次位置继续拉取
+    private lastCursor: { txDigest: string; eventSeq: string } | null = null;
+    private bootstrapped: boolean = false;
     private eventHandlers: Map<EventType, EventCallback[]> = new Map();
     private globalHandlers: EventCallback[] = [];
+    private emptyPolls: number = 0;
 
     constructor(config: IndexerConfig) {
         this.client = config.client;
@@ -64,8 +68,13 @@ export class TycoonEventIndexer {
         }
 
         this.isRunning = true;
-        this.pollEvents();
-        console.log('Event indexer started');
+        // 先进行游标引导，确保只消费启动后的新事件
+        this.bootstrap()
+            .catch((e) => console.warn('Event indexer bootstrap failed (will still poll):', e))
+            .finally(() => {
+                this.pollEvents();
+                console.log('Event indexer started');
+            });
     }
 
     /**
@@ -175,24 +184,45 @@ export class TycoonEventIndexer {
         }
 
         try {
-            // 查询新事件
+            // 查询新事件：基于游标增量拉取
             const result = await this.client.queryEvents({
                 query: {
                     MoveModule: {
                         package: this.packageId,
-                        module: 'events'
-                    }
+                        module: 'events',
+                    },
                 },
+                // 按升序返回，以便按时间顺序处理
+                order: 'ascending',
                 limit: this.batchSize,
-                order: 'ascending'
+                // 从上次的游标之后开始
+                cursor: this.lastCursor ?? undefined,
             });
 
             // 处理新事件
-            for (const event of result.data) {
-                const metadata = this.parseEvent(event);
-                if (metadata && metadata.sequence > this.lastEventSeq) {
-                    this.lastEventSeq = metadata.sequence;
-                    await this.handleEvent(metadata);
+            const count = (result.data?.length ?? 0);
+            if (count > 0) {
+                this.emptyPolls = 0;
+                console.log(`[EventIndexer] Polled ${count} events (from cursor=${this.lastCursor ? `${this.lastCursor.txDigest}:${this.lastCursor.eventSeq}` : 'NONE'})`);
+                for (const event of result.data) {
+                    const metadata = this.parseEvent(event);
+                    if (metadata) {
+                        // 确保sequence为数字比较
+                        if (Number(metadata.sequence) > Number(this.lastEventSeq)) {
+                            this.lastEventSeq = Number(metadata.sequence);
+                            await this.handleEvent(metadata);
+                        }
+                    }
+                }
+
+                // 将游标前移到本批最后一个事件
+                const last = result.data[result.data.length - 1];
+                this.lastCursor = last?.id ?? this.lastCursor;
+            } else {
+                // 偶尔打印空轮询，便于定位包ID或过滤器问题
+                this.emptyPolls += 1;
+                if (!this.bootstrapped || this.emptyPolls % 10 === 0) {
+                    console.log('[EventIndexer] No new events. packageId=', this.packageId);
                 }
             }
         } catch (error) {
@@ -202,6 +232,37 @@ export class TycoonEventIndexer {
         // 继续轮询
         if (this.isRunning) {
             this.pollTimer = setTimeout(() => this.pollEvents(), this.pollInterval);
+        }
+    }
+
+    /**
+     * 启动时引导游标至当前最新事件
+     * 这样可以避免启动后重复消费历史事件
+     */
+    private async bootstrap(): Promise<void> {
+        try {
+            const res = await this.client.queryEvents({
+                query: {
+                    MoveModule: {
+                        package: this.packageId,
+                        module: 'events',
+                    },
+                },
+                order: 'descending',
+                limit: 1,
+            });
+
+            if (res.data && res.data.length > 0) {
+                const latest = res.data[0];
+                // 将游标设置为最新事件，后续按升序只消费其后的新事件
+                this.lastCursor = latest.id;
+                this.lastEventSeq = Number(latest.id?.eventSeq ?? 0);
+            }
+            this.bootstrapped = true;
+            console.log('[EventIndexer] Bootstrap complete. lastCursor:', this.lastCursor);
+        } catch (e) {
+            // 失败不影响后续轮询，只是会从历史开始消费
+            console.warn('[EventIndexer] Bootstrap failed:', e);
         }
     }
 
@@ -217,17 +278,47 @@ export class TycoonEventIndexer {
                 return null;
             }
 
+            const data = this.normalizeEventData(event.parsedJson);
+
             return {
                 type: eventType,
-                data: event.parsedJson,
-                timestamp: event.timestampMs || Date.now(),
-                sequence: event.id.eventSeq || 0,
+                data,
+                timestamp: Number(event.timestampMs || Date.now()),
+                sequence: Number(event.id?.eventSeq ?? 0),
                 txHash: event.id.txDigest || '',
                 blockHeight: 0 // TODO: 从event中获取
             };
         } catch (error) {
             console.error('Failed to parse event:', error);
             return null;
+        }
+    }
+
+    /**
+     * 规整事件数据字段，避免 ID 对象/字符串不一致导致匹配失败
+     */
+    private normalizeEventData(raw: any): any {
+        try {
+            const data: any = { ...raw };
+            // 将 game 字段统一为字符串
+            if (data && data.game && typeof data.game === 'object') {
+                if (typeof data.game.id === 'string') {
+                    data.game = data.game.id;
+                } else if (typeof data.game.bytes === 'string') {
+                    data.game = data.game.bytes; // 某些节点表示为 bytes
+                }
+            }
+            // 将 player 字段统一为字符串（address 一般已是字符串）
+            if (data && data.player && typeof data.player === 'object') {
+                if (typeof data.player.id === 'string') {
+                    data.player = data.player.id;
+                } else if (typeof data.player.bytes === 'string') {
+                    data.player = data.player.bytes;
+                }
+            }
+            return data;
+        } catch (_) {
+            return raw;
         }
     }
 

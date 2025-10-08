@@ -243,6 +243,27 @@ export class QueryService {
     // ============ 私有辅助方法 ============
 
     /**
+     * 解析 ID 类型（可能是字符串或对象 { bytes: "0x..." }）
+     */
+    private parseID(value: any): string {
+        if (typeof value === 'string') return value;
+        if (value?.bytes) return value.bytes;
+        if (value?.id) return value.id;  // 某些情况下可能嵌套在 id 字段中
+        return '';
+    }
+
+    /**
+     * 解析 Option 类型（格式: { vec: [] } 或 { vec: [value] }）
+     */
+    private parseOption<T>(value: any): T | undefined {
+        if (!value) return undefined;
+        if (value.vec && Array.isArray(value.vec)) {
+            return value.vec.length > 0 ? value.vec[0] : undefined;
+        }
+        return undefined;
+    }
+
+    /**
      * 解析 Game 对象
      */
     private parseGameObject(response: SuiObjectResponse): Game | null {
@@ -256,7 +277,7 @@ export class QueryService {
             return {
                 id: fields.id?.id || response.data.objectId,
                 status: Number(fields.status) || 0,
-                template_map_id: fields.template_map_id || '',
+                template_map_id: this.parseID(fields.template_map_id),  // ✅ 修复 ID 类型解析
                 players: this.parsePlayers(fields.players || []),
                 round: Number(fields.round) || 0,
                 turn: Number(fields.turn) || 0,
@@ -264,18 +285,19 @@ export class QueryService {
                 has_rolled: Boolean(fields.has_rolled),
                 tiles: fields.tiles || [],
                 buildings: fields.buildings || [],
-                npc_on: new Map(),
-                owner_index: new Map(),
+                npc_on: new Map(),  // Table 类型，保持空 Map
+                owner_index: new Map(),  // Table 类型，保持空 Map
                 npc_spawn_pool: fields.npc_spawn_pool || [],
                 max_rounds: Number(fields.max_rounds) || 0,
                 price_rise_days: Number(fields.price_rise_days) || 0,
                 pending_decision: Number(fields.pending_decision) || 0,
                 decision_tile: Number(fields.decision_tile) || 0,
                 decision_amount: BigInt(fields.decision_amount || 0),
-                winner: fields.winner
+                winner: this.parseOption<string>(fields.winner)  // ✅ 修复 Option 类型解析
             };
         } catch (error) {
             console.error('[QueryService] Failed to parse game object:', error);
+            console.error('  Raw fields:', fields);
             return null;
         }
     }
@@ -294,7 +316,7 @@ export class QueryService {
             last_tile_id: Number(p.last_tile_id) || 0,
             next_tile_id: Number(p.next_tile_id) || 0,
             buffs: p.buffs || [],
-            cards: new Map()
+            cards: new Map()  // Table 类型，保持空 Map
         }));
     }
 }

@@ -399,32 +399,69 @@ export class GameInteraction {
     }
 
     /**
+     * 解析 ID 类型（可能是字符串或对象 { bytes: "0x..." }）
+     */
+    private parseID(value: any): string {
+        if (typeof value === 'string') return value;
+        if (value?.bytes) return value.bytes;
+        if (value?.id) return value.id;  // 某些情况下可能嵌套在 id 字段中
+        return '';
+    }
+
+    /**
+     * 解析 Option 类型（格式: { vec: [] } 或 { vec: [value] }）
+     */
+    private parseOption<T>(value: any): T | undefined {
+        if (!value) return undefined;
+        if (value.vec && Array.isArray(value.vec)) {
+            return value.vec.length > 0 ? value.vec[0] : undefined;
+        }
+        return undefined;
+    }
+
+    /**
      * 解析游戏对象
      */
     private parseGameObject(fields: any): Game {
-        // 这里需要根据实际的对象结构进行解析
-        // 临时返回一个简化的结构
         return {
             id: fields.id?.id || '',
-            status: fields.status || 0,
-            template_map_id: fields.template_map_id || '',
-            players: fields.players || [],
-            round: fields.round || 0,
-            turn: fields.turn || 0,
-            active_idx: fields.active_idx || 0,
-            has_rolled: fields.has_rolled || false,
+            status: Number(fields.status) || 0,
+            template_map_id: this.parseID(fields.template_map_id),  // ✅ 修复 ID 类型解析
+            players: this.parsePlayers(fields.players || []),
+            round: Number(fields.round) || 0,
+            turn: Number(fields.turn) || 0,
+            active_idx: Number(fields.active_idx) || 0,
+            has_rolled: Boolean(fields.has_rolled),
             tiles: fields.tiles || [],
             buildings: fields.buildings || [],
-            npc_on: new Map(),
-            owner_index: new Map(),
+            npc_on: new Map(),  // Table 类型，保持空 Map
+            owner_index: new Map(),  // Table 类型，保持空 Map
             npc_spawn_pool: fields.npc_spawn_pool || [],
-            max_rounds: fields.max_rounds || 0,
-            price_rise_days: fields.price_rise_days || 0,
-            pending_decision: fields.pending_decision || 0,
-            decision_tile: fields.decision_tile || 0,
+            max_rounds: Number(fields.max_rounds) || 0,
+            price_rise_days: Number(fields.price_rise_days) || 0,
+            pending_decision: Number(fields.pending_decision) || 0,
+            decision_tile: Number(fields.decision_tile) || 0,
             decision_amount: BigInt(fields.decision_amount || 0),
-            winner: fields.winner
+            winner: this.parseOption<string>(fields.winner)  // ✅ 修复 Option 类型解析
         };
+    }
+
+    /**
+     * 解析玩家列表
+     */
+    private parsePlayers(playersData: any[]): any[] {
+        return playersData.map((p: any) => ({
+            owner: p.owner || '',
+            pos: Number(p.pos) || 0,
+            cash: BigInt(p.cash || 0),
+            bankrupt: Boolean(p.bankrupt),
+            in_hospital_turns: Number(p.in_hospital_turns) || 0,
+            in_prison_turns: Number(p.in_prison_turns) || 0,
+            last_tile_id: Number(p.last_tile_id) || 0,
+            next_tile_id: Number(p.next_tile_id) || 0,
+            buffs: p.buffs || [],
+            cards: new Map()  // Table 类型，保持空 Map
+        }));
     }
 
     /**
@@ -433,9 +470,9 @@ export class GameInteraction {
     private parseSeatObject(fields: any): Seat {
         return {
             id: fields.id?.id || '',
-            game: fields.game || '',
+            game: this.parseID(fields.game),  // ✅ 修复 ID 类型解析
             player: fields.player || '',
-            player_index: fields.player_index || 0
+            player_index: Number(fields.player_index) || 0
         };
     }
 }

@@ -2,7 +2,7 @@
 <component size="1280,768">
   <controller name="category" pages="0,game_id,1,map_id,2,map_json" selected="1"/>
   <displayList>
-    <list id="n0_105vo" name="game_id" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56jpseuo3">
+    <list id="n0_105vo" name="game_id" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56jpseuo3" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
       <item/>
       <item/>
@@ -11,7 +11,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n3_105vo" name="map_id" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56jpseuo4">
+    <list id="n3_105vo" name="map_id" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56jpseuo4" autoClearItems="true">
       <gearDisplay controller="category" pages="1"/>
       <item title="object1"/>
       <item/>
@@ -24,7 +24,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n5_ez89" name="map_json" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56j105vo1">
+    <list id="n5_ez89" name="map_json" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56j105vo1" autoClearItems="true">
       <gearDisplay controller="category" pages="2"/>
       <item title="building 1"/>
       <item/>
@@ -46,19 +46,19 @@
     <component id="n8_ez89" name="btn_map_json" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="768,-110" size="380,100">
       <Button title="客户端地图" controller="category" page="2"/>
     </component>
-    <component id="n11_pseu" name="btn_joinGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,852" size="378,76">
+    <component id="n11_pseu" name="btn_joinGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,803" size="378,76">
       <gearDisplay controller="category" pages="0"/>
       <Button title="加入游戏"/>
     </component>
-    <component id="n12_pseu" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,852" size="378,76">
+    <component id="n12_pseu" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,803" size="378,76">
       <gearDisplay controller="category" pages="1"/>
       <Button title="创建游戏"/>
     </component>
-    <component id="n13_pseu" name="btn_editMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,852" size="378,76">
+    <component id="n13_pseu" name="btn_editMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,803" size="378,76">
       <gearDisplay controller="category" pages="2"/>
       <Button title="编辑地图"/>
     </component>
-    <component id="n14_pseu" name="btn_loadFromLocalStorage" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="869,855" scale="0.3,0.3">
+    <component id="n14_pseu" name="btn_loadFromLocalStorage" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="869,806" scale="0.3,0.3">
       <gearDisplay controller="category" pages="2"/>
       <Button checked="true"/>
     </component>

@@ -1,238 +1,103 @@
 import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
-import { Blackboard } from "../../events/Blackboard";
-import { MapConfig, mapManager } from "../../map/MapManager";
+import { UIGameList } from "./map-select/UIGameList";
+import { UIMapList } from "./map-select/UIMapList";
+import { UIMapAssetList } from "./map-select/UIMapAssetList";
 import * as fgui from "fairygui-cc";
-import { _decorator, Rect, resources, Size, SpriteFrame, Texture2D } from 'cc';
+import { _decorator } from 'cc';
 
 const { ccclass } = _decorator;
 
 /**
- * 地图选择界面 - 玩家选择游戏地图
+ * 地图选择界面（重构版）
+ * 主容器，管理 3 个子模块：
+ * - UIGameList: 链上 Game 列表
+ * - UIMapList: 链上 MapTemplate 列表
+ * - UIMapAssetList: 本地地图资源
  */
 @ccclass('UIMapSelect')
 export class UIMapSelect extends UIBase {
-    /** 地图列表容器 */
-    private _mapList: fgui.GList | null = null;
-    /** 地图预览图片 */
-    private _previewImage: fgui.GLoader | null = null;
-    /** 地图名称文本 */
-    private _mapNameText: fgui.GTextField | null = null;
-    /** 开始游戏按钮 */
-    private _startButton: fgui.GButton | null = null;
-    /** 返回按钮 */
-    private _editButton: fgui.GButton | null = null;
-    /** 刷新按钮 */
-    private _refreshButton: fgui.GButton | null = null;
-    /** 从localStorage加载复选框 */
-    private _loadFromLocalStorageCheckbox: fgui.GButton | null = null;
+    // Map 组件容器（data）
+    private m_dataComponent: fgui.GComponent;
 
-    // 当前选中的地图
-    private _selectedMapId: string | null = null;
-    private _selectedMapConfig: MapConfig | null = null;
+    // Controller（在 data 组件中）
+    private m_categoryController: fgui.Controller;
 
-    // 地图配置数据
-    private _availableMaps: MapConfig[] = [];
+    // 子模块
+    private m_gameListUI: UIGameList;
+    private m_mapListUI: UIMapList;
+    private m_mapAssetListUI: UIMapAssetList;
 
     /**
      * 初始化回调
      */
     protected onInit(): void {
         this._setupComponents();
-        this._loadMapData();
+        this._initSubModules();
     }
 
     /**
      * 设置组件引用
      */
     private _setupComponents(): void {
-       
-        // 获取按钮
-        this._startButton = this.getButton("btnStart");
-        this._editButton = this.getButton("btnEdit");
-        // this._refreshButton = this.getButton("btnRefresh");
-        this._loadFromLocalStorageCheckbox = this.getButton("btn_loadFromLocalStorage");
+        // 获取 data 组件（Map 类型）
+        this.m_dataComponent = this.getChild('data').asCom;
 
-         // 获取地图列表
-         this._mapList = this.getList("mapList");
-        
-        // 设置列表渲染器
-        if (this._mapList) {
-            this._mapList.itemRenderer = this._renderMapItem.bind(this);
-        }
-    }
-
-    /**
-     * 加载地图数据
-     */
-    private _loadMapData(): void {
-        if (!mapManager.instance) {
-            console.error('[UIMapSelect] MapManager not available');
+        if (!this.m_dataComponent) {
+            console.error('[UIMapSelect] data component not found');
             return;
         }
 
-        // 获取所有可用地图
-        this._availableMaps = mapManager.instance.getAvailableMaps();
-        
-        // 更新列表数据
-        if (this._mapList && this._availableMaps.length > 0) {
-            this._mapList.numItems = this._availableMaps.length;
-            
-            // 默认选择第一个地图
-            this._selectMap(0);
+        // 获取 controller（在 data 组件中）
+        this.m_categoryController = this.m_dataComponent.getController('category');
+
+        if (!this.m_categoryController) {
+            console.error('[UIMapSelect] category controller not found');
         }
 
-        console.log(`[UIMapSelect] 已加载 ${this._availableMaps.length} 个可用地图`);
-        console.log(`[UIMapSelect] 已加载地图: ${this._availableMaps.map(map => map.name).join(', ')}`);
+        console.log('[UIMapSelect] Components setup');
     }
 
     /**
-     * 渲染地图列表项
+     * 初始化子模块
      */
-    private _renderMapItem(index: number, item: fgui.GObject): void {
-        if (index >= this._availableMaps.length) return;
+    private _initSubModules(): void {
+        // 子模块 1: UIGameList（链上 Game 列表）
+        const gameIdComp = this.m_dataComponent.getChild('game_id').asCom;
+        this.m_gameListUI = gameIdComp.node.addComponent(UIGameList);
+        this.m_gameListUI.setUIName("GameList");
+        this.m_gameListUI.setPanel(gameIdComp);
+        this.m_gameListUI.init();
 
-        const mapConfig: MapConfig = this._availableMaps[index];
-        console.log(`[UIMapSelect] 渲染地图: ${mapConfig.name}, index: ${index}, mapConfig: ${mapConfig}`);
+        // 子模块 2: UIMapList（链上 MapTemplate 列表）
+        const mapIdComp = this.m_dataComponent.getChild('map_id').asCom;
+        this.m_mapListUI = mapIdComp.node.addComponent(UIMapList);
+        this.m_mapListUI.setUIName("MapList");
+        this.m_mapListUI.setPanel(mapIdComp);
+        this.m_mapListUI.init();
 
-        const mapItem = item.asCom as fgui.GButton;
-        mapItem.data = index; //自定义的数据，这个数据FairyGUI不做解析，按原样发布到最后的描述文件中
-        
-        // 获取列表项组件
-        const nameText = mapItem.getChild("mapName") as fgui.GTextField;
-        const typeText = mapItem.getChild("mapType") as fgui.GTextField;
-        const previewImage = mapItem.getChild("mapPreview") as fgui.GLoader;
+        // 子模块 3: UIMapAssetList（本地地图资源）
+        const mapJsonComp = this.m_dataComponent.getChild('map_json').asCom;
+        this.m_mapAssetListUI = mapJsonComp.node.addComponent(UIMapAssetList);
+        this.m_mapAssetListUI.setUIName("MapAssetList");
+        this.m_mapAssetListUI.setPanel(mapJsonComp);
+        this.m_mapAssetListUI.init();
 
-        // 设置地图信息
-        if (nameText) nameText.text = mapConfig.name;
-        if (typeText) typeText.text = this._getMapTypeText(mapConfig.type);
-
-        // 设置选择状态
-        mapItem.selected = (this._selectedMapId === mapConfig.id);
-
-        // 立即加载并显示预览图
-        this._loadMapPreviewImage(mapConfig, previewImage);
-
-        mapItem.onClick(this._onMapItemClick, this);
+        console.log('[UIMapSelect] Sub-modules initialized');
     }
 
     /**
-     * 获取地图类型显示文本
-     */
-    private _getMapTypeText(type: string): string {
-        switch (type) {
-            case 'classic': return '经典模式';
-            case 'brawl': return '乱斗模式';
-            default: return '未知';
-        }
-    }
-
-    /**
-     * 选择地图
-     */
-    private _selectMap(index: number): void {
-        if (index < 0 || index >= this._availableMaps.length) return;
-
-        const mapConfig = this._availableMaps[index];
-        this._selectedMapId = mapConfig.id;
-        this._selectedMapConfig = mapConfig;
-
-        // 更新预览信息
-        this._updateMapPreview(mapConfig);
-
-        // 更新列表选择状态
-        // if (this._mapList) {
-        //     this._mapList.refreshVirtualList(); //会导致cocos 卡死，why?
-        // }
-
-        console.log(`[UIMapSelect] 选择了地图: ${mapConfig.name}`);
-    }
-
-    /**
-     * 加载地图预览图片（用于列表项）
-     */
-    private _loadMapPreviewImage(mapConfig: MapConfig, previewImage: fgui.GLoader): void {
-        if (!previewImage || !mapConfig.previewImagePath) {
-            return;
-        }
-
-        const texturePath = mapConfig.previewImagePath + '/texture';
-        console.log(`[UIMapSelect] Loading map preview texture for list item: ${mapConfig.previewImagePath}`);
-        
-        resources.load(texturePath, Texture2D, (err, texture) => {
-            if (!err && texture) {
-                const spriteFrame = new SpriteFrame();
-                spriteFrame.texture = texture;
-                spriteFrame.originalSize = new Size(texture.width, texture.height);
-                spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
-                previewImage.texture = spriteFrame;
-            } else {
-                // 尝试加载默认贴图
-                console.warn(`[UIMapSelect] Failed to load map preview texture: ${mapConfig.previewImagePath}`, err);
-                previewImage.url = mapConfig.previewImagePath;
-            }
-        });
-    }
-
-    /**
-     * 更新地图预览信息（用于右侧预览区域）
-     */
-    private _updateMapPreview(mapConfig: MapConfig): void {
-        // 设置预览图
-        if (this._previewImage && mapConfig.previewImagePath) {
-            this._loadMapPreviewImage(mapConfig, this._previewImage);
-        }
-
-        // 设置地图信息
-        if (this._mapNameText) {
-            this._mapNameText.text = mapConfig.name;
-        }
-
-        // 开始按钮始终可用
-        if (this._startButton) {
-            this._startButton.enabled = true;
-            this._startButton.grayed = false;
-        }
-    }
-
-    /**
-     * 绑定事件
+     * 绑定事件（主容器无需绑定，由子模块处理）
      */
     protected bindEvents(): void {
-        // 绑定按钮事件
-        this._startButton?.onClick(this._onStartClick, this);
-        this._editButton?.onClick(this._onEditClick, this);
-        this._refreshButton?.onClick(this._onRefreshClick, this);
-
-        // // 绑定列表选择事件
-        // 和 mapItem.onClick 传过去的evt不一样，这边传进去的evt.sender为undefined，mapItem.onClick 传去的就是mapItem
-        // if (this._mapList) {
-        //     this._mapList.on(fgui.Event.CLICK_ITEM, this._onMapItemClick, this);
-        // }
-
-        // 监听地图配置更新事件
-        EventBus.on(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
+        // 子模块会处理各自的事件
     }
 
     /**
      * 解绑事件
      */
     protected unbindEvents(): void {
-        // 解绑按钮事件
-        this._startButton?.offClick(this._onStartClick, this);
-        this._editButton?.offClick(this._onEditClick, this);
-        this._refreshButton?.offClick(this._onRefreshClick, this);
-
-        // // 解绑列表事件
-        // if (this._mapList) {
-        //     this._mapList.off(fgui.Event.CLICK_ITEM, this._onMapItemClick, this);
-        // }
-
-        // 解绑全局事件
-        EventBus.off(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
-
-        // 调用父类解绑
         super.unbindEvents();
     }
 
@@ -240,16 +105,23 @@ export class UIMapSelect extends UIBase {
      * 显示回调
      */
     protected onShow(data?: any): void {
-        console.log("[UIMapSelect] Showing map select UI");
-        
+        console.log("[UIMapSelect] Showing");
+
         // 播放背景音乐
         EventBus.emit(EventTypes.Audio.PlayBGM, {
             musicPath: "audio/bgm/map_select",
             loop: true
         });
 
-        // 刷新地图数据
-        this._loadMapData();
+        // 默认显示第一个页面（Game 列表）
+        if (this.m_categoryController) {
+            this.m_categoryController.selectedIndex = 0;
+        }
+
+        // 刷新所有子模块数据
+        this.m_gameListUI?.refresh();
+        this.m_mapListUI?.refresh();
+        this.m_mapAssetListUI?.refresh();
 
         // 播放显示动画
         this._playShowAnimation();
@@ -259,104 +131,30 @@ export class UIMapSelect extends UIBase {
      * 隐藏回调
      */
     protected onHide(): void {
-        console.log("[UIMapSelect] Hiding map select UI");
-        
+        console.log("[UIMapSelect] Hiding");
+
         // 停止背景音乐
         EventBus.emit(EventTypes.Audio.StopBGM);
     }
 
     /**
-     * 刷新回调
+     * 切换分类
+     * @param index 0=game_id, 1=map_id, 2=map_json
      */
-    protected onRefresh(data?: any): void {
-        this._loadMapData();
-    }
-
-    // ================== 事件处理器 ==================
-
-    /**
-     * 开始游戏按钮点击
-     */
-    private _onStartClick(): void {
-        console.log("[UIMapSelect] Start map");
-        this.doStartMap(false);
-    }
-
-    /**
-     * 编辑按钮点击
-     */
-    private _onEditClick(): void {
-        console.log("[UIMapSelect] Edit map");
-        this.doStartMap(true);
-    }
-
-
-    private doStartMap(isEdit: boolean): void {
-        if (!this._selectedMapId || !this._selectedMapConfig) {
-            console.warn('[UIMapSelect] No map selected');
-            return;
+    public switchCategory(index: number): void {
+        if (this.m_categoryController) {
+            this.m_categoryController.selectedIndex = index;
+            console.log(`[UIMapSelect] Switched to category: ${index}`);
         }
-
-        // 读取复选框状态
-        const loadFromLocalStorage = this._loadFromLocalStorageCheckbox?.selected ?? false;
-
-        console.log(`[UIMapSelect] ${isEdit ? '编辑' : '开始'}游戏，地图: ${this._selectedMapConfig.name}, 从localStorage加载: ${loadFromLocalStorage}`);
-
-        // 保存选择的地图信息
-        Blackboard.instance.set("selectedMapId", this._selectedMapId, true);
-        Blackboard.instance.set("selectedMapConfig", this._selectedMapConfig, true);
-        Blackboard.instance.set("loadFromLocalStorage", loadFromLocalStorage, true);
-
-        // 发送地图选择事件
-        EventBus.emit(EventTypes.Game.MapSelected, {
-            mapId: this._selectedMapId,
-            isEdit: isEdit,
-            mapConfig: this._selectedMapConfig,
-            loadFromLocalStorage: loadFromLocalStorage,
-            source: "map_select"
-        });
-
-        // 隐藏当前界面
-        this.hide();
     }
-
-    /**
-     * 刷新按钮点击
-     */
-    private _onRefreshClick(): void {
-        console.log("[UIMapSelect] Refreshing map list");
-        this._loadMapData();
-    }
-
-    /**
-     * 地图列表项点击
-     */
-    private _onMapItemClick(evt: fgui.Event): void {
-        // console.log(`[UIMapSelect] 地图列表项点击: ${evt.sender}`);
-        const index = (evt.sender as fgui.GButton).data;
-        this._selectMap(index);
-    }
-
-    /**
-     * 地图配置更新事件
-     */
-    private _onMapConfigUpdated(): void {
-        console.log("[UIMapSelect] Map config updated, refreshing");
-        this._loadMapData();
-    }
-
-    // ================== 私有方法 ==================
 
     /**
      * 播放显示动画
      */
     private _playShowAnimation(): void {
-        // 可以使用FairyGUI的Transition播放动画
         const showTransition = this.getTransition("showAnim");
         if (showTransition) {
             showTransition.play();
         }
-
-        console.log("[UIMapSelect] Playing show animation");
     }
 }

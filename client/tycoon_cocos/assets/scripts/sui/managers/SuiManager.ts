@@ -931,7 +931,9 @@ export class SuiManager {
         });
 
         // 只保留前 6 个
-        return games.slice(0, 6).map(item => item.game);
+        // return games.slice(0, 6).map(item => item.game);
+        
+        return games.map(item => item.game);
     }
 
     /**

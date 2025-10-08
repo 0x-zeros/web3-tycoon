@@ -98,6 +98,8 @@ export class QueryService {
                 order: options.order || 'descending'
             });
 
+            console.log('[QueryService] queryAllGames num:', response.data.length);
+
             // 提取游戏 ID 并获取详情
             for (const event of response.data) {
                 const eventData = event.parsedJson as any;

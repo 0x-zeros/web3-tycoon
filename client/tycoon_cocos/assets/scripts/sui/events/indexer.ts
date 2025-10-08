@@ -4,8 +4,7 @@
  */
 
 import { SuiClient } from '@mysten/sui/client';
-import { EventType, EventMetadata, EventFilter, GameEvent } from './types';
-import { UseCardActionEvent, RollAndStepActionEvent } from './aggregated';
+import { EventType, EventMetadata, GameEvent } from './types';
 
 /**
  * 事件索引器配置
@@ -59,7 +58,7 @@ export class TycoonEventIndexer {
     private bootstrapped: boolean = false;
     private eventHandlers: Map<EventType, EventCallback[]> = new Map();
     private globalHandlers: EventCallback[] = [];
-    private emptyPolls: number = 0;
+    
 
     constructor(config: IndexerConfig) {
         this.client = config.client;
@@ -76,19 +75,13 @@ export class TycoonEventIndexer {
      * 开始监听事件
      */
     start(): void {
-        if (this.isRunning) {
-            console.warn('Event indexer is already running');
-            return;
-        }
+        if (this.isRunning) return;
 
         this.isRunning = true;
         // 先进行游标引导，确保只消费启动后的新事件
-        this.bootstrap()
-            .catch((e) => console.warn('Event indexer bootstrap failed (will still poll):', e))
-            .finally(() => {
-                this.pollEvents();
-                console.log('Event indexer started');
-            });
+        this.bootstrap().finally(() => {
+            this.pollEvents();
+        });
     }
 
     /**
@@ -104,7 +97,7 @@ export class TycoonEventIndexer {
             clearTimeout(this.pollTimer);
             this.pollTimer = undefined;
         }
-        console.log('Event indexer stopped');
+        
     }
 
     /**
@@ -137,56 +130,6 @@ export class TycoonEventIndexer {
         }
     }
 
-    /**
-     * 查询历史事件
-     */
-    async queryEvents(filter: EventFilter): Promise<EventMetadata[]> {
-        const events: EventMetadata[] = [];
-
-        try {
-            // 构建查询过滤器
-            const suiFilter: any = {
-                MoveModule: {
-                    package: this.packageId,
-                    module: 'events'
-                }
-            };
-
-            // 查询事件
-            const result = await this.client.queryEvents({
-                query: suiFilter,
-                limit: this.batchSize,
-                order: 'descending'
-            });
-
-            // 处理结果
-            for (const event of result.data) {
-                const metadata = this.parseEvent(event);
-                if (metadata && this.matchesFilter(metadata, filter)) {
-                    events.push(metadata);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to query events:', error);
-        }
-
-        return events;
-    }
-
-    /**
-     * 获取游戏的所有事件
-     */
-    async getGameEvents(gameId: string): Promise<EventMetadata[]> {
-        return this.queryEvents({ gameId });
-    }
-
-    /**
-     * 获取玩家的所有事件
-     */
-    async getPlayerEvents(playerAddress: string): Promise<EventMetadata[]> {
-        return this.queryEvents({ player: playerAddress });
-    }
-
     // ===== 私有方法 =====
 
     /**
@@ -200,7 +143,6 @@ export class TycoonEventIndexer {
         try {
             // 使用 MoveEventType 分类型查询，规避 MoveModule 兼容性问题
             const typeNames = this.getAllTypeNames();
-            let polledTotal = 0;
             for (const typeName of typeNames) {
                 const cursor = this.perTypeCursor.get(typeName) ?? undefined;
                 const fullType = `${this.packageId}::events::${typeName}`;
@@ -212,9 +154,7 @@ export class TycoonEventIndexer {
                 });
 
                 const count = (result.data?.length ?? 0);
-                polledTotal += count;
                 if (count > 0) {
-                    console.log(`[EventIndexer] Polled ${count} ${typeName}(s) from cursor=${cursor ? `${cursor.txDigest}:${cursor.eventSeq}` : 'NONE'}`);
                     for (const ev of result.data) {
                         const metadata = this.parseEvent(ev);
                         if (metadata) {
@@ -224,17 +164,6 @@ export class TycoonEventIndexer {
                     const last = result.data[result.data.length - 1];
                     this.perTypeCursor.set(typeName, last?.id ?? cursor ?? null);
                 }
-            }
-
-            if (polledTotal === 0) {
-                this.emptyPolls += 1;
-                if (!this.bootstrapped || this.emptyPolls % 10 === 0) {
-                    console.log('[EventIndexer] No new events. packageId=', this.packageId);
-                    // 进行一次轻量诊断，确认过滤器是否工作
-                    this.diagnoseFilters().catch(() => {});
-                }
-            } else {
-                this.emptyPolls = 0;
             }
         } catch (error) {
             console.error('Failed to poll events:', error);
@@ -247,40 +176,7 @@ export class TycoonEventIndexer {
     }
 
     /**
-     * 诊断过滤器是否能返回事件（只做日志输出，不抛错）
-     */
-    private async diagnoseFilters(): Promise<void> {
-        try {
-            const byModule = await this.client.queryEvents({
-                query: {
-                    MoveModule: {
-                        package: this.packageId,
-                        module: 'events',
-                    },
-                },
-                order: 'descending',
-                limit: 1,
-            });
-            const byModuleType = byModule.data?.[0]?.type ?? '(none)';
-            console.log('[EventIndexer][Diag] MoveModule last type:', byModuleType);
-
-            const byType = await this.client.queryEvents({
-                query: {
-                    MoveEventType: `${this.packageId}::events::GameCreatedEvent`,
-                },
-                order: 'descending',
-                limit: 1,
-            });
-            const byTypeType = byType.data?.[0]?.type ?? '(none)';
-            console.log('[EventIndexer][Diag] GameCreatedEvent last type:', byTypeType, 'count=', byType.data?.length ?? 0);
-        } catch (e) {
-            console.warn('[EventIndexer][Diag] failed:', e);
-        }
-    }
-
-    /**
      * 启动时引导游标至当前最新事件
-     * 这样可以避免启动后重复消费历史事件
      */
     private async bootstrap(): Promise<void> {
         try {
@@ -301,10 +197,9 @@ export class TycoonEventIndexer {
                 }
             }
             this.bootstrapped = true;
-            console.log('[EventIndexer] Bootstrap complete. cursors set for types:', typeNames.join(', '));
         } catch (e) {
             // 失败不影响后续轮询，只是会从历史开始消费
-            console.warn('[EventIndexer] Bootstrap failed:', e);
+            // 静默失败
         }
     }
 
@@ -399,38 +294,7 @@ export class TycoonEventIndexer {
         }
     }
 
-    /**
-     * 检查事件是否匹配过滤器
-     */
-    private matchesFilter(metadata: EventMetadata, filter: EventFilter): boolean {
-        if (filter.types && !filter.types.includes(metadata.type)) {
-            return false;
-        }
-
-        if (filter.gameId) {
-            const gameId = (metadata.data as any).game;
-            if (gameId !== filter.gameId) {
-                return false;
-            }
-        }
-
-        if (filter.player) {
-            const player = (metadata.data as any).player;
-            if (player !== filter.player) {
-                return false;
-            }
-        }
-
-        if (filter.fromTimestamp && metadata.timestamp < filter.fromTimestamp) {
-            return false;
-        }
-
-        if (filter.toTimestamp && metadata.timestamp > filter.toTimestamp) {
-            return false;
-        }
-
-        return true;
-    }
+    
 }
 
 /**

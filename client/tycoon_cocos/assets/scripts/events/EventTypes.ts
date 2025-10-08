@@ -369,9 +369,19 @@ export const EventTypes = {
         /** 地图模板列表更新 */
         MapTemplatesUpdated: "sui_map_templates_updated",
         /** 新游戏创建（客户端通知） */
-        NewGameCreated: "sui_new_game_created",
-        /** 游戏创建成功（显示详情） */
-        GameCreated: "sui_game_created"
+        NewGameCreated: "sui_new_game_created"
+    },
+
+    /** Move 链上事件（由 EventIndexer 转发） */
+    Move: {
+        /** 游戏创建事件 */
+        GameCreated: "move_game_created",
+        /** 玩家加入事件 */
+        PlayerJoined: "move_player_joined",
+        /** 游戏开始事件 */
+        GameStarted: "move_game_started",
+        /** 游戏结束事件 */
+        GameEnded: "move_game_ended"
     },
 
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */

@@ -22,6 +22,7 @@ import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { Blackboard } from '../../events/Blackboard';
 import { UINotification } from '../../ui/utils/UINotification';
+import { UIMessage, MessageBoxIcon } from '../../ui/utils/UIMessage';
 import { loadKeypairFromKeystore } from '../utils/KeystoreLoader';
 
 /**
@@ -544,22 +545,18 @@ export class SuiManager {
             console.log('  Game ID:', result.gameId);
             console.log('  Seat ID:', result.seatId);
 
-            UINotification.success("游戏创建成功");
+            // 显示成功 MessageBox
+            await UIMessage.success(
+                `游戏创建成功！\n\n` +
+                `游戏 ID: ${result.gameId.slice(0, 20)}...\n\n` +
+                `等待链上确认和其他玩家加入...`,
+                "创建成功"
+            );
 
-            // 查询游戏详情并缓存
-            const game = await this.getGameState(result.gameId);
-            if (game) {
-                this._currentGame = game;
-                console.log('[SuiManager] Cached current game');
-                console.log('  Players:', game.players.length);
-            }
-
-            // 发送游戏创建事件（不是 GameStart，避免跳转）
-            EventBus.emit(EventTypes.Sui.GameCreated, {
-                gameId: result.gameId,
-                seatId: result.seatId,
-                playerIndex: 0
-            });
+            // ❌ 不在这里缓存游戏和发送事件
+            // ✅ 等待 EventIndexer 收到链上 GameCreatedEvent
+            // ✅ EventIndexer 会转发到 EventBus.Move.GameCreated
+            // ✅ UIMapSelect 监听该事件并处理
 
             return result;
 
@@ -849,20 +846,29 @@ export class SuiManager {
             client: this._client!,
             packageId: this._config!.packageId,
             autoStart: true,
-            pollInterval: 5000  // 每 5 秒轮询一次
+            pollInterval: 1000  // 每 1 秒轮询一次
         });
 
         // 监听游戏创建事件
         this._eventIndexer.on(EventType.GAME_CREATED, (event) => {
-            console.log('[SuiManager] New game created event:', event);
-            UINotification.info("发现新游戏！");
+            console.log('[SuiManager] GameCreatedEvent from chain:', event.data);
+
+            // 刷新游戏列表缓存
             this._refreshGamesCache();
+
+            // 转发到 EventBus（解耦 UI 层）
+            EventBus.emit(EventTypes.Move.GameCreated, event.data);
         });
 
-        // 监听游戏开始事件（从列表移除）
+        // 监听游戏开始事件
         this._eventIndexer.on(EventType.GAME_STARTED, (event) => {
-            console.log('[SuiManager] Game started event:', event);
+            console.log('[SuiManager] GameStartedEvent from chain:', event.data);
+
+            // 从列表移除已开始的游戏
             this._onGameStarted(event);
+
+            // 转发到 EventBus
+            EventBus.emit(EventTypes.Move.GameStarted, event.data);
         });
 
         console.log('[SuiManager] Event listener started');

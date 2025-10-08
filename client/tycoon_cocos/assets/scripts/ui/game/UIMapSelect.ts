@@ -119,11 +119,11 @@ export class UIMapSelect extends UIBase {
         // 监听地图选择事件（编辑地图）
         EventBus.on(EventTypes.Game.MapSelected, this._onMapSelected, this);
 
-        // 监听游戏开始事件（加入游戏/开始游戏）
+        // 监听游戏开始事件（开始游戏）
         EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
 
-        // 监听游戏创建成功事件（显示详情）
-        EventBus.on(EventTypes.Sui.GameCreated, this._onGameCreated, this);
+        // 监听 Move 链上游戏创建事件（由 EventIndexer 转发）
+        EventBus.on(EventTypes.Move.GameCreated, this._onMoveGameCreated, this);
     }
 
     /**
@@ -132,7 +132,7 @@ export class UIMapSelect extends UIBase {
     protected unbindEvents(): void {
         EventBus.off(EventTypes.Game.MapSelected, this._onMapSelected, this);
         EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
-        EventBus.off(EventTypes.Sui.GameCreated, this._onGameCreated, this);
+        EventBus.off(EventTypes.Move.GameCreated, this._onMoveGameCreated, this);
         super.unbindEvents();
     }
 
@@ -156,21 +156,50 @@ export class UIMapSelect extends UIBase {
     }
 
     /**
-     * 游戏创建成功事件（显示详情）
+     * 处理 Move 链上游戏创建事件
+     * 事件数据：{ game, creator, template_map_id, max_players }
      */
-    private _onGameCreated(data: any): void {
-        console.log('[UIMapSelect] GameCreated event received');
-        console.log('  Showing game detail');
+    private _onMoveGameCreated(eventData: any): void {
+        console.log('[UIMapSelect] Move.GameCreated event received');
+        console.log('  Game:', eventData.game);
+        console.log('  Creator:', eventData.creator);
 
-        // 隐藏主界面
-        if (this.m_dataComponent) {
-            this.m_dataComponent.visible = false;
-        }
+        // 1. 刷新 game list（数据已由 SuiManager 更新缓存）
+        console.log('[UIMapSelect] Refreshing game list');
+        this.m_gameListUI?.refresh();
 
-        // 显示游戏详情
-        if (this.m_gameDetailComponent && this.m_gameDetailUI) {
-            this.m_gameDetailComponent.visible = true;
-            this.m_gameDetailUI.showGame();
+        // 2. 判断是否是自己创建的
+        const currentAddress = SuiManager.instance.currentAddress;
+        const isMyGame = eventData.creator === currentAddress;
+
+        console.log('  Is my game:', isMyGame);
+        console.log('  Current address:', currentAddress);
+
+        // 3. 只有是自己创建的才显示详情
+        if (isMyGame) {
+            console.log('[UIMapSelect] My game created, querying details...');
+
+            // 查询游戏详情并缓存
+            SuiManager.instance.getGameState(eventData.game).then(game => {
+                if (game) {
+                    // 缓存游戏
+                    (SuiManager.instance as any)._currentGame = game;
+                    console.log('[UIMapSelect] Game cached, showing detail');
+
+                    // 隐藏主界面
+                    if (this.m_dataComponent) {
+                        this.m_dataComponent.visible = false;
+                    }
+
+                    // 显示游戏详情
+                    if (this.m_gameDetailComponent && this.m_gameDetailUI) {
+                        this.m_gameDetailComponent.visible = true;
+                        this.m_gameDetailUI.showGame();
+                    }
+                }
+            }).catch(error => {
+                console.error('[UIMapSelect] Failed to query game:', error);
+            });
         }
     }
 

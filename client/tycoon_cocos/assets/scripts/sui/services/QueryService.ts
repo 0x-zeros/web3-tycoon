@@ -103,11 +103,17 @@ export class QueryService {
                 const eventData = event.parsedJson as any;
                 const gameId = eventData.game;
 
+                // console.log('[QueryService] GameCreatedEvent:', eventData);
+
                 if (!gameId) continue;
 
                 // 获取 Game 对象详情
                 const game = await this.getGame(gameId);
-                if (!game) continue;
+                if (!game) 
+                {
+                    console.log('[QueryService] Game not found:', gameId);
+                    continue;
+                }
 
                 // 过滤状态
                 if (options.status !== undefined && game.status !== options.status) {
@@ -142,7 +148,8 @@ export class QueryService {
             });
 
             if (response.data?.content?.dataType === 'moveObject') {
-                return this.parseGameObject(response.data);
+                return this.parseGameObject(response);
+                // return response.data.content.fields;
             }
 
             return null;
@@ -272,6 +279,7 @@ export class QueryService {
         }
 
         const fields = response.data.content.fields as any;
+        // console.log('[QueryService] parseGameObject:', fields);
 
         try {
             return {
@@ -306,17 +314,20 @@ export class QueryService {
      * 解析玩家列表
      */
     private parsePlayers(playersData: any[]): any[] {
-        return playersData.map((p: any) => ({
-            owner: p.owner || '',
-            pos: Number(p.pos) || 0,
-            cash: BigInt(p.cash || 0),
-            bankrupt: Boolean(p.bankrupt),
-            in_hospital_turns: Number(p.in_hospital_turns) || 0,
-            in_prison_turns: Number(p.in_prison_turns) || 0,
-            last_tile_id: Number(p.last_tile_id) || 0,
-            next_tile_id: Number(p.next_tile_id) || 0,
-            buffs: p.buffs || [],
-            cards: new Map()  // Table 类型，保持空 Map
-        }));
+        return playersData.map((p: any) => {
+            const f = p.fields || {};
+            return {
+                owner: f.owner || '',
+                pos: Number(f.pos) || 0,
+                cash: Number(f.cash || 0),
+                bankrupt: Boolean(f.bankrupt),
+                in_hospital_turns: Number(f.in_hospital_turns) || 0,
+                in_prison_turns: Number(f.in_prison_turns) || 0,
+                last_tile_id: Number(f.last_tile_id) || 0,
+                next_tile_id: Number(f.next_tile_id) || 0,
+                buffs: f.buffs || [],
+                cards: new Map()  // Table 类型，保持空 Map
+            };
+        });
     }
 }

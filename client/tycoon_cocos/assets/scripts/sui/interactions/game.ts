@@ -270,6 +270,7 @@ export class GameInteraction {
      */
     async getGameState(gameId: string): Promise<Game | null> {
         try {
+            console.log('[Game] getGameState gameId:', gameId);
             const object = await this.client.getObject({
                 id: gameId,
                 options: {

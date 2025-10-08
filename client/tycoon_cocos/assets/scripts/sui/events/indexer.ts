@@ -39,9 +39,23 @@ export class TycoonEventIndexer {
     private batchSize: number;
     private isRunning: boolean = false;
     private pollTimer?: NodeJS.Timeout;
-    private lastEventSeq: number = 0;
-    // 跟踪最新游标，以便从上次位置继续拉取
-    private lastCursor: { txDigest: string; eventSeq: string } | null = null;
+    // 事件类型映射与监听列表
+    private readonly typeMap: { [key: string]: EventType } = {
+        'GameCreatedEvent': EventType.GAME_CREATED,
+        'PlayerJoinedEvent': EventType.PLAYER_JOINED,
+        'GameStartedEvent': EventType.GAME_STARTED,
+        'GameEndedEvent': EventType.GAME_ENDED,
+        'TurnStartEvent': EventType.TURN_START,
+        'SkipTurnEvent': EventType.SKIP_TURN,
+        'EndTurnEvent': EventType.END_TURN,
+        'RoundEndedEvent': EventType.ROUND_ENDED,
+        'BankruptEvent': EventType.BANKRUPT,
+        'UseCardActionEvent': EventType.USE_CARD_ACTION,
+        'RollAndStepActionEvent': EventType.ROLL_AND_STEP_ACTION,
+    };
+
+    // 每个事件类型单独维护游标（MoveEventType 过滤下必须分开维护）
+    private perTypeCursor: Map<string, { txDigest: string; eventSeq: string } | null> = new Map();
     private bootstrapped: boolean = false;
     private eventHandlers: Map<EventType, EventCallback[]> = new Map();
     private globalHandlers: EventCallback[] = [];
@@ -184,46 +198,43 @@ export class TycoonEventIndexer {
         }
 
         try {
-            // 查询新事件：基于游标增量拉取
-            const result = await this.client.queryEvents({
-                query: {
-                    MoveModule: {
-                        package: this.packageId,
-                        module: 'events',
-                    },
-                },
-                // 按升序返回，以便按时间顺序处理
-                order: 'ascending',
-                limit: this.batchSize,
-                // 从上次的游标之后开始
-                cursor: this.lastCursor ?? undefined,
-            });
+            // 使用 MoveEventType 分类型查询，规避 MoveModule 兼容性问题
+            const typeNames = this.getAllTypeNames();
+            let polledTotal = 0;
+            for (const typeName of typeNames) {
+                const cursor = this.perTypeCursor.get(typeName) ?? undefined;
+                const fullType = `${this.packageId}::events::${typeName}`;
+                const result = await this.client.queryEvents({
+                    query: { MoveEventType: fullType },
+                    order: 'ascending',
+                    limit: this.batchSize,
+                    cursor,
+                });
 
-            // 处理新事件
-            const count = (result.data?.length ?? 0);
-            if (count > 0) {
-                this.emptyPolls = 0;
-                console.log(`[EventIndexer] Polled ${count} events (from cursor=${this.lastCursor ? `${this.lastCursor.txDigest}:${this.lastCursor.eventSeq}` : 'NONE'})`);
-                for (const event of result.data) {
-                    const metadata = this.parseEvent(event);
-                    if (metadata) {
-                        // 确保sequence为数字比较
-                        if (Number(metadata.sequence) > Number(this.lastEventSeq)) {
-                            this.lastEventSeq = Number(metadata.sequence);
+                const count = (result.data?.length ?? 0);
+                polledTotal += count;
+                if (count > 0) {
+                    console.log(`[EventIndexer] Polled ${count} ${typeName}(s) from cursor=${cursor ? `${cursor.txDigest}:${cursor.eventSeq}` : 'NONE'}`);
+                    for (const ev of result.data) {
+                        const metadata = this.parseEvent(ev);
+                        if (metadata) {
                             await this.handleEvent(metadata);
                         }
                     }
+                    const last = result.data[result.data.length - 1];
+                    this.perTypeCursor.set(typeName, last?.id ?? cursor ?? null);
                 }
+            }
 
-                // 将游标前移到本批最后一个事件
-                const last = result.data[result.data.length - 1];
-                this.lastCursor = last?.id ?? this.lastCursor;
-            } else {
-                // 偶尔打印空轮询，便于定位包ID或过滤器问题
+            if (polledTotal === 0) {
                 this.emptyPolls += 1;
                 if (!this.bootstrapped || this.emptyPolls % 10 === 0) {
                     console.log('[EventIndexer] No new events. packageId=', this.packageId);
+                    // 进行一次轻量诊断，确认过滤器是否工作
+                    this.diagnoseFilters().catch(() => {});
                 }
+            } else {
+                this.emptyPolls = 0;
             }
         } catch (error) {
             console.error('Failed to poll events:', error);
@@ -236,12 +247,11 @@ export class TycoonEventIndexer {
     }
 
     /**
-     * 启动时引导游标至当前最新事件
-     * 这样可以避免启动后重复消费历史事件
+     * 诊断过滤器是否能返回事件（只做日志输出，不抛错）
      */
-    private async bootstrap(): Promise<void> {
+    private async diagnoseFilters(): Promise<void> {
         try {
-            const res = await this.client.queryEvents({
+            const byModule = await this.client.queryEvents({
                 query: {
                     MoveModule: {
                         package: this.packageId,
@@ -251,15 +261,47 @@ export class TycoonEventIndexer {
                 order: 'descending',
                 limit: 1,
             });
+            const byModuleType = byModule.data?.[0]?.type ?? '(none)';
+            console.log('[EventIndexer][Diag] MoveModule last type:', byModuleType);
 
-            if (res.data && res.data.length > 0) {
-                const latest = res.data[0];
-                // 将游标设置为最新事件，后续按升序只消费其后的新事件
-                this.lastCursor = latest.id;
-                this.lastEventSeq = Number(latest.id?.eventSeq ?? 0);
+            const byType = await this.client.queryEvents({
+                query: {
+                    MoveEventType: `${this.packageId}::events::GameCreatedEvent`,
+                },
+                order: 'descending',
+                limit: 1,
+            });
+            const byTypeType = byType.data?.[0]?.type ?? '(none)';
+            console.log('[EventIndexer][Diag] GameCreatedEvent last type:', byTypeType, 'count=', byType.data?.length ?? 0);
+        } catch (e) {
+            console.warn('[EventIndexer][Diag] failed:', e);
+        }
+    }
+
+    /**
+     * 启动时引导游标至当前最新事件
+     * 这样可以避免启动后重复消费历史事件
+     */
+    private async bootstrap(): Promise<void> {
+        try {
+            // 对每个事件类型分别设置到最新游标，避免回放历史
+            const typeNames = this.getAllTypeNames();
+            for (const typeName of typeNames) {
+                const fullType = `${this.packageId}::events::${typeName}`;
+                const res = await this.client.queryEvents({
+                    query: { MoveEventType: fullType },
+                    order: 'descending',
+                    limit: 1,
+                });
+                if (res.data && res.data.length > 0) {
+                    const latest = res.data[0];
+                    this.perTypeCursor.set(typeName, latest.id);
+                } else {
+                    this.perTypeCursor.set(typeName, null);
+                }
             }
             this.bootstrapped = true;
-            console.log('[EventIndexer] Bootstrap complete. lastCursor:', this.lastCursor);
+            console.log('[EventIndexer] Bootstrap complete. cursors set for types:', typeNames.join(', '));
         } catch (e) {
             // 失败不影响后续轮询，只是会从历史开始消费
             console.warn('[EventIndexer] Bootstrap failed:', e);
@@ -326,21 +368,11 @@ export class TycoonEventIndexer {
      * 获取事件类型
      */
     private getEventType(typeName: string): EventType | null {
-        const typeMap: { [key: string]: EventType } = {
-            'GameCreatedEvent': EventType.GAME_CREATED,
-            'PlayerJoinedEvent': EventType.PLAYER_JOINED,
-            'GameStartedEvent': EventType.GAME_STARTED,
-            'GameEndedEvent': EventType.GAME_ENDED,
-            'TurnStartEvent': EventType.TURN_START,
-            'SkipTurnEvent': EventType.SKIP_TURN,
-            'EndTurnEvent': EventType.END_TURN,
-            'RoundEndedEvent': EventType.ROUND_ENDED,
-            'BankruptEvent': EventType.BANKRUPT,
-            'UseCardActionEvent': EventType.USE_CARD_ACTION,
-            'RollAndStepActionEvent': EventType.ROLL_AND_STEP_ACTION
-        };
+        return this.typeMap[typeName] || null;
+    }
 
-        return typeMap[typeName] || null;
+    private getAllTypeNames(): string[] {
+        return Object.keys(this.typeMap);
     }
 
     /**

@@ -7,6 +7,7 @@ import { UIMapAssetList } from "./map-select/UIMapAssetList";
 import { UIGameDetail } from "./map-select/UIGameDetail";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
+import { SuiManager } from "../../sui/managers/SuiManager";
 
 const { ccclass } = _decorator;
 

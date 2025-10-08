@@ -40,19 +40,15 @@ export class UIMapList extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 从父组件（data）中获取按钮
-        const dataComp = this._panel?.parent as fgui.GComponent;
-        if (dataComp) {
-            this.m_btn_createGame = dataComp.getChild('btn_createGame') as fgui.GButton;
-        }
+        // 按钮在 data 组件中，this._panel 就是 data
+        this.m_btn_createGame = this.getButton('btn_createGame');
 
         // 获取列表
         this.m_list = this.getList("map_id");
 
-        // 使用非虚拟列表的填充方式：numItems + getChildAt(i)
-        // 与项目中其它列表保持一致，避免依赖 setVirtual/itemRenderer
-
         console.log('[UIMapList] Components setup');
+        console.log('  m_btn_createGame:', !!this.m_btn_createGame);
+        console.log('  m_list:', !!this.m_list);
     }
 
     /**

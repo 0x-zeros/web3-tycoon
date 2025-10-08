@@ -41,20 +41,15 @@ export class UIGameList extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 从父组件（data）中获取按钮
-        const dataComp = this._panel?.parent as fgui.GComponent;
-        if (dataComp) {
-            this.m_btn_joinGame = dataComp.getChild('btn_joinGame') as fgui.GButton;
-        }
+        // 按钮在 data 组件中，this._panel 就是 data
+        this.m_btn_joinGame = this.getButton('btn_joinGame');
 
         // 获取列表
         this.m_list = this.getList("game_id");
 
-        // 说明：这里使用“非虚拟列表”的填充方式，
-        // 直接通过 numItems + getChildAt(i) 设置内容，避免依赖 setVirtual/itemRenderer
-        // 这样与项目中 Wallet 列表的用法保持一致。
-        
         console.log('[UIGameList] Components setup');
+        console.log('  m_btn_joinGame:', !!this.m_btn_joinGame);
+        console.log('  m_list:', !!this.m_list);
     }
 
     /**

@@ -93,17 +93,42 @@ export class UIMapSelect extends UIBase {
     }
 
     /**
-     * 绑定事件（主容器无需绑定，由子模块处理）
+     * 绑定事件
      */
     protected bindEvents(): void {
-        // 子模块会处理各自的事件
+        // 监听地图选择事件（编辑地图）
+        EventBus.on(EventTypes.Game.MapSelected, this._onMapSelected, this);
+
+        // 监听游戏开始事件（加入游戏/创建游戏）
+        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**
      * 解绑事件
      */
     protected unbindEvents(): void {
+        EventBus.off(EventTypes.Game.MapSelected, this._onMapSelected, this);
+        EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
         super.unbindEvents();
+    }
+
+    /**
+     * 地图选择事件（编辑地图）
+     */
+    private _onMapSelected(data: any): void {
+        console.log('[UIMapSelect] MapSelected event received');
+        console.log('  Source:', data.source);
+        console.log('  Hiding UIMapSelect');
+        this.hide();
+    }
+
+    /**
+     * 游戏开始事件（加入游戏/创建游戏）
+     */
+    private _onGameStart(data: any): void {
+        console.log('[UIMapSelect] GameStart event received');
+        console.log('  Hiding UIMapSelect');
+        this.hide();
     }
 
     /**

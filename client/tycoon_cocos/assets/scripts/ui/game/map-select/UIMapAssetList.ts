@@ -44,30 +44,34 @@ export class UIMapAssetList extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 从父组件（data）中获取按钮
-        const dataComp = this._panel?.parent as fgui.GComponent;
-        if (dataComp) {
-            this.m_btn_editMap = dataComp.getChild('btn_editMap') as fgui.GButton;
-        }
+        // 按钮在 data 组件中，this._panel 就是 data
+        this.m_btn_editMap = this.getButton('btn_editMap');
 
         // 获取列表
         this.m_list = this.getList("map_json");
 
-        // 获取复选框（可能在 data 或 panel 中）
-        this.m_btn_loadFromLocalStorage = this.getButton("btn_loadFromLocalStorage") ||
-                                           dataComp?.getChild('btn_loadFromLocalStorage') as fgui.GButton;
-
-        // 说明：使用“非虚拟列表”的填充方式（numItems + getChildAt(i)）
-        // 与项目中其它列表用法保持一致。
+        // 获取复选框
+        this.m_btn_loadFromLocalStorage = this.getButton("btn_loadFromLocalStorage");
 
         console.log('[UIMapAssetList] Components setup');
+        console.log('  m_btn_editMap:', !!this.m_btn_editMap);
+        console.log('  m_list:', !!this.m_list);
+        console.log('  m_btn_loadFromLocalStorage:', !!this.m_btn_loadFromLocalStorage);
     }
 
     /**
      * 绑定事件
      */
     protected bindEvents(): void {
-        this.m_btn_editMap?.onClick(this._onEditMapClick, this);
+        console.log('[UIMapAssetList] bindEvents called');
+        console.log('  m_btn_editMap:', !!this.m_btn_editMap);
+
+        if (this.m_btn_editMap) {
+            this.m_btn_editMap.onClick(this._onEditMapClick, this);
+            console.log('  btn_editMap event bound ✅');
+        } else {
+            console.error('  ❌ btn_editMap is null, cannot bind event');
+        }
 
         // 监听地图配置更新
         EventBus.on(EventTypes.Game.MapConfigUpdated, this._onMapConfigUpdated, this);
@@ -242,12 +246,18 @@ export class UIMapAssetList extends UIBase {
      * 编辑地图按钮点击
      */
     private _onEditMapClick(): void {
-        console.log('[UIMapAssetList] Edit map clicked');
+        console.log('='.repeat(60));
+        console.log('[UIMapAssetList] ===== EDIT MAP BUTTON CLICKED =====');
+        console.log('='.repeat(60));
 
         if (!this._selectedMapId || !this._selectedMapConfig) {
+            console.warn('[UIMapAssetList] No map selected');
             UINotification.warning("请先选择地图");
             return;
         }
+
+        console.log('  Selected map:', this._selectedMapConfig.name);
+        console.log('  Selected ID:', this._selectedMapId);
 
         // 读取复选框状态
         const loadFromLocalStorage = this.m_btn_loadFromLocalStorage?.selected ?? false;

@@ -1182,7 +1182,136 @@ export class GameMap extends Component {
             return false;
         }
     }
-    
+
+    /**
+     * 从链上数据加载地图（用于游戏模式）
+     * @param template 链上 MapTemplate 数据
+     * @param game 链上 Game 数据
+     * @returns 是否加载成功
+     */
+    public async loadFromChainData(template: any, game: any): Promise<boolean> {
+        try {
+            console.log('[GameMap] Loading map from chain data...');
+            console.log('  Template tiles:', template?.tiles_static?.size);
+            console.log('  Template buildings:', template?.buildings_static?.size);
+            console.log('  Game ID:', game?.id);
+
+            // 动态导入转换工具（避免循环依赖）
+            const { convertMapTemplateToSaveData } = await import('../../sui/utils/MapTemplateConverter');
+
+            // 1. 转换为 MapSaveData 格式
+            const mapData = convertMapTemplateToSaveData(
+                template,
+                game,
+                `chain_${game.id}`
+            );
+
+            // 2. 使用转换后的数据加载场景
+            return await this._loadMapFromData(mapData);
+
+        } catch (error) {
+            console.error('[GameMap] Failed to load from chain data:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 从内存中的 MapSaveData 加载（内部方法）
+     * 复用 loadMap 的核心逻辑，但数据来自内存而非文件
+     */
+    private async _loadMapFromData(mapData: MapSaveData): Promise<boolean> {
+        try {
+            // 清空现有地图
+            this.clearMap();
+
+            console.log('[GameMap] Loading from MapSaveData...');
+            console.log('  Tiles:', mapData.tiles.length);
+            console.log('  Buildings:', mapData.buildings?.length || 0);
+
+            // 加载地块
+            for (const tileData of mapData.tiles) {
+                const tileNode = new Node(`T_${tileData.position.x}_${tileData.position.z}`);
+                tileNode.setParent(this.tilesContainer!);
+
+                const tile = tileNode.addComponent(MapTile);
+                await tile.loadData(tileData);
+
+                const key = `${tileData.position.x}_${tileData.position.z}`;
+                this._tiles.push(tile);
+                this._tileIndex.set(key, tile);
+            }
+
+            // 加载建筑
+            if (mapData.buildings) {
+                for (const buildingData of mapData.buildings) {
+                    const buildingKey = `${buildingData.position.x}_${buildingData.position.z}`;
+                    const buildingInfo: BuildingInfo = {
+                        blockId: buildingData.blockId,
+                        position: buildingData.position,
+                        size: buildingData.size,
+                        direction: buildingData.direction || 0,
+                        buildingId: buildingData.buildingId,
+                        entranceTileIds: buildingData.entranceTileIds,
+                        chainPrevId: buildingData.chainPrevId,
+                        chainNextId: buildingData.chainNextId,
+                        owner: buildingData.owner,
+                        level: buildingData.level,
+                        price: buildingData.price,
+                        rent: buildingData.rent,
+                        mortgaged: buildingData.mortgaged
+                    };
+                    this._buildingRegistry.set(buildingKey, buildingInfo);
+
+                    // 创建 Building 的 PaperActor
+                    const gridPos = new Vec2(buildingData.position.x, buildingData.position.z);
+                    this.createBuildingPaperActor(
+                        buildingData.blockId,
+                        gridPos,
+                        buildingData.size,
+                        buildingData.level || 0,
+                        buildingInfo.direction
+                    );
+                }
+                console.log(`[GameMap] Loaded ${mapData.buildings.length} buildings`);
+            }
+
+            // 加载 NPCs
+            if (mapData.npcs) {
+                for (const npcData of mapData.npcs) {
+                    const gridPos = new Vec2(npcData.position.x, npcData.position.z);
+                    await this.placeObjectAt(npcData.blockId, gridPos);
+                }
+                console.log(`[GameMap] Loaded ${mapData.npcs.length} NPCs`);
+            }
+
+            // 加载装饰物
+            if (mapData.decorations) {
+                for (const decoData of mapData.decorations) {
+                    const gridPos = new Vec2(decoData.position.x, decoData.position.z);
+                    await this.placeDecorationAt(decoData.blockId, gridPos);
+                }
+                console.log(`[GameMap] Loaded ${mapData.decorations.length} decorations`);
+            }
+
+            // 保存地图数据
+            this._mapSaveData = mapData;
+            this.mapId = mapData.mapId;
+
+            console.log('[GameMap] Map data loaded successfully');
+            console.log('  Total tiles:', this._tiles.length);
+            console.log('  Total buildings:', this._buildingRegistry.size);
+
+            // 设置相机看向地图中心
+            this.focusCameraOnMapCenter();
+
+            return true;
+
+        } catch (error) {
+            console.error('[GameMap] Failed to load map from data:', error);
+            return false;
+        }
+    }
+
     /**
      * 清空地图
      */

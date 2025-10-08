@@ -227,15 +227,36 @@ export class UIGameDetail extends UIBase {
         try {
             UINotification.info("正在开始游戏...");
 
-            await SuiManager.instance.startGame(game.id, game.template_map_id);
+            const result = await SuiManager.instance.startGame(game.id, game.template_map_id);
 
-            UINotification.success("游戏已开始");
+            console.log('[UIGameDetail] Game started successfully');
+            console.log('  Starting player:', result.startingPlayer);
+            console.log('  TX hash:', result.txHash);
 
-            // 游戏开始后的处理由 SuiManager.startGame 发送 GameStart 事件
+            // ✅ 使用 MessageBox 显示详细成功信息
+            await UIMessage.success(
+                `游戏开始成功！\n\n` +
+                `游戏 ID: ${game.id}\n` +
+                `玩家数: ${game.players.length}\n` +
+                `起始玩家: ${IdFormatter.shortenAddress(result.startingPlayer)}\n` +
+                `交易哈希: ${result.txHash}\n\n` +
+                `正在加载游戏场景...`,
+                "游戏开始"
+            );
+
+            // 游戏开始后的处理由 SuiManager 的 GameStartedEvent 监听器处理
 
         } catch (error) {
             console.error('[UIGameDetail] Failed to start game:', error);
-            UINotification.error("开始游戏失败");
+
+            // ✅ 使用 MessageBox 显示详细错误信息
+            const errorMsg = (error as any)?.message || error?.toString() || '未知错误';
+            await UIMessage.error(
+                `开始游戏失败\n\n` +
+                `错误信息: ${errorMsg}\n\n` +
+                `请检查网络连接或稍后重试`,
+                "开始失败"
+            );
         }
     }
 

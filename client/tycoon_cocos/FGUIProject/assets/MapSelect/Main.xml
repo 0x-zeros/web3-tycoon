@@ -2,5 +2,6 @@
 <component size="1920,1080">
   <displayList>
     <component id="n10_pseu" name="data" src="pseuo2" fileName="Map.xml" xy="107,199"/>
+    <component id="n11_qh36" name="gameDetail" src="qh36o5" fileName="GameDetail.xml" xy="509,202"/>
   </displayList>
 </component>

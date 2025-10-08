@@ -369,7 +369,9 @@ export const EventTypes = {
         /** 地图模板列表更新 */
         MapTemplatesUpdated: "sui_map_templates_updated",
         /** 新游戏创建（客户端通知） */
-        NewGameCreated: "sui_new_game_created"
+        NewGameCreated: "sui_new_game_created",
+        /** 游戏创建成功（显示详情） */
+        GameCreated: "sui_game_created"
     },
 
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */

@@ -4,6 +4,7 @@ import { EventTypes } from "../../events/EventTypes";
 import { UIGameList } from "./map-select/UIGameList";
 import { UIMapList } from "./map-select/UIMapList";
 import { UIMapAssetList } from "./map-select/UIMapAssetList";
+import { UIGameDetail } from "./map-select/UIGameDetail";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -21,6 +22,9 @@ export class UIMapSelect extends UIBase {
     // Map 组件容器（data）
     private m_dataComponent: fgui.GComponent;
 
+    // GameDetail 组件容器
+    private m_gameDetailComponent: fgui.GComponent;
+
     // Controller（在 data 组件中）
     private m_categoryController: fgui.Controller;
 
@@ -28,6 +32,7 @@ export class UIMapSelect extends UIBase {
     private m_gameListUI: UIGameList;
     private m_mapListUI: UIMapList;
     private m_mapAssetListUI: UIMapAssetList;
+    private m_gameDetailUI: UIGameDetail;
 
     /**
      * 初始化回调
@@ -47,6 +52,13 @@ export class UIMapSelect extends UIBase {
         if (!this.m_dataComponent) {
             console.error('[UIMapSelect] data component not found');
             return;
+        }
+
+        // 获取 gameDetail 组件
+        this.m_gameDetailComponent = this.getChild('gameDetail').asCom;
+
+        if (!this.m_gameDetailComponent) {
+            console.error('[UIMapSelect] gameDetail component not found');
         }
 
         // 获取 controller（在 data 组件中）
@@ -89,6 +101,14 @@ export class UIMapSelect extends UIBase {
         this.m_mapAssetListUI.enabled = false;
         this.m_mapAssetListUI.enabled = true;
 
+        // 子模块 4: UIGameDetail（游戏详情）
+        this.m_gameDetailUI = this.m_gameDetailComponent.node.addComponent(UIGameDetail);
+        this.m_gameDetailUI.setUIName("GameDetail");
+        this.m_gameDetailUI.setPanel(this.m_gameDetailComponent);
+        this.m_gameDetailUI.setParentUI(this);
+        this.m_gameDetailUI.enabled = false;
+        this.m_gameDetailUI.enabled = true;
+
         console.log('[UIMapSelect] Sub-modules initialized');
     }
 
@@ -99,8 +119,11 @@ export class UIMapSelect extends UIBase {
         // 监听地图选择事件（编辑地图）
         EventBus.on(EventTypes.Game.MapSelected, this._onMapSelected, this);
 
-        // 监听游戏开始事件（加入游戏/创建游戏）
+        // 监听游戏开始事件（加入游戏/开始游戏）
         EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
+
+        // 监听游戏创建成功事件（显示详情）
+        EventBus.on(EventTypes.Sui.GameCreated, this._onGameCreated, this);
     }
 
     /**
@@ -109,6 +132,7 @@ export class UIMapSelect extends UIBase {
     protected unbindEvents(): void {
         EventBus.off(EventTypes.Game.MapSelected, this._onMapSelected, this);
         EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
+        EventBus.off(EventTypes.Sui.GameCreated, this._onGameCreated, this);
         super.unbindEvents();
     }
 
@@ -123,12 +147,31 @@ export class UIMapSelect extends UIBase {
     }
 
     /**
-     * 游戏开始事件（加入游戏/创建游戏）
+     * 游戏开始事件（开始游戏）
      */
     private _onGameStart(data: any): void {
         console.log('[UIMapSelect] GameStart event received');
         console.log('  Hiding UIMapSelect');
         this.hide();
+    }
+
+    /**
+     * 游戏创建成功事件（显示详情）
+     */
+    private _onGameCreated(data: any): void {
+        console.log('[UIMapSelect] GameCreated event received');
+        console.log('  Showing game detail');
+
+        // 隐藏主界面
+        if (this.m_dataComponent) {
+            this.m_dataComponent.visible = false;
+        }
+
+        // 显示游戏详情
+        if (this.m_gameDetailComponent && this.m_gameDetailUI) {
+            this.m_gameDetailComponent.visible = true;
+            this.m_gameDetailUI.showGame();
+        }
     }
 
     /**
@@ -143,6 +186,14 @@ export class UIMapSelect extends UIBase {
             musicPath: "audio/bgm/map_select",
             loop: true
         });
+
+        // 确保初始状态：显示 data，隐藏 gameDetail
+        if (this.m_dataComponent) {
+            this.m_dataComponent.visible = true;
+        }
+        if (this.m_gameDetailComponent) {
+            this.m_gameDetailComponent.visible = false;
+        }
 
         // 根据参数切换 category（默认 0 = Game 列表）
         const category = data?.category ?? 0;
@@ -187,6 +238,23 @@ export class UIMapSelect extends UIBase {
         if (this.m_categoryController) {
             this.m_categoryController.selectedIndex = index;
             console.log(`[UIMapSelect] Switched to category: ${index}`);
+        }
+    }
+
+    /**
+     * 显示主界面（从 gameDetail 返回）
+     */
+    public showMainPanel(): void {
+        console.log('[UIMapSelect] Showing main panel');
+
+        // 隐藏游戏详情
+        if (this.m_gameDetailComponent) {
+            this.m_gameDetailComponent.visible = false;
+        }
+
+        // 显示主界面
+        if (this.m_dataComponent) {
+            this.m_dataComponent.visible = true;
         }
     }
 

@@ -4,14 +4,29 @@
     <graph id="n2_qh36" name="bg" xy="512,300" pivot="0.5,0.5" anchor="true" size="1024,600" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <component id="n3_qh36" name="btn_ok" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="741,493" size="218,62">
-      <relation target="" sidePair="right-right,bottom-bottom"/>
-      <Button title="确定"/>
-    </component>
-    <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,493" size="218,62">
+    <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,487" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="退出游戏"/>
     </component>
-    <component id="n5_qh36" name="n5" src="pseuo3" fileName="components/Game.xml" xy="0,54"/>
+    <component id="n3_qh36" name="btn_ok" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="390,487" size="218,62">
+      <relation target="" sidePair="right-right,bottom-bottom"/>
+      <Button title="确定"/>
+    </component>
+    <component id="n19_qh36" name="btn_startGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,487" size="218,62">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="开始游戏"/>
+    </component>
+    <text id="n8_qh36" name="gameid" xy="158,76" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
+    <text id="n9_qh36" name="mapid" xy="158,142" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
+    <text id="n10_qh36" name="player_0" xy="55,234" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n11_qh36" name="player_1" xy="302,234" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n12_qh36" name="player_2" xy="557,234" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n13_qh36" name="player_3" xy="808,234" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
+    <text id="n14_qh36" name="n14" xy="54,194" size="23,31" fontSize="22" color="#ffffff" text="0:"/>
+    <text id="n6_qh36" name="n1" xy="32,79" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id"/>
+    <text id="n7_qh36" name="n2" xy="31,144" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
+    <text id="n15_qh36" name="n15" xy="301,195" size="23,31" fontSize="22" color="#ffffff" text="1:"/>
+    <text id="n16_qh36" name="n16" xy="555,193" size="23,32" fontSize="22" color="#ffffff" autoSize="none" text="2:"/>
+    <text id="n17_qh36" name="n17" xy="810,195" size="23,31" fontSize="22" color="#ffffff" text="3:"/>
   </displayList>
 </component>

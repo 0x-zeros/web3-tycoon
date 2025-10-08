@@ -73,6 +73,9 @@ export class SuiManager {
     // 最近发布的模板 ID
     private _lastPublishedTemplateId: number | null = null;
 
+    // 当前游戏（创建后缓存）
+    private _currentGame: Game | null = null;
+
     // 事件监听器
     private _eventIndexer: TycoonEventIndexer | null = null;
 
@@ -490,6 +493,13 @@ export class SuiManager {
     }
 
     /**
+     * 获取当前游戏
+     */
+    public get currentGame(): Game | null {
+        return this._currentGame;
+    }
+
+    /**
      * 使用指定模板创建游戏（封装通用逻辑）
      * @param templateId 模板 ID
      * @param options 可选配置
@@ -536,12 +546,19 @@ export class SuiManager {
 
             UINotification.success("游戏创建成功");
 
-            // 发送游戏开始事件
-            EventBus.emit(EventTypes.Game.GameStart, {
+            // 查询游戏详情并缓存
+            const game = await this.getGameState(result.gameId);
+            if (game) {
+                this._currentGame = game;
+                console.log('[SuiManager] Cached current game');
+                console.log('  Players:', game.players.length);
+            }
+
+            // 发送游戏创建事件（不是 GameStart，避免跳转）
+            EventBus.emit(EventTypes.Sui.GameCreated, {
                 gameId: result.gameId,
                 seatId: result.seatId,
-                playerIndex: 0,
-                isCreator: true
+                playerIndex: 0
             });
 
             return result;

@@ -553,11 +553,14 @@ export class UIEditor extends UIBase {
                         text: "创建游戏",
                         visible: true,
                         callback: async () => {
+                            console.log('[UIEditor] Creating game with template:', result.templateId);
                             // 直接使用刚发布的模板创建游戏
                             try {
                                 await SuiManager.instance.createGameWithTemplate(result.templateId);
+                                // 创建成功会触发 GameCreated 事件，UIMapSelect 会显示详情
                             } catch (error) {
                                 // 错误已在 createGameWithTemplate 中处理
+                                console.error('[UIEditor] Create game error:', error);
                             }
                         }
                     },

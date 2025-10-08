@@ -4,7 +4,7 @@
  */
 
 import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
-import type { Game } from '../types/game';
+import type { Game, Player } from '../types/game';
 import { GameStatus } from '../types/constants';
 
 /**
@@ -313,13 +313,13 @@ export class QueryService {
     /**
      * 解析玩家列表
      */
-    private parsePlayers(playersData: any[]): any[] {
-        return playersData.map((p: any) => {
+    private parsePlayers(playersData: any[]): Player[] {
+        return playersData.map((p: any): Player => {
             const f = p.fields || {};
             return {
                 owner: f.owner || '',
                 pos: Number(f.pos) || 0,
-                cash: Number(f.cash || 0),
+                cash: BigInt(f.cash || 0),  // ✅ 修复：应该是 BigInt
                 bankrupt: Boolean(f.bankrupt),
                 in_hospital_turns: Number(f.in_hospital_turns) || 0,
                 in_prison_turns: Number(f.in_prison_turns) || 0,

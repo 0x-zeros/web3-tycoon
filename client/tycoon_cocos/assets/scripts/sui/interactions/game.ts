@@ -450,19 +450,22 @@ export class GameInteraction {
     /**
      * 解析玩家列表
      */
-    private parsePlayers(playersData: any[]): any[] {
-        return playersData.map((p: any) => ({
-            owner: p.owner || '',
-            pos: Number(p.pos) || 0,
-            cash: BigInt(p.cash || 0),
-            bankrupt: Boolean(p.bankrupt),
-            in_hospital_turns: Number(p.in_hospital_turns) || 0,
-            in_prison_turns: Number(p.in_prison_turns) || 0,
-            last_tile_id: Number(p.last_tile_id) || 0,
-            next_tile_id: Number(p.next_tile_id) || 0,
-            buffs: p.buffs || [],
-            cards: new Map()  // Table 类型，保持空 Map
-        }));
+    private parsePlayers(playersData: any[]): Player[] {
+        return playersData.map((p: any): Player => {
+            const f = p.fields || p;  // 兼容两种格式
+            return {
+                owner: f.owner || '',
+                pos: Number(f.pos) || 0,
+                cash: BigInt(f.cash || 0),
+                bankrupt: Boolean(f.bankrupt),
+                in_hospital_turns: Number(f.in_hospital_turns) || 0,
+                in_prison_turns: Number(f.in_prison_turns) || 0,
+                last_tile_id: Number(f.last_tile_id) || 0,
+                next_tile_id: Number(f.next_tile_id) || 0,
+                buffs: f.buffs || [],
+                cards: new Map()  // Table 类型，保持空 Map
+            };
+        });
     }
 
     /**

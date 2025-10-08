@@ -350,8 +350,7 @@ export class SuiManager {
         this._log('[SuiManager] Joining game...', { gameId });
 
         // 构建交易
-        const address = this._signer!.getAddress();
-        const tx = this._gameClient!.game.buildJoinGameTx(gameId, address);
+        const tx = this._gameClient!.game.buildJoinGameTx(gameId);
 
         // 签名并执行
         const result = await this.signAndExecuteTransaction(tx);

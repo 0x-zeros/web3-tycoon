@@ -8,7 +8,7 @@
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import type { Game, GameCreateConfig, Seat } from '../types/game';
+import type { Game, Player, GameCreateConfig, Seat } from '../types/game';
 
 /**
  * 游戏交互类
@@ -67,23 +67,24 @@ export class GameInteraction {
     /**
      * 构建加入游戏的交易
      * @param gameId 游戏 ID
-     * @param senderAddress 发送者地址
      * @returns Transaction 对象
      */
-    buildJoinGameTx(gameId: string, senderAddress: string): Transaction {
+    buildJoinGameTx(gameId: string): Transaction {
         const tx = new Transaction();
 
-        // 调用join函数
-        const seat = tx.moveCall({
+        // 调用 join 函数（entry fun，不返回值）
+        // 合约内部已处理 transfer::transfer(seat, player_addr)
+        tx.moveCall({
             target: `${this.packageId}::game::join`,
             arguments: [
-                tx.object(gameId),       // game: &mut Game
-                tx.object(this.gameDataId) // game_data: &GameData
+                tx.object(gameId),          // game: &mut Game
+                tx.object(this.gameDataId)  // game_data: &GameData
             ]
         });
 
-        // 将座位转移给加入者
-        tx.transferObjects([seat], senderAddress);
+        // entry fun 内部已调用：
+        // - transfer::transfer(seat, player_addr)
+        // 所以不需要手动 transferObjects
 
         return tx;
     }
@@ -112,158 +113,6 @@ export class GameInteraction {
         return tx;
     }
 
-    // ============ 旧版本：直接签名执行（已弃用，保持兼容）============
-
-    /**
-     * 创建游戏
-     * 对应Move: public entry fun create_game
-     */
-    async createGame(
-        config: GameCreateConfig,
-        keypair: Ed25519Keypair
-    ): Promise<{
-        gameId: string;
-        seatId: string;
-        txHash: string;
-    }> {
-        const tx = new Transaction();
-
-        // 调用create_game函数
-        const [game, seat] = tx.moveCall({
-            target: `${this.packageId}::game::create_game`,
-            arguments: [
-                tx.object(this.gameDataId),              // game_data: &GameData
-                tx.object(config.template_map_id),       // template_map: &MapTemplate
-                tx.pure.u8(config.max_players),          // max_players: u8
-                tx.pure.u64(config.starting_cash || 0),  // starting_cash: u64 (0使用默认值)
-                tx.pure.u8(config.price_rise_days || 0), // price_rise_days: u8
-                tx.pure.u8(config.max_rounds || 0)       // max_rounds: u8
-            ]
-        });
-
-        // 分享游戏对象
-        tx.moveCall({
-            target: '0x2::transfer::public_share_object',
-            typeArguments: [`${this.packageId}::game::Game`],
-            arguments: [game]
-        });
-
-        // 将座位转移给创建者
-        tx.transferObjects([seat], keypair.toSuiAddress());
-
-        // 执行交易
-        const result = await this.client.signAndExecuteTransaction({
-            transaction: tx,
-            signer: keypair,
-            options: {
-                showObjectChanges: true,
-                showEvents: true
-            }
-        });
-
-        // 解析结果
-        const gameId = this.extractObjectId(result, 'Game');
-        const seatId = this.extractObjectId(result, 'Seat');
-
-        return {
-            gameId,
-            seatId,
-            txHash: result.digest
-        };
-    }
-
-    /**
-     * 加入游戏
-     * 对应Move: public entry fun join
-     */
-    async joinGame(
-        gameId: string,
-        keypair: Ed25519Keypair
-    ): Promise<{
-        seatId: string;
-        playerIndex: number;
-        txHash: string;
-    }> {
-        const tx = new Transaction();
-
-        // 调用join函数
-        const seat = tx.moveCall({
-            target: `${this.packageId}::game::join`,
-            arguments: [
-                tx.object(gameId),       // game: &mut Game
-                tx.object(this.gameDataId) // game_data: &GameData
-            ]
-        });
-
-        // 将座位转移给加入者
-        tx.transferObjects([seat], keypair.toSuiAddress());
-
-        // 执行交易
-        const result = await this.client.signAndExecuteTransaction({
-            transaction: tx,
-            signer: keypair,
-            options: {
-                showObjectChanges: true,
-                showEvents: true
-            }
-        });
-
-        // 解析结果
-        const seatId = this.extractObjectId(result, 'Seat');
-        const playerIndex = this.extractPlayerIndex(result);
-
-        return {
-            seatId,
-            playerIndex,
-            txHash: result.digest
-        };
-    }
-
-    /**
-     * 开始游戏
-     * 对应Move: public entry fun start
-     */
-    async startGame(
-        gameId: string,
-        mapTemplateId: string,
-        keypair: Ed25519Keypair
-    ): Promise<{
-        success: boolean;
-        startingPlayer: string;
-        txHash: string;
-    }> {
-        const tx = new Transaction();
-
-        // 调用start函数
-        tx.moveCall({
-            target: `${this.packageId}::game::start`,
-            arguments: [
-                tx.object(gameId),          // game: &mut Game
-                tx.object(this.gameDataId), // game_data: &GameData
-                tx.object(mapTemplateId),   // map: &MapTemplate
-                tx.object('0x8'),           // random: &Random
-                tx.object('0x6')            // clock: &Clock
-            ]
-        });
-
-        // 执行交易
-        const result = await this.client.signAndExecuteTransaction({
-            transaction: tx,
-            signer: keypair,
-            options: {
-                showEvents: true
-            }
-        });
-
-        // 解析事件获取起始玩家
-        const startingPlayer = this.extractStartingPlayer(result);
-
-        return {
-            success: true,
-            startingPlayer,
-            txHash: result.digest
-        };
-    }
 
     /**
      * 获取游戏状态
@@ -349,55 +198,6 @@ export class GameInteraction {
         }
     }
 
-    /**
-     * 获取所有可加入的游戏
-     */
-    async getAvailableGames(): Promise<Game[]> {
-        // 这需要通过事件或索引器来实现
-        // 临时返回空数组
-        return [];
-    }
-
-    // ===== 辅助函数 =====
-
-    /**
-     * 从交易结果中提取对象ID
-     */
-    private extractObjectId(result: any, objectType: string): string {
-        const changes = result.objectChanges || [];
-        for (const change of changes) {
-            if (change.type === 'created' && change.objectType?.includes(objectType)) {
-                return change.objectId;
-            }
-        }
-        throw new Error(`Failed to extract ${objectType} ID from transaction`);
-    }
-
-    /**
-     * 从交易结果中提取玩家索引
-     */
-    private extractPlayerIndex(result: any): number {
-        const events = result.events || [];
-        for (const event of events) {
-            if (event.type.includes('PlayerJoinedEvent')) {
-                return event.parsedJson?.player_index || 0;
-            }
-        }
-        return 0;
-    }
-
-    /**
-     * 从交易结果中提取起始玩家
-     */
-    private extractStartingPlayer(result: any): string {
-        const events = result.events || [];
-        for (const event of events) {
-            if (event.type.includes('GameStartedEvent')) {
-                return event.parsedJson?.starting_player || '';
-            }
-        }
-        return '';
-    }
 
     /**
      * 解析 ID 类型（可能是字符串或对象 { bytes: "0x..." }）

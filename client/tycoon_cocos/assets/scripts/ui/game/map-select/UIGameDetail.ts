@@ -6,6 +6,7 @@
 import { UIBase } from "../../core/UIBase";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
+import { UIMessage } from "../../utils/UIMessage";
 import { IdFormatter } from "../../utils/IdFormatter";
 import type { Game } from "../../../sui/types/game";
 import { DEFAULT_MAX_PLAYERS } from "../../../sui/types/constants";
@@ -245,7 +246,15 @@ export class UIGameDetail extends UIBase {
             console.log('  Seat ID:', result.seatId);
             console.log('  Player index:', result.playerIndex);
 
-            UINotification.success(`已加入游戏，玩家 #${result.playerIndex + 1}`);
+            // ✅ 使用 MessageBox 显示详细成功信息
+            await UIMessage.success(
+                `加入游戏成功！\n\n` +
+                `座位 ID: ${result.seatId}\n` +
+                `玩家序号: #${result.playerIndex + 1}\n` +
+                `交易哈希: ${result.txHash}\n\n` +
+                `等待其他玩家加入或游戏开始...`,
+                "加入成功"
+            );
 
             // 重新查询游戏详情并刷新显示
             const updatedGame = await SuiManager.instance.getGameState(game.id);
@@ -256,7 +265,15 @@ export class UIGameDetail extends UIBase {
 
         } catch (error) {
             console.error('[UIGameDetail] Failed to join game:', error);
-            UINotification.error("加入游戏失败");
+
+            // ✅ 使用 MessageBox 显示详细错误信息
+            const errorMsg = (error as any)?.message || error?.toString() || '未知错误';
+            await UIMessage.error(
+                `加入游戏失败\n\n` +
+                `错误信息: ${errorMsg}\n\n` +
+                `请检查网络连接或稍后重试`,
+                "加入失败"
+            );
         }
     }
 }

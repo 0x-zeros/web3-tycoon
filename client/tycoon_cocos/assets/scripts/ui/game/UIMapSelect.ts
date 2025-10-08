@@ -150,41 +150,25 @@ export class UIMapSelect extends UIBase {
 
     /**
      * 处理 Move 链上游戏创建事件
-     * 事件数据：{ game, creator, template_map_id, max_players }
+     * 事件数据：{ game, creator, template_map_id, max_players, gameObject }
      */
     private _onMoveGameCreated(eventData: any): void {
         console.log('[UIMapSelect] Move.GameCreated event received');
         console.log('  Game:', eventData.game);
         console.log('  Creator:', eventData.creator);
 
-        // 1. 刷新 game list（数据已由 SuiManager 更新缓存）
-        console.log('[UIMapSelect] Refreshing game list');
-        this.m_gameListUI?.refresh();
-
-        // 2. 判断是否是自己创建的
+        // 1. 判断是否是自己创建的
         const currentAddress = SuiManager.instance.currentAddress;
         const isMyGame = eventData.creator === currentAddress;
 
         console.log('  Is my game:', isMyGame);
         console.log('  Current address:', currentAddress);
 
-        // 3. 只有是自己创建的才显示详情
-        if (isMyGame) {
-            console.log('[UIMapSelect] My game created, querying details...');
-
-            // 查询游戏详情并缓存
-            SuiManager.instance.getGameState(eventData.game).then(game => {
-                if (game) {
-                    // 缓存游戏
-                    (SuiManager.instance as any)._currentGame = game;
-                    console.log('[UIMapSelect] Game cached, showing detail');
-
-                    // ✅ 显示 GameDetail（使用统一方法）
-                    this.showGameDetail(eventData.game);
-                }
-            }).catch(error => {
-                console.error('[UIMapSelect] Failed to query game:', error);
-            });
+        // 2. 只有是自己创建的才显示详情
+        if (isMyGame && eventData.gameObject) {
+            console.log('[UIMapSelect] My game created, showing detail');
+            // SuiManager 已设置 currentGame，直接显示
+            this.showGameDetail(eventData.game);
         }
     }
 

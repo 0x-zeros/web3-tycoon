@@ -849,14 +849,23 @@ export class SuiManager {
         });
 
         // 监听游戏创建事件
-        this._eventIndexer.on(EventType.GAME_CREATED, (event) => {
+        this._eventIndexer.on(EventType.GAME_CREATED, async (event) => {
             console.log('[SuiManager] GameCreatedEvent from chain:', event.data);
 
-            // 刷新游戏列表缓存
-            this._refreshGamesCache();
+            // 1. 查询新创建的游戏
+            const newGame = await this._addNewGameToCache(event.data.game);
 
-            // 转发到 EventBus（解耦 UI 层）
-            EventBus.emit(EventTypes.Move.GameCreated, event.data);
+            // 2. ✅ 先设置 currentGame（对于创建者）
+            if (newGame && event.data.creator === this._currentAddress) {
+                this._currentGame = newGame;
+                console.log('[SuiManager] Set as current game (creator)');
+            }
+
+            // 3. ✅ 再转发事件（确保 currentGame 已设置）
+            EventBus.emit(EventTypes.Move.GameCreated, {
+                ...event.data,
+                gameObject: newGame  // 完整的 Game 对象
+            });
         });
 
         // 监听玩家加入事件
@@ -884,28 +893,50 @@ export class SuiManager {
         console.log('[SuiManager] Event listener started');
     }
 
-    /**
-     * 刷新游戏列表缓存
-     */
-    private async _refreshGamesCache(): Promise<void> {
-        try {
-            const games = await this._queryService!.getReadyGames(
-                this._currentAddress || undefined,
-                50
-            );
+    // ============ 事件处理方法 ============
 
-            this._cachedGames = this._sortAndLimitGames(games);
+    /**
+     * 添加新游戏到缓存（只查询单个游戏）
+     * @param gameId 游戏 ID
+     * @returns 完整的 Game 对象
+     */
+    private async _addNewGameToCache(gameId: string): Promise<Game | null> {
+        try {
+            // 1. 查询新游戏
+            const game = await this._queryService!.getGame(gameId);
+            if (!game) {
+                console.error('[SuiManager] Failed to get new game:', gameId);
+                return null;
+            }
+
+            // 2. 检查是否已存在（避免重复）
+            const existingIndex = this._cachedGames.findIndex(g => g.id === gameId);
+            if (existingIndex >= 0) {
+                console.warn('[SuiManager] Game already in cache, replacing');
+                this._cachedGames[existingIndex] = game;
+            } else {
+                // 3. 添加到缓存开头（最新的在前）
+                this._cachedGames.unshift(game);
+                console.log('[SuiManager] New game added to cache');
+            }
+
+            // 4. 更新缓存时间戳
             this._cacheTimestamp = Date.now();
 
-            console.log('[SuiManager] Games cache refreshed:', this._cachedGames.length);
+            console.log('[SuiManager] Game cache updated');
+            console.log('  Game ID:', gameId);
+            console.log('  Total games:', this._cachedGames.length);
 
-            // 发送缓存更新事件
+            // 5. 触发 UI 更新
             EventBus.emit(EventTypes.Sui.GamesListUpdated, {
                 games: this._cachedGames
             });
 
+            return game;
+
         } catch (error) {
-            console.error('[SuiManager] Failed to refresh games cache:', error);
+            console.error('[SuiManager] Failed to add game to cache:', error);
+            return null;
         }
     }
 

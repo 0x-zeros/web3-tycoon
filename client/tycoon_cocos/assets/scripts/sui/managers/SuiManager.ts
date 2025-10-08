@@ -489,6 +489,63 @@ export class SuiManager {
         return this._lastPublishedTemplateId;
     }
 
+    /**
+     * 使用指定模板创建游戏（封装通用逻辑）
+     * @param templateId 模板 ID
+     * @param options 可选配置
+     * @returns 游戏 ID 和座位 ID
+     */
+    public async createGameWithTemplate(
+        templateId: number,
+        options?: {
+            maxPlayers?: number;
+            startingCash?: bigint;
+            priceRiseDays?: number;
+            maxRounds?: number;
+        }
+    ): Promise<{ gameId: string; seatId: string; txHash: string }> {
+        console.log('[SuiManager] createGameWithTemplate:', templateId);
+
+        // 检查连接
+        if (!this.isConnected) {
+            UINotification.warning("请先连接钱包");
+            throw new Error('Not connected');
+        }
+
+        UINotification.info("正在创建游戏...");
+
+        try {
+            const result = await this.createGame({
+                template_map_id: templateId.toString(),
+                max_players: options?.maxPlayers || 4,
+                starting_cash: options?.startingCash || 0n,
+                price_rise_days: options?.priceRiseDays || 0,
+                max_rounds: options?.maxRounds || 0
+            });
+
+            console.log('[SuiManager] Game created successfully');
+            console.log('  Game ID:', result.gameId);
+            console.log('  Seat ID:', result.seatId);
+
+            UINotification.success("游戏创建成功");
+
+            // 发送游戏开始事件
+            EventBus.emit(EventTypes.Game.GameStart, {
+                gameId: result.gameId,
+                seatId: result.seatId,
+                playerIndex: 0,
+                isCreator: true
+            });
+
+            return result;
+
+        } catch (error) {
+            console.error('[SuiManager] Failed to create game:', error);
+            UINotification.error("创建游戏失败");
+            throw error;
+        }
+    }
+
     // ============ 查询 API ============
 
     /**

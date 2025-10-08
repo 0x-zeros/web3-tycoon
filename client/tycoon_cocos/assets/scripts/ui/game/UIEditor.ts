@@ -549,6 +549,18 @@ export class UIEditor extends UIBase {
                             SuiManager.instance.openUrl(explorerUrl);
                         }
                     },
+                    btn_3: {
+                        text: "创建游戏",
+                        visible: true,
+                        callback: async () => {
+                            // 直接使用刚发布的模板创建游戏
+                            try {
+                                await SuiManager.instance.createGameWithTemplate(result.templateId);
+                            } catch (error) {
+                                // 错误已在 createGameWithTemplate 中处理
+                            }
+                        }
+                    },
                     close: {
                         visible: false
                     }

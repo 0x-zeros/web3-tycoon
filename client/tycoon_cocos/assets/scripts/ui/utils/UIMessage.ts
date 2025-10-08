@@ -69,6 +69,7 @@ export interface MessageBoxOptions {
     buttons?: {
         primary?: MessageBoxButtonConfig;
         secondary?: MessageBoxButtonConfig;
+        btn_3?: MessageBoxButtonConfig;
         close?: MessageBoxButtonConfig;
     };
 
@@ -244,6 +245,7 @@ export class UIMessage extends UIBase {
     private _message: fgui.GRichTextField | null = null;
     private _btnPrimary: fgui.GButton | null = null;
     private _btnSecondary: fgui.GButton | null = null;
+    private _btn3: fgui.GButton | null = null;
     private _btnClose: fgui.GButton | null = null;
 
     // 当前配置
@@ -266,6 +268,7 @@ export class UIMessage extends UIBase {
         this._message = this.getChild("message") as fgui.GRichTextField;
         this._btnPrimary = this.getButton("btn_primary");
         this._btnSecondary = this.getButton("btn_secondary");
+        this._btn3 = this.getButton("btn_3");
         this._btnClose = this.getButton("btn_close");
 
         // 确保 panel 可触摸但不阻挡底层
@@ -311,6 +314,9 @@ export class UIMessage extends UIBase {
         if (this._btnSecondary) {
             this._btnSecondary.on(fgui.Event.CLICK, this._onSecondaryClick, this);
         }
+        if (this._btn3) {
+            this._btn3.on(fgui.Event.CLICK, this._onBtn3Click, this);
+        }
         if (this._btnClose) {
             this._btnClose.on(fgui.Event.CLICK, this._onCloseClick, this);
         }
@@ -328,6 +334,13 @@ export class UIMessage extends UIBase {
      */
     private _onSecondaryClick(): void {
         this._onButtonClick(MessageBoxResult.SECONDARY);
+    }
+
+    /**
+     * Btn3按钮点击
+     */
+    private _onBtn3Click(): void {
+        this._onButtonClick('BTN_3' as MessageBoxResult);
     }
 
     /**
@@ -418,17 +431,20 @@ export class UIMessage extends UIBase {
         const defaultButtons = {
             primary: { text: "确定", visible: true },
             secondary: { text: "取消", visible: false },
+            btn_3: { text: "按钮3", visible: false },
             close: { text: "关闭", visible: true }
         };
 
         const finalButtons = {
             primary: { ...defaultButtons.primary, ...buttons?.primary },
             secondary: { ...defaultButtons.secondary, ...buttons?.secondary },
+            btn_3: { ...defaultButtons.btn_3, ...buttons?.btn_3 },
             close: { ...defaultButtons.close, ...buttons?.close }
         };
 
         this._configButton(this._btnPrimary, finalButtons.primary);
         this._configButton(this._btnSecondary, finalButtons.secondary);
+        this._configButton(this._btn3, finalButtons.btn_3);
         this._configButton(this._btnClose, finalButtons.close);
     }
 
@@ -506,6 +522,8 @@ export class UIMessage extends UIBase {
                 return this._currentOptions.buttons.primary?.callback;
             case MessageBoxResult.SECONDARY:
                 return this._currentOptions.buttons.secondary?.callback;
+            case 'BTN_3':
+                return this._currentOptions.buttons.btn_3?.callback;
             case MessageBoxResult.CLOSE:
                 return this._currentOptions.buttons.close?.callback;
             default:

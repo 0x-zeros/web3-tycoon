@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <packageDescription id="82r0pzop">
   <resources>
-    <image id="mumqk6" name="tile_0026.png" path="/images/" scale="9grid" scale9grid="4,4,8,2"/>
+    <image id="mumqk6" name="tile_0026.png" path="/images/" exported="true" scale="9grid" scale9grid="4,4,8,2"/>
     <component id="mumqlc" name="Button1.xml" path="/components/" exported="true"/>
     <image id="ue83c" name="circle.png" path="/images/" exported="true"/>
     <image id="ue83d" name="rectangle.png" path="/images/" exported="true" scale9grid="119,112,238,224"/>

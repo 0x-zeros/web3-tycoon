@@ -169,40 +169,11 @@ export class UIMapList extends UIBase {
             return;
         }
 
-        // 检查钱包连接
-        if (!SuiManager.instance.isConnected) {
-            UINotification.warning("请先连接钱包");
-            return;
-        }
-
         try {
-            UINotification.info("正在创建游戏...");
-
-            const result = await SuiManager.instance.createGame({
-                template_map_id: this._selectedTemplateId.toString(),
-                max_players: 4,
-                starting_cash: 0n,      // 使用默认值
-                price_rise_days: 0,
-                max_rounds: 0
-            });
-
-            console.log('[UIMapList] Game created successfully');
-            console.log('  Game ID:', result.gameId);
-            console.log('  Seat ID:', result.seatId);
-
-            UINotification.success("游戏创建成功");
-
-            // 发送游戏开始事件（进入等待室）
-            EventBus.emit(EventTypes.Game.GameStart, {
-                gameId: result.gameId,
-                seatId: result.seatId,
-                playerIndex: 0,  // 创建者是玩家 0
-                isCreator: true
-            });
-
+            // 调用封装的创建游戏方法
+            await SuiManager.instance.createGameWithTemplate(this._selectedTemplateId);
         } catch (error) {
-            console.error('[UIMapList] Failed to create game:', error);
-            UINotification.error("创建游戏失败");
+            // 错误已在 createGameWithTemplate 中处理
         }
     }
 

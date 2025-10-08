@@ -95,9 +95,26 @@ export class UIGameList extends UIBase {
                 this._renderItem(i, item);
             }
 
-            // 默认选择第一个
-            if (this._games.length > 0) {
-                this._selectGame(0);
+            // ✅ 保持之前的选中状态
+            if (this._selectedGameId) {
+                // 尝试找到之前选中的游戏
+                const index = this._games.findIndex(g => g.id === this._selectedGameId);
+                if (index >= 0) {
+                    this._selectGame(index);  // 选中之前的游戏
+                    console.log('  Kept previous selection:', this._selectedGameId);
+                } else {
+                    // 之前的游戏不在列表了（可能已开始），选第一个
+                    if (this._games.length > 0) {
+                        this._selectGame(0);
+                        console.log('  Previous game not found, selected first');
+                    }
+                }
+            } else {
+                // 首次加载，选第一个
+                if (this._games.length > 0) {
+                    this._selectGame(0);
+                    console.log('  First load, selected first game');
+                }
             }
         }
     }

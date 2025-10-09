@@ -39,7 +39,7 @@ export class UIModeSelect extends UIBase {
         this.m_keyPairInfo = this.getChild("keyPairInfo")?.asCom || null;
         if (this.m_keyPairInfo) {
             this.m_input_storageKey = this.m_keyPairInfo.getChild("storageKey") as fgui.GTextInput;
-            this.m_input_password = this.m_keyPairInfo.getChild("keypairPassword") as fgui.GTextInput;
+            this.m_input_password = this.m_keyPairInfo.getChild("password") as fgui.GTextInput;
             console.log('[UIModeSelect] KeyPair config components found');
         } else {
             console.warn('[UIModeSelect] keyPairInfo component not found');

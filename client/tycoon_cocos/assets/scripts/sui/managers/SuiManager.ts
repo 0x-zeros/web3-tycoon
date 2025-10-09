@@ -501,6 +501,15 @@ export class SuiManager {
     }
 
     /**
+     * 设置当前游戏（用于 UI 选择游戏）
+     * @param game 游戏对象
+     */
+    public setCurrentGame(game: Game | null): void {
+        this._currentGame = game;
+        this._log('[SuiManager] Current game set', { gameId: game?.id || 'null' });
+    }
+
+    /**
      * 使用指定模板创建游戏（封装通用逻辑）
      * @param templateId 模板 ID
      * @param options 可选配置

@@ -264,8 +264,8 @@ export class UIGameList extends UIBase {
     private _showGameDetail(game: Game): void {
         console.log('[UIGameList] Showing game detail:', game.id);
 
-        // 1. 缓存游戏到 SuiManager
-        (SuiManager.instance as any)._currentGame = game;
+        // 1. 设置当前游戏（使用公开方法）
+        SuiManager.instance.setCurrentGame(game);
 
         // 2. 发送事件，让父容器显示 GameDetail
         EventBus.emit(EventTypes.Game.ShowGameDetail, { gameId: game.id });

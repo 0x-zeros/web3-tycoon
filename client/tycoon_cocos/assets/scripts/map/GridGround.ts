@@ -105,10 +105,18 @@ export class GridGround extends Component {
     @property({ tooltip: 'Mesh网格高度（稍微高于网格线）' })
     public meshGridHeight: number = 0.01;
 
+    @property({ tooltip: '优先使用GeometryRenderer绘制网格' })
+    public useGeometryRenderer: boolean = true;
+
+    @property({ tooltip: '备用网格线厚度（用于无GeometryRenderer环境）' })
+    public fallbackLineThickness: number = 0.02;
+
     private _isInitialized: boolean = false;
     private _meshGridNodes: Map<string, Node> = new Map();
     private _highlightedGrid: Node | null = null;
     private _meshGridContainer: Node | null = null;
+    private _fallbackLineContainer: Node | null = null;
+    private _fallbackInitialized: boolean = false;
 
     protected start(): void {
         this.log('GridGround start');
@@ -170,8 +178,20 @@ export class GridGround extends Component {
             return;
         }
 
-        // 初始化 GeometryRenderer
-        this.cam.camera?.initGeometryRenderer();
+        // 初始化 GeometryRenderer（若存在）
+        if (this.useGeometryRenderer && this.cam.camera && (this.cam.camera as any).initGeometryRenderer) {
+            try {
+                (this.cam.camera as any).initGeometryRenderer();
+            } catch (e) {
+                // 某些构建环境不支持，降级为备用网格
+                this.useGeometryRenderer = false;
+                this.log('GeometryRenderer not available, use fallback mesh lines');
+            }
+        } else if (this.useGeometryRenderer && (!this.cam.camera || !(this.cam.camera as any).initGeometryRenderer)) {
+            // 无几何渲染器，使用备用方案
+            this.useGeometryRenderer = false;
+            this.log('GeometryRenderer missing, switching to fallback mesh lines');
+        }
         this._isInitialized = true;
         this.log('GeometryRenderer initialized');
     }
@@ -319,6 +339,11 @@ export class GridGround extends Component {
         }
         this._meshGridNodes.clear();
         this._highlightedGrid = null;
+        if (this._fallbackLineContainer) {
+            this._fallbackLineContainer.destroy();
+            this._fallbackLineContainer = null;
+            this._fallbackInitialized = false;
+        }
     }
     
     /**
@@ -327,35 +352,92 @@ export class GridGround extends Component {
     private drawGrid(): void {
         if (!this._isInitialized) return;
 
-        const gr = this.cam?.camera?.geometryRenderer;
-        if (!gr) return;
+        // 优先使用GeometryRenderer绘制
+        const gr = this.useGeometryRenderer ? (this.cam?.camera as any)?.geometryRenderer : null;
+        if (gr) {
+            const y = this.y;
+            const s = Math.max(0.001, this.step);
 
-        const y = this.y;
-        const s = Math.max(0.001, this.step);
+            // 使用 min/max 坐标范围（支持非对称范围，如 0-50）
+            const minX = this.minCoord;
+            const maxX = this.maxCoord;
+            const minZ = this.minCoord;
+            const maxZ = this.maxCoord;
 
-        // 使用 min/max 坐标范围（支持非对称范围，如 0-50）
+            // 画 X 方向的平行线（沿 Z 轴方向）
+            for (let x = minX; x <= maxX + 1; x += s) {
+                gr.addLine(
+                    new Vec3(x, y, minZ),
+                    new Vec3(x, y, maxZ + 1),
+                    this.color
+                );
+            }
+
+            // 画 Z 方向的平行线（沿 X 轴方向）
+            for (let z = minZ; z <= maxZ + 1; z += s) {
+                gr.addLine(
+                    new Vec3(minX, y, z),
+                    new Vec3(maxX + 1, y, z),
+                    this.color
+                );
+            }
+            return;
+        }
+
+        // 若无几何渲染器，则初始化并使用备用Mesh线条
+        if (!this._fallbackInitialized) {
+            this.createFallbackGridLines();
+            this._fallbackInitialized = true;
+        }
+        // 备用Mesh线条无需每帧重建
+    }
+
+    /**
+     * 构建备用网格线（使用细长的盒子Mesh模拟线条）
+     */
+    private createFallbackGridLines(): void {
+        // 容器
+        if (!this._fallbackLineContainer) {
+            this._fallbackLineContainer = new Node('GridLinesFallback');
+            this._fallbackLineContainer.setParent(this.node);
+        }
+
+        // 材质（非受光、使用颜色）
+        const material = new Material();
+        material.initialize({ effectName: 'builtin-unlit' });
+        material.setProperty('mainColor', this.color.clone());
+
         const minX = this.minCoord;
         const maxX = this.maxCoord;
         const minZ = this.minCoord;
         const maxZ = this.maxCoord;
+        const y = this.y;
+        const thickness = Math.max(0.001, this.fallbackLineThickness);
+        const lengthX = (maxX - minX) + 1;
+        const lengthZ = (maxZ - minZ) + 1;
 
-        // 画 X 方向的平行线（沿 Z 轴方向）
-        // 网格线在格子边界上，+0.5 偏移到格子中心对齐
-        for (let x = minX; x <= maxX + 1; x += s) {
-            gr.addLine(
-                new Vec3(x, y, minZ),
-                new Vec3(x, y, maxZ + 1),
-                this.color
-            );
+        // 垂直于X轴的线（沿Z方向拉伸）
+        for (let x = minX; x <= maxX + 1; x += this.step) {
+            const lineNode = new Node(`Line_X_${x}`);
+            lineNode.setParent(this._fallbackLineContainer);
+            const box = primitives.box({ width: thickness, height: thickness, length: lengthZ });
+            const mesh = utils.MeshUtils.createMesh(box);
+            const mr = lineNode.addComponent(MeshRenderer);
+            mr.mesh = mesh;
+            mr.material = material;
+            lineNode.setPosition(x, y, minZ + lengthZ / 2);
         }
 
-        // 画 Z 方向的平行线（沿 X 轴方向）
-        for (let z = minZ; z <= maxZ + 1; z += s) {
-            gr.addLine(
-                new Vec3(minX, y, z),
-                new Vec3(maxX + 1, y, z),
-                this.color
-            );
+        // 垂直于Z轴的线（沿X方向拉伸）
+        for (let z = minZ; z <= maxZ + 1; z += this.step) {
+            const lineNode = new Node(`Line_Z_${z}`);
+            lineNode.setParent(this._fallbackLineContainer);
+            const box = primitives.box({ width: lengthX, height: thickness, length: thickness });
+            const mesh = utils.MeshUtils.createMesh(box);
+            const mr = lineNode.addComponent(MeshRenderer);
+            mr.mesh = mesh;
+            mr.material = material;
+            lineNode.setPosition(minX + lengthX / 2, y, z);
         }
     }
 

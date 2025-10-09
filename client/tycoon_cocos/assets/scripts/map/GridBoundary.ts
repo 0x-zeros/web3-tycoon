@@ -14,7 +14,12 @@ import {
     Camera,
     Color,
     Vec3,
-    find
+    find,
+    Node,
+    MeshRenderer,
+    Material,
+    utils,
+    primitives
 } from 'cc';
 
 const { ccclass, property, executeInEditMode } = _decorator;
@@ -48,6 +53,11 @@ export class GridBoundary extends Component {
     public enabled: boolean = true;
 
     private _isInitialized: boolean = false;
+    private _useGeometryRenderer: boolean = true;
+    private _fallbackLineContainer: Node | null = null;
+    
+    @property({ tooltip: '备用边界线厚度（用于无GeometryRenderer环境）' })
+    public fallbackLineThickness: number = 0.03;
 
     protected start(): void {
         this.initializeCamera();
@@ -74,8 +84,17 @@ export class GridBoundary extends Component {
             return;
         }
 
-        // 初始化 GeometryRenderer
-        this.cam.camera?.initGeometryRenderer();
+        // 初始化 GeometryRenderer（若存在）
+        if (this.cam.camera && (this.cam.camera as any).initGeometryRenderer) {
+            try {
+                (this.cam.camera as any).initGeometryRenderer();
+            } catch (e) {
+                this._useGeometryRenderer = false;
+                console.warn('[GridBoundary] GeometryRenderer init failed, using fallback');
+            }
+        } else {
+            this._useGeometryRenderer = false;
+        }
         this._isInitialized = true;
         console.log('[GridBoundary] Initialized');
     }
@@ -86,8 +105,12 @@ export class GridBoundary extends Component {
     private drawBoundary(): void {
         if (!this._isInitialized) return;
 
-        const gr = this.cam?.camera?.geometryRenderer;
-        if (!gr) return;
+        const gr = this._useGeometryRenderer ? (this.cam?.camera as any)?.geometryRenderer : null;
+        if (!gr) {
+            // 使用备用Mesh线
+            this.ensureFallbackLines();
+            return;
+        }
 
         const min = this.minCoord + 0.5;  // 格子中心偏移
         const max = this.maxCoord + 0.5;
@@ -147,6 +170,79 @@ export class GridBoundary extends Component {
                     this.originColor
                 );
             }
+        }
+    }
+
+    /**
+     * 构建备用边界线（使用细长盒子Mesh）
+     */
+    private ensureFallbackLines(): void {
+        if (this._fallbackLineContainer) return;
+
+        const container = new Node('GridBoundaryFallback');
+        container.setParent(this.node);
+        this._fallbackLineContainer = container;
+
+        const material = new Material();
+        material.initialize({ effectName: 'builtin-unlit' });
+        material.setProperty('mainColor', this.boundaryColor.clone());
+
+        const min = this.minCoord + 0.5;
+        const max = this.maxCoord + 0.5;
+        const y = this.y;
+        const t = Math.max(0.001, this.fallbackLineThickness);
+        const length = (max - min);
+
+        // 四条边
+        const edges: Array<{ pos: Vec3; size: { w: number; l: number } }> = [
+            // 底边（沿X）
+            { pos: new Vec3((min + max) / 2, y, min), size: { w: length, l: t } },
+            // 顶边（沿X）
+            { pos: new Vec3((min + max) / 2, y, max), size: { w: length, l: t } },
+            // 左边（沿Z）
+            { pos: new Vec3(min, y, (min + max) / 2), size: { w: t, l: length } },
+            // 右边（沿Z）
+            { pos: new Vec3(max, y, (min + max) / 2), size: { w: t, l: length } },
+        ];
+
+        for (let i = 0; i < edges.length; i++) {
+            const n = new Node(`Boundary_${i}`);
+            n.setParent(container);
+            const geom = primitives.box({ width: edges[i].size.w, height: t, length: edges[i].size.l });
+            const mesh = utils.MeshUtils.createMesh(geom);
+            const mr = n.addComponent(MeshRenderer);
+            mr.mesh = mesh;
+            mr.material = material;
+            n.setPosition(edges[i].pos);
+        }
+
+        // 原点十字
+        if (this.showOriginMarker) {
+            const oc = new Material();
+            oc.initialize({ effectName: 'builtin-unlit' });
+            oc.setProperty('mainColor', this.originColor.clone());
+
+            const crossSize = 0.5;
+            const ox = 0 + 0.5;
+            const oz = 0 + 0.5;
+
+            const horiz = new Node('Origin_H');
+            horiz.setParent(container);
+            const hGeom = primitives.box({ width: crossSize * 2, height: t, length: t });
+            const hMesh = utils.MeshUtils.createMesh(hGeom);
+            const hMr = horiz.addComponent(MeshRenderer);
+            hMr.mesh = hMesh;
+            hMr.material = oc;
+            horiz.setPosition(ox, y, oz);
+
+            const vert = new Node('Origin_V');
+            vert.setParent(container);
+            const vGeom = primitives.box({ width: t, height: t, length: crossSize * 2 });
+            const vMesh = utils.MeshUtils.createMesh(vGeom);
+            const vMr = vert.addComponent(MeshRenderer);
+            vMr.mesh = vMesh;
+            vMr.material = oc;
+            vert.setPosition(ox, y, oz);
         }
     }
 

@@ -111,9 +111,7 @@ export function convertMapTemplateToSaveData(
             // chainPrevId/chainNextId 在 BuildingData 中不存在，存储在 BuildingInfo 中
             owner: gameBuildingData?.owner, //todo 修改 BuildingData.owner 的类型为 number
             level: gameBuildingData?.level,
-            price: Number(price),  // BigInt → number
-            rent: 0,  // todo 不需要的值？ 是不是应该从BuildingData里删掉，需要查找了看看
-            mortgaged: false,  // todo 不需要的值？ 是不是应该从BuildingData里删掉，需要查找了看看
+            price: Number(price)  // BigInt → number
         });
     });
 
@@ -130,7 +128,7 @@ export function convertMapTemplateToSaveData(
         updateTime: Date.now(),
 
         // MapSaveData 字段
-        gameMode: 'play',  // 游戏模式（非编辑）
+        gameMode: 'play' as 'play',  // 游戏模式（非编辑）
         tiles,
         objects: [],  // 游戏中不使用旧的 objects 系统
         buildings,

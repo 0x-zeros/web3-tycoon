@@ -42,12 +42,6 @@ export class MapBuilding extends MapElement {
     /** 建筑价格 */
     private _price: number = 0;
 
-    /** 各等级租金 */
-    private _rent: number[] = [];
-
-    /** 是否被抵押 */
-    private _mortgaged: boolean = false;
-
     // ========================= 初始化 =========================
 
     /**
@@ -97,7 +91,6 @@ export class MapBuilding extends MapElement {
     private initializeBuildingProperties(): void {
         // 设置默认属性
         this._price = 1000; // 默认价格
-        this._rent = [50, 200, 600, 1400, 1700, 2000]; // 默认租金
     }
 
     // ========================= 抽象方法实现 =========================
@@ -133,9 +126,7 @@ export class MapBuilding extends MapElement {
             owner: this._owner || undefined,
             level: this._level,
             direction: this._direction,
-            price: this._price,
-            rent: this._rent,
-            mortgaged: this._mortgaged
+            price: this._price
         };
     }
 
@@ -165,12 +156,6 @@ export class MapBuilding extends MapElement {
         if (data.price !== undefined) {
             this._price = data.price;
         }
-        if (data.rent !== undefined) {
-            this._rent = data.rent;
-        }
-        if (data.mortgaged !== undefined) {
-            this._mortgaged = data.mortgaged;
-        }
     }
 
     // ========================= 建筑特有方法 =========================
@@ -181,11 +166,6 @@ export class MapBuilding extends MapElement {
     public canUpgrade(): boolean {
         // 必须有拥有者
         if (!this._owner) {
-            return false;
-        }
-
-        // 不能被抵押
-        if (this._mortgaged) {
             return false;
         }
 
@@ -308,61 +288,11 @@ export class MapBuilding extends MapElement {
     }
 
     /**
-     * 获取当前租金
-     */
-    public getRent(): number {
-        if (this._mortgaged) {
-            return 0; // 抵押的建筑不收租
-        }
-
-        if (this._level >= 0 && this._level < this._rent.length) {
-            return this._rent[this._level];
-        }
-
-        return 0;
-    }
-
-    /**
-     * 设置租金数组
-     */
-    public setRentArray(rent: number[]): void {
-        this._rent = rent;
-    }
-
-    /**
-     * 是否被抵押
-     */
-    public isMortgaged(): boolean {
-        return this._mortgaged;
-    }
-
-    /**
-     * 设置抵押状态
-     */
-    public setMortgaged(mortgaged: boolean): void {
-        this._mortgaged = mortgaged;
-
-        if (mortgaged) {
-            console.log(`[MapBuilding] Building at (${this._gridPosition.x}, ${this._gridPosition.y}) is mortgaged`);
-        } else {
-            console.log(`[MapBuilding] Building at (${this._gridPosition.x}, ${this._gridPosition.y}) is unmortgaged`);
-        }
-    }
-
-    /**
      * 计算升级成本
      */
     public getUpgradeCost(): number {
         // 简单的升级成本计算
         return this._price * 0.5 * (this._level + 1);
-    }
-
-    /**
-     * 计算抵押价值
-     */
-    public getMortgageValue(): number {
-        // 抵押价值为购买价格的一半
-        return this._price * 0.5;
     }
 
     /**
@@ -380,10 +310,9 @@ export class MapBuilding extends MapElement {
             levelName: this.getLevelName(),
             direction: this._direction,
             price: this._price,
-            rent: this.getRent(),
-            upgradeCost: this.canUpgrade() ? this.getUpgradeCost() : null,
-            mortgaged: this._mortgaged,
-            mortgageValue: this.getMortgageValue()
+            // todo: 租金计算逻辑待从Move端同步
+            rent: this._price,  // 临时使用 price 作为租金
+            upgradeCost: this.canUpgrade() ? this.getUpgradeCost() : null
         };
     }
 

@@ -48,8 +48,6 @@ interface BuildingInfo {
     owner?: string;
     level?: number;
     price?: number;
-    rent?: number[];
-    mortgaged?: boolean;
 }
 
 const { ccclass, property } = _decorator;
@@ -919,9 +917,7 @@ export class GameMap extends Component {
                     entranceTileIds: info.entranceTileIds,  // 保存入口tile IDs
                     owner: info.owner,
                     level: info.level,
-                    price: info.price,
-                    rent: info.rent,
-                    mortgaged: info.mortgaged
+                    price: info.price
                 } as BuildingData);
             });
 
@@ -1121,9 +1117,7 @@ export class GameMap extends Component {
                         entranceTileIds: buildingData.entranceTileIds,  // 加载入口tile IDs
                         owner: buildingData.owner,
                         level: buildingData.level,
-                        price: buildingData.price,
-                        rent: buildingData.rent,
-                        mortgaged: buildingData.mortgaged
+                        price: buildingData.price
                     };
                     this._buildingRegistry.set(buildingKey, buildingInfo);
 
@@ -1256,9 +1250,7 @@ export class GameMap extends Component {
                         chainNextId: buildingData.chainNextId,
                         owner: buildingData.owner,
                         level: buildingData.level,
-                        price: buildingData.price,
-                        rent: buildingData.rent,
-                        mortgaged: buildingData.mortgaged
+                        price: buildingData.price
                     };
                     this._buildingRegistry.set(buildingKey, buildingInfo);
 

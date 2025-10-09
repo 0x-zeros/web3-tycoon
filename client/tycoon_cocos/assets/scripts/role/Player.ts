@@ -89,14 +89,10 @@ export interface PropertyData {
     purchasePrice: number;
     /** 当前价值 */
     currentValue: number;
-    /** 租金 */
-    rent: number;
     /** 房屋数量 */
     houses: number;
     /** 是否有酒店 */
     hasHotel: boolean;
-    /** 是否抵押 */
-    mortgaged: boolean;
     /** 房产组 */
     group: string;
     /** 地块ID */
@@ -464,63 +460,9 @@ export class Player extends Role {
      * 处理资金不足情况
      */
     protected handleInsufficientFunds(amount: number, category: string): boolean {
-        // 尝试抵押房产筹集资金
-        const mortgageMoney = this.getMortgageableMoney();
-        
-        if (mortgageMoney >= amount) {
-            // 自动抵押房产（AI或者提示玩家选择）
-            return this.autoMortgageForMoney(amount, category);
-        } else {
-            // 破产
-            this.goBankrupt();
-            return false;
-        }
-    }
-    
-    /**
-     * 获取可抵押的金额
-     */
-    protected getMortgageableMoney(): number {
-        return this.m_properties
-            .filter(p => !p.mortgaged)
-            .reduce((sum, p) => sum + Math.floor(p.currentValue * 0.5), 0);
-    }
-    
-    /**
-     * 自动抵押房产筹集资金
-     */
-    protected autoMortgageForMoney(amount: number, category: string): boolean {
-        let needed = amount;
-        let raised = 0;
-        
-        // 按价值从低到高抵押
-        const sortedProperties = this.m_properties
-            .filter(p => !p.mortgaged)
-            .sort((a, b) => a.currentValue - b.currentValue);
-        
-        for (const property of sortedProperties) {
-            if (needed <= 0) break;
-            
-            const mortgageValue = Math.floor(property.currentValue * 0.5);
-            property.mortgaged = true;
-            raised += mortgageValue;
-            needed -= mortgageValue;
-            
-            console.log(`[Player] ${this.m_strName} 抵押房产: ${property.name}, 获得: ${mortgageValue}`);
-        }
-        
-        if (raised >= amount) {
-            // 抵押成功，增加金钱并支付
-            this.addAttr(RoleAttribute.MONEY, raised);
-            this.m_financialStatus.cash = this.getAttr(RoleAttribute.MONEY);
-            
-            // 支付费用
-            return this.payMoney(amount, category);
-        } else {
-            // 抵押后仍不足，破产
-            this.goBankrupt();
-            return false;
-        }
+        // 资金不足，直接破产
+        this.goBankrupt();
+        return false;
     }
     
     /**

@@ -88,14 +88,6 @@ export interface GameRules {
         house?: number;
         hotel?: number;
     };
-    /** 抵押比率 */
-    mortgageRatio?: number;
-    /** 租金倍率 */
-    rentMultipliers?: {
-        monopoly?: number;
-        house?: number;
-        hotel?: number;
-    };
 }
 
 /**
@@ -179,10 +171,6 @@ export interface BuildingData {
     level?: number;
     /** 建筑价格 */
     price?: number;
-    /** 租金设置 */
-    rent?: number[];
-    /** 是否被抵押 */
-    mortgaged?: boolean;
 }
 
 

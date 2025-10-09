@@ -4,7 +4,7 @@
  */
 
 import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
-import type { Game, Player } from '../types/game';
+import type { Game, Player, Building, Tile } from '../types/game';
 import { GameStatus } from '../types/constants';
 
 /**
@@ -293,8 +293,8 @@ export class QueryService {
                 turn: Number(fields.turn) || 0,
                 active_idx: Number(fields.active_idx) || 0,
                 has_rolled: Boolean(fields.has_rolled),
-                tiles: fields.tiles || [],
-                buildings: fields.buildings || [],
+                tiles: this.parseTiles(fields.tiles || []),
+                buildings: this.parseBuildings(fields.buildings || []),
                 npc_on: new Map(),  // Table 类型，保持空 Map
                 owner_index: new Map(),  // Table 类型，保持空 Map
                 npc_spawn_pool: fields.npc_spawn_pool || [],
@@ -317,11 +317,11 @@ export class QueryService {
      */
     private parsePlayers(playersData: any[]): Player[] {
         return playersData.map((p: any): Player => {
-            const f = p.fields || {};
+            const f = p.fields || p;
             return {
                 owner: f.owner || '',
                 pos: Number(f.pos) || 0,
-                cash: BigInt(f.cash || 0),  // ✅ 修复：应该是 BigInt
+                cash: BigInt(f.cash || 0),
                 bankrupt: Boolean(f.bankrupt),
                 in_hospital_turns: Number(f.in_hospital_turns) || 0,
                 in_prison_turns: Number(f.in_prison_turns) || 0,
@@ -329,6 +329,32 @@ export class QueryService {
                 next_tile_id: Number(f.next_tile_id) || 0,
                 buffs: f.buffs || [],
                 cards: new Map()  // Table 类型，保持空 Map
+            };
+        });
+    }
+
+    /**
+     * 解析地块列表
+     */
+    private parseTiles(tilesData: any[]): Tile[] {
+        return tilesData.map((t: any): Tile => {
+            const f = t.fields || t;
+            return {
+                npc_on: Number(f.npc_on) || 0
+            };
+        });
+    }
+
+    /**
+     * 解析建筑列表
+     */
+    private parseBuildings(buildingsData: any[]): Building[] {
+        return buildingsData.map((b: any): Building => {
+            const f = b.fields || b;
+            return {
+                owner: Number(f.owner),
+                level: Number(f.level) || 0,
+                building_type: Number(f.building_type) || 0
             };
         });
     }

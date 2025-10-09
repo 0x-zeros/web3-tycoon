@@ -8,6 +8,7 @@ import type { MapTemplate, TileStatic, BuildingStatic } from '../types/map';
 import type { MapSaveData, TileData, BuildingData } from '../../map/data/MapDataTypes';
 import type { Game } from '../types/game';
 import { TileKind, BuildingSize, NO_BUILDING, INVALID_TILE_ID } from '../types/constants';
+import { getWeb3BlockByBlockId } from '../../voxel/Web3BlockTypes';
 
 /**
  * 将 Move MapTemplate + Game 数据转换为 MapSaveData
@@ -32,19 +33,25 @@ export function convertMapTemplateToSaveData(
 
     // 1. 转换 Tiles
     template.tiles_static.forEach((tileStatic, tileId) => {
+        const blockId = getTileBlockId(tileStatic.kind);
+        const block = getWeb3BlockByBlockId(blockId);
+
         tiles.push({
-            blockId: getTileBlockId(tileStatic.kind),  // 根据 kind 映射到 blockId
+            blockId: blockId,
+            typeId: block?.typeId || 0,  // ✅ 添加 typeId
             position: {
                 x: tileStatic.x,
                 z: tileStatic.y  // 注意：Move 的 y 对应 Cocos 的 z
             },
-            tileId: tileId,
-            buildingId: tileStatic.building_id !== NO_BUILDING ? tileStatic.building_id : undefined,
-            // 邻居关系
-            w: tileStatic.w !== INVALID_TILE_ID ? tileStatic.w : undefined,
-            n: tileStatic.n !== INVALID_TILE_ID ? tileStatic.n : undefined,
-            e: tileStatic.e !== INVALID_TILE_ID ? tileStatic.e : undefined,
-            s: tileStatic.s !== INVALID_TILE_ID ? tileStatic.s : undefined
+            // ✅ 扩展数据放入 data 字段
+            data: {
+                tileId: tileId,
+                buildingId: tileStatic.building_id !== NO_BUILDING ? tileStatic.building_id : undefined,
+                w: tileStatic.w !== INVALID_TILE_ID ? tileStatic.w : undefined,
+                n: tileStatic.n !== INVALID_TILE_ID ? tileStatic.n : undefined,
+                e: tileStatic.e !== INVALID_TILE_ID ? tileStatic.e : undefined,
+                s: tileStatic.s !== INVALID_TILE_ID ? tileStatic.s : undefined
+            }
         });
     });
 
@@ -69,8 +76,23 @@ export function convertMapTemplateToSaveData(
         // 从 Game.buildings 获取动态数据（owner, level, building_type）
         const gameBuildingData = game.buildings[buildingId];
 
+        // ✅ 修复：owner 是索引，需要转换为地址
+        const ownerIdx = gameBuildingData?.owner ?? 255;
+        const owner = ownerIdx !== 255 && game.players[ownerIdx]
+            ? game.players[ownerIdx].owner
+            : undefined;
+
+        const blockId = getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type);
+        const block = getWeb3BlockByBlockId(blockId);
+
+        // ✅ 补齐 entranceTileIds 为 [id, 65535] 格式
+        const entranceIds: [number, number] = entranceTiles.length === 1
+            ? [entranceTiles[0], INVALID_TILE_ID]
+            : [entranceTiles[0], entranceTiles[1]];
+
         buildings.push({
-            blockId: getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type),
+            blockId: blockId,
+            typeId: block?.typeId || 200,  // ✅ 添加 typeId
             position: {
                 x: firstEntranceTile.x,
                 z: firstEntranceTile.y
@@ -78,13 +100,12 @@ export function convertMapTemplateToSaveData(
             size: buildingStatic.size as (1 | 2),
             direction: 0,  // 默认朝向（MapTemplate 中暂无存储）
             buildingId: buildingId,
-            entranceTileIds: entranceTiles.slice(0, 2) as [number, number],  // 最多2个入口
-            chainPrevId: buildingStatic.chain_prev_id !== NO_BUILDING ? buildingStatic.chain_prev_id : undefined,
-            chainNextId: buildingStatic.chain_next_id !== NO_BUILDING ? buildingStatic.chain_next_id : undefined,
-            owner: gameBuildingData?.owner !== 255 ? gameBuildingData.owner.toString() : undefined,  // NO_OWNER
+            entranceTileIds: entranceIds,  // ✅ 补齐为 [id, 65535]
+            // chainPrevId/chainNextId 暂不填充（BuildingData 中未定义）
+            owner: owner,  // ✅ 修复：使用玩家地址而非索引
             level: gameBuildingData?.level ?? 0,
-            price: buildingStatic.price,
-            rent: [buildingStatic.price / 10n],  // 简化：租金 = 价格/10
+            price: Number(buildingStatic.price),  // BigInt → Number
+            rent: [Number(buildingStatic.price / BigInt(10))],  // 简化：租金 = 价格/10
             mortgaged: false
         });
     });
@@ -93,14 +114,25 @@ export function convertMapTemplateToSaveData(
     console.log('  Tiles:', tiles.length);
     console.log('  Buildings:', buildings.length);
 
+    // ✅ 填充 MapSaveData 元数据字段
+    const now = Date.now();
     return {
+        // 元数据字段（MapMetadata）
         mapId,
-        gameMode: 'play',  // 游戏模式（非编辑）
+        mapName: `Chain Map ${game.id.slice(0, 8)}`,
+        version: '1.0.0',
+        createTime: now,
+        updateTime: now,
+
+        // 游戏模式
+        gameMode: 'play',
+
+        // 地图数据
         tiles,
-        objects: [],  // 游戏中不使用旧的 objects 系统
+        objects: [],
         buildings,
-        npcs: [],  // NPC 数据需要从 Game events 或额外查询获取
-        decorations: []  // 装饰物暂不支持
+        npcs: [],
+        decorations: []
     };
 }
 

@@ -213,12 +213,8 @@ export class UIGameList extends UIBase {
 
             UINotification.success(`已加入游戏，玩家 #${result.playerIndex + 1}`);
 
-            // 发送游戏开始事件（进入等待室或游戏界面）
-            EventBus.emit(EventTypes.Game.GameStart, {
-                gameId: this._selectedGameId,
-                seatId: result.seatId,
-                playerIndex: result.playerIndex
-            });
+            // ✅ 删除错误的 GameStart emit
+            // 游戏开始由链上 GameStartedEvent 触发，不是加入时触发
 
         } catch (error) {
             console.error('[UIGameList] Failed to join game:', error);

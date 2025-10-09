@@ -8,7 +8,7 @@
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import type { Game, Player, GameCreateConfig, Seat } from '../types/game';
+import type { Game, Player, Building, Tile, GameCreateConfig, Seat } from '../types/game';
 
 /**
  * 游戏交互类
@@ -233,8 +233,8 @@ export class GameInteraction {
             turn: Number(fields.turn) || 0,
             active_idx: Number(fields.active_idx) || 0,
             has_rolled: Boolean(fields.has_rolled),
-            tiles: fields.tiles || [],
-            buildings: fields.buildings || [],
+            tiles: this.parseTiles(fields.tiles || []),
+            buildings: this.parseBuildings(fields.buildings || []),
             npc_on: new Map(),  // Table 类型，保持空 Map
             owner_index: new Map(),  // Table 类型，保持空 Map
             npc_spawn_pool: fields.npc_spawn_pool || [],
@@ -252,7 +252,7 @@ export class GameInteraction {
      */
     private parsePlayers(playersData: any[]): Player[] {
         return playersData.map((p: any): Player => {
-            const f = p.fields || p;  // 兼容两种格式
+            const f = p.fields || p;
             return {
                 owner: f.owner || '',
                 pos: Number(f.pos) || 0,
@@ -264,6 +264,32 @@ export class GameInteraction {
                 next_tile_id: Number(f.next_tile_id) || 0,
                 buffs: f.buffs || [],
                 cards: new Map()  // Table 类型，保持空 Map
+            };
+        });
+    }
+
+    /**
+     * 解析地块列表
+     */
+    private parseTiles(tilesData: any[]): Tile[] {
+        return tilesData.map((t: any): Tile => {
+            const f = t.fields || t;
+            return {
+                npc_on: Number(f.npc_on) || 0
+            };
+        });
+    }
+
+    /**
+     * 解析建筑列表
+     */
+    private parseBuildings(buildingsData: any[]): Building[] {
+        return buildingsData.map((b: any): Building => {
+            const f = b.fields || b;
+            return {
+                owner: Number(f.owner),
+                level: Number(f.level) || 0,
+                building_type: Number(f.building_type) || 0
             };
         });
     }

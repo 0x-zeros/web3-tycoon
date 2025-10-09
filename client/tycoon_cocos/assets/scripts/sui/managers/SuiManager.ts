@@ -958,14 +958,11 @@ export class SuiManager {
         });
 
         // 监听游戏开始事件
-        this._eventIndexer.on(EventType.GAME_STARTED, (event) => {
+        this._eventIndexer.on(EventType.GAME_STARTED, async (event) => {
             console.log('[SuiManager] GameStartedEvent from chain:', event.data);
 
-            // 从列表移除已开始的游戏
-            this._onGameStarted(event);
-
-            // 转发到 EventBus
-            EventBus.emit(EventTypes.Move.GameStarted, event.data);
+            // 处理游戏开始（内部会 emit 带 isPlayer 的事件）
+            await this._onGameStarted(event);
         });
 
         console.log('[SuiManager] Event listener started');

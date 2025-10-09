@@ -242,7 +242,7 @@ public(package) fun publish_map_from_bcs(
     tiles_bcs: vector<u8>,
     buildings_bcs: vector<u8>,
     ctx: &mut TxContext
-): ID {
+): (ID, u64, u64) {
 
     // 1. 反序列化 buildings
     let mut bcs_reader = bcs::new(buildings_bcs);
@@ -298,7 +298,7 @@ public(package) fun publish_map_from_bcs(
     };
 
 
-    // 获取 map ID 用于事件
+    // 获取 map ID 和计数用于事件
 
     let template = MapTemplate {
         id: object::new(ctx),
@@ -314,8 +314,8 @@ public(package) fun publish_map_from_bcs(
 
     //todo mint creator NFT
 
-    //return map_id
-    map_id
+    //return (map_id, tile_count, building_count)
+    (map_id, tile_count, building_count)
 }
 
 

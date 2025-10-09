@@ -25,6 +25,8 @@ export interface MapTemplatePublishedEvent {
     publisher: string;
     /** 地块数量 */
     tile_count: number;
+    /** 建筑数量 */
+    building_count: number;
 }
 
 /**

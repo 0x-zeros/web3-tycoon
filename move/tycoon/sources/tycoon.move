@@ -141,7 +141,7 @@ entry fun publish_map_from_bcs(
     let expected_version = get_map_schema_version(game_data);
     assert!(schema_version == expected_version, EInvalidSchemaVersion);
 
-    let map_id = map::publish_map_from_bcs(schema_version, tiles_bcs, buildings_bcs, ctx);
+    let (map_id, tile_count, building_count) = map::publish_map_from_bcs(schema_version, tiles_bcs, buildings_bcs, ctx);
 
     //todo 把map_id 添加到map_registry
     // game_data.map_registry.templates.push_back(map_id);
@@ -150,7 +150,8 @@ entry fun publish_map_from_bcs(
     events::emit_map_template_published_event(
         map_id,
         ctx.sender(),
-        0
+        tile_count,
+        building_count
     );
 }
 

@@ -10,7 +10,8 @@ use sui::object::ID;
 public struct MapTemplatePublishedEvent has copy, drop {
     template_id: ID,
     publisher: address,
-    tile_count: u64
+    tile_count: u64,
+    building_count: u64
 }
 
 // 注册表创建事件
@@ -534,12 +535,14 @@ public fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
 public fun emit_map_template_published_event(
     template_id: ID,
     publisher: address,
-    tile_count: u64
+    tile_count: u64,
+    building_count: u64
 ) {
     event::emit(MapTemplatePublishedEvent {
         template_id,
         publisher,
-        tile_count
+        tile_count,
+        building_count
     });
 }
 

@@ -11,6 +11,41 @@ import { TileKind, BuildingSize, NO_BUILDING, INVALID_TILE_ID } from '../types/c
 import { Web3TileType, Web3BuildingType } from '../../voxel/Web3BlockTypes';
 
 /**
+ * 根据建筑和入口tile的相对位置计算朝向
+ *
+ * Cocos坐标系：
+ * - direction定义：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
+ * - 左手坐标系，Y轴旋转CCW逆时针
+ *
+ * @param buildingPos Building的gridPos {x, y}
+ * @param entranceTileId 第一个entrance tile的ID
+ * @param template MapTemplate数据
+ * @returns direction (0-3)，默认0（朝南）
+ */
+function calculateBuildingDirection(
+    buildingPos: {x: number, y: number},
+    entranceTileId: number,
+    template: MapTemplate
+): number {
+    if (entranceTileId === 65535) return 0;
+
+    const entranceTile = template.tiles_static.get(entranceTileId);
+    if (!entranceTile) return 0;
+
+    // 计算entrance相对building的方向
+    const dx = entranceTile.x - buildingPos.x;
+    const dz = entranceTile.y - buildingPos.y;
+
+    // 根据相对位置判断朝向
+    // 优先判断主方向（绝对值更大的轴）
+    if (Math.abs(dz) > Math.abs(dx)) {
+        return dz > 0 ? 0 : 2;  // 南(+z) 或 北(-z)
+    } else {
+        return dx > 0 ? 1 : 3;  // 东(+x) 或 西(-x)
+    }
+}
+
+/**
  * 将 Move MapTemplate + Game 数据转换为 MapSaveData
  *
  * @param template 链上 MapTemplate 数据
@@ -35,17 +70,16 @@ export function convertMapTemplateToSaveData(
     template.tiles_static.forEach((tileStatic, tileId) => {
         tiles.push({
             blockId: getTileBlockId(tileStatic.kind),
-            typeId: getTileTypeId(tileStatic.kind),  // ✅ 必须字段
-            
-            //todo tileStatic.x, tileStatic.y 为gridpos，需要转换为cocos坐标；需要参数之前的转换的地方
+            typeId: getTileTypeId(tileStatic.kind),
+
             position: {
                 x: tileStatic.x,
                 z: tileStatic.y  // 注意：Move 的 y 对应 Cocos 的 z
             },
-            data: {  // ✅ 嵌套在 data 对象中
+            data: {
                 tileId: tileId,
                 buildingId: tileStatic.building_id,
-                custom: tileStatic.special, //todo TileData.custom 根据 tileStatic.special 改名和类型吧（u64 -> number）
+                special: Number(tileStatic.special),  // bigint → number
                 w: tileStatic.w,
                 n: tileStatic.n,
                 e: tileStatic.e,
@@ -58,7 +92,7 @@ export function convertMapTemplateToSaveData(
     template.buildings_static.forEach((buildingStatic, buildingId) => {
 
         //直接从move里获取的值
-        const size = buildingStatic.size as (1 | 2); //todo as (1 | 2) 需要吗？
+        const size = buildingStatic.size as (1 | 2); // TypeScript类型窄化
         const price = buildingStatic.price;
         const chainPrevId = buildingStatic.chain_prev_id;
         const chainNextId = buildingStatic.chain_next_id;
@@ -99,17 +133,17 @@ export function convertMapTemplateToSaveData(
 
         buildings.push({
             blockId: getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type),
-            typeId: getBuildingTypeId(buildingStatic.size),  // ✅ 必须字段
+            typeId: getBuildingTypeId(buildingStatic.size),
             size: size,
             position: {
-                x: gridPos.x, //todo 需要转换为cocos坐标；需要参数之前的转换的地方
-                z: gridPos.y, //todo 需要转换为cocos坐标；需要参数之前的转换的地方
+                x: gridPos.x,
+                z: gridPos.y
             },
-            direction: 0,  // todo 需要从 building的gridPos和 entranceTiles[0]的gridPos 的相对位置计算得到（使用 position的相对位置也一样， 参考地图编辑的时候的direction规则 ）
+            direction: calculateBuildingDirection(gridPos, entranceTileIds[0], template),
             buildingId: buildingId,
             entranceTileIds: entranceTileIds as [number, number],
             // chainPrevId/chainNextId 在 BuildingData 中不存在，存储在 BuildingInfo 中
-            owner: gameBuildingData?.owner, //todo 修改 BuildingData.owner 的类型为 number
+            owner: gameBuildingData?.owner,
             level: gameBuildingData?.level,
             price: Number(price)  // BigInt → number
         });
@@ -213,8 +247,7 @@ function getBuildingBlockId(size: number, _buildingType?: number): string {
 
     // 2x2 建筑：根据 building_type 区分
     if (size === BuildingSize.SIZE_2X2) {
-        // TODO: 根据 buildingType 映射不同的 2x2 建筑模型
-        // 目前先使用通用的 2x2 建筑
+        // 目前使用通用的 2x2 建筑（未来可根据 buildingType 区分不同模型）
         return 'web3:building_2x2';
     }
 

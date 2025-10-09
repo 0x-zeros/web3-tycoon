@@ -34,8 +34,8 @@ export interface TileData {
         n?: number;  // north: z-1
         e?: number;  // east: x+1
         s?: number;  // south: z+1
-        /** 自定义数据 */
-        custom?: any;
+        /** 特殊数值（如奖金、罚款金额） */
+        special?: number;
     };
 }
 

@@ -174,7 +174,7 @@ export interface BuildingData {
     /** 入口tile的ID（最多2个，1x1建筑第二个为65535） */
     entranceTileIds?: [number, number];
     /** 拥有者 */
-    owner?: string;
+    owner?: number;
     /** 建筑等级 */
     level?: number;
     /** 建筑价格 */

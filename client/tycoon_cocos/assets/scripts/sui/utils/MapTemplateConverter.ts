@@ -27,32 +27,44 @@ export function convertMapTemplateToSaveData(
     const buildings: BuildingData[] = [];
 
     console.log('[MapTemplateConverter] Converting template to save data');
-    console.log('  Template tiles:', template.tiles_static.size);
-    console.log('  Template buildings:', template.buildings_static.size);
-    console.log('  Game buildings:', game.buildings.length);
+    console.log('  Template tiles:', template.tiles_static.size, template.tiles_static);
+    console.log('  Template buildings:', template.buildings_static.size, template.buildings_static);
+    console.log('  Game buildings:', game.buildings.length, game.buildings);
 
     // 1. 转换 Tiles
     template.tiles_static.forEach((tileStatic, tileId) => {
         tiles.push({
             blockId: getTileBlockId(tileStatic.kind),
             typeId: getTileTypeId(tileStatic.kind),  // ✅ 必须字段
+            
+            //todo tileStatic.x, tileStatic.y 为gridpos，需要转换为cocos坐标；需要参数之前的转换的地方
             position: {
                 x: tileStatic.x,
                 z: tileStatic.y  // 注意：Move 的 y 对应 Cocos 的 z
             },
             data: {  // ✅ 嵌套在 data 对象中
                 tileId: tileId,
-                buildingId: tileStatic.building_id !== NO_BUILDING ? tileStatic.building_id : undefined,
-                w: tileStatic.w !== INVALID_TILE_ID ? tileStatic.w : undefined,
-                n: tileStatic.n !== INVALID_TILE_ID ? tileStatic.n : undefined,
-                e: tileStatic.e !== INVALID_TILE_ID ? tileStatic.e : undefined,
-                s: tileStatic.s !== INVALID_TILE_ID ? tileStatic.s : undefined
+                buildingId: tileStatic.building_id,
+                custom: tileStatic.special, //todo TileData.custom 根据 tileStatic.special 改名和类型吧（u64 -> number）
+                w: tileStatic.w,
+                n: tileStatic.n,
+                e: tileStatic.e,
+                s: tileStatic.s
             }
         });
     });
 
     // 2. 转换 Buildings
     template.buildings_static.forEach((buildingStatic, buildingId) => {
+
+        //直接从move里获取的值
+        const size = buildingStatic.size as (1 | 2); //todo as (1 | 2) 需要吗？
+        const price = buildingStatic.price;
+        const chainPrevId = buildingStatic.chain_prev_id;
+        const chainNextId = buildingStatic.chain_next_id;
+
+        //其他需要根据move里的值计算的值
+
         // 找到该 building 的入口 tiles
         const entranceTiles: number[] = [];
         template.tiles_static.forEach((tile, tileId) => {
@@ -61,48 +73,53 @@ export function convertMapTemplateToSaveData(
             }
         });
 
+
+        let entranceTileIds: number[] = entranceTiles; // 最多2个入口
         if (entranceTiles.length === 0) {
-            console.warn(`[Converter] Building ${buildingId} has no entrance tiles, skipping`);
-            return;
+            entranceTileIds = [65535, 65535];
+            console.warn(`[Converter] Building ${buildingId} has no entrance tiles`);
+        }
+        else if (entranceTiles.length === 1) {
+            entranceTileIds.push(65535);
+        }
+        else if (entranceTiles.length > 2) {
+            entranceTileIds = entranceTiles.slice(0, 2); // 最多2个入口
+            console.warn(`[Converter] Building ${buildingId} has more than 2 entrance tiles`);
         }
 
+
         // 使用第一个入口 tile 的坐标作为 building 的坐标
-        const firstEntranceTile = template.tiles_static.get(entranceTiles[0])!;
+        const gridPos = {x: 0, y: 0}; //todo 要在move的 BuildingStatic里添加x, y (u8， 同tTileStatic的)； publish的相应地方也需要修改
 
         // 从 Game.buildings 获取动态数据（owner, level, building_type）
         const gameBuildingData = game.buildings[buildingId];
+        if (!gameBuildingData) {
+            console.warn(`[Converter] Building ${buildingId} not found in Game.buildings.`);
+        }
 
         buildings.push({
             blockId: getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type),
             typeId: getBuildingTypeId(buildingStatic.size),  // ✅ 必须字段
-            size: buildingStatic.size as (1 | 2),
+            size: size,
             position: {
-                x: firstEntranceTile.x,
-                z: firstEntranceTile.y
+                x: gridPos.x, //todo 需要转换为cocos坐标；需要参数之前的转换的地方
+                z: gridPos.y, //todo 需要转换为cocos坐标；需要参数之前的转换的地方
             },
-            direction: 0,  // 默认朝向（MapTemplate 中暂无存储）
+            direction: 0,  // todo 需要从 building的gridPos和 entranceTiles[0]的gridPos 的相对位置计算得到（使用 position的相对位置也一样， 参考地图编辑的时候的direction规则 ）
             buildingId: buildingId,
-            entranceTileIds: entranceTiles.slice(0, 2) as [number, number],  // 最多2个入口
+            entranceTileIds: entranceTileIds as [number, number],
             // chainPrevId/chainNextId 在 BuildingData 中不存在，存储在 BuildingInfo 中
-            owner: gameBuildingData?.owner !== 255 ? gameBuildingData.owner.toString() : undefined,  // NO_OWNER
-            level: gameBuildingData?.level ?? 0,
-            price: Number(buildingStatic.price),  // BigInt → number
-            rent: [Number(buildingStatic.price / BigInt(10))],  // 简化：租金 = 价格/10
-            mortgaged: false
+            owner: gameBuildingData?.owner, //todo 修改 BuildingData.owner 的类型为 number
+            level: gameBuildingData?.level,
+            price: Number(price),  // BigInt → number
+            rent: 0,  // todo 不需要的值？ 是不是应该从BuildingData里删掉，需要查找了看看
+            mortgaged: false,  // todo 不需要的值？ 是不是应该从BuildingData里删掉，需要查找了看看
         });
     });
 
     console.log('[MapTemplateConverter] Conversion completed');
     console.log('  Tiles:', tiles.length);
     console.log('  Buildings:', buildings.length);
-
-    // 调试：打印第一个 tile 和 building 的数据
-    if (tiles.length > 0) {
-        console.log('  First tile:', JSON.stringify(tiles[0], null, 2));
-    }
-    if (buildings.length > 0) {
-        console.log('  First building:', JSON.stringify(buildings[0], null, 2));
-    }
 
     const result = {
         // ✅ MapMetadata 必须字段
@@ -121,11 +138,19 @@ export function convertMapTemplateToSaveData(
         decorations: []  // 装饰物暂不支持
     };
 
-    console.log('[MapTemplateConverter] MapSaveData created:', {
-        mapId: result.mapId,
-        tilesCount: result.tiles.length,
-        buildingsCount: result.buildings?.length || 0
-    });
+    // ✅ 打印完整的 MapSaveData 对象（不 stringify）
+    console.log('='.repeat(80));
+    console.log('[MapTemplateConverter] 转换后的 MapSaveData 对象（用于对比 publish 前）：');
+    console.log('  完整对象:', result);
+    console.log('  tiles 数组:', result.tiles);
+    console.log('  buildings 数组:', result.buildings);
+    if (result.tiles.length > 0) {
+        console.log('  第一个 tile:', result.tiles[0]);
+    }
+    if (result.buildings && result.buildings.length > 0) {
+        console.log('  第一个 building:', result.buildings[0]);
+    }
+    console.log('='.repeat(80));
 
     return result;
 }

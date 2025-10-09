@@ -563,24 +563,39 @@ export class UIEditor extends UIBase {
                         callback: async () => {
                             console.log('[UIEditor] Creating game with template:', result.templateId);
 
-                            // 1. 先隐藏编辑器（卸载地图）
-                            EventBus.emit(EventTypes.Game.RequestMapChange, {
-                                toMapId: null
-                            });
-
-                            // 2. 直接使用刚发布的模板创建游戏（复用方法）
                             try {
+                                // 1. 先隐藏编辑器（卸载地图）
+                                EventBus.emit(EventTypes.Game.RequestMapChange, {
+                                    toMapId: null
+                                });
+
+                                // 2. ✅ 立即显示 UIMapSelect（Game List tab）
+                                EventBus.emit(EventTypes.UI.ShowMapSelect, {
+                                    category: 0  // ✅ 0 = Game List tab
+                                });
+
+                                // 3. 创建游戏
                                 await SuiManager.instance.createGameWithTemplate(result.templateId);
 
-                                // createGameWithTemplate 内部会：
+                                // createGameWithTemplate 会：
                                 // - 显示创建成功 MessageBox
                                 // - 触发 GameCreatedEvent
-                                // - SuiManager 设置 _currentGame
-                                // - UIMapSelect 自动显示 GameDetail
+                                //
+                                // GameCreatedEvent 会触发：
+                                // - SuiManager 查询并设置 _currentGame
+                                // - UIMapSelect._onMoveGameCreated()
+                                //   └→ showGameDetail(gameId)
+                                //        ├→ controller = 0（已设置）
+                                //        ├→ 选中游戏
+                                //        └→ 显示 GameDetail
 
                             } catch (error) {
-                                // 错误已在 createGameWithTemplate 中处理
                                 console.error('[UIEditor] Create game error:', error);
+
+                                // 创建失败也要显示 UIMapSelect
+                                EventBus.emit(EventTypes.UI.ShowMapSelect, {
+                                    category: 0
+                                });
                             }
                         }
                     },

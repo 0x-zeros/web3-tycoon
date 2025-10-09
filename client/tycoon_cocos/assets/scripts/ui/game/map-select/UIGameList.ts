@@ -15,6 +15,7 @@ import { IdFormatter } from "../../utils/IdFormatter";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
+import { getGameStatusText } from "../../../sui/types/constants";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -143,6 +144,12 @@ export class UIGameList extends UIBase {
         const mapidText = button.getChild("mapid") as fgui.GTextField;
         if (mapidText) {
             mapidText.text = game.template_map_id || 'N/A';  // ✅ 完整显示
+        }
+
+        // 显示游戏状态
+        const statusText = button.getChild("status") as fgui.GTextField;
+        if (statusText) {
+            statusText.text = getGameStatusText(game.status);  // ✅ 中文状态
         }
 
         // 显示玩家列表（player_0, player_1, player_2, player_3）

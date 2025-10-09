@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1024,256" pivot="0.5,0.5" extention="Button">
-  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="3"/>
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
   <displayList>
     <image id="n23_qh36" name="n23" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1024,256"/>
     <text id="n9_pseu" name="n1" xy="25,54" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id"/>
@@ -20,6 +20,7 @@
       <gearDisplay controller="button" pages="1,3"/>
       <relation target="" sidePair="width-width,height-height"/>
     </component>
+    <text id="n24_azob" name="status" xy="836,3" size="181,32" fontSize="22" color="#ffffff" text="active/ready/end"/>
   </displayList>
   <Button mode="Radio" downEffect="dark" downEffectValue="0.8"/>
 </component>

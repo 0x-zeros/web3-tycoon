@@ -885,7 +885,7 @@ export class SuiManager {
             // 并行查询所有数据
             const [gameData, games, templates] = await Promise.all([
                 this._queryService!.getGameData(),
-                this._queryService!.getReadyGames(this._currentAddress || undefined, 50),
+                this._queryService!.queryAllGames({ limit: 50, order: 'descending' }),  // ✅ 查询所有游戏，不过滤状态
                 this._queryService!.getMapTemplates()
             ]);
 
@@ -1180,7 +1180,7 @@ export class SuiManager {
 
             // 2. 获取 MapTemplate
             console.log('[SuiManager] Fetching MapTemplate:', game.template_map_id);
-            const template = await this.getMapTemplate(game.template_map_id);
+            const template = await this.getMapTemplate(game.template_map_id); //todo 有问题，全是0或者NaN
 
             if (!template) {
                 throw new Error('Failed to get map template');

@@ -1020,19 +1020,19 @@ export class UIManager {
         // 监听显示主菜单事件
         EventBus.on(EventTypes.UI.ShowMainMenu, async (data) => {
             console.log("[UISystem] UI.ShowMainMenu event received:", data);
-            await this.showUI("UIModeSelect", data);  // ✅ 传递 data
+            await this.showUI("ModeSelect", data);  // ✅ 注意：注册名是 "ModeSelect"
         }, this);
 
         // 监听显示地图选择事件
         EventBus.on(EventTypes.UI.ShowMapSelect, async (data) => {
             console.log("[UISystem] UI.ShowMapSelect event received:", data);
-            await this.showUI("UIMapSelect", data);  // ✅ 传递 data
+            await this.showUI("MapSelect", data);  // ✅ 注意：注册名是 "MapSelect"
         }, this);
 
         // 监听游戏开始事件
         EventBus.on(EventTypes.Game.GameStart, async (data) => {
             console.log("[UISystem] Game.GameStart event received:", data);
-            await this.showUI("UIInGame", data);  // ✅ 传递 data
+            await this.showUI("InGame", data);  // ✅ 注意：注册名是 "InGame"
         }, this);
 
         // 监听其他全局UI事件

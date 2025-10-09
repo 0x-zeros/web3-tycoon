@@ -166,6 +166,18 @@ export function isLargeBuilding(size: number): boolean {
     return size === BuildingSize.SIZE_2X2;
 }
 
+/**
+ * 获取游戏状态的中文文本
+ */
+export function getGameStatusText(status: number): string {
+    switch (status) {
+        case GameStatus.READY: return '准备中';
+        case GameStatus.ACTIVE: return '进行中';
+        case GameStatus.ENDED: return '已结束';
+        default: return '未知';
+    }
+}
+
 // ===== NPC操作常量（对应events.move） =====
 export enum NpcAction {
     SPAWN = 1,     // 生成NPC

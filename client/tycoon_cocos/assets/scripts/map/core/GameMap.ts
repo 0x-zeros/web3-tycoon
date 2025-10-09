@@ -31,6 +31,7 @@ import { BlockOverlayManager } from '../../voxel/overlay/BlockOverlayManager';
 import { OverlayConfig, OverlayFace } from '../../voxel/overlay/OverlayTypes';
 import { UINotification } from '../../ui/utils/UINotification';
 import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerator';
+import { convertMapTemplateToSaveData } from '../../sui/utils/MapTemplateConverter';
 
 // Building信息接口
 interface BuildingInfo {
@@ -1186,12 +1187,10 @@ export class GameMap extends Component {
     public async loadFromChainData(template: any, game: any): Promise<boolean> {
         try {
             console.log('[GameMap] Loading map from chain data...');
+            console.log('  Template id:', template?.map_id);
             console.log('  Template tiles:', template?.tiles_static?.size);
             console.log('  Template buildings:', template?.buildings_static?.size);
             console.log('  Game ID:', game?.id);
-
-            // 动态导入转换工具（避免循环依赖）
-            const { convertMapTemplateToSaveData } = await import('../../sui/utils/MapTemplateConverter');
 
             // 1. 转换为 MapSaveData 格式
             const mapData = convertMapTemplateToSaveData(

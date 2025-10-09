@@ -145,7 +145,7 @@ export abstract class MapElement extends Component {
                 );
                 
                 if (this._renderNode) {
-                    console.log(`[MapElement] Created voxel render for ${blockId} at ${position}`);
+                    // console.log(`[MapElement] Created voxel render for ${blockId} at ${position}`);
                 } else {
                     console.warn(`[MapElement] Failed to create voxel render for ${blockId}`);
                 }

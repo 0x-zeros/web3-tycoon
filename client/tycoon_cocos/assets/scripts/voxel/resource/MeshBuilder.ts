@@ -57,7 +57,7 @@ export class MeshBuilder {
      * @returns 网格数据
      */
     static buildMesh(blockData: ParsedBlockData, context: MeshBuildContext): VoxelMeshData {
-        console.log(`[MeshBuilder] buildMesh: 开始构建网格, elements数量=${blockData.elements.length}`);
+        // console.log(`[MeshBuilder] buildMesh: 开始构建网格, elements数量=${blockData.elements.length}`);
         
         const meshData: VoxelMeshData = {
             vertices: [],
@@ -94,9 +94,9 @@ export class MeshBuilder {
             this.applyBlockRotation(meshData, context.blockRotation);
         }
 
-        console.log(`[MeshBuilder] buildMesh: 网格构建完成, textureGroups数量=${meshData.textureGroups.size}`);
+        // console.log(`[MeshBuilder] buildMesh: 网格构建完成, textureGroups数量=${meshData.textureGroups.size}`);
         for (const [texture, group] of meshData.textureGroups) {
-            console.log(`[MeshBuilder]   - 纹理组: ${texture}, 顶点数=${group.vertices.length}, 索引数=${group.indices.length}`);
+            // console.log(`[MeshBuilder]   - 纹理组: ${texture}, 顶点数=${group.vertices.length}, 索引数=${group.indices.length}`);
         }
 
         return meshData;

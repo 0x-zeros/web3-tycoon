@@ -126,7 +126,7 @@ export class VoxelSystem {
 
             // 5. 使用新的数据结构构建网格
             const meshData = MeshBuilder.buildMesh(blockData, meshBuildContext);
-            console.log(`[VoxelSystem] 普通方块网格生成成功: ${blockId}`);
+            // console.log(`[VoxelSystem] 普通方块网格生成成功: ${blockId}`);
             return meshData;
 
         } catch (error) {
@@ -189,7 +189,7 @@ export class VoxelSystem {
             // 预加载纹理资源（通过MaterialFactory的公共方法）
             await this.materialFactory.preloadTexture(texturePath);
             
-            console.log(`[VoxelSystem] Preloaded material for ${blockId}`);
+            // console.log(`[VoxelSystem] Preloaded material for ${blockId}`);
         } catch (error) {
             console.error(`[VoxelSystem] 预加载方块材质失败: ${blockId}`, error);
         }
@@ -390,7 +390,7 @@ export class VoxelSystem {
             const meshData = await this.generateBlockMesh(blockId, position);
             if (!meshData) return null;
 
-            console.log(`[VoxelSystem] ${blockId} meshData:`, meshData);
+            // console.log(`[VoxelSystem] ${blockId} meshData:`, meshData);
 
             // 创建方块节点（先不添加到场景，避免粉色闪烁）
             const blockNode = new Node(`Block_${blockId.replace('minecraft:', '')}`);//todo

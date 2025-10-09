@@ -70,7 +70,7 @@ export class MapTile extends MapElement {
         this.setupCollider(new Vec3(1, 0.1, 1), new Vec3(0, 0, 0));
 
         this._initialized = true;
-        console.log(`[MapTile] Initialized tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        // console.log(`[MapTile] Initialized tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
     }
     
     // ========================= 抽象方法实现 =========================

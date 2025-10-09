@@ -364,7 +364,7 @@ export class MaterialFactory {
     async preloadTexture(texturePath: string): Promise<void> {
         try {
             await this.textureManager.loadTexture(texturePath);
-            console.log(`[MaterialFactory] Preloaded texture: ${texturePath}`);
+            // console.log(`[MaterialFactory] Preloaded texture: ${texturePath}`);
         } catch (error) {
             console.warn(`[MaterialFactory] Failed to preload texture: ${texturePath}`, error);
         }

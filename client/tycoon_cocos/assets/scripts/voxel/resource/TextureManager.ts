@@ -71,7 +71,7 @@ export class TextureManager {
      * @returns 纹理信息
      */
     private async doLoadTexture(texturePath: string): Promise<TextureInfo | null> {
-        console.log(`[TextureManager] 开始加载纹理: ${texturePath}`);
+        // console.log(`[TextureManager] 开始加载纹理: ${texturePath}`);
 
         try {
             // 使用 Cocos Creator 资源系统加载纹理

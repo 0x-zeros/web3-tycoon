@@ -1719,7 +1719,7 @@ export class GameMap extends Component {
                 this._buildings.set(key, buildingNode);
             }
 
-            console.log(`[GameMap] Created PaperActor for ${blockId} at (${actorPos.x}, ${actorPos.y}, ${actorPos.z}) with direction ${direction}`);
+            // console.log(`[GameMap] Created PaperActor for ${blockId} at (${actorPos.x}, ${actorPos.y}, ${actorPos.z}) with direction ${direction}`);
         }
 
         return buildingNode;

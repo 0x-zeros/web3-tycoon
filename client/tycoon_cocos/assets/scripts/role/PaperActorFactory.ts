@@ -139,7 +139,7 @@ export class PaperActorFactory {
         // 初始化
         actor.initialize();
 
-        console.log(`[PaperActorFactory] Created Building: ${buildingActorId} (from ${buildingType}) Lv${level} at`, position);
+        // console.log(`[PaperActorFactory] Created Building: ${buildingActorId} (from ${buildingType}) Lv${level} at`, position);
         return node;
     }
 

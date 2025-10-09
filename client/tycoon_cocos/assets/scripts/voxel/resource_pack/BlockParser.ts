@@ -109,11 +109,11 @@ export class BlockParser {
             }
         };
         
-        console.log(`[BlockParser] 解析完成: ${blockId}`, {
-            template,
-            textureCount: textures.length,
-            elementCount: elements.length
-        });
+        // console.log(`[BlockParser] 解析完成: ${blockId}`, {
+        //     template,
+        //     textureCount: textures.length,
+        //     elementCount: elements.length
+        // });
         
         return result;
     }

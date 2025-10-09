@@ -144,7 +144,7 @@ export class PaperActor extends Component {
      */
     public async initialize(): Promise<boolean> {
         try {
-            console.log(`[PaperActor] Initializing ${this.node.name}...`);
+            // console.log(`[PaperActor] Initializing ${this.node.name}...`);
 
             // 1. 先确保材质已创建并准备好
             await this.ensureMaterialReady();
@@ -168,7 +168,7 @@ export class PaperActor extends Component {
 
             // 5. 资源加载完成，显示节点
             this.node.active = true;
-            console.log(`[PaperActor] Initialized ${this.node.name} successfully`);
+            // console.log(`[PaperActor] Initialized ${this.node.name} successfully`);
             return true;
         } catch (error) {
             console.error(`[PaperActor] Failed to initialize ${this.node.name}:`, error);
@@ -738,7 +738,7 @@ export class PaperActor extends Component {
                 // 缩放调整（箭头稍微小一点）
                 this.arrowNode.setScale(0.4, 0.4, 0.4);
 
-                console.log(`[PaperActor] Arrow indicator loaded for building ${this.actorId}`);
+                // console.log(`[PaperActor] Arrow indicator loaded for building ${this.actorId}`);
                 resolve();
             });
         });

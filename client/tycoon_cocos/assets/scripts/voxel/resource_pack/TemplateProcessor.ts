@@ -85,7 +85,7 @@ export class TemplateProcessor {
         if (modelChain && modelChain.length > 0) {
             for (const model of modelChain) {
                 if (model.json?.elements) {
-                    console.log(`[TemplateProcessor] 使用模型 ${model.rel} 的 elements`);
+                    // console.log(`[TemplateProcessor] 使用模型 ${model.rel} 的 elements`);
                     return this.parseElements(model.json.elements);
                 }
             }

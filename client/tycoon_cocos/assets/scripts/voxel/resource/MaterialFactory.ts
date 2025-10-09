@@ -110,7 +110,7 @@ export class MaterialFactory {
                 const overlayTextureInfo = await this.textureManager.loadTexture(config.overlayTexture);
                 if (overlayTextureInfo && overlayTextureInfo.texture) {
                     material.setProperty('u_OverlayTex', overlayTextureInfo.texture);
-                    console.log(`[MaterialFactory] Overlay纹理加载成功: ${config.overlayTexture}`);
+                    // console.log(`[MaterialFactory] Overlay纹理加载成功: ${config.overlayTexture}`);
                 } else {
                     console.warn(`[MaterialFactory] Overlay纹理加载失败: ${config.overlayTexture}`);
                     // 使用白色纹理作为fallback

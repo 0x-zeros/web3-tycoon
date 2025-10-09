@@ -614,6 +614,8 @@ export class SuiManager {
         const tilesMap = new Map<number, TileStatic>();
         const buildingsMap = new Map<number, BuildingStatic>();
 
+        console.log('[SuiManager] Parsing map template object:', fields);
+
         // 解析 tiles_static (vector<TileStatic>)
         if (fields.tiles_static && Array.isArray(fields.tiles_static)) {
             fields.tiles_static.forEach((tile: any, index: number) => {

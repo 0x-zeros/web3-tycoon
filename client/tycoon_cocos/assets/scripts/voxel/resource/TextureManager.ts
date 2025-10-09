@@ -93,7 +93,7 @@ export class TextureManager {
             // 缓存纹理
             this.textureCache.set(texturePath, textureInfo);
 
-            console.log(`[TextureManager] 纹理加载成功: ${texturePath} (${texture.width}x${texture.height})`);
+            // console.log(`[TextureManager] 纹理加载成功: ${texturePath} (${texture.width}x${texture.height})`);
             return textureInfo;
 
         } catch (error) {

@@ -555,13 +555,13 @@ export class SuiManager {
             console.log('  Game ID:', result.gameId);
             console.log('  Seat ID:', result.seatId);
 
-            // 显示成功 MessageBox
-            await UIMessage.success(
+            // 显示成功 MessageBox（不 await，避免阻塞调用者的 callback）
+            UIMessage.success(
                 `游戏创建成功！\n\n` +
                 `游戏 ID: ${result.gameId}\n\n` +  // ✅ 完整显示
                 `等待链上确认和其他玩家加入...`,
                 "创建成功"
-            );
+            ).catch(err => console.error('[SuiManager] MessageBox error:', err));
 
             // ❌ 不在这里缓存游戏和发送事件
             // ✅ 等待 EventIndexer 收到链上 GameCreatedEvent

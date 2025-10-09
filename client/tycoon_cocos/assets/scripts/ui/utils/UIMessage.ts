@@ -614,7 +614,7 @@ export class UIMessage extends UIBase {
             buttons: {
                 primary: { text: "知道了" },
                 secondary: { visible: false },
-                close: { visible: false }
+                close: { visible: true }
             }
         });
     }
@@ -630,7 +630,7 @@ export class UIMessage extends UIBase {
             buttons: {
                 primary: { text: "好的" },
                 secondary: { visible: false },
-                close: { visible: false }
+                close: { visible: true }
             }
         });
     }
@@ -646,7 +646,7 @@ export class UIMessage extends UIBase {
             buttons: {
                 primary: { text: "我知道了" },
                 secondary: { visible: false },
-                close: { visible: false }
+                close: { visible: true }
             }
         });
     }
@@ -662,7 +662,7 @@ export class UIMessage extends UIBase {
             buttons: {
                 primary: { text: "确定" },
                 secondary: { visible: false },
-                close: { visible: false }
+                close: { visible: true }
             }
         });
     }

@@ -628,7 +628,7 @@ export class UIEditor extends UIBase {
      * 返回到 UIMapSelect 并选中刚发布的模板
      * @param templateId 模板 ID
      */
-    private _returnToMapSelectWithTemplate(templateId: number): void {
+    private _returnToMapSelectWithTemplate(templateId: string): void {
         console.log('[UIEditor] Returning to UIMapSelect');
         console.log('  Template ID:', templateId);
 
@@ -640,7 +640,7 @@ export class UIEditor extends UIBase {
         // 2. 显示 UIMapSelect，切换到 map_id tab，并选中模板
         EventBus.emit(EventTypes.UI.ShowMapSelect, {
             category: 1,  // ✅ 1 = map_id tab
-            selectTemplateId: templateId.toString()  // ✅ 转为 string
+            selectTemplateId: templateId  // ✅ 已经是 string
         });
 
         console.log('[UIEditor] Returning to map selection with template selected');

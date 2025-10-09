@@ -24,7 +24,7 @@ export interface MapTemplateNFT {
     /** Object ID */
     objectId: string;
     /** 模板 ID */
-    templateId: number;
+    templateId: string;
     /** 模板名称 */
     name: string;
     /** 创建者地址 */

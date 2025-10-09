@@ -74,7 +74,7 @@ export class SuiManager {
     private _assetsCacheTimestamp: number = 0;
 
     // 最近发布的模板 ID
-    private _lastPublishedTemplateId: number | null = null;
+    private _lastPublishedTemplateId: string | null = null;
 
     // 当前游戏（创建后缓存）
     private _currentGame: Game | null = null;
@@ -448,7 +448,7 @@ export class SuiManager {
      */
     public async publishMapTemplate(mapTemplate: MapTemplate): Promise<{
         txHash: string;
-        templateId: number;
+        templateId: string;
     }> {
         this._ensureInitialized();
         this._ensureSigner();
@@ -490,7 +490,7 @@ export class SuiManager {
     /**
      * 获取最近发布的模板 ID
      */
-    public get lastPublishedTemplateId(): number | null {
+    public get lastPublishedTemplateId(): string | null {
         return this._lastPublishedTemplateId;
     }
 
@@ -835,14 +835,14 @@ export class SuiManager {
     /**
      * 从交易结果中提取模板 ID
      */
-    private _extractTemplateId(result: SuiTransactionBlockResponse): number {
+    private _extractTemplateId(result: SuiTransactionBlockResponse): string {
         const events = result.events || [];
         for (const event of events) {
             if (event.type.includes('MapTemplatePublishedEvent')) {
-                return (event.parsedJson as any)?.template_id || 0;
+                return (event.parsedJson as any)?.template_id || '0';
             }
         }
-        return 0;
+        return '0';
     }
 
     /**

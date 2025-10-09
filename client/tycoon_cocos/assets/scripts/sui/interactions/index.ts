@@ -175,7 +175,7 @@ export class AdminInteraction {
             max_players: number;
         },
         keypair: Ed25519Keypair
-    ): Promise<{ templateId: number; txHash: string }> {
+    ): Promise<{ templateId: string; txHash: string }> {
         const tx = new Transaction();
 
         // 构建tiles向量
@@ -226,14 +226,14 @@ export class AdminInteraction {
         return { templateId, txHash: result.digest };
     }
 
-    private extractTemplateId(result: any): number {
+    private extractTemplateId(result: any): string {
         const events = result.events || [];
         for (const event of events) {
             if (event.type.includes('MapTemplatePublishedEvent')) {
-                return event.parsedJson?.template_id || 0;
+                return event.parsedJson?.template_id || '0';
             }
         }
-        return 0;
+        return '0';
     }
 }
 

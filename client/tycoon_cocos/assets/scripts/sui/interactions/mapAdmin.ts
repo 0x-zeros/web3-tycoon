@@ -80,7 +80,7 @@ export class MapAdminInteraction {
         keypair: Ed25519Keypair
     ): Promise<{
         txHash: string;
-        templateId: number;
+        templateId: string;
     }> {
         console.log('[MapAdmin] Starting map upload...');
         console.log(`Template ID: ${mapTemplate.id}`);
@@ -150,7 +150,7 @@ export class MapAdminInteraction {
      * 获取已发布的地图模板
      * @param templateId 模板ID
      */
-    async getMapTemplate(templateId: number): Promise<MapTemplate | null> {
+    async getMapTemplate(templateId: string): Promise<MapTemplate | null> {
         try {
             // 这需要通过 GameData 对象的动态字段查询
             // 或通过事件索引器查询

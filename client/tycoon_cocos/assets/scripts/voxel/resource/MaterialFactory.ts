@@ -63,7 +63,7 @@ export class MaterialFactory {
             const material = await this.doCreateMaterial(config);
             if (material) {
                 this.materialCache.set(cacheKey, material);
-                console.log(`[MaterialFactory] 材质创建成功: ${cacheKey}`);
+                // console.log(`[MaterialFactory] 材质创建成功: ${cacheKey}`);
             }
             return material;
         } catch (error) {
@@ -97,7 +97,7 @@ export class MaterialFactory {
             console.error(`[MaterialFactory] EffectAsset 加载失败: voxel/shaders/${shaderInfo.shader}`);
             return null;
         }
-        console.log(`[MaterialFactory] EffectAsset 加载成功: voxel/shaders/${shaderInfo.shader}`);
+        // console.log(`[MaterialFactory] EffectAsset 加载成功: voxel/shaders/${shaderInfo.shader}`);
 
         material.initialize({ effectAsset, technique: shaderInfo.technique });
 
@@ -213,7 +213,7 @@ export class MaterialFactory {
      */
     private setVoxelShaderUniforms(material: Material, config: MaterialConfig): void {
         try {
-            console.log(`[MaterialFactory] 设置着色器参数，材质类型: ${config.type}`);
+            // console.log(`[MaterialFactory] 设置着色器参数，材质类型: ${config.type}`);
             
             // 通用参数 - 所有着色器都有这些
             material.setProperty('timer', 0.0);
@@ -249,8 +249,8 @@ export class MaterialFactory {
                     material.setProperty('bloomIntensity', 1.0);
                     break;
             }
-            
-            console.log(`[MaterialFactory] 着色器参数设置完成`);
+
+            // console.log(`[MaterialFactory] 着色器参数设置完成`);
         } catch (error) {
             console.error(`[MaterialFactory] 设置着色器参数失败:`, error);
             throw error;
@@ -438,10 +438,10 @@ export class MaterialFactory {
             texture: texturePath,
             alphaTest: materialType === MaterialType.CUTOUT ? 0.5 : undefined
         };
-        
+
         const isEmissive = blockDef ? blockDef.lightLevel > 0 : false;
         if (isEmissive) {
-            console.log(`[MaterialFactory] 创建发光方块材质: ${texturePath} (发光效果由顶点light值实现)`);
+            // console.log(`[MaterialFactory] 创建发光方块材质: ${texturePath} (发光效果由顶点light值实现)`);
         }
 
         return await this.createMaterial(config);

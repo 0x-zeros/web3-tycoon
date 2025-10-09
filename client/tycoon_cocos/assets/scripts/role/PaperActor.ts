@@ -302,7 +302,7 @@ export class PaperActor extends Component {
         return new Promise<void>((resolve) => {
             // 加载纹理，需要添加 /texture 后缀
             const fullPath = texturePath + '/texture';
-            console.log(`[PaperActor] Loading texture: ${fullPath} for ${this.node.name}`);
+            // console.log(`[PaperActor] Loading texture: ${fullPath} for ${this.node.name}`);
 
             resources.load(fullPath, Texture2D, (err, texture) => {
                 if (err) {

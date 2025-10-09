@@ -580,7 +580,7 @@ export class GameMap extends Component {
         this._tiles.push(tile);
         this._tileIndex.set(key, tile);
 
-        console.log(`[GameMap] Placed tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        // console.log(`[GameMap] Placed tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
 
         // 编辑模式下触发自动保存
         if (this._isEditMode) {
@@ -1751,7 +1751,7 @@ export class GameMap extends Component {
      * @param gridPos 网格位置（左下角）
      */
     private async place2x2Building(blockId: string, gridPos: Vec2): Promise<void> {
-        console.log(`[GameMap] Placing 2x2 building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        // console.log(`[GameMap] Placing 2x2 building ${blockId} at (${gridPos.x}, ${gridPos.y})`);
 
         // 2x2 建筑：创建父容器，清理占位，并生成4个可见的体素块（MapTile）
         // 这样可以与删除/重建逻辑复用统一流程
@@ -1802,7 +1802,7 @@ export class GameMap extends Component {
         (containerNode as any)['propertyBlockId'] = blockId;
         (containerNode as any)['propertyPosition'] = gridPos.clone();
 
-        console.log(`[GameMap] Created 2x2 building base tiles for ${blockId} at (${gridPos.x}, ${gridPos.y})`);
+        // console.log(`[GameMap] Created 2x2 building base tiles for ${blockId} at (${gridPos.x}, ${gridPos.y})`);
     }
 
     /**

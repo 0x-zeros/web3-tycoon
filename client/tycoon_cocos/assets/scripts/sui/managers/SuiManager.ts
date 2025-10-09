@@ -614,11 +614,15 @@ export class SuiManager {
         const tilesMap = new Map<number, TileStatic>();
         const buildingsMap = new Map<number, BuildingStatic>();
 
-        console.log('[SuiManager] Parsing map template object:', fields);
+        console.log('[SuiManager] Parsing map template object, fields:', fields);
 
         // 解析 tiles_static (vector<TileStatic>)
         if (fields.tiles_static && Array.isArray(fields.tiles_static)) {
-            fields.tiles_static.forEach((tile: any, index: number) => {
+            fields.tiles_static.forEach((obj: any, index: number) => {
+
+                //type: "0xdf548492efb92f3f3bc19101abe2ef138ccaa0f8084bbe9e94edb00eee69c12e::map::TileStatic"
+               //fields: {building_id: 65535, e: 2, kind: 0, n: 65535, s: 65535, …}
+                const tile = obj.fields;
                 tilesMap.set(index, {
                     x: Number(tile.x),
                     y: Number(tile.y),
@@ -635,7 +639,9 @@ export class SuiManager {
 
         // 解析 buildings_static (vector<BuildingStatic>)
         if (fields.buildings_static && Array.isArray(fields.buildings_static)) {
-            fields.buildings_static.forEach((building: any, index: number) => {
+            fields.buildings_static.forEach((obj: any, index: number) => {
+
+                const building = obj.fields;
                 buildingsMap.set(index, {
                     x: Number(building.x || 0),
                     y: Number(building.y || 0),
@@ -653,7 +659,7 @@ export class SuiManager {
             : [];
 
         return {
-            id: Number(fields.id || 0),
+            id: fields.id.id,
             tiles_static: tilesMap,
             buildings_static: buildingsMap,
             hospital_ids: hospitalIds

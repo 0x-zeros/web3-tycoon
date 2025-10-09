@@ -66,7 +66,7 @@ export interface TileStatic {
  */
 export interface MapTemplate {
     /** 模板ID */
-    id: number;
+    id: string;
     /** 地块静态数据表 */
     tiles_static: Map<number, TileStatic>;
     /** 建筑静态数据表 */

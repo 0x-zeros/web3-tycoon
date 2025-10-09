@@ -484,7 +484,7 @@ export class UIEditor extends UIBase {
 
             // Step 4: 导出 MapTemplate
             console.log('[UIEditor] Exporting map template...');
-            const mapTemplate = exportGameMapToMapTemplate(gameMap, 0);  // templateId=0，Move 端自动生成
+            const mapTemplate = exportGameMapToMapTemplate(gameMap, '0');  // templateId=0，Move 端自动生成
             console.log('[UIEditor] ✓ Map template exported');
 
             // Step 5: 显示确认对话框

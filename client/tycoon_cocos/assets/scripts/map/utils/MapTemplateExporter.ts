@@ -35,7 +35,7 @@ import type { MapBuilding } from '../core/MapBuilding';
  * @returns MapTemplate 数据
  * @throws 如果前置条件未满足
  */
-export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: number = 0): MapTemplate {
+export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: string = '0'): MapTemplate {
     console.log('[MapExporter] Exporting GameMap to MapTemplate...');
 
     // ===== 前置条件检查 =====
@@ -224,4 +224,3 @@ function getDefaultTileSpecial(tileKind: number): bigint {
 function getDefaultBuildingPrice(size: 1 | 2): bigint {
     return size === 1 ? DEFAULT_BUILDING_PRICE_1X1 : DEFAULT_BUILDING_PRICE_2X2;
 }
-

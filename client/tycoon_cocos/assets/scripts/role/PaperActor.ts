@@ -368,7 +368,7 @@ export class PaperActor extends Component {
                 this.meshRenderer.setMaterial(this.material, 0);
             }
 
-            console.log(`[PaperActor] Set texture for ${this.node.name}: ${texture.name || 'unnamed'}`);
+            // console.log(`[PaperActor] Set texture for ${this.node.name}: ${texture.name || 'unnamed'}`);
         } catch (e) {
             console.warn(`[PaperActor] Failed to set texture for ${this.node.name}:`, e);
         }

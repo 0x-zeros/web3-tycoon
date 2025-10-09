@@ -6,6 +6,7 @@
     <image id="mumq7" name="logo.png" path="/images/"/>
     <component id="pseu8" name="Loading.xml" path="/" exported="true"/>
     <component id="pseu9" name="LoadingProgressBar.xml" path="/components/"/>
+    <component id="azobb" name="Keypair.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

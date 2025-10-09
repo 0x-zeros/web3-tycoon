@@ -537,7 +537,7 @@ export class UIEditor extends UIBase {
                         text: "返回创建游戏",
                         callback: () => {
                             // 返回 UIMapSelect 并选中刚发布的模板
-                            this._returnToMapSelectWithTemplate();
+                            this._returnToMapSelectWithTemplate(result.templateId);
                         }
                     },
                     secondary: {
@@ -554,10 +554,22 @@ export class UIEditor extends UIBase {
                         visible: true,
                         callback: async () => {
                             console.log('[UIEditor] Creating game with template:', result.templateId);
-                            // 直接使用刚发布的模板创建游戏
+
+                            // 1. 先隐藏编辑器（卸载地图）
+                            EventBus.emit(EventTypes.Game.RequestMapChange, {
+                                toMapId: null
+                            });
+
+                            // 2. 直接使用刚发布的模板创建游戏（复用方法）
                             try {
                                 await SuiManager.instance.createGameWithTemplate(result.templateId);
-                                // 创建成功会触发 GameCreated 事件，UIMapSelect 会显示详情
+
+                                // createGameWithTemplate 内部会：
+                                // - 显示创建成功 MessageBox
+                                // - 触发 GameCreatedEvent
+                                // - SuiManager 设置 _currentGame
+                                // - UIMapSelect 自动显示 GameDetail
+
                             } catch (error) {
                                 // 错误已在 createGameWithTemplate 中处理
                                 console.error('[UIEditor] Create game error:', error);
@@ -585,16 +597,9 @@ export class UIEditor extends UIBase {
 
     /**
      * 返回到 UIMapSelect 并选中刚发布的模板
-     * 参考 UIInGame._onExitGameClick() 的实现
+     * @param templateId 模板 ID
      */
-    private _returnToMapSelectWithTemplate(): void {
-        const templateId = SuiManager.instance.lastPublishedTemplateId;
-
-        if (templateId === null) {
-            console.warn('[UIEditor] No lastPublishedTemplateId');
-            return;
-        }
-
+    private _returnToMapSelectWithTemplate(templateId: number): void {
         console.log('[UIEditor] Returning to UIMapSelect');
         console.log('  Template ID:', templateId);
 
@@ -603,15 +608,13 @@ export class UIEditor extends UIBase {
             toMapId: null
         });
 
-        // 2. 显示 UIMapSelect（带参数）
-        EventBus.emit(EventTypes.UI.ShowMapSelect, {
-            category: 1,  // Map 列表（map_id）
-            selectTemplateId: templateId,
-            source: "editor_publish_success"
+        // 2. 显示 UIMapSelect，切换到 map_id tab，并选中模板
+        UIManager.instance.show('UIMapSelect', {
+            category: 1,  // ✅ 1 = map_id tab
+            selectTemplateId: templateId  // ✅ 选中刚发布的模板
         });
 
-        // 注意：不需要 this.hide()
-        // UIInGame 会监听 ShowMapSelect 事件并隐藏（包括子组件 UIEditor）
+        console.log('[UIEditor] Returning to map selection with template selected');
     }
 
     /**

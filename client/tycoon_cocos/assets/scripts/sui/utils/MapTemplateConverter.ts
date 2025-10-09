@@ -8,7 +8,7 @@ import type { MapTemplate, TileStatic, BuildingStatic } from '../types/map';
 import type { MapSaveData, TileData, BuildingData } from '../../map/data/MapDataTypes';
 import type { Game } from '../types/game';
 import { TileKind, BuildingSize, NO_BUILDING, INVALID_TILE_ID } from '../types/constants';
-import { getWeb3BlockByBlockId } from '../../voxel/Web3BlockTypes';
+import { Web3TileType, Web3BuildingType } from '../../voxel/Web3BlockTypes';
 
 /**
  * 将 Move MapTemplate + Game 数据转换为 MapSaveData
@@ -33,18 +33,14 @@ export function convertMapTemplateToSaveData(
 
     // 1. 转换 Tiles
     template.tiles_static.forEach((tileStatic, tileId) => {
-        const blockId = getTileBlockId(tileStatic.kind);
-        const block = getWeb3BlockByBlockId(blockId);
-
         tiles.push({
-            blockId: blockId,
-            typeId: block?.typeId || 0,  // ✅ 添加 typeId
+            blockId: getTileBlockId(tileStatic.kind),
+            typeId: getTileTypeId(tileStatic.kind),  // ✅ 必须字段
             position: {
                 x: tileStatic.x,
                 z: tileStatic.y  // 注意：Move 的 y 对应 Cocos 的 z
             },
-            // ✅ 扩展数据放入 data 字段
-            data: {
+            data: {  // ✅ 嵌套在 data 对象中
                 tileId: tileId,
                 buildingId: tileStatic.building_id !== NO_BUILDING ? tileStatic.building_id : undefined,
                 w: tileStatic.w !== INVALID_TILE_ID ? tileStatic.w : undefined,
@@ -76,35 +72,21 @@ export function convertMapTemplateToSaveData(
         // 从 Game.buildings 获取动态数据（owner, level, building_type）
         const gameBuildingData = game.buildings[buildingId];
 
-        // ✅ 修复：owner 是索引，需要转换为地址
-        const ownerIdx = gameBuildingData?.owner ?? 255;
-        const owner = ownerIdx !== 255 && game.players[ownerIdx]
-            ? game.players[ownerIdx].owner
-            : undefined;
-
-        const blockId = getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type);
-        const block = getWeb3BlockByBlockId(blockId);
-
-        // ✅ 补齐 entranceTileIds 为 [id, 65535] 格式
-        const entranceIds: [number, number] = entranceTiles.length === 1
-            ? [entranceTiles[0], INVALID_TILE_ID]
-            : [entranceTiles[0], entranceTiles[1]];
-
         buildings.push({
-            blockId: blockId,
-            typeId: block?.typeId || 200,  // ✅ 添加 typeId
+            blockId: getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type),
+            typeId: getBuildingTypeId(buildingStatic.size),  // ✅ 必须字段
+            size: buildingStatic.size as (1 | 2),
             position: {
                 x: firstEntranceTile.x,
                 z: firstEntranceTile.y
             },
-            size: buildingStatic.size as (1 | 2),
             direction: 0,  // 默认朝向（MapTemplate 中暂无存储）
             buildingId: buildingId,
-            entranceTileIds: entranceIds,  // ✅ 补齐为 [id, 65535]
-            // chainPrevId/chainNextId 暂不填充（BuildingData 中未定义）
-            owner: owner,  // ✅ 修复：使用玩家地址而非索引
+            entranceTileIds: entranceTiles.slice(0, 2) as [number, number],  // 最多2个入口
+            // chainPrevId/chainNextId 在 BuildingData 中不存在，存储在 BuildingInfo 中
+            owner: gameBuildingData?.owner !== 255 ? gameBuildingData.owner.toString() : undefined,  // NO_OWNER
             level: gameBuildingData?.level ?? 0,
-            price: Number(buildingStatic.price),  // BigInt → Number
+            price: Number(buildingStatic.price),  // BigInt → number
             rent: [Number(buildingStatic.price / BigInt(10))],  // 简化：租金 = 价格/10
             mortgaged: false
         });
@@ -114,26 +96,57 @@ export function convertMapTemplateToSaveData(
     console.log('  Tiles:', tiles.length);
     console.log('  Buildings:', buildings.length);
 
-    // ✅ 填充 MapSaveData 元数据字段
-    const now = Date.now();
-    return {
-        // 元数据字段（MapMetadata）
+    // 调试：打印第一个 tile 和 building 的数据
+    if (tiles.length > 0) {
+        console.log('  First tile:', JSON.stringify(tiles[0], null, 2));
+    }
+    if (buildings.length > 0) {
+        console.log('  First building:', JSON.stringify(buildings[0], null, 2));
+    }
+
+    const result = {
+        // ✅ MapMetadata 必须字段
         mapId,
-        mapName: `Chain Map ${game.id.slice(0, 8)}`,
+        mapName: `Chain Game ${game.id.slice(0, 8)}...`,
         version: '1.0.0',
-        createTime: now,
-        updateTime: now,
+        createTime: Date.now(),
+        updateTime: Date.now(),
 
-        // 游戏模式
-        gameMode: 'play',
-
-        // 地图数据
+        // MapSaveData 字段
+        gameMode: 'play',  // 游戏模式（非编辑）
         tiles,
-        objects: [],
+        objects: [],  // 游戏中不使用旧的 objects 系统
         buildings,
-        npcs: [],
-        decorations: []
+        npcs: [],  // NPC 数据需要从 Game events 或额外查询获取
+        decorations: []  // 装饰物暂不支持
     };
+
+    console.log('[MapTemplateConverter] MapSaveData created:', {
+        mapId: result.mapId,
+        tilesCount: result.tiles.length,
+        buildingsCount: result.buildings?.length || 0
+    });
+
+    return result;
+}
+
+/**
+ * Move TileKind → Web3TileType 映射
+ */
+function getTileTypeId(kind: number): number {
+    switch (kind) {
+        case TileKind.EMPTY: return Web3TileType.EMPTY_LAND;
+        case TileKind.LOTTERY: return Web3TileType.LOTTERY;
+        case TileKind.HOSPITAL: return Web3TileType.HOSPITAL;
+        case TileKind.CHANCE: return Web3TileType.CHANCE;
+        case TileKind.BONUS: return Web3TileType.BONUS;
+        case TileKind.FEE: return Web3TileType.FEE;
+        case TileKind.CARD: return Web3TileType.CARD;
+        case TileKind.NEWS: return Web3TileType.NEWS;
+        default:
+            console.warn(`[Converter] Unknown tile kind: ${kind}, using EMPTY_LAND`);
+            return Web3TileType.EMPTY_LAND;
+    }
 }
 
 /**
@@ -144,13 +157,13 @@ function getTileBlockId(kind: number): string {
         case TileKind.EMPTY: return 'web3:empty_land';
         case TileKind.LOTTERY: return 'web3:lottery';
         case TileKind.HOSPITAL: return 'web3:hospital';
-        case TileKind.PRISON: return 'web3:prison';
+        case TileKind.PRISON: return 'web3:hospital';  // PRISON 暂用 hospital 模型
         case TileKind.CHANCE: return 'web3:chance';
         case TileKind.BONUS: return 'web3:bonus';
         case TileKind.FEE: return 'web3:fee';
         case TileKind.CARD: return 'web3:card';
         case TileKind.NEWS: return 'web3:news';
-        case TileKind.SHOP: return 'web3:shop';
+        case TileKind.SHOP: return 'web3:card';  // SHOP 暂用 card 模型
         default:
             console.warn(`[Converter] Unknown tile kind: ${kind}, using empty_land`);
             return 'web3:empty_land';
@@ -158,9 +171,18 @@ function getTileBlockId(kind: number): string {
 }
 
 /**
- * 根据 building size 和 type 映射到客户端 blockId
+ * BuildingSize → Web3BuildingType 映射
  */
-function getBuildingBlockId(size: number, buildingType?: number): string {
+function getBuildingTypeId(size: number): number {
+    return size === BuildingSize.SIZE_1X1
+        ? Web3BuildingType.BUILDING_1X1
+        : Web3BuildingType.BUILDING_2X2;
+}
+
+/**
+ * 根据 building size 映射到客户端 blockId
+ */
+function getBuildingBlockId(size: number, _buildingType?: number): string {
     // 1x1 建筑：普通地产
     if (size === BuildingSize.SIZE_1X1) {
         return 'web3:building_1x1';

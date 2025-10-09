@@ -441,8 +441,7 @@ export class UIInGame extends UIBase {
             this.show();
 
             // 2. 隐藏 UIMapSelect
-            console.log('[UIInGame] Hiding UIMapSelect');
-            EventBus.emit(EventTypes.UI.ShowMapSelect, { hide: true });
+            //todo , 在UIMapSelect中自己处理隐藏
 
             // 3. 获取 GameMap 实例
             const mapManager = MapManager.getInstance();

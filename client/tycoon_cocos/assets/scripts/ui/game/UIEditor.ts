@@ -609,7 +609,7 @@ export class UIEditor extends UIBase {
         });
 
         // 2. 显示 UIMapSelect，切换到 map_id tab，并选中模板
-        UIManager.instance.show('UIMapSelect', {
+        EventBus.emit(EventTypes.UI.ShowMapSelect, {
             category: 1,  // ✅ 1 = map_id tab
             selectTemplateId: templateId  // ✅ 选中刚发布的模板
         });

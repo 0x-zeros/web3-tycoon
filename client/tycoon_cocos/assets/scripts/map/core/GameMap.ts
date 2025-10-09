@@ -1238,6 +1238,18 @@ export class GameMap extends Component {
             if (mapData.buildings) {
                 for (const buildingData of mapData.buildings) {
                     const buildingKey = `${buildingData.position.x}_${buildingData.position.z}`;
+                    const gridPos = new Vec2(buildingData.position.x, buildingData.position.z);
+
+                    // 1. ✅ 先创建 voxel blocks（底层）
+                    if (buildingData.size === 1) {
+                        // 1x1 building：创建单个 tile block
+                        await this.placeTileAt(buildingData.blockId, gridPos);
+                    } else if (buildingData.size === 2) {
+                        // 2x2 building：创建 4 个 blocks
+                        await this.place2x2Building(buildingData.blockId, gridPos);
+                    }
+
+                    // 2. 添加到 registry
                     const buildingInfo: BuildingInfo = {
                         blockId: buildingData.blockId,
                         position: buildingData.position,
@@ -1253,8 +1265,7 @@ export class GameMap extends Component {
                     };
                     this._buildingRegistry.set(buildingKey, buildingInfo);
 
-                    // 创建 Building 的 PaperActor
-                    const gridPos = new Vec2(buildingData.position.x, buildingData.position.z);
+                    // 3. 创建 Building 的 PaperActor（上层精灵）
                     this.createBuildingPaperActor(
                         buildingData.blockId,
                         gridPos,

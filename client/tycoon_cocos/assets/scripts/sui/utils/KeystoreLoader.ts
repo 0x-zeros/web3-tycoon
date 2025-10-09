@@ -140,85 +140,82 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
 }
 
 /**
- * 从 base64 解析 keypair
- * @param base64 Base64 编码的私钥（33 字节：1 字节标识符 + 32 字节私钥）
+ * 从加密存储的数据解析 keypair
+ * @param data 解密后的私钥数据（Bech32 字符串或 Base64）
  * @returns Ed25519Keypair
  */
-function parseKeypairFromBase64(base64: string): Ed25519Keypair {
-    const decoded = atob(base64);
-    const bytes = new Uint8Array(decoded.length);
-    for (let i = 0; i < decoded.length; i++) {
-        bytes[i] = decoded.charCodeAt(i);
+function parseKeypairFromBase64(data: string): Ed25519Keypair {
+    console.log('[KeystoreLoader] parseKeypairFromBase64: START');
+    console.log('  Data length:', data.length);
+    console.log('  Data sample:', data.substring(0, 20) + '...');
+
+    try {
+        // 方法1: 尝试直接作为 Bech32 或原始数据传给 fromSecretKey
+        console.log('[KeystoreLoader] Attempting method 1: Direct fromSecretKey');
+        const keypair = Ed25519Keypair.fromSecretKey(data);
+        const address = keypair.toSuiAddress();
+        console.log('  Method 1 SUCCESS, address:', address);
+        return keypair;
+    } catch (error1) {
+        console.warn('[KeystoreLoader] Method 1 failed:', error1);
+
+        try {
+            // 方法2: 尝试 Base64 解码后传给 fromSecretKey
+            console.log('[KeystoreLoader] Attempting method 2: Base64 decode');
+            const decoded = atob(data);
+            const bytes = new Uint8Array(decoded.length);
+            for (let i = 0; i < decoded.length; i++) {
+                bytes[i] = decoded.charCodeAt(i);
+            }
+
+            // 跳过第一个字节（可能是类型标识符）
+            const privateKeyBytes = bytes.subarray(1);
+            console.log('  Decoded bytes length:', privateKeyBytes.length);
+
+            const keypair = Ed25519Keypair.fromSecretKey(privateKeyBytes);
+            const address = keypair.toSuiAddress();
+            console.log('  Method 2 SUCCESS, address:', address);
+            return keypair;
+        } catch (error2) {
+            console.error('[KeystoreLoader] Method 2 also failed:', error2);
+            throw new Error('Failed to parse keypair from stored data');
+        }
     }
-
-    // 跳过第一个字节（密钥类型标识符）
-    const privateKeyBytes = bytes.subarray(1);
-
-    if (privateKeyBytes.length !== 32) {
-        throw new Error(`Invalid private key length: ${privateKeyBytes.length}, expected 32 bytes`);
-    }
-
-    return Ed25519Keypair.fromSecretKey(privateKeyBytes);
 }
 
 /**
- * 导出 keypair 为 base64（兼容 Sui keystore 格式）
+ * 导出 keypair（使用 Sui SDK 原生格式）
  * @param keypair Ed25519Keypair
- * @returns Base64 字符串
+ * @returns 私钥数据（可直接传给 fromSecretKey）
  */
 function exportKeypairToBase64(keypair: Ed25519Keypair): string {
     console.log('[KeystoreLoader] exportKeypairToBase64: START');
 
-    // 使用 getSecretKey() 获取私钥
+    // 使用 getSecretKey() 获取私钥（可能是 Bech32 字符串或 Uint8Array）
     const secretKey = keypair.getSecretKey();
-    console.log('  Secret key type:', secretKey.constructor.name);
+
+    // 检查类型
+    const isString = typeof secretKey === 'string';
+    const isUint8Array = secretKey instanceof Uint8Array;
+
+    console.log('  Secret key type:', isString ? 'string' : isUint8Array ? 'Uint8Array' : 'unknown');
     console.log('  Secret key length:', secretKey.length);
-    console.log('  Secret key sample (first 10 bytes):', Array.from(secretKey.slice(0, 10)));
 
-    // Sui SDK 的 getSecretKey() 返回格式：
-    // - 可能是 32 字节（纯私钥）
-    // - 可能是 64 字节（seed + key）
-    // - 可能是 70 字节（未知格式）
-
-    // 尝试不同的处理方式
-    let privateKey: Uint8Array;
-
-    if (secretKey.length === 32) {
-        console.log('  Format: 32 bytes (pure private key)');
-        privateKey = secretKey;
-    } else if (secretKey.length === 64) {
-        console.log('  Format: 64 bytes (seed + key)');
-        privateKey = secretKey.slice(0, 32);  // 取前 32 字节
-    } else if (secretKey.length === 70) {
-        console.log('  Format: 70 bytes (unknown, trying bcs encoding)');
-        // 可能是 BCS 编码，跳过前几个字节
-        // 尝试跳过前 38 字节（70 - 32）
-        privateKey = secretKey.slice(38);
+    if (isString) {
+        // Bech32 格式（如 "suiprivkey..."），直接返回
+        console.log('  Format: Bech32 string');
+        console.log('  Sample:', secretKey.substring(0, 20) + '...');
+        return secretKey;
+    } else if (isUint8Array) {
+        // Uint8Array 格式，转为 Base64
+        console.log('  Format: Uint8Array, converting to Base64');
+        const result = btoa(String.fromCharCode(...secretKey));
+        console.log('  Base64 length:', result.length);
+        return result;
     } else {
-        console.error('[KeystoreLoader] Unexpected secret key length:', secretKey.length);
-        console.error('  Trying to use last 32 bytes as fallback');
-        // 尝试使用最后 32 字节
-        privateKey = secretKey.slice(secretKey.length - 32);
+        console.error('[KeystoreLoader] Unknown secret key format');
+        throw new Error('Unknown secret key format from getSecretKey()');
     }
-
-    console.log('  Extracted private key length:', privateKey.length);
-
-    if (privateKey.length !== 32) {
-        console.error('[KeystoreLoader] Failed to extract 32-byte private key');
-        throw new Error(`Invalid private key length: ${privateKey.length}, expected 32`);
-    }
-
-    // 添加类型标识符（0x00 for Ed25519）
-    const withFlag = new Uint8Array(33);
-    withFlag[0] = 0x00;
-    withFlag.set(privateKey, 1);
-    console.log('  With flag length:', withFlag.length);
-
-    const result = btoa(String.fromCharCode(...withFlag));
-    console.log('  Base64 result length:', result.length);
-    console.log('[KeystoreLoader] exportKeypairToBase64: SUCCESS');
-
-    return result;
 }
 
 /**

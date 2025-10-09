@@ -89,6 +89,8 @@ export function exportGameMapToMapTemplate(gameMap: GameMap, templateId: string 
             const size = info.size;
 
             buildingsMap.set(buildingId, {
+                x: info.position.x,
+                y: info.position.z,  // Cocos z 对应 Move y
                 size,
                 price: info.price ?? getDefaultBuildingPrice(size),
                 chain_prev_id: info.chainPrevId ?? NO_BUILDING,

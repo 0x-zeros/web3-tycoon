@@ -154,6 +154,9 @@ export enum EventType {
     GAME_STARTED = 'GameStartedEvent',
     GAME_ENDED = 'GameEndedEvent',
 
+    // 管理事件
+    MAP_TEMPLATE_PUBLISHED = 'MapTemplatePublishedEvent',
+
     // 回合管理
     TURN_START = 'TurnStartEvent',
     SKIP_TURN = 'SkipTurnEvent',

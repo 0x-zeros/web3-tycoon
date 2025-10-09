@@ -13,6 +13,7 @@ import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
+import type { MapTemplatePublishedEvent } from "../../../sui/types/admin";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -25,8 +26,8 @@ export class UIMapList extends UIBase {
     private m_btn_createGame: fgui.GButton;
 
     // 数据
-    private _templates: { id: number; name: string }[] = [];
-    private _selectedTemplateId: number | null = null;
+    private _templates: MapTemplatePublishedEvent[] = [];
+    private _selectedTemplateId: string | null = null;
     private _selectedIndex: number = -1;
 
     /**
@@ -56,6 +57,9 @@ export class UIMapList extends UIBase {
      */
     protected bindEvents(): void {
         this.m_btn_createGame?.onClick(this._onCreateGameClick, this);
+
+        // 监听地图模板发布事件（实时更新列表）
+        EventBus.on(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
     }
 
     /**
@@ -63,6 +67,7 @@ export class UIMapList extends UIBase {
      */
     protected unbindEvents(): void {
         this.m_btn_createGame?.offClick(this._onCreateGameClick, this);
+        EventBus.off(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
         super.unbindEvents();
     }
 
@@ -115,20 +120,17 @@ export class UIMapList extends UIBase {
         // 根据 FairyGUI 的实际组件名称设置
         const mapidText = button.getChild("mapid") as fgui.GTextField;
         if (mapidText) {
-            mapidText.text = template.id.toString();
+            mapidText.text = template.template_id;  // ✅ 完整显示 template_id
         }
 
         const tileText = button.getChild("tile") as fgui.GTextField;
         if (tileText) {
-            // TODO: 需要完整的 MapTemplate 对象才能获取 tiles_static.size
-            // 当前缓存只有 {id, name}，暂时显示 N/A
-            tileText.text = 'N/A';
+            tileText.text = template.tile_count.toString();  // ✅ 来自事件
         }
 
         const buildingText = button.getChild("building") as fgui.GTextField;
         if (buildingText) {
-            // TODO: 需要完整的 MapTemplate 对象才能获取 buildings_static.size
-            buildingText.text = 'N/A';
+            buildingText.text = template.building_count.toString();  // ✅ 来自事件
         }
 
         // 设置选中状态
@@ -148,9 +150,9 @@ export class UIMapList extends UIBase {
 
         this._selectedIndex = index;
         const template = this._templates[index];
-        this._selectedTemplateId = template.id;
+        this._selectedTemplateId = template.template_id;
 
-        console.log(`[UIMapList] Selected template: ${template.name} (ID: ${template.id})`);
+        console.log(`[UIMapList] Selected template ID: ${template.template_id}`);
 
         // 刷新列表显示选中状态
         if (this.m_list) {
@@ -170,7 +172,7 @@ export class UIMapList extends UIBase {
         }
 
         try {
-            // 调用封装的创建游戏方法
+            // ✅ 直接调用（template_id 已是 string 类型）
             await SuiManager.instance.createGameWithTemplate(this._selectedTemplateId);
         } catch (error) {
             // 错误已在 createGameWithTemplate 中处理
@@ -180,11 +182,11 @@ export class UIMapList extends UIBase {
     /**
      * 根据模板 ID 选中（用于发布后返回）
      */
-    public selectTemplateById(templateId: number): void {
+    public selectTemplateById(templateId: string): void {
         console.log('[UIMapList] selectTemplateById:', templateId);
 
         // 查找模板索引
-        const index = this._templates.findIndex(t => t.id === templateId);
+        const index = this._templates.findIndex(t => t.template_id === templateId);
 
         if (index >= 0) {
             console.log('  Found template at index:', index);
@@ -209,5 +211,14 @@ export class UIMapList extends UIBase {
         if (index >= 0) {
             this._selectTemplate(index);
         }
+    }
+
+    /**
+     * 地图模板发布事件（实时更新列表）
+     */
+    private _onMapTemplatePublished(eventData: any): void {
+        console.log('[UIMapList] MapTemplatePublished event received');
+        console.log('  Template ID:', eventData.template_id);
+        this.refresh();  // 刷新列表
     }
 }

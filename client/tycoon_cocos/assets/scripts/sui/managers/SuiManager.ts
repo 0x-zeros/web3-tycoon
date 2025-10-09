@@ -17,6 +17,7 @@ import { TycoonEventIndexer } from '../events/indexer';
 import { EventType } from '../events/types';
 import type { Game, Player, Seat, GameCreateConfig } from '../types/game';
 import type { MapTemplate, TileStatic, BuildingStatic } from '../types/map';
+import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';
 import type { SeatNFT, MapTemplateNFT, DeFiAssets } from '../types/assets';
 import { EventBus } from '../../events/EventBus';
@@ -62,7 +63,7 @@ export class SuiManager {
     // 缓存数据（链上数据）
     private _cachedGameData: any = null;
     private _cachedGames: Game[] = [];
-    private _cachedMapTemplates: { id: number; name: string }[] = [];
+    private _cachedMapTemplates: MapTemplatePublishedEvent[] = [];
     private _cacheTimestamp: number = 0;
 
     // 缓存数据（玩家资产）
@@ -511,12 +512,12 @@ export class SuiManager {
 
     /**
      * 使用指定模板创建游戏（封装通用逻辑）
-     * @param templateId 模板 ID
+     * @param templateId 模板 ID（Sui 对象 ID）
      * @param options 可选配置
      * @returns 游戏 ID 和座位 ID
      */
     public async createGameWithTemplate(
-        templateId: number,
+        templateId: string,
         options?: {
             maxPlayers?: number;
             startingCash?: bigint;
@@ -543,7 +544,7 @@ export class SuiManager {
 
         try {
             const result = await this.createGame({
-                template_map_id: templateId.toString(),
+                template_map_id: templateId,  // ✅ 直接使用 string
                 max_players: options?.maxPlayers || 4,
                 starting_cash: options?.startingCash || defaultStartingCash,  // 从 GameData
                 price_rise_days: options?.priceRiseDays || 15,                // DEFAULT_PRICE_RISE_DAYS
@@ -976,6 +977,25 @@ export class SuiManager {
             await this._onGameStarted(event);
         });
 
+        // 监听地图模板发布事件
+        this._eventIndexer.on(EventType.MAP_TEMPLATE_PUBLISHED, (event) => {
+            console.log('[SuiManager] MapTemplatePublishedEvent from chain:', event.data);
+
+            // 添加到缓存（包含所有事件字段）
+            const templateInfo: MapTemplatePublishedEvent = {
+                template_id: event.data.template_id,
+                publisher: event.data.publisher,
+                tile_count: event.data.tile_count,
+                building_count: event.data.building_count
+            };
+
+            this._cachedMapTemplates.push(templateInfo);
+            console.log('[SuiManager] Map template added to cache:', templateInfo);
+
+            // 转发到 EventBus
+            EventBus.emit(EventTypes.Move.MapTemplatePublished, event.data);
+        });
+
         console.log('[SuiManager] Event listener started');
     }
 
@@ -1228,7 +1248,7 @@ export class SuiManager {
     /**
      * 获取缓存的地图模板列表
      */
-    public getCachedMapTemplates(): { id: number; name: string }[] {
+    public getCachedMapTemplates(): MapTemplatePublishedEvent[] {
         return this._cachedMapTemplates;
     }
 

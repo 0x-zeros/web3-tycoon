@@ -5,6 +5,7 @@
 
 import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
 import type { Game, Player, Building, Tile } from '../types/game';
+import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';
 
 /**
@@ -190,10 +191,11 @@ export class QueryService {
     }
 
     /**
-     * 获取地图模板列表
+     * 获取地图模板列表（通过事件查询）
+     * 返回 MapTemplatePublishedEvent 数据，不查询完整对象
      */
-    async getMapTemplates(): Promise<{ id: number; name: string }[]> {
-        const templates: { id: number; name: string }[] = [];
+    async getMapTemplates(): Promise<MapTemplatePublishedEvent[]> {
+        const templates: MapTemplatePublishedEvent[] = [];
 
         try {
             // 通过 MapTemplatePublishedEvent 查询
@@ -208,8 +210,10 @@ export class QueryService {
             for (const event of response.data) {
                 const eventData = event.parsedJson as any;
                 templates.push({
-                    id: eventData.template_id || 0,
-                    name: `模板 ${eventData.template_id}`  // ✅ 直接使用 fallback（Move 端无 name 字段）
+                    template_id: eventData.template_id || '',
+                    publisher: eventData.publisher || '',
+                    tile_count: eventData.tile_count || 0,
+                    building_count: eventData.building_count || 0
                 });
             }
 

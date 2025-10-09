@@ -383,7 +383,9 @@ export const EventTypes = {
         /** 游戏开始事件 */
         GameStarted: "move_game_started",
         /** 游戏结束事件 */
-        GameEnded: "move_game_ended"
+        GameEnded: "move_game_ended",
+        /** 地图模板发布事件 */
+        MapTemplatePublished: "move_map_template_published"
     },
 
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */

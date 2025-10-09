@@ -40,7 +40,7 @@ done
 if [ "$#" -lt 1 ]; then
     echo "Error: No environment provided."
     echo "Usage: $0 <environment>"
-    echo "Environment can be: testnet, mainnet, local, localnet"
+    echo "Environment can be: testnet, mainnet, local, devnet"
     exit 1
 fi
 # 保存环境参数并移除已处理的参数
@@ -150,7 +150,10 @@ EOF
 COCOS_CONFIG_DIR="../../client/tycoon_cocos/assets/scripts/config"
 mkdir -p "$COCOS_CONFIG_DIR"
 COCOS_CONFIG="$COCOS_CONFIG_DIR/env.$CONFIG_ENV.ts"
-cat > "$COCOS_CONFIG" <<EOF
+
+# 根据环境决定是否添加 signerType 配置
+if [ "$CONFIG_ENV" = "localnet" ]; then
+    cat > "$COCOS_CONFIG" <<EOF
 /**
  * Sui区块链环境配置
  * 自动生成于: $(date '+%Y-%m-%d %H:%M:%S')
@@ -161,8 +164,26 @@ export const SuiEnvConfig = {
     adminCap: '$ADMIN_CAP',
     gameData: '$GAME_DATA',
     network: '$CONFIG_ENV',
+
+    // 开发环境使用 Keypair 签名
+    signerType: 'keypair' as const
 };
 EOF
+else
+    cat > "$COCOS_CONFIG" <<EOF
+/**
+ * Sui区块链环境配置
+ * 自动生成于: $(date '+%Y-%m-%d %H:%M:%S')
+ */
+export const SuiEnvConfig = {
+    packageId: '$PACKAGE_ID',
+    upgradeCap: '$UPGRADE_CAP',
+    adminCap: '$ADMIN_CAP',
+    gameData: '$GAME_DATA',
+    network: '$CONFIG_ENV'
+};
+EOF
+fi
 
 # # 构建CLI环境文件的绝对路径
 # ENV="$(readlink -f ../cli)/$ENV.env"

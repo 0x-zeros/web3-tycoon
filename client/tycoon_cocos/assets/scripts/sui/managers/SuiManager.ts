@@ -893,7 +893,7 @@ export class SuiManager {
             // 并行查询所有数据
             const [gameData, games, templates] = await Promise.all([
                 this._queryService!.getGameData(),
-                this._queryService!.queryAllGames({ limit: 50, order: 'descending' }),  // ✅ 查询所有游戏，不过滤状态
+                this._queryService!.queryAllGamesBatch({ limit: 50, order: 'descending' }),  // ✅ 使用批量版本提升性能
                 this._queryService!.getMapTemplates()
             ]);
 

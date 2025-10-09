@@ -138,6 +138,93 @@ export class QueryService {
     }
 
     /**
+     * 查询所有 Game 类型的共享对象（批量版本，使用 multiGetObjects）
+     * 性能优化：减少网络请求次数（50个游戏：从50次降为1次）
+     */
+    async queryAllGamesBatch(options: GameQueryOptions = {}): Promise<GameListItem[]> {
+        const games: GameListItem[] = [];
+
+        try {
+            // 1. 查询所有 GameCreatedEvent
+            const response = await this.client.queryEvents({
+                query: {
+                    MoveEventType: `${this.packageId}::events::GameCreatedEvent`
+                },
+                limit: options.limit || 50,
+                order: options.order || 'descending'
+            });
+
+            console.log('[QueryService] queryAllGamesBatch num:', response.data.length);
+
+            // 2. 提取所有 gameId 和 event 元数据
+            const eventDataList = response.data
+                .map(event => {
+                    const eventData = event.parsedJson as any;
+                    const gameId = eventData.game;
+                    if (!gameId) return null;
+
+                    return {
+                        gameId,
+                        createdAt: Number(event.timestampMs || 0),
+                        creator: eventData.creator
+                    };
+                })
+                .filter(item => item !== null) as Array<{
+                    gameId: string;
+                    createdAt: number;
+                    creator: string;
+                }>;
+
+            if (eventDataList.length === 0) {
+                return games;
+            }
+
+            // 3. 批量获取 Game 对象（关键优化点）
+            const gameIds = eventDataList.map(item => item.gameId);
+            console.log(`[QueryService] Fetching ${gameIds.length} games in batch...`);
+
+            const gameResponses = await this.client.multiGetObjects({
+                ids: gameIds,
+                options: {
+                    showContent: true,
+                    showType: true
+                }
+            });
+
+            // 4. 批量解析并组装结果
+            for (let i = 0; i < gameResponses.length; i++) {
+                const response = gameResponses[i];
+                const eventData = eventDataList[i];
+
+                const game = this.parseGameObject(response);
+                if (!game) {
+                    console.log('[QueryService] Game not found:', eventData.gameId);
+                    continue;
+                }
+
+                // 过滤状态
+                if (options.status !== undefined && game.status !== options.status) {
+                    continue;
+                }
+
+                games.push({
+                    game,
+                    objectId: eventData.gameId,
+                    createdAt: eventData.createdAt,
+                    isMyCreation: false  // 后续由调用者设置
+                });
+            }
+
+            console.log(`[QueryService] Batch query completed: ${games.length} games matched`);
+
+        } catch (error) {
+            console.error('[QueryService] Failed to query all games (batch):', error);
+        }
+
+        return games;
+    }
+
+    /**
      * 获取单个游戏详情
      */
     async getGame(gameId: string): Promise<Game | null> {

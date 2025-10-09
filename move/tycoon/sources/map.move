@@ -36,6 +36,8 @@ const NO_BUILDING: u16 = 65535;        // u16::MAX 表示tile不属于任何buil
 // - chain_prev_id: 前一个连街建筑ID（NO_BUILDING表示无效）
 // - chain_next_id: 后一个连街建筑ID（NO_BUILDING表示无效）
 public struct BuildingStatic has store, copy, drop {
+    x: u8,          // X坐标（客户端展示用）
+    y: u8,          // Y坐标（客户端展示用）
     size: u8,       // 建筑大小（1x1 或 2x2）
     price: u64,     // 购买价格
     chain_prev_id: u16,  // 前一个连街建筑（只对1x1有效）
@@ -163,12 +165,16 @@ public fun new_tile_static(
 
 // 创建建筑静态信息
 fun new_building_static(
+    x: u8,
+    y: u8,
     size: u8,
     price: u64,
     chain_prev_id: u16,
     chain_next_id: u16
 ): BuildingStatic {
     BuildingStatic {
+        x,
+        y,
         size,
         price,
         chain_prev_id,
@@ -246,13 +252,15 @@ public(package) fun publish_map_from_bcs(
 
     let mut i = 0;
     while (i < building_count) {
-        // 按 BuildingStatic 字段顺序 peel：size, price, chain_prev_id, chain_next_id
+        // 按 BuildingStatic 字段顺序 peel：x, y, size, price, chain_prev_id, chain_next_id
+        let x = bcs_reader.peel_u8();
+        let y = bcs_reader.peel_u8();
         let size = bcs_reader.peel_u8();
         let price = bcs_reader.peel_u64();
         let chain_prev_id = bcs_reader.peel_u16();
         let chain_next_id = bcs_reader.peel_u16();
 
-        let building = new_building_static(size, price, chain_prev_id, chain_next_id);
+        let building = new_building_static(x, y, size, price, chain_prev_id, chain_next_id);
         buildings.push_back(building);
         i = i + 1;
     };

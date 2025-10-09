@@ -13,6 +13,10 @@ import { NO_BUILDING } from './constants';
  * 注意：这是建筑的经济属性，与地块分离
  */
 export interface BuildingStatic {
+    /** X坐标（客户端展示用） */
+    x: number;
+    /** Y坐标（客户端展示用） */
+    y: number;
     /** 建筑大小（1=1x1小建筑，2=2x2大建筑） */
     size: number;
     /** 基础价格 */

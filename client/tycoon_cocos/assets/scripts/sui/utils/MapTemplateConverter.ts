@@ -88,8 +88,8 @@ export function convertMapTemplateToSaveData(
         }
 
 
-        // 使用第一个入口 tile 的坐标作为 building 的坐标
-        const gridPos = {x: 0, y: 0}; //todo 要在move的 BuildingStatic里添加x, y (u8， 同tTileStatic的)； publish的相应地方也需要修改
+        // 使用 BuildingStatic 中的坐标（已在Move端添加）
+        const gridPos = {x: buildingStatic.x, y: buildingStatic.y};
 
         // 从 Game.buildings 获取动态数据（owner, level, building_type）
         const gameBuildingData = game.buildings[buildingId];

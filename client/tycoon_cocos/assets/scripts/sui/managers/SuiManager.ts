@@ -634,6 +634,8 @@ export class SuiManager {
         if (fields.buildings_static && Array.isArray(fields.buildings_static)) {
             fields.buildings_static.forEach((building: any, index: number) => {
                 buildingsMap.set(index, {
+                    x: Number(building.x || 0),
+                    y: Number(building.y || 0),
                     size: Number(building.size),
                     price: BigInt(building.price || 0),
                     chain_prev_id: Number(building.chain_prev_id),

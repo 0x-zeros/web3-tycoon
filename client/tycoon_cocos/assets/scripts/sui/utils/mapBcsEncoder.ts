@@ -186,6 +186,8 @@ export function decodeMapTemplateFromBCS(
             s: t.s
         })),
         buildings: buildings.map(b => ({
+            x: b.x,
+            y: b.y,
             size: b.size,
             price: b.price,
             chain_prev_id: b.chain_prev_id,

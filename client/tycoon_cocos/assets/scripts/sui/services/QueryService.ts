@@ -209,7 +209,7 @@ export class QueryService {
                 const eventData = event.parsedJson as any;
                 templates.push({
                     id: eventData.template_id || 0,
-                    name: eventData.name || `Template ${eventData.template_id}`
+                    name: `模板 ${eventData.template_id}`  // ✅ 直接使用 fallback（Move 端无 name 字段）
                 });
             }
 

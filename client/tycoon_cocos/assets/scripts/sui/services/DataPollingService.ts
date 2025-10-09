@@ -28,6 +28,7 @@ export interface PollingTask {
  */
 export class DataPollingService {
     private _timers: Map<string, any> = new Map();
+    private _inFlight: Map<string, boolean> = new Map();  // ✅ 并发保护标志
     private _running: boolean = false;
 
     /**
@@ -44,6 +45,15 @@ export class DataPollingService {
         const timer = setInterval(async () => {
             if (!this._running) return;
 
+            // ✅ 检查是否正在执行
+            if (this._inFlight.get(task.key)) {
+                console.warn(`[DataPolling] Task ${task.key} still in flight, skipping`);
+                return;
+            }
+
+            // ✅ 设置标志
+            this._inFlight.set(task.key, true);
+
             try {
                 const data = await task.fetcher();
 
@@ -59,6 +69,9 @@ export class DataPollingService {
                 if (task.onError) {
                     task.onError(error);
                 }
+            } finally {
+                // ✅ 清除标志
+                this._inFlight.delete(task.key);
             }
         }, task.interval);
 
@@ -87,6 +100,7 @@ export class DataPollingService {
         if (timer) {
             clearInterval(timer);
             this._timers.delete(key);
+            this._inFlight.delete(key);  // ✅ 清理标志
             console.log(`[DataPolling] Task unregistered: ${key}`);
         }
     }

@@ -536,17 +536,25 @@ export class UIEditor extends UIBase {
                     primary: {
                         text: "返回创建游戏",
                         callback: () => {
-                            // 返回 UIMapSelect 并选中刚发布的模板
-                            this._returnToMapSelectWithTemplate(result.templateId);
+                            try {
+                                // 返回 UIMapSelect 并选中刚发布的模板
+                                this._returnToMapSelectWithTemplate(result.templateId);
+                            } catch (error) {
+                                console.error('[UIEditor] Primary callback error:', error);
+                            }
                         }
                     },
                     secondary: {
                         text: "查看详情",
                         visible: true,
                         callback: () => {
-                            // 打开 Explorer
-                            UINotification.info("正在打开区块链浏览器...");
-                            SuiManager.instance.openUrl(explorerUrl);
+                            try {
+                                // 打开 Explorer
+                                UINotification.info("正在打开区块链浏览器...");
+                                SuiManager.instance.openUrl(explorerUrl);
+                            } catch (error) {
+                                console.error('[UIEditor] Secondary callback error:', error);
+                            }
                         }
                     },
                     btn_3: {
@@ -592,6 +600,12 @@ export class UIEditor extends UIBase {
                 `详细错误信息已输出到控制台`,
                 "发布失败"
             );
+        } finally {
+            // ✅ 确保按钮重新启用（无论成功或失败）
+            if (this.m_btn_toMoveMap) {
+                this.m_btn_toMoveMap.enabled = true;
+                console.log('[UIEditor] Publish button re-enabled');
+            }
         }
     }
 
@@ -611,7 +625,7 @@ export class UIEditor extends UIBase {
         // 2. 显示 UIMapSelect，切换到 map_id tab，并选中模板
         EventBus.emit(EventTypes.UI.ShowMapSelect, {
             category: 1,  // ✅ 1 = map_id tab
-            selectTemplateId: templateId  // ✅ 选中刚发布的模板
+            selectTemplateId: templateId.toString()  // ✅ 转为 string
         });
 
         console.log('[UIEditor] Returning to map selection with template selected');

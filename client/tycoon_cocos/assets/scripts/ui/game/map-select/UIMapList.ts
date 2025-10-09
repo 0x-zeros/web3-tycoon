@@ -109,6 +109,8 @@ export class UIMapList extends UIBase {
         if (index >= this._templates.length) return;
 
         const template = this._templates[index];
+        if (!template) return;  // ✅ 安全检查
+
         const button = item.asCom as fgui.GButton;
 
         // 显示索引（从 1 开始）
@@ -120,17 +122,17 @@ export class UIMapList extends UIBase {
         // 根据 FairyGUI 的实际组件名称设置
         const mapidText = button.getChild("mapid") as fgui.GTextField;
         if (mapidText) {
-            mapidText.text = template.template_id;  // ✅ 完整显示 template_id
+            mapidText.text = template.template_id || 'N/A';  // ✅ 添加 fallback
         }
 
         const tileText = button.getChild("tile") as fgui.GTextField;
         if (tileText) {
-            tileText.text = template.tile_count.toString();  // ✅ 来自事件
+            tileText.text = (template.tile_count ?? 0).toString();  // ✅ 添加 ?? 0
         }
 
         const buildingText = button.getChild("building") as fgui.GTextField;
         if (buildingText) {
-            buildingText.text = template.building_count.toString();  // ✅ 来自事件
+            buildingText.text = (template.building_count ?? 0).toString();  // ✅ 添加 ?? 0
         }
 
         // 设置选中状态

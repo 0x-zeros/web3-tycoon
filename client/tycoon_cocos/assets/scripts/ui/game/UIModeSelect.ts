@@ -3,6 +3,7 @@ import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { SuiManager } from "../../sui/managers/SuiManager";
 import { UINotification } from "../utils/UINotification";
+import { KeystoreConfig } from "../../sui/utils/KeystoreConfig";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -16,6 +17,11 @@ export class UIModeSelect extends UIBase {
     /** 开始游戏按钮 */
     private m_btn_start: fgui.GButton;
 
+    /** Keypair 配置组件 */
+    private m_keyPairInfo: fgui.GComponent | null = null;
+    private m_input_storageKey: fgui.GTextInput | null = null;
+    private m_input_password: fgui.GTextInput | null = null;
+
     /**
      * 初始化回调
      */
@@ -28,6 +34,16 @@ export class UIModeSelect extends UIBase {
      */
     private _setupComponents(): void {
         this.m_btn_start = this.getButton("btn_start");
+
+        // 获取 keypair 配置组件
+        this.m_keyPairInfo = this.getChild("keyPairInfo")?.asCom || null;
+        if (this.m_keyPairInfo) {
+            this.m_input_storageKey = this.m_keyPairInfo.getChild("storageKey") as fgui.GTextInput;
+            this.m_input_password = this.m_keyPairInfo.getChild("keypairPassword") as fgui.GTextInput;
+            console.log('[UIModeSelect] KeyPair config components found');
+        } else {
+            console.warn('[UIModeSelect] keyPairInfo component not found');
+        }
     }
 
     /**
@@ -39,6 +55,14 @@ export class UIModeSelect extends UIBase {
 
         // 监听游戏开始事件
         EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
+
+        // 绑定 keypair 配置输入框事件
+        if (this.m_input_storageKey) {
+            this.m_input_storageKey.on(fgui.Event.CHANGED, this._onStorageKeyChanged, this);
+        }
+        if (this.m_input_password) {
+            this.m_input_password.on(fgui.Event.CHANGED, this._onPasswordChanged, this);
+        }
     }
 
     /**
@@ -47,6 +71,14 @@ export class UIModeSelect extends UIBase {
     protected unbindEvents(): void {
         // 解绑按钮事件
         this.m_btn_start?.offClick(this._onStartClick, this);
+
+        // 解绑 keypair 配置输入框事件
+        if (this.m_input_storageKey) {
+            this.m_input_storageKey.off(fgui.Event.CHANGED, this._onStorageKeyChanged, this);
+        }
+        if (this.m_input_password) {
+            this.m_input_password.off(fgui.Event.CHANGED, this._onPasswordChanged, this);
+        }
 
         // 调用父类解绑
         super.unbindEvents();
@@ -57,6 +89,9 @@ export class UIModeSelect extends UIBase {
      */
     protected onShow(data?: any): void {
         console.log("[UIModeSelect] Showing mode select UI");
+
+        // 加载并显示 keypair 配置
+        this._loadKeypairConfig();
 
         // 播放背景音乐
         EventBus.emit(EventTypes.Audio.PlayBGM, {
@@ -118,5 +153,49 @@ export class UIModeSelect extends UIBase {
         }
 
         console.log("[UIModeSelect] Playing show animation");
+    }
+
+    // ================== Keypair 配置管理 ==================
+
+    /**
+     * 加载 keypair 配置到输入框
+     */
+    private _loadKeypairConfig(): void {
+        if (!this.m_input_storageKey || !this.m_input_password) {
+            return;
+        }
+
+        const config = KeystoreConfig.instance;
+        this.m_input_storageKey.text = config.getStorageKey();
+        this.m_input_password.text = config.getPassword();
+
+        console.log('[UIModeSelect] Keypair config loaded to UI');
+        console.log('  Storage key:', config.getStorageKey());
+        console.log('  Full key:', config.getFullStorageKey());
+    }
+
+    /**
+     * storageKey 输入框变化
+     */
+    private _onStorageKeyChanged(): void {
+        if (!this.m_input_storageKey) return;
+
+        const newKey = this.m_input_storageKey.text.trim();
+        KeystoreConfig.instance.setStorageKey(newKey);
+
+        console.log('[UIModeSelect] Storage key changed:', newKey);
+        console.log('  Full storage key:', KeystoreConfig.instance.getFullStorageKey());
+    }
+
+    /**
+     * password 输入框变化
+     */
+    private _onPasswordChanged(): void {
+        if (!this.m_input_password) return;
+
+        const newPassword = this.m_input_password.text;
+        KeystoreConfig.instance.setPassword(newPassword);
+
+        console.log('[UIModeSelect] Password changed (memory only)');
     }
 }

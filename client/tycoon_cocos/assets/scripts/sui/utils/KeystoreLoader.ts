@@ -9,10 +9,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { encryptWithPassword, decryptWithPassword } from './CryptoUtils';
 import { requestSuiFromFaucet } from './FaucetUtils';
 import { UINotification } from '../../ui/utils/UINotification';
-
-// 存储键和开发密码
-const STORAGE_KEY = 'web3_tycoon_sui_encrypted_keypair';
-const DEV_PASSWORD = 'web3-tycoon-dev-2024';  // 硬编码开发密码（仅测试网使用）
+import { KeystoreConfig } from './KeystoreConfig';
 
 /**
  * 加载或生成 Keypair（自动处理 faucet 和加密存储）
@@ -24,16 +21,22 @@ const DEV_PASSWORD = 'web3-tycoon-dev-2024';  // 硬编码开发密码（仅测�
  * @returns Ed25519Keypair
  */
 export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
+    // 从配置获取 storageKey 和 password
+    const config = KeystoreConfig.instance;
+    const storageKey = config.getFullStorageKey();
+    const password = config.getPassword();
+
     console.log('='.repeat(60));
     console.log('[KeystoreLoader] === START ===');
     console.log('  Timestamp:', new Date().toISOString());
-    console.log('  Storage key:', STORAGE_KEY);
+    console.log('  Storage key:', storageKey);
+    console.log('  Config:', config.getSummary());
     console.log('='.repeat(60));
 
     try {
         // Step 1: 检查 localStorage
         console.log('[KeystoreLoader] Step 1: Checking localStorage');
-        const encryptedData = localStorage.getItem(STORAGE_KEY);
+        const encryptedData = localStorage.getItem(storageKey);
         console.log('  Encrypted data exists:', !!encryptedData);
         if (encryptedData) {
             console.log('  Encrypted data length:', encryptedData.length);
@@ -44,7 +47,7 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
 
             // Step 2: 解密
             console.log('[KeystoreLoader] Step 2: Decrypting');
-            const privateKeyBase64 = await decryptWithPassword(encryptedData, DEV_PASSWORD);
+            const privateKeyBase64 = await decryptWithPassword(encryptedData, password);
             console.log('  Decryption successful');
             console.log('  Decrypted data length:', privateKeyBase64.length);
 
@@ -94,17 +97,17 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
 
         // Step 7: 加密
         console.log('[KeystoreLoader] Step 7: Encrypting');
-        const encrypted = await encryptWithPassword(privateKeyBase64, DEV_PASSWORD);
+        const encrypted = await encryptWithPassword(privateKeyBase64, password);
         console.log('  Encrypted length:', encrypted.length);
 
         // Step 8: 保存
         console.log('[KeystoreLoader] Step 8: Saving to localStorage');
-        localStorage.setItem(STORAGE_KEY, encrypted);
+        localStorage.setItem(storageKey, encrypted);
         console.log('  Saved');
 
         // Step 9: 验证保存
         console.log('[KeystoreLoader] Step 9: Verifying save');
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(storageKey);
         const verified = saved === encrypted;
         console.log('  Verification result:', verified ? 'SUCCESS' : 'FAILED');
         console.log('  Saved data exists:', !!saved);
@@ -222,8 +225,9 @@ function exportKeypairToBase64(keypair: Ed25519Keypair): string {
  * 清除保存的 keypair
  */
 export function clearStoredKeypair(): void {
-    localStorage.removeItem(STORAGE_KEY);
-    console.log('[KeystoreLoader] Stored keypair cleared');
+    const storageKey = KeystoreConfig.instance.getFullStorageKey();
+    localStorage.removeItem(storageKey);
+    console.log('[KeystoreLoader] Stored keypair cleared:', storageKey);
 }
 
 /**

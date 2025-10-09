@@ -11,9 +11,11 @@
 import { _decorator, Component, Node, resources, Prefab, instantiate, director } from 'cc';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
+import { Blackboard } from '../events/Blackboard';
 import { GameMap } from './core/GameMap';
 import { VoxelSystem } from '../voxel/VoxelSystem';
 import { GridGround, GridGroundConfig } from './GridGround';
+import { UINotification } from '../ui/utils/UINotification';
 
 const { ccclass, property } = _decorator;
 
@@ -330,9 +332,12 @@ export class MapManager extends Component {
     private registerEventListeners(): void {
         // 监听地图选择事件
         EventBus.on(EventTypes.Game.MapSelected, this.onMapSelected, this);
-        
+
         // 监听地图切换请求
         EventBus.on(EventTypes.Game.RequestMapChange, this.onMapChangeRequest, this);
+
+        // 监听游戏开始事件（加载链上场景数据）
+        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**
@@ -360,6 +365,93 @@ export class MapManager extends Component {
                 error: result.error
             });
         }
+    }
+
+    /**
+     * 游戏开始事件处理（从链上数据加载场景）
+     * 事件数据：{ game, template, gameData }
+     */
+    private async _onGameStart(data: any): Promise<void> {
+        console.log('[MapManager] Game.GameStart event received');
+        console.log('  Game ID:', data.game?.id);
+        console.log('  Template tiles:', data.template?.tiles_static?.size);
+        console.log('  GameData:', !!data.gameData);
+
+        try {
+            // 1. 获取当前 GameMap 实例
+            const mapInfo = this.getCurrentMapInfo();
+            const gameMap = mapInfo?.component;
+
+            if (!gameMap) {
+                throw new Error('GameMap not found');
+            }
+
+            // 2. 从链上数据加载场景
+            console.log('[MapManager] Loading game scene from chain data...');
+            UINotification.info("正在加载游戏地图...");
+
+            const loaded = await gameMap.loadFromChainData(data.template, data.game);
+
+            if (!loaded) {
+                throw new Error('Failed to load game scene');
+            }
+
+            console.log('[MapManager] Game scene loaded successfully');
+
+            // 3. 初始化游戏状态到 Blackboard
+            this._initializeGameState(data.game, data.gameData);
+
+            // 4. 发送场景加载完成事件
+            EventBus.emit(EventTypes.Game.MapLoaded, {
+                gameId: data.game.id,
+                success: true
+            });
+
+            UINotification.success("游戏地图加载完成");
+
+        } catch (error) {
+            console.error('[MapManager] Failed to load game scene:', error);
+            UINotification.error("游戏地图加载失败");
+
+            // 发送加载失败事件
+            EventBus.emit(EventTypes.Game.MapLoadFailed, {
+                error: error
+            });
+        }
+    }
+
+    /**
+     * 初始化游戏状态到 Blackboard
+     */
+    private _initializeGameState(game: any, gameData: any): void {
+        console.log('[MapManager] Initializing game state to Blackboard');
+
+        // 设置游戏基础信息
+        Blackboard.instance.set('currentGameId', game.id, true);
+        Blackboard.instance.set('currentRound', game.round, true);
+        Blackboard.instance.set('currentTurn', game.turn, true);
+        Blackboard.instance.set('currentGame', game, true);
+
+        // 设置当前玩家信息
+        // TODO: 根据当前地址找到玩家的 index
+        if (game.players && game.players.length > 0) {
+            const player = game.players[0];  // 临时用第一个玩家
+            Blackboard.instance.set('playerName', `玩家 #1`, true);
+            Blackboard.instance.set('playerMoney', Number(player.cash), true);
+            Blackboard.instance.set('playerLevel', 1, true);
+            Blackboard.instance.set('playerHp', 100, true);
+            Blackboard.instance.set('playerMaxHp', 100, true);
+            Blackboard.instance.set('playerExp', 0, true);
+            Blackboard.instance.set('playerMaxExp', 1000, true);
+        }
+
+        // 设置游戏配置
+        Blackboard.instance.set('gameData', gameData, true);
+
+        // 初始化游戏时间
+        Blackboard.instance.set('gameTime', 0, true);
+
+        console.log('[MapManager] Game state initialized');
     }
 
     /**

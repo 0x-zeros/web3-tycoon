@@ -426,84 +426,25 @@ export class UIInGame extends UIBase {
     // ================== 游戏事件处理 ==================
 
     /**
-     * 游戏开始事件（从链上数据加载场景）
+     * 游戏开始事件（只负责 UI 显示）
      * 事件数据：{ game, template, gameData }
+     *
+     * 场景加载由 MapManager 自动处理
      */
-    private async _onGameStart(data: any): Promise<void> {
+    private _onGameStart(data: any): void {
         console.log('[UIInGame] GameStart event received');
         console.log('  Game ID:', data.game?.id);
-        console.log('  Template tiles:', data.template?.tiles_static?.size);
-        console.log('  GameData:', !!data.gameData);
 
-        try {
-            // 1. 显示 UIInGame（先显示 UI，再加载场景）
-            console.log('[UIInGame] Showing UIInGame');
-            this.show();
+        // 1. 显示 UIInGame
+        this.show();
 
-            // 2. 隐藏 UIMapSelect
-            //todo , 在UIMapSelect中自己处理隐藏
+        // 2. UIMapSelect 会通过自己的 _onGameStart 监听器自动隐藏
 
-            // 3. 获取 GameMap 实例
-            const mapManager = MapManager.getInstance();
-            if (!mapManager) {
-                throw new Error('MapManager not found');
-            }
+        // 3. 更新显示（MapManager 已初始化 Blackboard）
+        this._updatePlayerDisplay();
+        this._updateGameStateDisplay();
 
-            const mapInfo = mapManager.getCurrentMapInfo();
-            const gameMap = mapInfo?.component;
-
-            if (!gameMap) {
-                throw new Error('GameMap not found');
-            }
-
-            // 4. 从链上数据加载场景
-            console.log('[UIInGame] Loading game scene from chain data...');
-            const loaded = await gameMap.loadFromChainData(data.template, data.game);
-
-            if (!loaded) {
-                throw new Error('Failed to load game scene');
-            }
-
-            console.log('[UIInGame] Game scene loaded successfully');
-
-            // 5. 初始化游戏状态到 Blackboard
-            this._initializeGameState(data.game, data.gameData);
-
-            // 6. 更新显示
-            this._updatePlayerDisplay();
-            this._updateGameStateDisplay();
-
-            console.log('[UIInGame] Game started successfully');
-
-        } catch (error) {
-            console.error('[UIInGame] Failed to start game:', error);
-            // TODO: 显示错误提示并返回地图选择
-        }
-    }
-
-    /**
-     * 初始化游戏状态到 Blackboard
-     */
-    private _initializeGameState(game: any, gameData: any): void {
-        console.log('[UIInGame] Initializing game state to Blackboard');
-
-        // 设置游戏基础信息
-        Blackboard.instance.set('currentGameId', game.id, true);
-        Blackboard.instance.set('currentRound', game.round, true);
-        Blackboard.instance.set('currentTurn', game.turn, true);
-
-        // 设置当前玩家信息（假设是第一个玩家）
-        if (game.players && game.players.length > 0) {
-            const player = game.players[0];
-            Blackboard.instance.set('playerName', `玩家 #1`, true);
-            Blackboard.instance.set('playerMoney', Number(player.cash), true);
-            Blackboard.instance.set('playerLevel', 1, true);
-        }
-
-        // 设置游戏配置
-        Blackboard.instance.set('gameData', gameData, true);
-
-        console.log('[UIInGame] Game state initialized');
+        console.log('[UIInGame] UI shown, MapManager is loading scene');
     }
 
     /**

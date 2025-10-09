@@ -44,6 +44,8 @@ const TileStaticBCS = bcs.struct('TileStatic', {
  *
  * Move定义：
  * public struct BuildingStatic has store, copy, drop {
+ *     x: u8,
+ *     y: u8,
  *     size: u8,
  *     price: u64,
  *     chain_prev_id: u16,
@@ -51,6 +53,8 @@ const TileStaticBCS = bcs.struct('TileStatic', {
  * }
  */
 const BuildingStaticBCS = bcs.struct('BuildingStatic', {
+    x: bcs.u8(),
+    y: bcs.u8(),
     size: bcs.u8(),
     price: bcs.u64(),
     chain_prev_id: bcs.u16(),
@@ -109,6 +113,8 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
 
     // 2. 准备 buildings 数组（必须按 building_id 顺序）
     const buildings: Array<{
+        x: number;
+        y: number;
         size: number;
         price: bigint;
         chain_prev_id: number;
@@ -128,6 +134,8 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
             }
 
             buildings.push({
+                x: building.x,
+                y: building.y,
                 size: building.size,
                 price: BigInt(building.price),
                 chain_prev_id: building.chain_prev_id,

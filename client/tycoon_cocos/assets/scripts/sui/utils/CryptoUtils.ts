@@ -1,19 +1,41 @@
 /**
  * 加密工具
  * 使用 Web Crypto API 实现 AES-GCM 加密
- * 参考 MetaMask 等钱包的加密方式
+ * 参考 MetaMask 的 @metamask/browser-passworder 实现
+ *
+ * 环境兼容性：
+ * - 浏览器环境：使用 Web Crypto API（最安全）
+ * - Cocos Editor 环境：降级为 Base64 编码（仅开发调试）
  */
 
+// 检测 Web Crypto API 是否可用
+const HAS_WEB_CRYPTO = typeof crypto !== 'undefined' && crypto.subtle !== undefined;
+
+if (!HAS_WEB_CRYPTO) {
+    console.warn('[CryptoUtils] Web Crypto API not available (Cocos Editor environment)');
+    console.warn('[CryptoUtils] Falling back to Base64 encoding (DEV ONLY, NOT SECURE)');
+}
+
 /**
- * 使用 AES-GCM 加密字符串
+ * 使用 AES-GCM 加密字符串（浏览器）或 Base64 编码（Editor）
  * @param plaintext 明文
  * @param password 密码
- * @returns Base64 编码的密文（包含 salt + iv + ciphertext）
+ * @returns Base64 编码的密文
  */
 export async function encryptWithPassword(plaintext: string, password: string): Promise<string> {
     console.log('[CryptoUtils] Encrypt: START');
     console.log('  Plaintext length:', plaintext.length);
+    console.log('  Environment:', HAS_WEB_CRYPTO ? 'Browser (secure)' : 'Editor (base64)');
 
+    // ✅ Cocos Editor 环境：降级为 Base64（开发调试可接受）
+    if (!HAS_WEB_CRYPTO) {
+        console.warn('[CryptoUtils] Using Base64 encoding (NOT ENCRYPTED)');
+        const result = btoa(unescape(encodeURIComponent(plaintext)));
+        console.log('[CryptoUtils] Encrypt: SUCCESS (base64)');
+        return result;
+    }
+
+    // ✅ 浏览器环境：使用 Web Crypto API（生产环境）
     try {
         const enc = new TextEncoder();
 
@@ -83,7 +105,7 @@ export async function encryptWithPassword(plaintext: string, password: string): 
 }
 
 /**
- * 使用 AES-GCM 解密字符串
+ * 使用 AES-GCM 解密字符串（浏览器）或 Base64 解码（Editor）
  * @param ciphertext Base64 编码的密文
  * @param password 密码
  * @returns 明文
@@ -91,7 +113,17 @@ export async function encryptWithPassword(plaintext: string, password: string): 
 export async function decryptWithPassword(ciphertext: string, password: string): Promise<string> {
     console.log('[CryptoUtils] Decrypt: START');
     console.log('  Ciphertext length:', ciphertext.length);
+    console.log('  Environment:', HAS_WEB_CRYPTO ? 'Browser (secure)' : 'Editor (base64)');
 
+    // ✅ Cocos Editor 环境：降级为 Base64
+    if (!HAS_WEB_CRYPTO) {
+        console.warn('[CryptoUtils] Using Base64 decoding (NOT ENCRYPTED)');
+        const result = decodeURIComponent(escape(atob(ciphertext)));
+        console.log('[CryptoUtils] Decrypt: SUCCESS (base64)');
+        return result;
+    }
+
+    // ✅ 浏览器环境：使用 Web Crypto API
     try {
         const enc = new TextEncoder();
         const dec = new TextDecoder();

@@ -1242,11 +1242,12 @@ export class SuiManager {
             console.log('  Game players:', game.players.length);
 
             // 4. 发送事件，触发 GameSession 加载
+            // GameSession.loadFromMoveGame() 会发送 GameStart 事件（触发 UI 切换）
             EventBus.emit(EventTypes.Move.GameStarted, {
                 game: game,
                 template: template,
                 gameData: gameData,
-                isPlayer: true  // 已经在 _onGameStarted 中判断过了
+                isPlayer: true
             });
 
             UINotification.success("游戏场景加载完成");

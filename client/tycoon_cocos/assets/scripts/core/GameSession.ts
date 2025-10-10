@@ -133,6 +133,16 @@ export class GameSession {
         console.log('  Template tiles:', template.tiles_static.size);
         console.log('  Template buildings:', template.buildings_static.size);
 
+        // 立即发送 GameStart 事件，触发 UI 切换
+        console.log('[GameSession] 发送 GameStart 事件（UI 切换）');
+        EventBus.emit(EventTypes.Game.GameStart, {
+            game: game,
+            template: template,
+            gameData: gameData,
+            source: 'chain_game',
+            mode: 'play'
+        });
+
         // 1. 保存引用
         this._mapTemplate = template;
         this._gameData = gameData;

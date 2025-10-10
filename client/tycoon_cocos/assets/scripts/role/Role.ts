@@ -11,19 +11,17 @@ import { Vec3 } from 'cc';
 import { forEach, includes } from 'lodash-es';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
-import { 
-    RoleType, 
-    RoleAttribute, 
-    RoleState, 
-    RoleData, 
-    RoleConfig, 
+import {
+    RoleType,
+    RoleAttribute,
+    RoleState,
+    RoleData,
+    RoleConfig,
     RoleMoveParams,
     RoleInteractionResult
 } from './RoleTypes';
 import { Actor } from './Actor';
 import { RoleAction } from './RoleAction';
-import { Skill } from '../skill/Skill';
-import { Card } from '../card/Card';
 
 /**
  * 角色基类
@@ -85,13 +83,7 @@ export abstract class Role {
     
     /** 背包容器（简化版背包） */
     protected m_inventory: { [key: string]: number } = {};
-    
-    /** 拥有的技能 */
-    protected m_skills: Skill[] = [];
-    
-    /** 拥有的卡牌 */
-    protected m_cards: Card[] = [];
-    
+
     // ========================= 状态标记 =========================
     
     /** 是否已初始化 */
@@ -122,10 +114,9 @@ export abstract class Role {
         this.m_attr.set(RoleAttribute.LEVEL, 1);
         this.m_attr.set(RoleAttribute.VIP_LEVEL, 0);
         this.m_attr.set(RoleAttribute.PROPERTIES_COUNT, 0);
-        this.m_attr.set(RoleAttribute.CARDS_COUNT, 0);
         this.m_attr.set(RoleAttribute.JAIL_TURNS, 0);
         this.m_attr.set(RoleAttribute.BANKRUPT, 0);
-        
+
         // 清空临时属性
         this.m_tmpAttr.clear();
     }
@@ -153,17 +144,7 @@ export abstract class Role {
                 }
             });
         }
-        
-        // 加载初始技能
-        if (config.availableSkills) {
-            this.loadSkills(config.availableSkills);
-        }
-        
-        // 加载初始卡牌
-        if (config.initialCards) {
-            this.loadCards(config.initialCards);
-        }
-        
+
         this.m_bInitialized = true;
         
         // 触发初始化完成事件
@@ -297,86 +278,7 @@ export abstract class Role {
     
     public getRoleAction(): RoleAction | null { return this.m_roleAction; }
     public setRoleAction(action: RoleAction): void { this.m_roleAction = action; }
-    
-    // ========================= 技能和卡牌管理 =========================
-    
-    /**
-     * 加载技能
-     */
-    public loadSkills(skillIds: number[]): void {
-        // 这里需要通过SkillManager加载技能
-        // 暂时使用占位符
-        console.log(`[Role] 加载技能: ${skillIds}`);
-    }
-    
-    /**
-     * 加载卡牌
-     */
-    public loadCards(cardIds: number[]): void {
-        // 这里需要通过CardManager加载卡牌
-        // 暂时使用占位符
-        console.log(`[Role] 加载卡牌: ${cardIds}`);
-    }
-    
-    /**
-     * 添加技能
-     */
-    public addSkill(skill: Skill): void {
-        if (!includes(this.m_skills, skill)) {
-            this.m_skills.push(skill);
-            EventBus.emit(EventTypes.Skill.Learned, {
-                roleId: this.m_oId,
-                skillId: skill.getConfig().id,
-                skill: skill
-            });
-        }
-    }
-    
-    /**
-     * 移除技能
-     */
-    public removeSkill(skill: Skill): void {
-        const index = this.m_skills.indexOf(skill);
-        if (index >= 0) {
-            this.m_skills.splice(index, 1);
-            EventBus.emit(EventTypes.Role.StateChange, {
-                roleId: this.m_oId,
-                message: 'skill-removed',
-                data: { skill: skill }
-            });
-        }
-    }
-    
-    /**
-     * 添加卡牌
-     */
-    public addCard(card: Card): void {
-        if (!includes(this.m_cards, card)) {
-            this.m_cards.push(card);
-            this.setAttr(RoleAttribute.CARDS_COUNT, this.m_cards.length);
-            EventBus.emit(EventTypes.Card.GetNewCard, {
-                roleId: this.m_oId,
-                card: card
-            });
-        }
-    }
-    
-    /**
-     * 移除卡牌
-     */
-    public removeCard(card: Card): void {
-        const index = this.m_cards.indexOf(card);
-        if (index >= 0) {
-            this.m_cards.splice(index, 1);
-            this.setAttr(RoleAttribute.CARDS_COUNT, this.m_cards.length);
-            EventBus.emit(EventTypes.Role.StateChange, {
-                roleId: this.m_oId,
-                message: 'card-removed',
-                data: { card: card }
-            });
-        }
-    }
-    
+
     // ========================= 移动相关 =========================
     
     /**
@@ -444,8 +346,6 @@ export abstract class Role {
             tmpAttributes: tmpAttributeData,
             position: this.m_position.clone(),
             currentTileId: this.m_currentTileId,
-            skillIds: this.m_skills.map(skill => skill.getId()),
-            cardData: this.m_cards.map(card => card.exportData()),
             state: this.m_eState
         };
     }
@@ -554,10 +454,8 @@ export abstract class Role {
         this.m_targetTileId = -1;
         this.m_target = null;
         this.m_attackerList.length = 0;
-        this.m_skills.length = 0;
-        this.m_cards.length = 0;
         this.clearTmpAttr();
-        
+
         console.log(`[Role] 角色重置完成: ${this.m_strName}`);
     }
     
@@ -592,10 +490,8 @@ export abstract class Role {
         // 清理数据
         this.m_attr.clear();
         this.m_tmpAttr.clear();
-        this.m_skills.length = 0;
-        this.m_cards.length = 0;
         this.m_attackerList.length = 0;
-        
+
         console.log(`[Role] 角色销毁完成: ${this.m_strName}`);
     }
     
@@ -610,11 +506,9 @@ export abstract class Role {
             `状态: ${this.m_eState}`,
             `位置: ${this.m_currentTileId}`,
             `金钱: ${this.getAttr(RoleAttribute.MONEY)}`,
-            `生命: ${this.getAttr(RoleAttribute.HP)}`,
-            `技能数: ${this.m_skills.length}`,
-            `卡牌数: ${this.m_cards.length}`
+            `生命: ${this.getAttr(RoleAttribute.HP)}`
         ];
-        
+
         return `[Role] ${info.join(', ')}`;
     }
 }

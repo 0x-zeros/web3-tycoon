@@ -10,7 +10,6 @@
 import { Role } from './Role';
 import { RoleType, NPCType, RoleAttribute } from './RoleTypes';
 import { Player } from './Player';
-import { Skill } from '../skill/Skill';
 
 /**
  * NPC配置接口
@@ -26,8 +25,6 @@ export interface NPCConfig {
     lifeTime: number;
     /** 影响半径（地块数） */
     radius: number;
-    /** 可用技能ID列表 */
-    skills: number[];
     /** 模型路径 */
     modelPath: string;
     /** 特效路径 */
@@ -215,44 +212,17 @@ export class NPC extends Role {
         this.m_iTypeId = config.typeId;
         this.m_lifeTime = config.lifeTime;
         this.m_effectRadius = config.radius;
-        
-        // 加载技能
-        if (config.skills && config.skills.length > 0) {
-            this.loadNPCSkills(config.skills);
-        }
-        
+
         // 设置自定义属性
         if (config.customProperties) {
             for (const [key, value] of Object.entries(config.customProperties)) {
                 this.setCustomProperty(key, value);
             }
         }
-        
+
         console.log(`[NPC] 从配置初始化NPC: ${this.m_strName} (${this.m_npcType})`);
     }
-    
-    // ========================= 技能系统 =========================
-    
-    /**
-     * 加载NPC技能
-     */
-    protected loadNPCSkills(skillIds: number[]): void {
-        // 这里需要通过SkillManager加载技能
-        // 暂时模拟
-        console.log(`[NPC] 加载NPC技能: ${skillIds}`);
-        
-        // 根据NPC类型添加默认技能效果
-        this.addDefaultSkillEffects();
-    }
-    
-    /**
-     * 添加默认技能效果
-     */
-    protected addDefaultSkillEffects(): void {
-        // 根据NPC类型添加相应的技能效果
-        // 这里先用简单的逻辑，后续可以通过配置文件管理
-    }
-    
+
     // ========================= 触发系统 =========================
     
     /**

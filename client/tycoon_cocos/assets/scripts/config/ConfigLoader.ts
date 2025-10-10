@@ -20,7 +20,6 @@ interface NPCData extends RoleData {
 interface PlayerData extends RoleData {
     controllable?: boolean;
 }
-import { SkillConfig } from '../skill/SkillTypes';
 
 const { ccclass } = _decorator;
 
@@ -29,7 +28,6 @@ const { ccclass } = _decorator;
  */
 export enum ConfigType {
     ROLES = 'roles',
-    SKILLS = 'skills',
     NPCS = 'npcs',
     PLAYERS = 'players',
     MAPS = 'maps',
@@ -55,7 +53,6 @@ export interface ConfigInfo {
  */
 export interface GameConfigs {
     roles?: RoleData[];
-    skills?: SkillConfig[];
     npcs?: NPCData[];
     players?: PlayerData[];
     maps?: any[];
@@ -131,7 +128,6 @@ export class ConfigLoader extends Component {
     private initializeConfigInfos(): void {
         // 注册配置文件信息
         this.registerConfig(ConfigType.ROLES, 'data/configs/roles', true);
-        this.registerConfig(ConfigType.SKILLS, 'data/configs/skills', true);
         this.registerConfig(ConfigType.NPCS, 'data/configs/npcs', true);
         this.registerConfig(ConfigType.PLAYERS, 'data/configs/players', false);
         this.registerConfig(ConfigType.MAPS, 'data/configs/maps', false);
@@ -299,7 +295,6 @@ export class ConfigLoader extends Component {
     public getAllConfigs(): GameConfigs {
         return {
             roles: this.getConfig(ConfigType.ROLES),
-            skills: this.getConfig(ConfigType.SKILLS),
             npcs: this.getConfig(ConfigType.NPCS),
             players: this.getConfig(ConfigType.PLAYERS),
             maps: this.getConfig(ConfigType.MAPS),
@@ -395,7 +390,6 @@ export class ConfigLoader extends Component {
             case ConfigType.ROLES:
             case ConfigType.NPCS:
             case ConfigType.PLAYERS:
-            case ConfigType.SKILLS:
                 if (!Array.isArray(data)) {
                     return {
                         success: false,
@@ -407,8 +401,6 @@ export class ConfigLoader extends Component {
 
         // 具体格式检查
         switch (type) {
-            case ConfigType.SKILLS:
-                return this.validateSkillsConfig(data);
             case ConfigType.ROLES:
                 return this.validateRolesConfig(data);
             default:
@@ -416,22 +408,6 @@ export class ConfigLoader extends Component {
                 break;
         }
 
-        return { success: true };
-    }
-
-    /**
-     * 验证技能配置数据
-     */
-    private validateSkillsConfig(data: any[]): { success: boolean; error?: string } {
-        for (let i = 0; i < data.length; i++) {
-            const skill = data[i];
-            if (!skill.id || !skill.name || !skill.type) {
-                return {
-                    success: false,
-                    error: `技能配置数据不完整: 索引 ${i}, 缺少必需字段 id/name/type`
-                };
-            }
-        }
         return { success: true };
     }
 

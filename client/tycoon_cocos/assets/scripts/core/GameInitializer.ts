@@ -11,7 +11,6 @@
 import { _decorator, Component, director, Node, game, resources, Prefab, instantiate } from 'cc';
 import { ConfigLoader, ConfigType } from '../config/ConfigLoader';
 import { RoleManager } from '../role/RoleManager';
-import { SkillManager } from '../skill/SkillManager';
 import { UIManager } from '../ui/core/UIManager';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
@@ -59,9 +58,6 @@ export class GameInitializer extends Component {
     @property({ displayName: "角色管理器节点", type: Node, tooltip: "RoleManager组件所在节点" })
     public roleManagerNode: Node | null = null;
 
-    @property({ displayName: "技能管理器节点", type: Node, tooltip: "SkillManager组件所在节点" })
-    public skillManagerNode: Node | null = null;
-
     @property({ displayName: "显示加载进度", tooltip: "是否在控制台显示加载进度" })
     public showProgress: boolean = true;
 
@@ -83,7 +79,6 @@ export class GameInitializer extends Component {
     // 系统管理器引用
     private configLoader: ConfigLoader | null = null;
     private roleManager: RoleManager | null = null;
-    private skillManager: SkillManager | null = null;
     private mapManager: MapManager | null = null;
 
     // 初始化性能数据
@@ -227,22 +222,6 @@ export class GameInitializer extends Component {
         this.enterPhase(InitializationPhase.MANAGERS_INIT, '初始化管理器...');
 
         try {
-            // 初始化技能管理器
-            if (this.skillManagerNode) {
-                this.skillManager = this.skillManagerNode.getComponent(SkillManager);
-                if (this.skillManager) {
-                    const skillsLoaded = await this.skillManager.loadSkillConfigs();
-                    if (!skillsLoaded) {
-                        return {
-                            success: false,
-                            phase: InitializationPhase.MANAGERS_INIT,
-                            error: '技能配置加载失败'
-                        };
-                    }
-                    console.log('技能管理器初始化完成');
-                }
-            }
-
             // 初始化角色管理器
             if (this.roleManagerNode) {
                 this.roleManager = this.roleManagerNode.getComponent(RoleManager);
@@ -362,10 +341,6 @@ export class GameInitializer extends Component {
         return this.roleManager;
     }
 
-    public getSkillManager(): SkillManager | null {
-        return this.skillManager;
-    }
-
     /**
      * 重新初始化游戏
      */
@@ -445,7 +420,6 @@ export class GameInitializer extends Component {
             }
 
             globalWindow.game.roleManager = this.roleManager;
-            globalWindow.game.skillManager = this.skillManager;
             globalWindow.game.configLoader = this.configLoader;
             globalWindow.game.mapManager = this.mapManager;
             globalWindow.game.initializer = this;

@@ -9,8 +9,6 @@
 
 import { Role } from './Role';
 import { RoleType, RoleAttribute, RoleState, NPCType } from './RoleTypes';
-import { Skill } from '../skill/Skill';
-import { Card } from '../card/Card';
 
 /**
  * 玩家类型枚举
@@ -124,15 +122,7 @@ export class Player extends Role {
     
     /** 是否准备就绪 */
     protected m_bReady: boolean = false;
-    
-    // ========================= 技能栏系统 =========================
-    
-    /** 技能栏 */
-    protected m_skillShow: number[] = new Array(6).fill(0);
-    
-    /** 快捷栏最大数量 */
-    protected static readonly SKILL_USE_MAX_NUM: number = 6;
-    
+
     // ========================= 游戏相关数据 =========================
     
     /** 拥有的房产 */
@@ -218,114 +208,7 @@ export class Player extends Role {
         this.setAttr(RoleAttribute.MONEY, 15000);
         this.setAttr(RoleAttribute.TURN_ORDER, 0);
     }
-    
-    // ========================= 技能栏管理 =========================
-    
-    /**
-     * 设置技能栏
-     * 设置技能到指定栏位
-     */
-    public setSkillSlot(skillId: number, index: number): void {
-        if (index < 0 || index >= Player.SKILL_USE_MAX_NUM) {
-            console.warn(`[Player] 技能栏索引超出范围: ${index}`);
-            return;
-        }
-        
-        this.m_skillShow[index] = skillId;
-        
-        // 触发技能栏变化事件
-        this.emit('skillbar-changed', {
-            player: this,
-            index: index,
-            skillId: skillId
-        });
-        
-        console.log(`[Player] ${this.m_strName} 设置技能栏[${index}] = ${skillId}`);
-    }
-    
-    /**
-     * 获取技能栏
-     * 获取指定栏位的技能
-     */
-    public getSkillSlot(index: number): number {
-        if (index < 0 || index >= Player.SKILL_USE_MAX_NUM) {
-            return 0;
-        }
-        
-        return this.m_skillShow[index];
-    }
-    
-    /**
-     * 获取整个技能栏
-     */
-    public getSkillSlots(): number[] {
-        return [...this.m_skillShow];
-    }
-    
-    /**
-     * 清空技能栏
-     */
-    public clearSkillSlots(): void {
-        this.m_skillShow.fill(0);
-        this.emit('skillbar-cleared', { player: this });
-    }
-    
-    // ========================= 卡牌和技能使用 =========================
-    
-    /**
-     * 使用卡牌（通过技能系统）
-     * 重写父类方法，添加玩家特有逻辑
-     */
-    public async useCard(cardIndex: number, target?: Role): Promise<boolean> {
-        if (cardIndex < 0 || cardIndex >= this.m_cards.length) {
-            console.warn(`[Player] 卡牌索引无效: ${cardIndex}`);
-            return false;
-        }
-        
-        const card = this.m_cards[cardIndex];
-        if (!card) {
-            return false;
-        }
-        
-        // 检查是否在监狱（某些卡牌监狱中不能使用）
-        if (this.isInJail() && !this.canUseCardInJail(card)) {
-            console.log(`[Player] ${this.m_strName} 在监狱中无法使用此卡牌`);
-            return false;
-        }
-        
-        // 使用卡牌
-        const success = await card.use(this, target);
-        
-        if (success) {
-            // 更新统计
-            this.m_statistics.cardsUsed++;
-            
-            // 移除已使用的单次卡牌
-            if (card.getRemainingUses() <= 0) {
-                this.removeCard(card);
-            }
-            
-            // 触发使用卡牌事件
-            this.emit('card-used', {
-                player: this,
-                card: card,
-                target: target,
-                success: true
-            });
-        }
-        
-        return success;
-    }
-    
-    /**
-     * 检查卡牌是否可在监狱中使用
-     */
-    protected canUseCardInJail(card: Card): boolean {
-        // 出狱卡和某些特殊卡牌可以在监狱中使用
-        const cardType = card.getCardType();
-        return cardType === 'get_out_of_jail' || cardType === 'special';
-    }
-    
+
     // ========================= 房产管理 =========================
     
     /**
@@ -795,13 +678,10 @@ export class Player extends Role {
         this.m_consecutiveDoubles = 0;
         this.m_hasRolledDice = false;
         this.m_movesThisTurn = 0;
-        
-        // 重置技能栏
-        this.clearSkillSlots();
-        
+
         // 重新初始化数据
         this.initializePlayerData();
-        
+
         console.log(`[Player] 玩家重置完成: ${this.m_strName}`);
     }
     

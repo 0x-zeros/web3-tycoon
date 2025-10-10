@@ -8,7 +8,7 @@
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import type { Game, Player, Building, Tile, GameCreateConfig, Seat } from '../types/game';
+import type { Game, Player, Building, Tile, GameCreateConfig, Seat, NpcInst } from '../types/game';
 
 /**
  * 游戏交互类
@@ -235,7 +235,7 @@ export class GameInteraction {
             has_rolled: Boolean(fields.has_rolled),
             tiles: this.parseTiles(fields.tiles || []),
             buildings: this.parseBuildings(fields.buildings || []),
-            npc_on: new Map(),  // Table 类型，保持空 Map
+            npc_on: this.parseNpcInstances(fields.npc_on || []),
             npc_spawn_pool: fields.npc_spawn_pool || [],
             max_rounds: Number(fields.max_rounds) || 0,
             price_rise_days: Number(fields.price_rise_days) || 0,
@@ -261,6 +261,7 @@ export class GameInteraction {
                 in_prison_turns: Number(f.in_prison_turns) || 0,
                 last_tile_id: Number(f.last_tile_id) || 0,
                 next_tile_id: Number(f.next_tile_id) || 0,
+                temple_levels: f.temple_levels || [],
                 buffs: f.buffs || [],
                 cards: new Map()  // Table 类型，保持空 Map
             };
@@ -274,7 +275,7 @@ export class GameInteraction {
         return tilesData.map((t: any): Tile => {
             const f = t.fields || t;
             return {
-                npc_on: Number(f.npc_on) || 0
+                npc_on: Number(f.npc_on ?? 65535)  // 65535 = NO_NPC
             };
         });
     }
@@ -289,6 +290,21 @@ export class GameInteraction {
                 owner: Number(f.owner),
                 level: Number(f.level) || 0,
                 building_type: Number(f.building_type) || 0
+            };
+        });
+    }
+
+    /**
+     * 解析NPC实例列表
+     */
+    private parseNpcInstances(npcData: any[]): NpcInst[] {
+        return npcData.map((npc: any): NpcInst => {
+            const f = npc.fields || npc;
+            return {
+                tile_id: Number(f.tile_id),
+                kind: Number(f.kind),
+                consumable: Boolean(f.consumable),
+                spawn_index: Number(f.spawn_index)
             };
         });
     }

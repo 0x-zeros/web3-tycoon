@@ -4,7 +4,7 @@
  */
 
 import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
-import type { Game, Player, Building, Tile } from '../types/game';
+import type { Game, Player, Building, Tile, NpcInst } from '../types/game';
 import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';
 import { GameData } from '../models/GameData';
@@ -393,7 +393,7 @@ export class QueryService {
                 has_rolled: Boolean(fields.has_rolled),
                 tiles: this.parseTiles(fields.tiles || []),
                 buildings: this.parseBuildings(fields.buildings || []),
-                npc_on: new Map(),  // Table 类型，保持空 Map
+                npc_on: this.parseNpcInstances(fields.npc_on || []),
                 npc_spawn_pool: fields.npc_spawn_pool || [],
                 max_rounds: Number(fields.max_rounds) || 0,
                 price_rise_days: Number(fields.price_rise_days) || 0,
@@ -438,7 +438,7 @@ export class QueryService {
         return tilesData.map((t: any): Tile => {
             const f = t.fields || t;
             return {
-                npc_on: Number(f.npc_on) || 0
+                npc_on: Number(f.npc_on ?? 65535)  // 65535 = NO_NPC
             };
         });
     }
@@ -453,6 +453,21 @@ export class QueryService {
                 owner: Number(f.owner),
                 level: Number(f.level) || 0,
                 building_type: Number(f.building_type) || 0
+            };
+        });
+    }
+
+    /**
+     * 解析NPC实例列表
+     */
+    private parseNpcInstances(npcData: any[]): NpcInst[] {
+        return npcData.map((npc: any): NpcInst => {
+            const f = npc.fields || npc;
+            return {
+                tile_id: Number(f.tile_id),
+                kind: Number(f.kind),
+                consumable: Boolean(f.consumable),
+                spawn_index: Number(f.spawn_index)
             };
         });
     }

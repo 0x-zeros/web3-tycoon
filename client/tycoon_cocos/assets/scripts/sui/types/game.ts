@@ -56,6 +56,8 @@ export interface Player {
  * 对应Move: struct NpcInst
  */
 export interface NpcInst {
+    /** NPC所在tile */
+    tile_id: number;
     /** NPC类型（对应types.move的NPC_*常量） */
     kind: number;
     /** 是否可消耗（炸弹消耗，路障不消耗） */
@@ -112,7 +114,7 @@ export interface Building {
  * 注意：这是导航节点，只包含NPC信息
  */
 export interface Tile {
-    /** 地块上的NPC类型（0表示无NPC） */
+    /** 地块上的NPC索引（65535表示无NPC，其他值为game.npc_on的index） */
     npc_on: number;
 }
 
@@ -146,8 +148,8 @@ export interface Game {
     tiles: Tile[];
     /** 建筑列表（经济实体） */
     buildings: Building[];
-    /** NPC位置表（key: tile_id, value: NpcInst） */
-    npc_on: Map<number, NpcInst>;
+    /** NPC实例列表（索引存储在tiles[].npc_on） */
+    npc_on: NpcInst[];
 
     // NPC管理
     /** NPC生成池 */

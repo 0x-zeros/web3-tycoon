@@ -2,7 +2,6 @@ module tycoon::game;
 
 use std::option::{Self, Option};
 
-use sui::table::{Self, Table};
 use sui::clock::{Self, Clock};
 use sui::coin;
 use sui::random::{Self, Random, RandomGenerator};
@@ -71,6 +70,7 @@ const E_TILE_INDEX_OUT_OF_BOUNDS: u64 = 8002;  // 地块索引越界
 // Map相关错误（game.move中使用的部分）
 const EMapMismatch: u64 = 9001;        // 地图不匹配（传入的map与game创建时的不一致）
 const ETileOccupiedByNpc: u64 = 2001;
+const ENpcNotFound: u64 = 2002;
 const ENoSuchTile: u64 = 2002;
 
 
@@ -150,7 +150,8 @@ public struct Player has store {
 // - spawn_index: 指向spawn_pool的索引
 //   * 0xFFFF: 表示玩家手动放置（非随机生成）
 public struct NpcInst has store, copy, drop {
-    kind: u8,  // NpcKind
+    tile_id: u16,     // NPC所在tile
+    kind: u8,         // NpcKind
     consumable: bool,
     spawn_index: u16  // 指向spawn_pool的索引，0xFFFF表示玩家放置
 }
@@ -208,13 +209,13 @@ public struct Building has store, copy, drop {
 // 使用vector索引对齐，tile_id即为数组下标
 // 现在只存储NPC信息，建筑信息移至Building结构
 public struct Tile has store, copy, drop {
-    npc_on: u8     // NPC类型（0表示无NPC，用于查询密度）//其他值: 表示具体的 NPC 类型
+    npc_on: u16    // NPC索引（65535表示无NPC，其他值为game.npc_on的index）
 }
 
 // 无主建筑的owner值
 const NO_OWNER: u8 = 255;
 // 无NPC的标记值
-const NO_NPC: u8 = 0;
+const NO_NPC: u16 = 65535;
 
 // ===== Game 游戏对象 =====
 //
@@ -264,7 +265,7 @@ public struct Game has key, store {
     tiles: vector<Tile>,
     // 建筑动态数据（与MapTemplate.buildings_static对齐）
     buildings: vector<Building>,
-    npc_on: Table<u16, NpcInst>,  // NPC实例完整数据
+    npc_on: vector<NpcInst>,      // NPC实例完整数据（vector索引存储在tiles[].npc_on）
 
     // NPC生成系统
     npc_spawn_pool: vector<NpcSpawnEntry>,  // NPC生成池
@@ -359,7 +360,7 @@ public entry fun create_game(
         has_rolled: false,
         tiles,
         buildings,
-        npc_on: table::new(ctx),
+        npc_on: vector[],
         npc_spawn_pool: init_npc_spawn_pool(tycoon::get_npc_spawn_weights(game_data)),
         max_rounds,
         price_rise_days,
@@ -1186,8 +1187,9 @@ fun execute_step_movement_with_choices(
         let mut stop_effect_opt = option::none<events::StopEffect>();
 
         // 检查下一格的NPC/机关
-        if (table::contains(&game.npc_on, next_pos)) {
-            let npc = *table::borrow(&game.npc_on, next_pos);
+        let tile_npc_index = game.tiles[next_pos as u64].npc_on;
+        if (tile_npc_index != NO_NPC) {
+            let npc = game.npc_on[tile_npc_index as u64];
 
             if (is_hospital_npc(npc.kind)) {
                 // 炸弹或狗狗 - 送医院
@@ -1901,15 +1903,17 @@ fun place_npc_internal(
     npc_changes: &mut vector<events::NpcChangeItem>,
 ) {
     // 仅限制同一地块不可重复放置
-    assert!(!table::contains(&game.npc_on, tile_id), ETileOccupiedByNpc);
+    assert!(game.tiles[tile_id as u64].npc_on == NO_NPC, ETileOccupiedByNpc);
     let npc = NpcInst {
+        tile_id,
         kind,
         consumable,
         spawn_index: 0xFFFF  // 玩家手动放置的NPC
     };
-    table::add(&mut game.npc_on, tile_id, npc);
-    // 更新 Tile 中的 NPC 类型记录
-    game.tiles[tile_id as u64].npc_on = kind;
+    let npc_index = game.npc_on.length();
+    game.npc_on.push_back(npc);
+    // 更新 Tile 中的 NPC 索引
+    game.tiles[tile_id as u64].npc_on = (npc_index as u16);
     npc_changes.push_back(
         events::make_npc_change(tile_id, kind, events::npc_action_spawn(), consumable)
     );
@@ -1920,14 +1924,24 @@ fun remove_npc_internal(
     tile_id: u16,
     npc_changes: &mut vector<events::NpcChangeItem>,
 ) {
-    if (table::contains(&game.npc_on, tile_id)) {
-        let npc = table::remove(&mut game.npc_on, tile_id);
-        // 清除 Tile 中的 NPC 类型记录
-        game.tiles[tile_id as u64].npc_on = NO_NPC;
-        npc_changes.push_back(
-            events::make_npc_change(tile_id, npc.kind, events::npc_action_remove(), npc.consumable)
-        );
-    }
+    let tile_npc_index = game.tiles[tile_id as u64].npc_on;
+    if (tile_npc_index == NO_NPC) {
+        return
+    };
+
+    let npc = game.npc_on.swap_remove(tile_npc_index as u64);
+    game.tiles[tile_id as u64].npc_on = NO_NPC;
+
+    // 关键：更新被swap到当前位置的NPC的tile索引
+    if ((tile_npc_index as u64) < game.npc_on.length()) {
+        let moved_npc = &game.npc_on[tile_npc_index as u64];
+        let moved_tile_id = moved_npc.tile_id;
+        game.tiles[moved_tile_id as u64].npc_on = tile_npc_index;
+    };
+
+    npc_changes.push_back(
+        events::make_npc_change(tile_id, npc.kind, events::npc_action_remove(), npc.consumable)
+    );
 }
 
 // 消耗NPC（用于玩家踩到NPC时）
@@ -1938,9 +1952,19 @@ fun consume_npc_if_consumable(
     npc: &NpcInst
 ): bool {
     if (npc.consumable) {
-        table::remove(&mut game.npc_on, tile_id);
-        // 清除 Tile 中的 NPC 类型记录
+        let tile_npc_index = game.tiles[tile_id as u64].npc_on;
+        assert!(tile_npc_index != NO_NPC, ENpcNotFound);
+
+        game.npc_on.swap_remove(tile_npc_index as u64);
         game.tiles[tile_id as u64].npc_on = NO_NPC;
+
+        // 关键：更新被swap到当前位置的NPC的tile索引
+        if ((tile_npc_index as u64) < game.npc_on.length()) {
+            let moved_npc = &game.npc_on[tile_npc_index as u64];
+            let moved_tile_id = moved_npc.tile_id;
+            game.tiles[moved_tile_id as u64].npc_on = tile_npc_index;
+        };
+
         true
     } else {
         false
@@ -2038,7 +2062,7 @@ fun apply_card_effect_with_collectors(
         };
 
         // 尝试放置NPC（如果地块已被占用会跳过）
-        if (!table::contains(&game.npc_on, tile_id)) {
+        if (game.tiles[tile_id as u64].npc_on == NO_NPC) {
             place_npc_internal(
                 game,
                 tile_id,
@@ -2666,12 +2690,14 @@ public(package) fun spawn_random_npc(
 
     // 放置NPC
     let npc = NpcInst {
+        tile_id,
         kind: npc_kind,
         consumable: is_consumable,
         spawn_index: pool_idx
     };
-    table::add(&mut game.npc_on, tile_id, npc);
-    game.tiles[tile_id as u64].npc_on = npc_kind;
+    let npc_index = game.npc_on.length();
+    game.npc_on.push_back(npc);
+    game.tiles[tile_id as u64].npc_on = (npc_index as u16);
 
     // 只有成功放置NPC后才设置冷却
     // 这确保了如果因为地块不足而失败，NPC不会进入冷却，下次还有机会生成

@@ -59,7 +59,7 @@ export class DataPollingService {
 
                 // 更新到 Blackboard
                 if (task.blackboardKey) {
-                    Blackboard.instance.set(task.blackboardKey, data, true);
+                    Blackboard.instance.set(task.blackboardKey, data);
                 }
 
             } catch (error) {

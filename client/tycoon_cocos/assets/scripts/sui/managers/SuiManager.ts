@@ -197,17 +197,17 @@ export class SuiManager {
         console.log('  Address:', this._currentAddress);
 
         // 通过 Blackboard 通知 UI（Keypair 模式连接）
-        Blackboard.instance.set("sui_keypair_connected", true, true);
+        Blackboard.instance.set("sui_keypair_connected", true);
 
         // 如果需要强制更新（重新加载时），先清空再设置，确保触发 watch 回调
         if (forceUpdate) {
-            Blackboard.instance.set("sui_current_address", null, true);
+            Blackboard.instance.set("sui_current_address", null);
             // 延迟一点再设置新值，确保 watch 能检测到变化
             setTimeout(() => {
-                Blackboard.instance.set("sui_current_address", this._currentAddress, true);
+                Blackboard.instance.set("sui_current_address", this._currentAddress);
             }, 1);
         } else {
-            Blackboard.instance.set("sui_current_address", this._currentAddress, true);
+            Blackboard.instance.set("sui_current_address", this._currentAddress);
         }
 
         // 加载玩家资产
@@ -1357,8 +1357,8 @@ export class SuiManager {
             });
 
             // 通过 Blackboard 通知 UI 更新
-            Blackboard.instance.set("sui_balance", balance, true);
-            Blackboard.instance.set("sui_seats", seats, true);
+            Blackboard.instance.set("sui_balance", balance);
+            Blackboard.instance.set("sui_seats", seats);
 
             const formattedBalance = this._formatSuiAmount(balance);
             UINotification.success(`资产加载完成：${formattedBalance} SUI`);
@@ -1380,7 +1380,7 @@ export class SuiManager {
 
             if (balance !== this._cachedSuiBalance) {
                 this._cachedSuiBalance = balance;
-                Blackboard.instance.set("sui_balance", balance, true);
+                Blackboard.instance.set("sui_balance", balance);
                 console.log('[SuiManager] Balance updated:', balance.toString());
             }
         } catch (error) {

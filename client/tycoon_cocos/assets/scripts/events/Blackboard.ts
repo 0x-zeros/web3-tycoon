@@ -27,8 +27,6 @@ interface BlackboardItem {
     value: any;
     /** 监听器列表 */
     watchers: DataWatcherConfig[];
-    /** 是否为持久化数据 */
-    persistent?: boolean;
     /** 数据类型标记 */
     type?: string;
 }
@@ -44,8 +42,6 @@ export class Blackboard extends EventTarget {
     private _data: Map<string, BlackboardItem> = new Map();
     /** 是否启用调试模式 */
     private _debug: boolean = false;
-    /** 持久化存储key前缀 */
-    private _persistentPrefix: string = "blackboard_";
 
     /**
      * 获取单例实例
@@ -62,7 +58,6 @@ export class Blackboard extends EventTarget {
      */
     private constructor() {
         super();
-        this._loadPersistentData();
     }
 
     /**
@@ -75,7 +70,7 @@ export class Blackboard extends EventTarget {
     /**
      * 设置数据
      */
-    public set<T>(key: string, value: T, persistent: boolean = false): void {
+    public set<T>(key: string, value: T): void {
         const oldItem = this._data.get(key);
         const oldValue = oldItem ? oldItem.value : undefined;
 
@@ -88,16 +83,10 @@ export class Blackboard extends EventTarget {
         const item: BlackboardItem = {
             value: value,
             watchers: oldItem ? oldItem.watchers : [],
-            persistent: persistent,
             type: typeof value
         };
 
         this._data.set(key, item);
-
-        // 持久化存储
-        if (persistent) {
-            this._savePersistentData(key, value);
-        }
 
         // 触发监听器
         this._notifyWatchers(key, value, oldValue);
@@ -145,11 +134,6 @@ export class Blackboard extends EventTarget {
 
         // 从存储中删除
         this._data.delete(key);
-
-        // 清理持久化数据
-        if (item.persistent) {
-            this._deletePersistentData(key);
-        }
 
         // 触发删除事件
         this.emit(`${key}_deleted`, oldValue);
@@ -207,7 +191,6 @@ export class Blackboard extends EventTarget {
             item = {
                 value: undefined,
                 watchers: [],
-                persistent: false,
                 type: "undefined"
             };
             this._data.set(key, item);
@@ -298,10 +281,10 @@ export class Blackboard extends EventTarget {
     /**
      * 批量设置数据
      */
-    public setBatch(data: Record<string, any>, persistent: boolean = false): void {
+    public setBatch(data: Record<string, any>): void {
         for (const key in data) {
             if (data.hasOwnProperty(key)) {
-                this.set(key, data[key], persistent);
+                this.set(key, data[key]);
             }
         }
     }
@@ -309,20 +292,15 @@ export class Blackboard extends EventTarget {
     /**
      * 清理所有数据
      */
-    public clear(includePersistent: boolean = false): void {
+    public clear(): void {
         const keys = Array.from(this._data.keys());
-        
-        for (const key of keys) {
-            const item = this._data.get(key);
-            if (!item) continue;
 
-            if (includePersistent || !item.persistent) {
-                this.delete(key);
-            }
+        for (const key of keys) {
+            this.delete(key);
         }
 
         if (this._debug) {
-            console.log(`[Blackboard] Cleared data (includePersistent: ${includePersistent})`);
+            console.log(`[Blackboard] Cleared all data`);
         }
     }
 
@@ -339,8 +317,7 @@ export class Blackboard extends EventTarget {
         for (const [key, item] of this._data) {
             info.data[key] = {
                 value: item.value,
-                type: item.type,
-                persistent: item.persistent
+                type: item.type
             };
             info.watchers[key] = item.watchers.length;
         }
@@ -353,11 +330,11 @@ export class Blackboard extends EventTarget {
      */
     public destroy(): void {
         // 清理所有数据和监听器
-        this.clear(true);
-        
+        this.clear();
+
         // 清理EventTarget
         this.removeAll();
-        
+
         Blackboard._instance = null;
 
         if (this._debug) {
@@ -402,37 +379,5 @@ export class Blackboard extends EventTarget {
         }
         
         return false;
-    }
-
-    /**
-     * 加载持久化数据
-     */
-    private _loadPersistentData(): void {
-        // 这里可以从localStorage或其他存储中加载数据
-        // 暂时跳过实现
-    }
-
-    /**
-     * 保存持久化数据
-     */
-    private _savePersistentData(key: string, value: any): void {
-        try {
-            const storageKey = this._persistentPrefix + key;
-            localStorage.setItem(storageKey, JSON.stringify(value));
-        } catch (e) {
-            warn(`[Blackboard] Failed to save persistent data for ${key}:`, e);
-        }
-    }
-
-    /**
-     * 删除持久化数据
-     */
-    private _deletePersistentData(key: string): void {
-        try {
-            const storageKey = this._persistentPrefix + key;
-            localStorage.removeItem(storageKey);
-        } catch (e) {
-            warn(`[Blackboard] Failed to delete persistent data for ${key}:`, e);
-        }
     }
 }

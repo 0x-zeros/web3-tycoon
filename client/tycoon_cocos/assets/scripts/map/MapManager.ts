@@ -464,29 +464,29 @@ export class MapManager extends Component {
         console.log('[MapManager] Initializing game state to Blackboard');
 
         // 设置游戏基础信息
-        Blackboard.instance.set('currentGameId', game.id, true);
-        Blackboard.instance.set('currentRound', game.round, true);
-        Blackboard.instance.set('currentTurn', game.turn, true);
-        Blackboard.instance.set('currentGame', game, true);
+        Blackboard.instance.set('currentGameId', game.id);
+        Blackboard.instance.set('currentRound', game.round);
+        Blackboard.instance.set('currentTurn', game.turn);
+        Blackboard.instance.set('currentGame', game);
 
         // 设置当前玩家信息
         // TODO: 根据当前地址找到玩家的 index
         if (game.players && game.players.length > 0) {
             const player = game.players[0];  // 临时用第一个玩家
-            Blackboard.instance.set('playerName', `玩家 #1`, true);
-            Blackboard.instance.set('playerMoney', Number(player.cash), true);
-            Blackboard.instance.set('playerLevel', 1, true);
-            Blackboard.instance.set('playerHp', 100, true);
-            Blackboard.instance.set('playerMaxHp', 100, true);
-            Blackboard.instance.set('playerExp', 0, true);
-            Blackboard.instance.set('playerMaxExp', 1000, true);
+            Blackboard.instance.set('playerName', `玩家 #1`);
+            Blackboard.instance.set('playerMoney', Number(player.cash));
+            Blackboard.instance.set('playerLevel', 1);
+            Blackboard.instance.set('playerHp', 100);
+            Blackboard.instance.set('playerMaxHp', 100);
+            Blackboard.instance.set('playerExp', 0);
+            Blackboard.instance.set('playerMaxExp', 1000);
         }
 
         // 设置游戏配置
-        Blackboard.instance.set('gameData', gameData, true);
+        Blackboard.instance.set('gameData', gameData);
 
         // 初始化游戏时间
-        Blackboard.instance.set('gameTime', 0, true);
+        Blackboard.instance.set('gameTime', 0);
 
         console.log('[MapManager] Game state initialized');
     }

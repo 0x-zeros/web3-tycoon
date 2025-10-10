@@ -272,9 +272,9 @@ export class UIMapAssetList extends UIBase {
         console.log('  Load from localStorage:', loadFromLocalStorage);
 
         // 保存选择的地图信息
-        Blackboard.instance.set("selectedMapId", this._selectedMapId, true);
-        Blackboard.instance.set("selectedMapConfig", this._selectedMapConfig, true);
-        Blackboard.instance.set("loadFromLocalStorage", loadFromLocalStorage, true);
+        Blackboard.instance.set("selectedMapId", this._selectedMapId);
+        Blackboard.instance.set("selectedMapConfig", this._selectedMapConfig);
+        Blackboard.instance.set("loadFromLocalStorage", loadFromLocalStorage);
 
         // 发送地图选择事件（编辑模式）
         EventBus.emit(EventTypes.Game.MapSelected, {

@@ -7,6 +7,7 @@ import { _decorator } from 'cc';
 import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIEditor } from "./UIEditor";
+import { UIInGameDebug } from "./UIInGameDebug";
 import { MapManager } from "../../map/MapManager";
 import { DiceController } from "../../game/DiceController";
 
@@ -23,6 +24,7 @@ export class UIInGame extends UIBase {
 
     private m_mapElementUI:UIMapElement;
     private m_editorUI:UIEditor;
+    private m_debugUI: UIInGameDebug | null = null;
     private m_modeController: fgui.Controller;
 
     // ================ 玩家信息组件 ================
@@ -111,7 +113,19 @@ export class UIInGame extends UIBase {
 
         //hide
         this.m_mapElementUI.hide();
-        
+
+        // m_debugUI
+        const debugComponent = this.getChild('debug')?.asCom;
+        if (debugComponent) {
+            this.m_debugUI = debugComponent.node.addComponent(UIInGameDebug);
+            this.m_debugUI.setUIName("InGameDebug");
+            this.m_debugUI.setPanel(debugComponent);
+            this.m_debugUI.init();
+            console.log('[UIInGame] Debug UI component created');
+        } else {
+            console.warn('[UIInGame] Debug component not found in FairyGUI');
+        }
+
         // 根据GameMap的编辑模式设置控制器
         this.updateModeController();
 

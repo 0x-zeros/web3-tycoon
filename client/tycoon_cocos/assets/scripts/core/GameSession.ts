@@ -103,6 +103,8 @@ export class GameSession {
     public loadFromMoveGame(game: Game): void {
         console.log('[GameSession] 从 Move Game 加载数据', game);
 
+        //todo 保存 game 为变量
+
         // 基础信息
         this._gameId = game.id;
         this._status = game.status;

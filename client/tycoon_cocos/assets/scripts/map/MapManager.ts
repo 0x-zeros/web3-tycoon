@@ -361,6 +361,13 @@ export class MapManager extends Component {
     }
 
     /**
+     * 获取当前 GameMap 组件（直接访问器）
+     */
+    public getCurrentGameMap(): GameMap | null {
+        return this._currentMapComponent;
+    }
+
+    /**
      * 获取当前地图信息
      */
     public getCurrentMapInfo(): { mapId: string; config: MapConfig; component: GameMap } | null {
@@ -437,95 +444,95 @@ export class MapManager extends Component {
         }
     }
 
-    /**
-     * 游戏开始事件处理（从链上数据加载场景）
-     * 事件数据：{ game, template, gameData }
-     *
-     * 参考 loadMap() 的实现，统一创建新的 GameMap 实例
-     */
-    private async _onGameStart(data: any): Promise<void> {
-        console.log('[MapManager] Game.GameStart event received');
-        console.log('  Game ID:', data.game?.id);
-        console.log('  Template tiles:', data.template?.tiles_static?.size);
-        console.log('  GameData:', !!data.gameData);
+    // /**
+    //  * 游戏开始事件处理（从链上数据加载场景）
+    //  * 事件数据：{ game, template, gameData }
+    //  *
+    //  * 参考 loadMap() 的实现，统一创建新的 GameMap 实例
+    //  */
+    // private async _onGameStart(data: any): Promise<void> {
+    //     console.log('[MapManager] Game.GameStart event received');
+    //     console.log('  Game ID:', data.game?.id);
+    //     console.log('  Template tiles:', data.template?.tiles_static?.size);
+    //     console.log('  GameData:', !!data.gameData);
 
-        // 区分链上游戏 vs 本地编辑（通过是否有 template 判断）
-        if (!data.template || !data.game) {
-            // 本地编辑模式（旧的 GameStart 事件，来自 MapSelected）
-            console.log('[MapManager] Local map event, ignoring (handled by MapSelected)');
-            return;
-        }
+    //     // 区分链上游戏 vs 本地编辑（通过是否有 template 判断）
+    //     if (!data.template || !data.game) {
+    //         // 本地编辑模式（旧的 GameStart 事件，来自 MapSelected）
+    //         console.log('[MapManager] Local map event, ignoring (handled by MapSelected)');
+    //         return;
+    //     }
 
-        try {
-            // 1. 卸载当前地图（如果有）
-            this.unloadCurrentMap();
+    //     try {
+    //         // 1. 卸载当前地图（如果有）
+    //         this.unloadCurrentMap();
 
-            // 2. 创建新的地图节点
-            const mapInstance = new Node(`ChainGame_${data.game.id.slice(0, 8)}`);
+    //         // 2. 创建新的地图节点
+    //         const mapInstance = new Node(`ChainGame_${data.game.id.slice(0, 8)}`);
 
-            // 3. 添加 GameMap 组件
-            const mapComponent = mapInstance.addComponent(GameMap);
+    //         // 3. 添加 GameMap 组件
+    //         const mapComponent = mapInstance.addComponent(GameMap);
 
-            // 4. 创建临时 MapConfig（链上游戏不需要预制体）
-            const tempConfig: MapConfig = {
-                id: `chain_${data.game.id}`,
-                name: `Chain Game`,
-                prefabPath: '',  // 链上游戏不需要预制体
-                previewImagePath: '',
-                type: 'classic'
-            };
+    //         // 4. 创建临时 MapConfig（链上游戏不需要预制体）
+    //         const tempConfig: MapConfig = {
+    //             id: `chain_${data.game.id}`,
+    //             name: `Chain Game`,
+    //             prefabPath: '',  // 链上游戏不需要预制体
+    //             previewImagePath: '',
+    //             type: 'classic'
+    //         };
 
-            // 5. 初始化 GameMap（非编辑模式）
-            console.log('[MapManager] Initializing GameMap (play mode)...');
-            await mapComponent.init(tempConfig, false);  // isEdit = false
+    //         // 5. 初始化 GameMap（非编辑模式）
+    //         console.log('[MapManager] Initializing GameMap (play mode)...');
+    //         await mapComponent.init(tempConfig, false);  // isEdit = false
 
-            // 6. 从链上数据加载场景
-            console.log('[MapManager] Loading scene from chain data...');
-            UINotification.info("正在加载游戏地图...");
+    //         // 6. 从链上数据加载场景
+    //         console.log('[MapManager] Loading scene from chain data...');
+    //         UINotification.info("正在加载游戏地图...");
 
-            const loaded = await mapComponent.loadFromChainData(data.template, data.game);
+    //         const loaded = await mapComponent.loadFromChainData(data.template, data.game);
 
-            if (!loaded) {
-                throw new Error('Failed to load game scene');
-            }
+    //         if (!loaded) {
+    //             throw new Error('Failed to load game scene');
+    //         }
 
-            console.log('[MapManager] Game scene loaded successfully');
+    //         console.log('[MapManager] Game scene loaded successfully');
 
-            // 7. 添加到容器
-            const container = this.mapContainer || director.getScene();
-            if (container) {
-                container.addChild(mapInstance);
-            }
+    //         // 7. 添加到容器
+    //         const container = this.mapContainer || director.getScene();
+    //         if (container) {
+    //             container.addChild(mapInstance);
+    //         }
 
-            // 8. 更新当前地图状态
-            this._currentMapInstance = mapInstance;
-            this._currentMapComponent = mapComponent;
-            this._currentMapId = tempConfig.id;
+    //         // 8. 更新当前地图状态
+    //         this._currentMapInstance = mapInstance;
+    //         this._currentMapComponent = mapComponent;
+    //         this._currentMapId = tempConfig.id;
 
-            this.log(`链上游戏场景加载成功: ${tempConfig.id}`);
+    //         this.log(`链上游戏场景加载成功: ${tempConfig.id}`);
 
-            // 9. 初始化游戏状态到 Blackboard
-            this._initializeGameState(data.game, data.gameData);
+    //         // 9. 初始化游戏状态到 Blackboard
+    //         this._initializeGameState(data.game, data.gameData);
 
-            // 10. 发送场景加载完成事件
-            EventBus.emit(EventTypes.Game.MapLoaded, {
-                gameId: data.game.id,
-                mapId: tempConfig.id,
-                success: true
-            });
+    //         // 10. 发送场景加载完成事件
+    //         EventBus.emit(EventTypes.Game.MapLoaded, {
+    //             gameId: data.game.id,
+    //             mapId: tempConfig.id,
+    //             success: true
+    //         });
 
-            UINotification.success("游戏地图加载完成");
+    //         UINotification.success("游戏地图加载完成");
 
-        } catch (error) {
-            console.error('[MapManager] Failed to load game scene:', error);
-            UINotification.error("游戏地图加载失败");
+    //     } catch (error) {
+    //         console.error('[MapManager] Failed to load game scene:', error);
+    //         UINotification.error("游戏地图加载失败");
 
-            // 发送加载失败事件
-            EventBus.emit(EventTypes.Game.MapLoadFailed, {
-                error: error
-            });
-        }
-    }
+    //         // 发送加载失败事件
+    //         EventBus.emit(EventTypes.Game.MapLoadFailed, {
+    //             error: error
+    //         });
+    //     }
+    // }
 
     /**
      * 初始化游戏状态到 Blackboard

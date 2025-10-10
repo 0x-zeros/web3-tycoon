@@ -65,12 +65,9 @@ export class UIInGameDebug extends UIBase {
         }
 
         // 确保ID标签被隐藏
-        const mapManager = MapManager.getInstance();
-        if (mapManager) {
-            const mapInfo = mapManager.getCurrentMapInfo();
-            if (mapInfo && mapInfo.component) {
-                mapInfo.component.hideIdsWithOverlay();
-            }
+        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+        if (gameMap) {
+            gameMap.hideIdsWithOverlay();
         }
     }
 
@@ -81,12 +78,9 @@ export class UIInGameDebug extends UIBase {
         console.log("[UIInGameDebug] Hiding debug UI");
 
         // 清理ID标签并重置状态
-        const mapManager = MapManager.getInstance();
-        if (mapManager) {
-            const mapInfo = mapManager.getCurrentMapInfo();
-            if (mapInfo && mapInfo.component) {
-                mapInfo.component.hideIdsWithOverlay();
-            }
+        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+        if (gameMap) {
+            gameMap.hideIdsWithOverlay();
         }
 
         // 重置显示状态
@@ -100,33 +94,36 @@ export class UIInGameDebug extends UIBase {
      * 显示/隐藏ID按钮点击事件（3D Overlay）
      */
     private async _onShowIdsClick(): Promise<void> {
-        console.log("[UIInGameDebug] Show IDs button clicked");
-        const mapManager = MapManager.getInstance();
-        if (mapManager) {
-            const mapInfo = mapManager.getCurrentMapInfo();
-            if (mapInfo && mapInfo.component) {
-                this._isShowingIds = !this._isShowingIds;
+        console.log("[UIInGameDebug] Button clicked");
 
-                if (this._isShowingIds) {
-                    // 显示ID（3D Overlay）
-                    await mapInfo.component.showIdsWithOverlay();
+        // 直接获取当前 GameMap 组件
+        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
 
-                    // 更新按钮文本
-                    if (this.m_btn_showIds) {
-                        this.m_btn_showIds.title = "隐藏ID";
-                    }
-                } else {
-                    // 隐藏ID（3D Overlay）
-                    mapInfo.component.hideIdsWithOverlay();
+        if (!gameMap) {
+            console.error('[UIInGameDebug] No GameMap found!');
+            return;
+        }
 
-                    // 更新按钮文本
-                    if (this.m_btn_showIds) {
-                        this.m_btn_showIds.title = "显示ID";
-                    }
-                }
+        this._isShowingIds = !this._isShowingIds;
 
-                console.log(`[UIInGameDebug] IDs ${this._isShowingIds ? 'shown' : 'hidden'} (3D Overlay only)`);
+        if (this._isShowingIds) {
+            // 显示ID（3D Overlay）
+            await gameMap.showIdsWithOverlay();
+
+            // 更新按钮文本
+            if (this.m_btn_showIds) {
+                this.m_btn_showIds.title = "隐藏ID";
+            }
+        } else {
+            // 隐藏ID（3D Overlay）
+            gameMap.hideIdsWithOverlay();
+
+            // 更新按钮文本
+            if (this.m_btn_showIds) {
+                this.m_btn_showIds.title = "显示ID";
             }
         }
+
+        console.log(`[UIInGameDebug] IDs ${this._isShowingIds ? 'shown' : 'hidden'}`);
     }
 }

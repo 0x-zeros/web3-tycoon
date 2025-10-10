@@ -32,7 +32,7 @@ public struct GameCreatedEvent has copy, drop {
     game: ID,
     creator: address,
     template_map_id: ID,
-    max_players: u8
+    players: vector<address>  // 所有玩家地址列表
 }
 
 // 玩家加入事件
@@ -45,7 +45,8 @@ public struct PlayerJoinedEvent has copy, drop {
 // 游戏开始事件
 public struct GameStartedEvent has copy, drop {
     game: ID,
-    player_count: u8,
+    template_map_id: ID,
+    players: vector<address>,
     starting_player: address
 }
 
@@ -225,13 +226,13 @@ public(package) fun emit_game_created_event(
     game_id: ID,
     creator: address,
     template_map_id: ID,
-    max_players: u8
+    players: vector<address>
 ) {
     event::emit(GameCreatedEvent {
         game: game_id,
         creator,
         template_map_id,
-        max_players
+        players
     });
 }
 
@@ -249,12 +250,14 @@ public(package) fun emit_player_joined_event(
 
 public(package) fun emit_game_started_event(
     game_id: ID,
-    player_count: u8,
+    template_map_id: ID,
+    players: vector<address>,
     starting_player: address
 ) {
     event::emit(GameStartedEvent {
         game: game_id,
-        player_count,
+        template_map_id,
+        players,
         starting_player
     });
 }

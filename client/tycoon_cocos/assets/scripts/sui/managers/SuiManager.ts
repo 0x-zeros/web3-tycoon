@@ -1166,49 +1166,43 @@ export class SuiManager {
      */
     private async _onGameStarted(event: any): Promise<void> {
         const gameId = event.data?.game;
-        const startingPlayer = event.data?.starting_player;
+        const templateMapId = event.data?.template_map_id;  // ← 从事件获取
+        const players = event.data?.players || [];           // ← 从事件获取
 
         if (!gameId) return;
 
-        // 1. 找到缓存的 Game
-        const cachedGame = this._cachedGames.find(g => g.id === gameId);
-
-        // 2. 判断是否是当前玩家
-        const isPlayer = cachedGame?.players.some(p => p.owner === this._currentAddress);
+        // 直接从事件判断，无需查询缓存
+        const isPlayer = players.includes(this._currentAddress);
 
         console.log('[SuiManager] GameStarted event processing');
         console.log('  Game:', gameId);
-        console.log('  Starting player:', startingPlayer);
+        console.log('  Template:', templateMapId);
+        console.log('  Players:', players);
         console.log('  Is player:', isPlayer);
 
-        if (isPlayer && cachedGame) {
-            // ✅ 是玩家：重新获取完整数据并加载场景
+        if (isPlayer) {
             console.log('[SuiManager] I am a player, loading game scene...');
-
-            await this._loadGameScene(gameId);
-
+            await this._loadGameScene(gameId, templateMapId);  // ← 传入 templateMapId
         } else {
-            // ✅ 不是玩家：只更新 status
-            console.log('[SuiManager] Not a player, updating status only');
+            console.log('[SuiManager] Not a player, updating cache');
 
+            // 更新缓存状态
+            const cachedGame = this._cachedGames.find(g => g.id === gameId);
             if (cachedGame) {
                 cachedGame.status = GameStatus.ACTIVE;
             }
 
-            // 从 READY 列表移除
+            // 从列表移除
             const index = this._cachedGames.findIndex(g => g.id === gameId);
             if (index >= 0) {
                 this._cachedGames.splice(index, 1);
-                console.log(`[SuiManager] Removed started game ${gameId} from cache`);
-
-                // 通知 UI 更新
                 EventBus.emit(EventTypes.Sui.GamesListUpdated, {
                     games: this._cachedGames
                 });
             }
         }
 
-        // 转发到 EventBus
+        // 转发事件
         EventBus.emit(EventTypes.Move.GameStarted, {
             ...event.data,
             isPlayer: isPlayer || false
@@ -1218,24 +1212,21 @@ export class SuiManager {
     /**
      * 加载游戏场景（获取完整数据）
      */
-    private async _loadGameScene(gameId: string): Promise<void> {
+    private async _loadGameScene(gameId: string, templateMapId: string): Promise<void> {
         try {
             console.log('[SuiManager] Loading game scene...');
             UINotification.info("正在加载游戏场景...");
 
-            // 1. 并行获取 Game、GameData
-            const [game, gameData] = await Promise.all([
+            // 并行加载 Game + MapTemplate + GameData
+            const [game, template, gameData] = await Promise.all([
                 this._gameClient!.game.getGameState(gameId),
+                this.getMapTemplate(templateMapId),  // ← 使用传入的 templateMapId
                 this._queryService!.getGameData()
             ]);
 
             if (!game) {
                 throw new Error('Failed to get game state');
             }
-
-            // 2. 获取 MapTemplate
-            console.log('[SuiManager] Fetching MapTemplate:', game.template_map_id);
-            const template = await this.getMapTemplate(game.template_map_id); //todo 有问题，全是0或者NaN
 
             if (!template) {
                 throw new Error('Failed to get map template');

@@ -18,8 +18,8 @@ export interface GameCreatedEvent {
     creator: string;
     /** 地图模板ID */
     template_map_id: string;
-    /** 最大玩家数 */
-    max_players: number;
+    /** 所有玩家地址列表 */
+    players: string[];
 }
 
 /**
@@ -42,8 +42,10 @@ export interface PlayerJoinedEvent {
 export interface GameStartedEvent {
     /** 游戏ID */
     game: string;
-    /** 玩家数量 */
-    player_count: number;
+    /** 地图模板ID */
+    template_map_id: string;
+    /** 所有玩家地址列表 */
+    players: string[];
     /** 起始玩家地址 */
     starting_player: string;
 }

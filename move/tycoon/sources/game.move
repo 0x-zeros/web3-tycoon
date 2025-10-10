@@ -376,13 +376,16 @@ public entry fun create_game(
     game.players.push_back(player);
 
     // 发出游戏创建事件
-    let max_players = types::DEFAULT_MAX_PLAYERS();
     let template_map_id = map::get_map_id(map);
+    // 构建玩家地址列表（创建时只有创建者）
+    let mut players_addresses = vector[];
+    players_addresses.push_back(creator);
+
     events::emit_game_created_event(
         game_id_copy,
         creator,
         template_map_id,
-        max_players
+        players_addresses
     );
 
     // 创建座位凭证（索引为 0）
@@ -532,10 +535,19 @@ public entry fun start(
         i = i + 1;
     };
 
-    // 发出开始事件 //该消息不需要太多信息，客户端在收到该event以后，应该重新获取game object，得到游戏的全部数据。
+    // 发出开始事件
+    // 构建玩家地址列表
+    let mut players_addresses = vector[];
+    let mut i = 0;
+    while (i < game.players.length()) {
+        players_addresses.push_back((&game.players[i]).owner);
+        i = i + 1;
+    };
+
     events::emit_game_started_event(
         game.id.to_inner(),
-        game.players.length() as u8,
+        game.template_map_id,
+        players_addresses,
         starting_player
     );
 }

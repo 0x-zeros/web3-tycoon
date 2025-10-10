@@ -1,12 +1,12 @@
 /**
  * Sui区块链环境配置
- * 自动生成于: 2025-10-09 17:41:07
+ * 自动生成于: 2025-10-10 16:11:54
  */
 export const SuiEnvConfig = {
-    packageId: '0x2a3eedeb4dd17fc51e6800a2cac41e74601c07f5cca3bd44ee337193180ec821',
-    upgradeCap: '0x910382a2b955744ff48b6e7ea1558a025941d4bb9555217ee7f7a1254073be50',
-    adminCap: '0xbb20f4332a002146e101b05b0eb03d36a7b405306856ef36907b2790297b3d1d',
-    gameData: '0x4dd3da2dde428260accb46a58cd5fa96f964e336620958e5d3ff8b87d8d7ec00',
+    packageId: '0xd233e14974972a1415c0ef2adfe443c0c16b47cf67853d80daf827c33bea62c8',
+    upgradeCap: '0x0898f9e6dd8523a3bb20f6861726bdc28e06ae702d9258e05005192f0b1856d6',
+    adminCap: '0xcb0df815954019297356e3bb8b71e31d247690b7996dd13e1ab317b98960ba16',
+    gameData: '0x3898bb7b9e5e224a2f7fbb25418a5d90f68c9228f35acb8a5659ff69db1cf00f',
     network: 'localnet',
 
     // 开发环境使用 Keypair 签名

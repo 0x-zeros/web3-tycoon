@@ -174,21 +174,7 @@ export class SuiManager {
             UINotification.info("检测到 Keypair 模式");
 
             try {
-                const keypair = await loadKeypairFromKeystore();
-                this.setKeypairSigner(keypair);
-
-                console.log('[SuiManager] ✓ Auto-configured with KeypairSigner');
-                console.log('  Address:', this._currentAddress);
-
-                // 通过 Blackboard 通知 UI（Keypair 模式连接）
-                Blackboard.instance.set("sui_keypair_connected", true, true);
-                Blackboard.instance.set("sui_current_address", this._currentAddress, true);
-
-                // 加载玩家资产
-                this.loadPlayerAssets().catch(error => {
-                    console.error('[SuiManager] Failed to load assets:', error);
-                });
-
+                await this._loadAndSetKeypair();
             } catch (error) {
                 console.error('[SuiManager] Failed to load keypair:', error);
                 UINotification.error("Keypair 加载失败");
@@ -196,6 +182,64 @@ export class SuiManager {
             }
         } else {
             console.log('[SuiManager] Waiting for wallet connection (signerType: wallet)');
+        }
+    }
+
+    /**
+     * 加载并设置 Keypair（内部方法，供 _autoConfigureSigner 和 reloadKeypair 复用）
+     * @param forceUpdate 是否强制触发 UI 更新（即使地址未变）
+     */
+    private async _loadAndSetKeypair(forceUpdate: boolean = false): Promise<void> {
+        const keypair = await loadKeypairFromKeystore();
+        this.setKeypairSigner(keypair);
+
+        console.log('[SuiManager] ✓ Keypair loaded and set');
+        console.log('  Address:', this._currentAddress);
+
+        // 通过 Blackboard 通知 UI（Keypair 模式连接）
+        Blackboard.instance.set("sui_keypair_connected", true, true);
+
+        // 如果需要强制更新（重新加载时），先清空再设置，确保触发 watch 回调
+        if (forceUpdate) {
+            Blackboard.instance.set("sui_current_address", null, true);
+            // 延迟一点再设置新值，确保 watch 能检测到变化
+            setTimeout(() => {
+                Blackboard.instance.set("sui_current_address", this._currentAddress, true);
+            }, 1);
+        } else {
+            Blackboard.instance.set("sui_current_address", this._currentAddress, true);
+        }
+
+        // 加载玩家资产
+        this.loadPlayerAssets().catch(error => {
+            console.error('[SuiManager] Failed to load assets:', error);
+        });
+    }
+
+    /**
+     * 重新加载 Keypair（用于切换账号）
+     * @returns 是否切换了账号（地址变化）
+     */
+    public async reloadKeypair(): Promise<boolean> {
+        const oldAddress = this._currentAddress;
+        console.log('[SuiManager] Reloading keypair...');
+        console.log('  Old address:', oldAddress);
+
+        try {
+            // 强制更新 UI（forceUpdate = true）
+            await this._loadAndSetKeypair(true);
+
+            const addressChanged = oldAddress !== this._currentAddress;
+            console.log('[SuiManager] Keypair reloaded');
+            console.log('  New address:', this._currentAddress);
+            console.log('  Address changed:', addressChanged);
+
+            return addressChanged;
+
+        } catch (error) {
+            console.error('[SuiManager] Failed to reload keypair:', error);
+            UINotification.error("密钥重新加载失败");
+            throw error;
         }
     }
 

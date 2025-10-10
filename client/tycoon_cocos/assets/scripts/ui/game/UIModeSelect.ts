@@ -21,6 +21,7 @@ export class UIModeSelect extends UIBase {
     private m_keyPairInfo: fgui.GComponent | null = null;
     private m_input_storageKey: fgui.GTextInput | null = null;
     private m_input_password: fgui.GTextInput | null = null;
+    private m_btn_use: fgui.GButton | null = null;
 
     /**
      * 初始化回调
@@ -40,6 +41,7 @@ export class UIModeSelect extends UIBase {
         if (this.m_keyPairInfo) {
             this.m_input_storageKey = this.m_keyPairInfo.getChild("storageKey") as fgui.GTextInput;
             this.m_input_password = this.m_keyPairInfo.getChild("password") as fgui.GTextInput;
+            this.m_btn_use = this.m_keyPairInfo.getChild("btn_use") as fgui.GButton;
             console.log('[UIModeSelect] KeyPair config components found');
         } else {
             console.warn('[UIModeSelect] keyPairInfo component not found');
@@ -56,12 +58,9 @@ export class UIModeSelect extends UIBase {
         // 监听游戏开始事件
         EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
 
-        // 绑定 keypair 配置输入框事件
-        if (this.m_input_storageKey) {
-            this.m_input_storageKey.on(fgui.Event.CHANGED, this._onStorageKeyChanged, this);
-        }
-        if (this.m_input_password) {
-            this.m_input_password.on(fgui.Event.CHANGED, this._onPasswordChanged, this);
+        // 绑定 keypair 配置按钮事件（不再实时更新，改为点击按钮时应用）
+        if (this.m_btn_use) {
+            this.m_btn_use.onClick(this._onUseKeypairClick, this);
         }
     }
 
@@ -72,12 +71,9 @@ export class UIModeSelect extends UIBase {
         // 解绑按钮事件
         this.m_btn_start?.offClick(this._onStartClick, this);
 
-        // 解绑 keypair 配置输入框事件
-        if (this.m_input_storageKey) {
-            this.m_input_storageKey.off(fgui.Event.CHANGED, this._onStorageKeyChanged, this);
-        }
-        if (this.m_input_password) {
-            this.m_input_password.off(fgui.Event.CHANGED, this._onPasswordChanged, this);
+        // 解绑 keypair 配置按钮事件
+        if (this.m_btn_use) {
+            this.m_btn_use.offClick(this._onUseKeypairClick, this);
         }
 
         // 调用父类解绑
@@ -89,6 +85,9 @@ export class UIModeSelect extends UIBase {
      */
     protected onShow(data?: any): void {
         console.log("[UIModeSelect] Showing mode select UI");
+
+        // 根据 signerType 控制 keyPairInfo 显示
+        this._updateKeypairInfoVisibility();
 
         // 加载并显示 keypair 配置
         this._loadKeypairConfig();
@@ -158,6 +157,23 @@ export class UIModeSelect extends UIBase {
     // ================== Keypair 配置管理 ==================
 
     /**
+     * 更新 keyPairInfo 组件的显示状态
+     */
+    private _updateKeypairInfoVisibility(): void {
+        if (!this.m_keyPairInfo) return;
+
+        // 只在 keypair 模式下显示
+        const config = SuiManager.instance.config;
+        const isKeypairMode = config?.signerType === 'keypair';
+
+        this.m_keyPairInfo.visible = isKeypairMode;
+
+        console.log('[UIModeSelect] KeyPairInfo visibility updated');
+        console.log('  Signer type:', config?.signerType);
+        console.log('  Visible:', isKeypairMode);
+    }
+
+    /**
      * 加载 keypair 配置到输入框
      */
     private _loadKeypairConfig(): void {
@@ -175,27 +191,50 @@ export class UIModeSelect extends UIBase {
     }
 
     /**
-     * storageKey 输入框变化
+     * "使用"按钮点击 - 应用配置并重新加载 keypair
      */
-    private _onStorageKeyChanged(): void {
-        if (!this.m_input_storageKey) return;
+    private async _onUseKeypairClick(): Promise<void> {
+        if (!this.m_input_storageKey || !this.m_input_password) {
+            console.warn('[UIModeSelect] Input fields not ready');
+            return;
+        }
 
-        const newKey = this.m_input_storageKey.text.trim();
-        KeystoreConfig.instance.setStorageKey(newKey);
-
-        console.log('[UIModeSelect] Storage key changed:', newKey);
-        console.log('  Full storage key:', KeystoreConfig.instance.getFullStorageKey());
-    }
-
-    /**
-     * password 输入框变化
-     */
-    private _onPasswordChanged(): void {
-        if (!this.m_input_password) return;
-
+        const newStorageKey = this.m_input_storageKey.text.trim();
         const newPassword = this.m_input_password.text;
-        KeystoreConfig.instance.setPassword(newPassword);
 
-        console.log('[UIModeSelect] Password changed (memory only)');
+        console.log('[UIModeSelect] Apply keypair config clicked');
+        console.log('  Storage key:', newStorageKey);
+
+        // 禁用按钮（防止重复点击）
+        if (this.m_btn_use) {
+            this.m_btn_use.enabled = false;
+        }
+
+        try {
+            // 1. 应用配置
+            KeystoreConfig.instance.applyConfig(newStorageKey, newPassword);
+
+            // 2. 重新加载 keypair
+            UINotification.info("正在加载密钥...");
+            const addressChanged = await SuiManager.instance.reloadKeypair();
+
+            // 3. 根据结果提示
+            if (addressChanged) {
+                const newAddress = SuiManager.instance.currentAddress;
+                UINotification.success(`已切换到新账号\n${newAddress}`);
+            } else {
+                UINotification.info("配置已更新（账号未变）");
+            }
+
+        } catch (error) {
+            console.error('[UIModeSelect] Failed to apply keypair config:', error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            UINotification.error(`配置应用失败：${errorMsg}`);
+        } finally {
+            // 重新启用按钮
+            if (this.m_btn_use) {
+                this.m_btn_use.enabled = true;
+            }
+        }
     }
 }

@@ -118,6 +118,9 @@ export class UIWallet extends UIBase {
 
         // 监听 Keypair 连接（开发模式）
         Blackboard.instance.watch("sui_keypair_connected", this._onKeypairConnected, this);
+
+        // 监听地址变化（用于 Keypair 切换账号）
+        Blackboard.instance.watch("sui_current_address", this._onAddressChanged, this);
     }
 
     /**
@@ -144,6 +147,11 @@ export class UIWallet extends UIBase {
 
         // 清理WalletList
         this._closeWalletList();
+
+        // 解绑 Blackboard 监听
+        Blackboard.instance.unwatch("sui_balance", this._onBalanceChanged, this);
+        Blackboard.instance.unwatch("sui_keypair_connected", this._onKeypairConnected, this);
+        Blackboard.instance.unwatch("sui_current_address", this._onAddressChanged, this);
 
         // 调用父类解绑
         super.unbindEvents();
@@ -720,6 +728,29 @@ export class UIWallet extends UIBase {
 
         console.log('[UIWallet] UI updated for Keypair mode');
         console.log('  Address:', address);
+    }
+
+    /**
+     * 地址变化回调（用于 Keypair 切换账号）
+     */
+    private _onAddressChanged(address: string): void {
+        if (!address) return;
+
+        console.log('[UIWallet] Address changed:', address);
+
+        // 如果是 Keypair 模式，更新显示
+        if (this._isKeypairMode) {
+            // 更新地址显示
+            if (this.m_btn_wallet) {
+                this.m_btn_wallet.title = this._shortenAddress(address);
+                console.log('[UIWallet] Wallet button title updated');
+            }
+
+            // 更新 chain 显示
+            this._updateChainDisplay();
+
+            UINotification.info(`地址已更新\n${this._shortenAddress(address)}`);
+        }
     }
 
     /**

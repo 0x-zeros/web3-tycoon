@@ -4,9 +4,13 @@
     <image id="n0_azob" name="n0" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="512,256">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <text id="n1_azob" name="n1" xy="12,43" size="149,45" fontSize="30" color="#ffffff" autoSize="none" text="key"/>
-    <text id="n2_azob" name="n2" xy="12,150" size="158,45" fontSize="30" color="#ffffff" autoSize="none" text="password"/>
-    <text id="n5_azob" name="storageKey" xy="198,43" size="301,42" fontSize="30" color="#ffffff" autoSize="none" text="dev0" input="true"/>
-    <text id="n6_azob" name="password" xy="198,150" size="301,42" fontSize="30" color="#ffffff" autoSize="none" text="password0" input="true"/>
+    <text id="n9_lrk2" name="n9" xy="11,8" size="331,45" fontSize="30" color="#ffffff" autoSize="none" text="keyPair（测试用）"/>
+    <text id="n1_azob" name="n1" xy="12,63" size="149,45" fontSize="30" color="#ffffff" autoSize="none" text="用户"/>
+    <text id="n2_azob" name="n2" xy="12,127" size="158,45" fontSize="30" color="#ffffff" autoSize="none" text="密码"/>
+    <text id="n5_azob" name="storageKey" xy="198,63" size="301,42" fontSize="30" color="#ffffff" autoSize="none" text="dev0" input="true"/>
+    <text id="n6_azob" name="password" xy="198,127" size="301,42" fontSize="30" color="#ffffff" autoSize="none" text="password0" input="true"/>
+    <component id="n8_lrk2" name="btn_use" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="128,181" size="252,59">
+      <Button title="使用"/>
+    </component>
   </displayList>
 </component>

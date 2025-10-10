@@ -113,6 +113,19 @@ export class KeystoreConfig {
     // ============ 工具方法 ============
 
     /**
+     * 应用配置（一次性设置 storageKey 和 password）
+     * @param storageKey 存储键
+     * @param password 密码
+     */
+    public applyConfig(storageKey: string, password: string): void {
+        this.setStorageKey(storageKey);
+        this.setPassword(password);
+        console.log('[KeystoreConfig] Config applied');
+        console.log('  Storage key:', this._storageKey);
+        console.log('  Full key:', this.getFullStorageKey());
+    }
+
+    /**
      * 重置所有配置
      */
     public reset(): void {

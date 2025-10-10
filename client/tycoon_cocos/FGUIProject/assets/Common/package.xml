@@ -355,7 +355,7 @@
     <image id="pseuov0" name="button_square_depth.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuov1" name="button_square.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuov2" name="button_rectangle_depth.png" path="/kenney_ui-pack/Extra/"/>
-    <image id="pseuov3" name="button_rectangle.png" path="/kenney_ui-pack/Extra/"/>
+    <image id="pseuov3" name="button_rectangle.png" path="/kenney_ui-pack/Extra/" scale="9grid" scale9grid="30,32,319,64"/>
     <image id="pseuov4" name="bar_shadow_square_small_square.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuov5" name="bar_shadow_square_small_r.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuov6" name="bar_shadow_square_small_m.png" path="/kenney_ui-pack/Extra/"/>
@@ -389,6 +389,7 @@
     <image id="pseuovy" name="panel_glass.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuovz" name="panel_glass_tab_blade.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuow0" name="crosshair_color_d.png" path="/kenney_ui-pack/Yellow/"/>
+    <component id="lrk2ow1" name="Button13.xml" path="/components/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

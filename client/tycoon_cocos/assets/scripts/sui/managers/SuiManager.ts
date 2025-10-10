@@ -1182,7 +1182,7 @@ export class SuiManager {
 
         if (isPlayer) {
             console.log('[SuiManager] I am a player, loading game scene...');
-            await this._loadGameScene(gameId, templateMapId);  // ← 传入 templateMapId
+            await this.loadGameScene(gameId, templateMapId);  // ← 传入 templateMapId
         } else {
             console.log('[SuiManager] Not a player, updating cache');
 
@@ -1202,17 +1202,15 @@ export class SuiManager {
             }
         }
 
-        // 转发事件
-        EventBus.emit(EventTypes.Move.GameStarted, {
-            ...event.data,
-            isPlayer: isPlayer || false
-        });
+        // 注意：不在这里转发事件，而是在 _loadGameScene 中发送完整数据
     }
 
     /**
      * 加载游戏场景（获取完整数据）
+     * @param gameId 游戏 ID
+     * @param templateMapId 地图模板 ID
      */
-    private async _loadGameScene(gameId: string, templateMapId: string): Promise<void> {
+    public async loadGameScene(gameId: string, templateMapId: string): Promise<void> {
         try {
             console.log('[SuiManager] Loading game scene...');
             UINotification.info("正在加载游戏场景...");

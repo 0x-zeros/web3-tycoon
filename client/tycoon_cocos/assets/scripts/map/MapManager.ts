@@ -16,6 +16,7 @@ import { GameMap } from './core/GameMap';
 import { VoxelSystem } from '../voxel/VoxelSystem';
 import { GridGround, GridGroundConfig } from './GridGround';
 import { UINotification } from '../ui/utils/UINotification';
+import { GameSession } from '../core/GameSession';
 
 const { ccclass, property } = _decorator;
 
@@ -276,7 +277,7 @@ export class MapManager extends Component {
      * @param session GameSession 实例
      * @returns GameMap 组件实例
      */
-    public async loadGameMapFromSession(session: any): Promise<any> {
+    public async loadGameMapFromSession(session: GameSession): Promise<any> {
         console.log('[MapManager] 从 GameSession 加载游戏地图');
 
         // 1. 卸载当前地图（如果有）
@@ -284,10 +285,10 @@ export class MapManager extends Component {
 
         // 2. 创建新的地图节点
         const gameId = session.getGameId();
-        const mapInstance = new Node(`ChainGame_${gameId.slice(0, 8)}`);
+        const mapNode = new Node(`ChainGame_${gameId.slice(0, 8)}`);
 
         // 3. 添加 GameMap 组件
-        const mapComponent = mapInstance.addComponent(GameMap);
+        const gameMap = mapNode.addComponent(GameMap);
 
         // 4. 创建临时 MapConfig（链上游戏不需要预制体）
         const tempConfig: MapConfig = {
@@ -300,13 +301,13 @@ export class MapManager extends Component {
 
         // 5. 初始化 GameMap（非编辑模式）
         console.log('[MapManager] Initializing GameMap (play mode)...');
-        await mapComponent.init(tempConfig, false);  // isEdit = false
+        await gameMap.init(tempConfig, false);  // isEdit = false
 
         // 6. 从 GameSession 加载场景（新方法）
         console.log('[MapManager] Loading scene from GameSession...');
         UINotification.info("正在加载游戏地图...");
 
-        const loaded = await mapComponent.loadFromGameSession(session);
+        const loaded = await gameMap.loadFromGameSession(session);
 
         if (!loaded) {
             throw new Error('Failed to load game map from session');
@@ -317,12 +318,12 @@ export class MapManager extends Component {
         // 7. 添加到容器
         const container = this.mapContainer || director.getScene();
         if (container) {
-            container.addChild(mapInstance);
+            container.addChild(mapNode);
         }
 
         // 8. 更新当前地图状态
-        this._currentMapInstance = mapInstance;
-        this._currentMapComponent = mapComponent;
+        this._currentMapInstance = mapNode;
+        this._currentMapComponent = gameMap;
         this._currentMapId = tempConfig.id;
 
         this.log(`链上游戏地图加载成功: ${tempConfig.id}`);
@@ -331,12 +332,12 @@ export class MapManager extends Component {
         EventBus.emit(EventTypes.Game.MapLoaded, {
             gameId: gameId,
             mapId: tempConfig.id,
-            mapComponent: mapComponent
+            mapComponent: gameMap
         });
 
         UINotification.success("游戏地图加载完成");
 
-        return mapComponent;
+        return gameMap;
     }
 
     /**

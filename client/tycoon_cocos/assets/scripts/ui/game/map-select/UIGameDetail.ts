@@ -11,7 +11,7 @@ import { IdFormatter } from "../../utils/IdFormatter";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
-import { DEFAULT_MAX_PLAYERS } from "../../../sui/types/constants";
+import { DEFAULT_MAX_PLAYERS, GameStatus } from "../../../sui/types/constants";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -132,34 +132,53 @@ export class UIGameDetail extends UIBase {
             }
         }
 
-        // 按钮显示逻辑
+        // 按钮显示逻辑（根据游戏状态和玩家身份）
+        const isActiveGame = game.status === GameStatus.ACTIVE;  // 进行中
         const canJoin = game.players.length < DEFAULT_MAX_PLAYERS;
         const canStart = game.players.length >= 2;
 
-        if (isPlayer) {
-            // 已是玩家：显示"开始游戏"
-            this.m_btn_startGame.title = "开始游戏";
-            this.m_btn_startGame.visible = true;
-            this.m_btn_startGame.enabled = canStart;  // 人数 >= 2 才能开始
-            this.m_btn_startGame.grayed = !canStart;
+        if (isActiveGame) {
+            // === 进行中的游戏 ===
+            if (isPlayer) {
+                // 情况1：自己是玩家 → "继续游戏"、"退出游戏"、"确定"
+                this.m_btn_startGame.title = "继续游戏";
+                this.m_btn_startGame.visible = true;
+                this.m_btn_startGame.enabled = true;
+                this.m_btn_startGame.grayed = false;
 
-            this.m_btn_quitGame.visible = true;
-        } else if (canJoin) {
-            // 不是玩家但可加入：显示"加入游戏"
-            this.m_btn_startGame.title = "加入游戏";
-            this.m_btn_startGame.visible = true;
-            this.m_btn_startGame.enabled = true;
-            this.m_btn_startGame.grayed = false;
-
-            this.m_btn_quitGame.visible = false;
+                this.m_btn_quitGame.visible = true;
+            } else {
+                // 情况2：不是玩家 → 只显示 "确定"
+                this.m_btn_startGame.visible = false;
+                this.m_btn_quitGame.visible = false;
+            }
         } else {
-            // 不是玩家且已满员：显示"已满员"
-            this.m_btn_startGame.title = "已满员";
-            this.m_btn_startGame.visible = true;
-            this.m_btn_startGame.enabled = false;
-            this.m_btn_startGame.grayed = true;
+            // === 准备中的游戏（原逻辑） ===
+            if (isPlayer) {
+                // 已是玩家：显示"开始游戏"
+                this.m_btn_startGame.title = "开始游戏";
+                this.m_btn_startGame.visible = true;
+                this.m_btn_startGame.enabled = canStart;  // 人数 >= 2 才能开始
+                this.m_btn_startGame.grayed = !canStart;
 
-            this.m_btn_quitGame.visible = false;
+                this.m_btn_quitGame.visible = true;
+            } else if (canJoin) {
+                // 不是玩家但可加入：显示"加入游戏"
+                this.m_btn_startGame.title = "加入游戏";
+                this.m_btn_startGame.visible = true;
+                this.m_btn_startGame.enabled = true;
+                this.m_btn_startGame.grayed = false;
+
+                this.m_btn_quitGame.visible = false;
+            } else {
+                // 不是玩家且已满员：显示"已满员"
+                this.m_btn_startGame.title = "已满员";
+                this.m_btn_startGame.visible = true;
+                this.m_btn_startGame.enabled = false;
+                this.m_btn_startGame.grayed = true;
+
+                this.m_btn_quitGame.visible = false;
+            }
         }
 
         console.log('[UIGameDetail] Game displayed');
@@ -191,10 +210,10 @@ export class UIGameDetail extends UIBase {
     }
 
     /**
-     * 开始游戏/加入游戏按钮点击
+     * 开始游戏/加入游戏/继续游戏按钮点击
      */
     private async _onStartGameClick(): Promise<void> {
-        console.log('[UIGameDetail] Start/Join game clicked');
+        console.log('[UIGameDetail] Start/Join/Continue game clicked');
 
         const game = SuiManager.instance.currentGame;
         if (!game) {
@@ -204,12 +223,16 @@ export class UIGameDetail extends UIBase {
 
         const currentAddress = SuiManager.instance.currentAddress;
         const isPlayer = game.players.some(p => p.owner === currentAddress);
+        const isActiveGame = game.status === GameStatus.ACTIVE;
 
-        if (isPlayer) {
-            // 已是玩家：开始游戏
+        if (isActiveGame && isPlayer) {
+            // 进行中的游戏 + 是玩家 → 继续游戏
+            await this._handleContinueGame(game);
+        } else if (isPlayer) {
+            // 准备中的游戏 + 是玩家 → 开始游戏
             await this._handleStartGame(game);
         } else {
-            // 不是玩家：加入游戏
+            // 准备中的游戏 + 不是玩家 → 加入游戏
             await this._handleJoinGame(game);
         }
     }
@@ -297,6 +320,33 @@ export class UIGameDetail extends UIBase {
                 `错误信息: ${errorMsg}\n\n` +
                 `请检查网络连接或稍后重试`,
                 "加入失败"
+            );
+        }
+    }
+
+    /**
+     * 处理继续游戏（进行中的游戏）
+     */
+    private async _handleContinueGame(game: Game): Promise<void> {
+        try {
+            UINotification.info("正在加载游戏场景...");
+
+            // 直接调用 SuiManager 的 loadGameScene
+            await SuiManager.instance.loadGameScene(game.id, game.template_map_id);
+
+            console.log('[UIGameDetail] Game scene loaded');
+
+            // 场景加载成功，GameSession 会发送 GameStart 事件触发 UI 切换
+
+        } catch (error) {
+            console.error('[UIGameDetail] Failed to continue game:', error);
+
+            const errorMsg = (error as any)?.message || error?.toString() || '未知错误';
+            await UIMessage.error(
+                `加载游戏场景失败\n\n` +
+                `错误信息: ${errorMsg}\n\n` +
+                `请检查网络连接或稍后重试`,
+                "加载失败"
             );
         }
     }

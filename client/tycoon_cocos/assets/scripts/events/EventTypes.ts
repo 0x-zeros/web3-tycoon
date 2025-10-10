@@ -66,7 +66,7 @@ export const EventTypes = {
         /** 游戏结束 */
         GameEnd: "game_end",
         /** 游戏结束（新名称） */
-        Ended: "game_ended",
+        GameEnded: "game_ended",
         /** 游戏暂停 */
         GamePause: "game_pause",
         /** 游戏恢复 */
@@ -85,6 +85,24 @@ export const EventTypes = {
         RoundEnded: "game_round_ended",
         /** 显示游戏详情 */
         ShowGameDetail: "game_show_game_detail",
+
+        // GameSession 相关事件
+        /** GameSession 加载完成 */
+        SessionLoaded: "game_session_loaded",
+        /** GameSession 重置 */
+        SessionReset: "game_session_reset",
+        /** GameSession 销毁 */
+        SessionDestroyed: "game_session_destroyed",
+        /** 游戏状态变化 */
+        StatusChanged: "game_status_changed",
+        /** 待决策状态 */
+        DecisionPending: "game_decision_pending",
+        /** 决策已清除 */
+        DecisionCleared: "game_decision_cleared",
+        /** NPC 生成 */
+        NPCSpawned: "game_npc_spawned",
+        /** NPC 移除 */
+        NPCRemoved: "game_npc_removed",
 
         // 地图相关事件
         /** 地图被选择 */

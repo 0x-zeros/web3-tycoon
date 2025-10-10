@@ -14,10 +14,12 @@ import { NO_OWNER } from './constants';
 export interface BuffEntry {
     /** Buff类型（对应types.move的BUFF_*常量） */
     kind: number;
-    /** 首个失效轮次（独占：当current_turn < first_inactive_turn时有效） */
-    first_inactive_turn: bigint;
+    /** 最后一个激活轮次（包含：当current_round <= last_active_round时有效） */
+    last_active_round: number;
     /** 携带的值（如遥控骰子的点数） */
     value: bigint;
+    /** 关联的NPC spawn索引（0xFFFF表示非NPC产生） */
+    spawn_index: number;
 }
 
 /**
@@ -41,6 +43,8 @@ export interface Player {
     last_tile_id: number;
     /** 下一步强制目标tile（65535=无强制，用于转向卡等） */
     next_tile_id: number;
+    /** 拥有的土地庙等级列表（用于租金加成计算） */
+    temple_levels: number[];
     /** 活跃的Buff列表 */
     buffs: BuffEntry[];
     /** 持有的卡牌（key: card_kind, value: count） */
@@ -54,12 +58,10 @@ export interface Player {
 export interface NpcInst {
     /** NPC类型（对应types.move的NPC_*常量） */
     kind: number;
-    /** 拥有者索引（放置者） */
-    owner: number;
     /** 是否可消耗（炸弹消耗，路障不消耗） */
     consumable: boolean;
-    /** 创建时的轮次 */
-    created_turn: bigint;
+    /** 生成池索引（0xFFFF表示玩家放置） */
+    spawn_index: number;
 }
 
 /**

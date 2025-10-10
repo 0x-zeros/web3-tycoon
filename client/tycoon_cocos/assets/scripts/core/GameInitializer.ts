@@ -19,6 +19,7 @@ import { fromEntries } from '../utils/object-utils';
 import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
 import { CURRENT_SUI_CONFIG } from '../sui/config';
+import { GameSession } from './GameSession';
 
 const { ccclass, property } = _decorator;
 
@@ -80,6 +81,9 @@ export class GameInitializer extends Component {
     private configLoader: ConfigLoader | null = null;
     private roleManager: RoleManager | null = null;
     private mapManager: MapManager | null = null;
+
+    // GameSession 实例
+    private gameSession: GameSession | null = null;
 
     // 初始化性能数据
     private initStartTime: number = 0;
@@ -237,6 +241,10 @@ export class GameInitializer extends Component {
                     console.log('地图管理器初始化完成');
                 }
             }
+
+            // 创建 GameSession 实例
+            this.gameSession = new GameSession();
+            console.log('GameSession 初始化完成');
 
             this.recordPhaseTime('管理器初始化');
             return {
@@ -424,12 +432,16 @@ export class GameInitializer extends Component {
             globalWindow.game.mapManager = this.mapManager;
             globalWindow.game.initializer = this;
 
+            // GameSession（调试用）
+            globalWindow.game.session = this.gameSession;
+
             // Sui 相关（调试用）
             globalWindow.game.sui = SuiManager.instance;
             globalWindow.game.blackboard = Blackboard.instance;
 
             console.log('[GameInitializer] Global accessors set up');
             console.log('  Available in console:');
+            console.log('    window.game.session    - GameSession');
             console.log('    window.game.sui        - SuiManager');
             console.log('    window.game.blackboard - Blackboard');
             console.log('    window.game.mapManager - MapManager');
@@ -447,6 +459,9 @@ export class GameInitializer extends Component {
 
         // 注册游戏开始事件监听器
         EventBus.on(EventTypes.Game.GameStart, this.onGameStart, this);
+
+        // 注册 Move 链上游戏开始事件监听器
+        EventBus.on(EventTypes.Move.GameStarted, this.onMoveGameStarted, this);
     }
 
     /**
@@ -481,17 +496,58 @@ export class GameInitializer extends Component {
      */
     private async onGameStart(data: any): Promise<void> {
         console.log('[GameInitializer] GameStart listener called:', data);
-        
+
         try {
             if (data.mapId) {
                 console.log(`[GameInitializer] 游戏将在地图 ${data.mapId} 上开始`);
             } else {
                 console.warn('[GameInitializer] 游戏开始事件缺少地图信息');
             }
-            
+
         } catch (error) {
             console.error('游戏启动失败:', error);
         }
+    }
+
+    /**
+     * Move 链上游戏开始事件处理
+     * 从 SuiManager 加载 Game 数据到 GameSession
+     */
+    private async onMoveGameStarted(data: any): Promise<void> {
+        console.log('[GameInitializer] Move GameStarted event received:', data);
+
+        try {
+            // 检查是否是玩家
+            if (!data.isPlayer) {
+                console.log('[GameInitializer] 不是玩家，跳过 GameSession 加载');
+                return;
+            }
+
+            // 从 SuiManager 获取当前游戏
+            const currentGame = SuiManager.instance.currentGame;
+            if (!currentGame) {
+                console.error('[GameInitializer] SuiManager.currentGame 为空');
+                return;
+            }
+
+            // 加载到 GameSession
+            if (this.gameSession) {
+                this.gameSession.loadFromMoveGame(currentGame);
+                console.log('[GameInitializer] GameSession 数据加载完成');
+            } else {
+                console.error('[GameInitializer] GameSession 未初始化');
+            }
+
+        } catch (error) {
+            console.error('[GameInitializer] Failed to load GameSession:', error);
+        }
+    }
+
+    /**
+     * 获取 GameSession 实例
+     */
+    public getGameSession(): GameSession | null {
+        return this.gameSession;
     }
 
 }

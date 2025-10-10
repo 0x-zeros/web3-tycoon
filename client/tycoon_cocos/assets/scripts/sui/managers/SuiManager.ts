@@ -26,6 +26,7 @@ import { Blackboard } from '../../events/Blackboard';
 import { UINotification } from '../../ui/utils/UINotification';
 import { UIMessage, MessageBoxIcon } from '../../ui/utils/UIMessage';
 import { loadKeypairFromKeystore } from '../utils/KeystoreLoader';
+import { GameData } from '../models/GameData';
 
 /**
  * Sui Manager 配置选项
@@ -61,7 +62,7 @@ export class SuiManager {
     private _currentSeat: Seat | null = null;
 
     // 缓存数据（链上数据）
-    private _cachedGameData: any = null;
+    private _cachedGameData: GameData | null = null;
     private _cachedGames: Game[] = [];
     private _cachedMapTemplates: MapTemplatePublishedEvent[] = [];
     private _cacheTimestamp: number = 0;
@@ -499,7 +500,7 @@ export class SuiManager {
 
         // 获取 GameData 的 schema_version
         const gameData = this._cachedGameData || await this._queryService!.getGameData();
-        const schemaVersion = gameData?.map_schema_version || 1;  // 默认 1
+        const schemaVersion = gameData?.mapSchemaVersion || 1;  // 默认 1
 
         this._log('[SuiManager] Publishing map template...', {
             templateId: mapTemplate.id,
@@ -579,7 +580,7 @@ export class SuiManager {
 
         // 获取 GameData 的默认值
         const gameData = this._cachedGameData || await this._queryService!.getGameData();
-        const defaultStartingCash = gameData?.starting_cash || BigInt(10000);
+        const defaultStartingCash = gameData?.startingCash || BigInt(10000);
 
         console.log('[SuiManager] Using defaults from GameData:');
         console.log('  starting_cash:', defaultStartingCash);
@@ -771,9 +772,9 @@ export class SuiManager {
 
     /**
      * 获取 GameData
-     * @returns GameData 对象
+     * @returns GameData 模型实例
      */
-    public async getGameData(): Promise<any> {
+    public async getGameData(): Promise<GameData | null> {
         this._ensureInitialized();
 
         return await this._queryService!.getGameData();
@@ -943,10 +944,11 @@ export class SuiManager {
 
             // 打印 GameData
             console.log('[SuiManager] GameData loaded:');
-            console.log('  Full GameData:', gameData);
             if (gameData) {
-                console.log('  map_schema_version:', gameData.map_schema_version);
-                console.log('  starting_cash:', gameData.starting_cash);
+                console.log('  mapSchemaVersion:', gameData.mapSchemaVersion);
+                console.log('  startingCash:', gameData.startingCash.toString());
+                console.log('  mapTemplates:', gameData.mapRegistry.getTemplateCount());
+                console.log('  cards:', gameData.cardRegistry.getCardCount());
             }
 
             // 更新缓存
@@ -1121,7 +1123,7 @@ export class SuiManager {
         // 2. 创建新 Player 对象（使用初始值，对应 Move 端的 create_player_with_cash）
         const startingCash = game.players.length > 0
             ? game.players[0].cash  // 复制第一个玩家的现金
-            : BigInt(this._cachedGameData?.starting_cash || 10000);
+            : (this._cachedGameData?.startingCash || BigInt(10000));
 
         const newPlayer: Player = {
             owner: playerAddress,
@@ -1132,6 +1134,7 @@ export class SuiManager {
             in_prison_turns: 0,
             last_tile_id: 65535,  // INVALID_TILE_ID
             next_tile_id: 65535,  // INVALID_TILE_ID
+            temple_levels: [],    // ✅ 添加 temple_levels
             buffs: [],
             cards: new Map()  // 初始卡牌在客户端可以省略
         };
@@ -1307,7 +1310,7 @@ export class SuiManager {
     /**
      * 获取缓存的 GameData
      */
-    public getCachedGameData(): any {
+    public getCachedGameData(): GameData | null {
         return this._cachedGameData;
     }
 

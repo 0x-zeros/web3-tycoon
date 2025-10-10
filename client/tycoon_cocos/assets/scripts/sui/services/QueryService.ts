@@ -7,6 +7,7 @@ import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
 import type { Game, Player, Building, Tile } from '../types/game';
 import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';
+import { GameData } from '../models/GameData';
 
 /**
  * 游戏列表查询选项
@@ -42,8 +43,9 @@ export class QueryService {
 
     /**
      * 获取 GameData 共享对象
+     * @returns GameData 模型实例
      */
-    async getGameData(): Promise<any> {
+    async getGameData(): Promise<GameData | null> {
         try {
             const response = await this.client.getObject({
                 id: this.gameDataId,
@@ -54,7 +56,8 @@ export class QueryService {
             });
 
             if (response.data?.content?.dataType === 'moveObject') {
-                return response.data.content.fields;
+                const fields = response.data.content.fields;
+                return GameData.loadFromFields(fields);
             }
 
             return null;
@@ -418,6 +421,7 @@ export class QueryService {
                 in_prison_turns: Number(f.in_prison_turns) || 0,
                 last_tile_id: Number(f.last_tile_id) || 0,
                 next_tile_id: Number(f.next_tile_id) || 0,
+                temple_levels: f.temple_levels || [],  // ✅ 添加 temple_levels
                 buffs: f.buffs || [],
                 cards: new Map()  // Table 类型，保持空 Map
             };

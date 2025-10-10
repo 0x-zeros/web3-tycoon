@@ -454,28 +454,10 @@ export class GameInitializer extends Component {
     private registerEventListeners(): void {
         // 注册全局游戏事件监听器
         // 使用EventBus替代直接的addEventListener
-        EventBus.on(EventTypes.Role.Spawned, this.onPlayerCreated, this);
-        EventBus.on(EventTypes.NPC.Spawned, this.onNPCCreated, this);
-
-        // 注册游戏开始事件监听器
-        EventBus.on(EventTypes.Game.GameStart, this.onGameStart, this);
+        // 移除冗余的角色与NPC创建事件监听，以及GameStart重复监听
 
         // 注册 Move 链上游戏开始事件监听器
         EventBus.on(EventTypes.Move.GameStarted, this.onMoveGameStarted, this);
-    }
-
-    /**
-     * 角色创建事件处理
-     */
-    private onPlayerCreated(data: any): void {
-        console.log('角色创建:', data);
-    }
-
-    /**
-     * NPC创建事件处理
-     */
-    private onNPCCreated(data: any): void {
-        console.log('NPC创建:', data);
     }
 
     /**
@@ -491,23 +473,7 @@ export class GameInitializer extends Component {
         }
     }
 
-    /**
-     * 游戏开始事件处理
-     */
-    private async onGameStart(data: any): Promise<void> {
-        console.log('[GameInitializer] GameStart listener called:', data);
-
-        try {
-            if (data.mapId) {
-                console.log(`[GameInitializer] 游戏将在地图 ${data.mapId} 上开始`);
-            } else {
-                console.warn('[GameInitializer] 游戏开始事件缺少地图信息');
-            }
-
-        } catch (error) {
-            console.error('游戏启动失败:', error);
-        }
-    }
+    
 
     /**
      * Move 链上游戏开始事件处理

@@ -148,8 +148,6 @@ export interface Game {
     buildings: Building[];
     /** NPC位置表（key: tile_id, value: NpcInst） */
     npc_on: Map<number, NpcInst>;
-    /** 所有者索引（key: player_index, value: building_ids） */
-    owner_index: Map<number, number[]>;
 
     // NPC管理
     /** NPC生成池 */

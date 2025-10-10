@@ -220,6 +220,9 @@ export class QueryService {
 
             console.log(`[QueryService] Batch query completed: ${games.length} games matched`);
 
+            //1st game
+            // console.log('[QueryService] 1st game:', games[0].game);
+
         } catch (error) {
             console.error('[QueryService] Failed to query all games (batch):', error);
         }
@@ -375,8 +378,9 @@ export class QueryService {
         }
 
         const fields = response.data.content.fields as any;
-        // console.log('[QueryService] parseGameObject:', fields);
+        console.log('[QueryService] parseGameObject:', fields);
 
+        
         try {
             return {
                 id: fields.id?.id || response.data.objectId,
@@ -390,7 +394,6 @@ export class QueryService {
                 tiles: this.parseTiles(fields.tiles || []),
                 buildings: this.parseBuildings(fields.buildings || []),
                 npc_on: new Map(),  // Table 类型，保持空 Map
-                owner_index: new Map(),  // Table 类型，保持空 Map
                 npc_spawn_pool: fields.npc_spawn_pool || [],
                 max_rounds: Number(fields.max_rounds) || 0,
                 price_rise_days: Number(fields.price_rise_days) || 0,

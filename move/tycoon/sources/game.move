@@ -208,7 +208,7 @@ public struct Building has store, copy, drop {
 // 使用vector索引对齐，tile_id即为数组下标
 // 现在只存储NPC信息，建筑信息移至Building结构
 public struct Tile has store, copy, drop {
-    npc_on: u8     // NPC类型（0表示无NPC，用于查询密度）
+    npc_on: u8     // NPC类型（0表示无NPC，用于查询密度）//其他值: 表示具体的 NPC 类型
 }
 
 // 无主建筑的owner值
@@ -241,7 +241,6 @@ const NO_NPC: u8 = 0;
 // 建筑系统：
 // - tiles: 地块动态数据vector，索引对应tile_id
 // - buildings: 建筑动态数据vector，索引对应building_id
-// - owner_index: 反向索引，快速查找玩家的所有建筑（building_id）
 //
 // NPC系统：
 // - npc_on: 地块上的NPC实例（完整数据）
@@ -266,7 +265,6 @@ public struct Game has key, store {
     // 建筑动态数据（与MapTemplate.buildings_static对齐）
     buildings: vector<Building>,
     npc_on: Table<u16, NpcInst>,  // NPC实例完整数据
-    owner_index: Table<u8 /* player_index */, vector<u16 /* building_id */>>, //用于优化计算的数据, 不是必须
 
     // NPC生成系统
     npc_spawn_pool: vector<NpcSpawnEntry>,  // NPC生成池
@@ -362,7 +360,6 @@ public entry fun create_game(
         tiles,
         buildings,
         npc_on: table::new(ctx),
-        owner_index: table::new(ctx),
         npc_spawn_pool: init_npc_spawn_pool(tycoon::get_npc_spawn_weights(game_data)),
         max_rounds,
         price_rise_days,
@@ -863,13 +860,6 @@ public entry fun buy_building(
     let building_mut = &mut game.buildings[building_id as u64];
     building_mut.owner = player_index;
     building_mut.level = 1;
-
-    // 更新owner_index（保持不变，仍然记录tile_id用于连街判定）
-    if (!table::contains(&game.owner_index, player_index)) {
-        table::add(&mut game.owner_index, player_index, vector[]);
-    };
-    let owner_tiles = table::borrow_mut(&mut game.owner_index, player_index);
-    owner_tiles.push_back(tile_id);
 
     // 维护 temple_levels 缓存（如果购买的是土地庙）
     if (building_mut.building_type == types::BUILDING_TEMPLE()) {
@@ -1823,9 +1813,8 @@ fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: 
 // 破产处理步骤：
 // 1. 标记玩家破产状态，防止其继续参与游戏
 // 2. 释放该玩家拥有的所有建筑：
-//    - 从owner_of表中移除所有权记录
+//    - 重置建筑所有权为NO_OWNER
 //    - 重置建筑等级为0（恢复初始状态）
-//    - 清空owner_index中的拥有列表
 // 3. 发送破产事件通知
 // 4. 检查游戏结束条件：
 //    - 如果只剩一个非破产玩家，该玩家获胜
@@ -1849,33 +1838,15 @@ fun handle_bankruptcy(
     };
 
     // 步骤2: 释放玩家拥有的所有建筑
-    // 注意：owner_index记录的是tile_id，但我们需要通过tile找到对应的building_id
-    if (table::contains(&game.owner_index, player_index)) {
-        let owned_tiles = *table::borrow(&game.owner_index, player_index);
-
-        let mut i = 0;
-        while (i < owned_tiles.length()) {
-            let tile_id = owned_tiles[i];
-
-            // 获取tile对应的building_id
-            let tile_static = map::get_tile(map, tile_id);
-            let building_id = map::tile_building_id(tile_static);
-
-            if (building_id != map::no_building()) {
-                let building =&mut game.buildings[building_id as u64];
-                // 重置建筑所有权和等级
-                if (building.owner != NO_OWNER) {
-                    building.owner = NO_OWNER;
-                    building.level = 0;
-                };
-            };
-
-            i = i + 1;
+    // 直接遍历所有建筑，重置该玩家拥有的建筑
+    let mut i = 0;
+    while (i < game.buildings.length()) {
+        let building = &mut game.buildings[i];
+        if (building.owner == player_index) {
+            building.owner = NO_OWNER;
+            building.level = 0;
         };
-
-        // 清空玩家的建筑拥有列表
-        let owner_tiles_mut = table::borrow_mut(&mut game.owner_index, player_index);
-        *owner_tiles_mut = vector[];
+        i = i + 1;
     };
 
     // 清空玩家的土地庙缓存

@@ -236,7 +236,6 @@ export class GameInteraction {
             tiles: this.parseTiles(fields.tiles || []),
             buildings: this.parseBuildings(fields.buildings || []),
             npc_on: new Map(),  // Table 类型，保持空 Map
-            owner_index: new Map(),  // Table 类型，保持空 Map
             npc_spawn_pool: fields.npc_spawn_pool || [],
             max_rounds: Number(fields.max_rounds) || 0,
             price_rise_days: Number(fields.price_rise_days) || 0,

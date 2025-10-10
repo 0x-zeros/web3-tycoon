@@ -19,9 +19,13 @@
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import type { Game, Player as MovePlayer, NpcInst as MoveNpcInst } from '../sui/types/game';
+import type { MapTemplate } from '../sui/types/map';
 import { GameStatus, PendingDecision, INVALID_TILE_ID } from '../sui/types/constants';
 import { Player } from '../role/Player';
 import { NPC } from '../role/NPC';
+import { GameData } from '../sui/models/GameData';
+import { GameTile } from '../game/models/GameTile';
+import { GameBuilding } from '../game/models/GameBuilding';
 
 /**
  * 待决策信息接口
@@ -79,6 +83,23 @@ export class GameSession {
     /** 待决策信息 */
     private _pendingDecision: PendingDecisionInfo | null = null;
 
+    // ========================= 地图相关数据 =========================
+
+    /** 地图模板 */
+    private _mapTemplate: MapTemplate | null = null;
+
+    /** GameData 配置 */
+    private _gameData: GameData | null = null;
+
+    /** Tile 逻辑数据列表 */
+    private _tiles: GameTile[] = [];
+
+    /** Building 逻辑数据列表 */
+    private _buildings: GameBuilding[] = [];
+
+    /** GameMap 组件引用 */
+    private _gameMap: any = null;  // GameMap 类型（避免循环依赖）
+
     // ========================= 配置 =========================
 
     /** 最大轮数（0表示无限） */
@@ -99,47 +120,68 @@ export class GameSession {
     /**
      * 从 Move Game 对象加载数据
      * @param game Move 端的 Game 对象
+     * @param template MapTemplate 数据
+     * @param gameData GameData 配置数据
      */
-    public loadFromMoveGame(game: Game): void {
-        console.log('[GameSession] 从 Move Game 加载数据', game);
+    public async loadFromMoveGame(
+        game: Game,
+        template: MapTemplate,
+        gameData: GameData
+    ): Promise<void> {
+        console.log('[GameSession] 从 Move 数据加载游戏会话');
+        console.log('  Game ID:', game.id);
+        console.log('  Template tiles:', template.tiles_static.size);
+        console.log('  Template buildings:', template.buildings_static.size);
 
-        //todo 保存 game 为变量
+        // 1. 保存引用
+        this._mapTemplate = template;
+        this._gameData = gameData;
 
-        // 基础信息
+        // 2. 基础信息
         this._gameId = game.id;
         this._status = game.status;
         this._templateMapId = game.template_map_id;
 
-        // 回合系统
+        // 3. 回合系统
         this._round = game.round;
         this._turn = game.turn;
         this._activePlayerIndex = game.active_idx;
         this._hasRolled = game.has_rolled;
 
-        // 配置
+        // 4. 配置
         this._maxRounds = game.max_rounds;
         this._priceRiseDays = game.price_rise_days;
         this._winner = game.winner || null;
 
-        // 加载玩家列表
-        this.loadPlayers(game.players);
+        // 5. 合并地图数据
+        console.log('[GameSession] 合并地图数据...');
+        this._tiles = this.mergeTiles(template, game);
+        this._buildings = this.mergeBuildings(template, game);
+        console.log(`[GameSession] 合并完成：${this._tiles.length} tiles, ${this._buildings.length} buildings`);
 
-        // 加载NPC
+        // 6. 加载玩家和 NPC
+        this.loadPlayers(game.players);
         this.loadNPCs(game.npc_on);
 
-        // 加载待决策状态
+        // 7. 加载待决策状态
         this.loadPendingDecision(game);
 
-        console.log('[GameSession] 数据加载完成', {
+        // 8. 加载游戏地图（调用 MapManager）
+        console.log('[GameSession] 开始加载游戏地图...');
+        await this.loadGameMap();
+
+        console.log('[GameSession] 游戏会话加载完成', {
             gameId: this._gameId,
             status: this._status,
             round: this._round,
             turn: this._turn,
             playerCount: this._players.length,
+            tileCount: this._tiles.length,
+            buildingCount: this._buildings.length,
             npcCount: this._npcs.size
         });
 
-        // 触发加载完成事件
+        // 9. 触发加载完成事件
         EventBus.emit(EventTypes.Game.SessionLoaded, {
             session: this,
             game: game
@@ -194,6 +236,65 @@ export class GameSession {
         } else {
             this._pendingDecision = null;
         }
+    }
+
+    // ========================= 地图数据合并 =========================
+
+    /**
+     * 合并 Tiles 数据
+     */
+    private mergeTiles(template: MapTemplate, game: Game): GameTile[] {
+        const tiles: GameTile[] = [];
+
+        template.tiles_static.forEach((tileStatic, tileId) => {
+            const gameTile = game.tiles[tileId];
+            const tile = GameTile.merge(tileStatic, gameTile, tileId);
+            tiles.push(tile);
+        });
+
+        console.log(`[GameSession] 合并了 ${tiles.length} 个 Tiles`);
+        return tiles;
+    }
+
+    /**
+     * 合并 Buildings 数据
+     */
+    private mergeBuildings(template: MapTemplate, game: Game): GameBuilding[] {
+        const buildings: GameBuilding[] = [];
+
+        template.buildings_static.forEach((buildingStatic, buildingId) => {
+            const gameBuilding = game.buildings[buildingId];
+            const building = GameBuilding.merge(
+                buildingStatic,
+                gameBuilding,
+                buildingId,
+                template
+            );
+            buildings.push(building);
+        });
+
+        console.log(`[GameSession] 合并了 ${buildings.length} 个 Buildings`);
+        return buildings;
+    }
+
+    /**
+     * 加载游戏地图（调用 MapManager）
+     */
+    private async loadGameMap(): Promise<void> {
+        console.log('[GameSession] 加载游戏地图...');
+
+        // 动态导入 MapManager（避免循环依赖）
+        const { MapManager } = await import('../map/MapManager');
+        const mapManager = MapManager.getInstance();
+
+        if (!mapManager) {
+            throw new Error('[GameSession] MapManager not found');
+        }
+
+        // 调用 MapManager 创建并加载地图
+        this._gameMap = await mapManager.loadGameMapFromSession(this);
+
+        console.log('[GameSession] 游戏地图加载完成');
     }
 
     // ========================= 回合控制 =========================
@@ -473,6 +574,21 @@ export class GameSession {
     public getPriceRiseDays(): number { return this._priceRiseDays; }
     public getWinner(): string | null { return this._winner; }
 
+    // 地图相关访问器
+    public getMapTemplate(): MapTemplate | null { return this._mapTemplate; }
+    public getGameData(): GameData | null { return this._gameData; }
+    public getTiles(): GameTile[] { return [...this._tiles]; }
+    public getBuildings(): GameBuilding[] { return [...this._buildings]; }
+    public getGameMap(): any { return this._gameMap; }
+
+    public getTileByIndex(index: number): GameTile | null {
+        return this._tiles[index] || null;
+    }
+
+    public getBuildingByIndex(index: number): GameBuilding | null {
+        return this._buildings[index] || null;
+    }
+
     // ========================= 调试方法 =========================
 
     /**
@@ -513,6 +629,13 @@ export class GameSession {
         this._maxRounds = 0;
         this._priceRiseDays = 15;
         this._winner = null;
+
+        // 清理地图数据
+        this._mapTemplate = null;
+        this._gameData = null;
+        this._tiles = [];
+        this._buildings = [];
+        this._gameMap = null;
 
         EventBus.emit(EventTypes.Game.SessionReset, {
             session: this

@@ -1179,7 +1179,66 @@ export class GameMap extends Component {
     }
 
     /**
+     * 从 GameSession 加载游戏场景（新方法 - 游戏模式）
+     * 直接从 GameSession 的逻辑数据渲染场景
+     *
+     * @param session GameSession 实例
+     * @returns 是否加载成功
+     */
+    public async loadFromGameSession(session: any): Promise<boolean> {
+        try {
+            console.log('[GameMap] 从 GameSession 加载场景');
+
+            // 清空现有场景
+            this.clearMap();
+
+            // 获取逻辑数据
+            const tiles = session.getTiles();
+            const buildings = session.getBuildings();
+            const npcs = session.getAllNPCs();
+            const players = session.getAllPlayers();
+
+            console.log('[GameMap] 场景数据统计');
+            console.log('  Tiles:', tiles.length);
+            console.log('  Buildings:', buildings.length);
+            console.log('  NPCs:', npcs.size);
+            console.log('  Players:', players.length);
+
+            // 渲染 Tiles
+            for (const gameTile of tiles) {
+                await this.renderGameTile(gameTile);
+            }
+
+            // 渲染 Buildings
+            for (const gameBuilding of buildings) {
+                await this.renderGameBuilding(gameBuilding);
+            }
+
+            // 渲染 NPCs
+            for (const [tileId, npc] of npcs) {
+                await this.renderNPC(npc, tileId);
+            }
+
+            // 渲染 Players
+            for (const player of players) {
+                await this.renderPlayer(player);
+            }
+
+            // 设置相机看向地图中心
+            this.focusCameraOnMapCenter();
+
+            console.log('[GameMap] 场景加载完成');
+            return true;
+
+        } catch (error) {
+            console.error('[GameMap] Failed to load from GameSession:', error);
+            return false;
+        }
+    }
+
+    /**
      * 从链上数据加载地图（用于游戏模式）
+     * @deprecated 使用 loadFromGameSession 替代
      * @param template 链上 MapTemplate 数据
      * @param game 链上 Game 数据
      * @returns 是否加载成功
@@ -1206,6 +1265,91 @@ export class GameMap extends Component {
             console.error('[GameMap] Failed to load from chain data:', error);
             return false;
         }
+    }
+
+    // ========================= 新的渲染方法（从 GameSession 逻辑数据） =========================
+
+    /**
+     * 渲染单个 GameTile
+     */
+    private async renderGameTile(gameTile: any): Promise<void> {
+        const tileNode = new Node(`T_${gameTile.x}_${gameTile.y}`);
+        tileNode.setParent(this.tilesContainer!);
+
+        const mapTile = tileNode.addComponent(MapTile);
+        await mapTile.initialize(gameTile.blockId, new Vec2(gameTile.x, gameTile.y));
+
+        // 设置 tile 的逻辑数据
+        mapTile.setTileId(gameTile.tileId);
+        mapTile.setBuildingId(gameTile.buildingId);
+        mapTile.setW(gameTile.w);
+        mapTile.setN(gameTile.n);
+        mapTile.setE(gameTile.e);
+        mapTile.setS(gameTile.s);
+
+        // 存储到索引
+        const key = `${gameTile.x}_${gameTile.y}`;
+        this._tiles.push(mapTile);
+        this._tileIndex.set(key, mapTile);
+    }
+
+    /**
+     * 渲染单个 GameBuilding
+     */
+    private async renderGameBuilding(gameBuilding: any): Promise<void> {
+        const buildingKey = `${gameBuilding.x}_${gameBuilding.y}`;
+        const gridPos = new Vec2(gameBuilding.x, gameBuilding.y);
+
+        // 1. 创建 voxel blocks（底层）
+        if (gameBuilding.size === 1) {
+            // 1x1 building：创建单个 block
+            await this.placeTileAt(gameBuilding.blockId, gridPos);
+        } else if (gameBuilding.size === 2) {
+            // 2x2 building：创建 4 个 blocks
+            await this.place2x2Building(gameBuilding.blockId, gridPos);
+        }
+
+        // 2. 添加到 registry
+        const buildingInfo: any = {
+            blockId: gameBuilding.blockId,
+            position: { x: gameBuilding.x, z: gameBuilding.y },
+            size: gameBuilding.size,
+            direction: gameBuilding.direction,
+            buildingId: gameBuilding.buildingId,
+            entranceTileIds: gameBuilding.entranceTileIds,
+            chainPrevId: gameBuilding.chainPrevId,
+            chainNextId: gameBuilding.chainNextId,
+            owner: gameBuilding.owner,
+            level: gameBuilding.level,
+            price: Number(gameBuilding.price)
+        };
+        this._buildingRegistry.set(buildingKey, buildingInfo);
+
+        // 3. 创建 Building 的 PaperActor
+        this.createBuildingPaperActor(
+            gameBuilding.blockId,
+            gridPos,
+            gameBuilding.size,
+            gameBuilding.level || 0,
+            gameBuilding.direction
+        );
+    }
+
+    /**
+     * 渲染 NPC
+     */
+    private async renderNPC(npc: any, tileId: number): Promise<void> {
+        // TODO: 实现 NPC 渲染逻辑
+        // 需要从 tileId 找到对应的 GameTile，获取位置
+        console.log(`[GameMap] TODO: Render NPC at tile ${tileId}`);
+    }
+
+    /**
+     * 渲染 Player
+     */
+    private async renderPlayer(player: any): Promise<void> {
+        // TODO: 实现 Player 渲染逻辑
+        console.log(`[GameMap] TODO: Render Player ${player.getPlayerIndex()}`);
     }
 
     /**

@@ -1241,11 +1241,12 @@ export class SuiManager {
             console.log('  Template buildings:', template.buildings_static.size);
             console.log('  Game players:', game.players.length);
 
-            // 4. 发送事件，触发场景加载
-            EventBus.emit(EventTypes.Game.GameStart, {
+            // 4. 发送事件，触发 GameSession 加载
+            EventBus.emit(EventTypes.Move.GameStarted, {
                 game: game,
                 template: template,
-                gameData: gameData
+                gameData: gameData,
+                isPlayer: true  // 已经在 _onGameStarted 中判断过了
             });
 
             UINotification.success("游戏场景加载完成");

@@ -270,12 +270,82 @@ export class MapManager extends Component {
     }
 
     /**
+     * 从 GameSession 加载游戏地图（游戏模式）
+     * 创建 GameMap 节点和组件，从 GameSession 的逻辑数据加载场景
+     *
+     * @param session GameSession 实例
+     * @returns GameMap 组件实例
+     */
+    public async loadGameMapFromSession(session: any): Promise<any> {
+        console.log('[MapManager] 从 GameSession 加载游戏地图');
+
+        // 1. 卸载当前地图（如果有）
+        this.unloadCurrentMap();
+
+        // 2. 创建新的地图节点
+        const gameId = session.getGameId();
+        const mapInstance = new Node(`ChainGame_${gameId.slice(0, 8)}`);
+
+        // 3. 添加 GameMap 组件
+        const mapComponent = mapInstance.addComponent(GameMap);
+
+        // 4. 创建临时 MapConfig（链上游戏不需要预制体）
+        const tempConfig: MapConfig = {
+            id: `chain_${gameId}`,
+            name: `Chain Game`,
+            prefabPath: '',
+            previewImagePath: '',
+            type: 'classic'
+        };
+
+        // 5. 初始化 GameMap（非编辑模式）
+        console.log('[MapManager] Initializing GameMap (play mode)...');
+        await mapComponent.init(tempConfig, false);  // isEdit = false
+
+        // 6. 从 GameSession 加载场景（新方法）
+        console.log('[MapManager] Loading scene from GameSession...');
+        UINotification.info("正在加载游戏地图...");
+
+        const loaded = await mapComponent.loadFromGameSession(session);
+
+        if (!loaded) {
+            throw new Error('Failed to load game map from session');
+        }
+
+        console.log('[MapManager] Game map loaded successfully');
+
+        // 7. 添加到容器
+        const container = this.mapContainer || director.getScene();
+        if (container) {
+            container.addChild(mapInstance);
+        }
+
+        // 8. 更新当前地图状态
+        this._currentMapInstance = mapInstance;
+        this._currentMapComponent = mapComponent;
+        this._currentMapId = tempConfig.id;
+
+        this.log(`链上游戏地图加载成功: ${tempConfig.id}`);
+
+        // 9. 发送地图加载完成事件
+        EventBus.emit(EventTypes.Game.MapLoaded, {
+            gameId: gameId,
+            mapId: tempConfig.id,
+            mapComponent: mapComponent
+        });
+
+        UINotification.success("游戏地图加载完成");
+
+        return mapComponent;
+    }
+
+    /**
      * 卸载当前地图
      */
     public unloadCurrentMap(): void {
         if (this._currentMapInstance) {
             this.log(`卸载当前地图: ${this._currentMapId}`);
-            
+
             // 发送地图卸载事件
             if (this._currentMapId) {
                 EventBus.emit(EventTypes.Game.MapUnloaded, {
@@ -330,14 +400,14 @@ export class MapManager extends Component {
      * 注册事件监听器
      */
     private registerEventListeners(): void {
-        // 监听地图选择事件
+        // 监听地图选择事件（editor 模式）
         EventBus.on(EventTypes.Game.MapSelected, this.onMapSelected, this);
 
         // 监听地图切换请求
         EventBus.on(EventTypes.Game.RequestMapChange, this.onMapChangeRequest, this);
 
-        // 监听游戏开始事件（加载链上场景数据）
-        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
+        // ❌ 移除：游戏模式现在由 GameSession 直接调用 loadGameMapFromSession
+        // EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**

@@ -489,16 +489,19 @@ export class GameInitializer extends Component {
                 return;
             }
 
-            // 从 SuiManager 获取当前游戏
-            const currentGame = SuiManager.instance.currentGame;
-            if (!currentGame) {
-                console.error('[GameInitializer] SuiManager.currentGame 为空');
+            // 从事件数据获取 game, template, gameData
+            const game = data.game;
+            const template = data.template;
+            const gameData = data.gameData;
+
+            if (!game || !template || !gameData) {
+                console.error('[GameInitializer] 事件数据不完整', { game: !!game, template: !!template, gameData: !!gameData });
                 return;
             }
 
             // 加载到 GameSession
             if (this.gameSession) {
-                this.gameSession.loadFromMoveGame(currentGame);
+                await this.gameSession.loadFromMoveGame(game, template, gameData);
                 console.log('[GameInitializer] GameSession 数据加载完成');
             } else {
                 console.error('[GameInitializer] GameSession 未初始化');

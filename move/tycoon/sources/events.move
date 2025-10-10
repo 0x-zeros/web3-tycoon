@@ -31,8 +31,7 @@ public struct GameDataCreatedEvent has copy, drop {
 public struct GameCreatedEvent has copy, drop {
     game: ID,
     creator: address,
-    template_map_id: ID,
-    players: vector<address>  // 所有玩家地址列表
+    template_map_id: ID
 }
 
 // 玩家加入事件
@@ -225,14 +224,12 @@ public struct RollAndStepActionEvent has copy, drop {
 public(package) fun emit_game_created_event(
     game_id: ID,
     creator: address,
-    template_map_id: ID,
-    players: vector<address>
+    template_map_id: ID
 ) {
     event::emit(GameCreatedEvent {
         game: game_id,
         creator,
-        template_map_id,
-        players
+        template_map_id
     });
 }
 

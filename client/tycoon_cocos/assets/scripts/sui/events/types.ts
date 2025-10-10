@@ -18,8 +18,6 @@ export interface GameCreatedEvent {
     creator: string;
     /** 地图模板ID */
     template_map_id: string;
-    /** 所有玩家地址列表 */
-    players: string[];
 }
 
 /**

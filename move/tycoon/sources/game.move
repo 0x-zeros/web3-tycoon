@@ -377,15 +377,10 @@ public entry fun create_game(
 
     // 发出游戏创建事件
     let template_map_id = map::get_map_id(map);
-    // 构建玩家地址列表（创建时只有创建者）
-    let mut players_addresses = vector[];
-    players_addresses.push_back(creator);
-
     events::emit_game_created_event(
         game_id_copy,
         creator,
-        template_map_id,
-        players_addresses
+        template_map_id
     );
 
     // 创建座位凭证（索引为 0）

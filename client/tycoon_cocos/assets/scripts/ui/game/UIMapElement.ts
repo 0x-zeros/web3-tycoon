@@ -410,7 +410,7 @@ export class UIMapElement extends UIBase {
             const actorConfig = ActorConfigManager.getConfig(blockId);
             if (actorConfig && actorConfig.textures.default) {
                 const texturePath = actorConfig.textures.default + '/texture';
-                console.log(`[UIMapElement] Loading PaperActor texture: ${texturePath}`);
+                // console.log(`[UIMapElement] Loading PaperActor texture: ${texturePath}`);
 
                 resources.load(texturePath, Texture2D, (err, texture) => {
                     if (!err && texture) {

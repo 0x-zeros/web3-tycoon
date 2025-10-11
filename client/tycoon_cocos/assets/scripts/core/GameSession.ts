@@ -139,8 +139,8 @@ export class GameSession {
     ): Promise<void> {
         console.log('[GameSession] 从 Move 数据加载游戏会话');
         console.log('  Game ID:', game.id);
-        console.log('  Template tiles:', template.tiles_static.size);
-        console.log('  Template buildings:', template.buildings_static.size);
+        // console.log('  Template tiles:', template.tiles_static.size);
+        // console.log('  Template buildings:', template.buildings_static.size);
 
 
         // 1. 保存引用
@@ -185,6 +185,11 @@ export class GameSession {
         // 立即发送 GameStart 事件，触发 -> UIInGame 的切换
         // UIInGame 在GameSession 数据填充好了再开始初始化（因为UI里很多地方都需要GameSession的数据）
         console.log('[GameSession] 数据加载完成， 发送 GameStart 事件，触发 -> UIInGame 的切换。');
+        console.log('[GameSession]  GameSession:', this);
+        console.log('[GameSession]  Game:', game);
+        console.log('[GameSession]  Template:', template);
+        console.log('[GameSession]  GameData:', gameData);
+        
         EventBus.emit(EventTypes.Game.GameStart, {
             mode: 'play',
             source: 'chain_game',

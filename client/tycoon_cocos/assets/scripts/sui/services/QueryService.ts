@@ -4,7 +4,7 @@
  */
 
 import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
-import type { Game, Player, Building, Tile, NpcInst } from '../types/game';
+import type { Game, Player, Building, Tile, NpcInst, CardEntry } from '../types/game';
 import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';
 import { GameData } from '../models/GameData';
@@ -378,7 +378,7 @@ export class QueryService {
         }
 
         const fields = response.data.content.fields as any;
-        console.log('[QueryService] parseGameObject:', fields);
+        // console.log('[QueryService] parseGameObject:', fields);
 
         
         try {
@@ -415,7 +415,7 @@ export class QueryService {
     private parsePlayers(playersData: any[]): Player[] {
         return playersData.map((p: any): Player => {
             const f = p.fields || p;
-            return {
+            const player = {
                 owner: f.owner || '',
                 pos: Number(f.pos) || 0,
                 cash: BigInt(f.cash || 0),
@@ -424,9 +424,27 @@ export class QueryService {
                 in_prison_turns: Number(f.in_prison_turns) || 0,
                 last_tile_id: Number(f.last_tile_id) || 0,
                 next_tile_id: Number(f.next_tile_id) || 0,
-                temple_levels: f.temple_levels || [],  // ✅ 添加 temple_levels
+                temple_levels: f.temple_levels || [],
                 buffs: f.buffs || [],
-                cards: new Map()  // Table 类型，保持空 Map
+                cards: this.parseCardEntries(f.cards || [])  // ✅ 正确解析
+            };
+
+            // console.log('[QueryService] parsePlayers:', player);
+            return player;
+        });
+    }
+
+    /**
+     * 解析 CardEntry 数组
+     */
+    private parseCardEntries(cardsData: any[]): CardEntry[] {
+        // console.log('[QueryService] parseCardEntries:', cardsData);
+        return cardsData.map((card: any): CardEntry => {
+            const f = card.fields || card;
+            // console.log('[QueryService] parseCardEntries:', f);
+            return {
+                kind: Number(f.kind),
+                count: Number(f.count)
             };
         });
     }

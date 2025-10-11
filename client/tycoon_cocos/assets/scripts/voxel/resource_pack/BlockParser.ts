@@ -43,7 +43,7 @@ export class BlockParser {
      * @returns 解析后的方块数据
      */
     async parseBlock(blockId: string): Promise<ParsedBlockData> {
-        console.log(`[BlockParser] 开始解析方块: ${blockId}`);
+        // console.log(`[BlockParser] 开始解析方块: ${blockId}`);
         
         // 1. 解析命名空间ID
         // console.log('parseBlock, blockId:', blockId);

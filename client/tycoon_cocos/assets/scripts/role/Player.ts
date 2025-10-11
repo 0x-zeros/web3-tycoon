@@ -10,35 +10,12 @@
 
 import { Role } from './Role';
 import { RoleType, RoleAttribute, RoleState } from './RoleTypes';
-import type { Player as MovePlayer, BuffEntry as MoveBuffEntry } from '../sui/types/game';
+import type { Player as MovePlayer, BuffEntry as MoveBuffEntry, CardEntry } from '../sui/types/game';
 import { INVALID_TILE_ID } from '../sui/types/constants';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { IdFormatter } from '../ui/utils/IdFormatter';
-
-/**
- * Buff 条目接口（对应 Move 端）
- */
-export interface BuffEntry {
-    /** Buff 类型 */
-    kind: number;
-    /** 最后一个激活轮次（包含） */
-    last_active_round: number;
-    /** 附加数值 */
-    value: bigint;
-    /** 关联的 NPC spawn 索引 */
-    spawn_index: number;
-}
-
-/**
- * 卡牌条目接口（对应 Move 端）
- */
-export interface CardEntry {
-    /** 卡牌类型 */
-    kind: number;
-    /** 数量 */
-    count: number;
-}
+import { Card } from '../card/Card';
 
 /**
  * Player 类
@@ -81,8 +58,8 @@ export class Player extends Role {
     /** Buff 列表（对应 Move Player.buffs） */
     protected _buffs: BuffEntry[] = [];
 
-    /** 卡牌列表（对应 Move Player.cards） */
-    protected _cards: CardEntry[] = [];
+    /** 卡牌列表（客户端 Card 对象） */
+    protected _cards: Card[] = [];
 
     // ========================= 构造和初始化 =========================
 
@@ -173,13 +150,10 @@ export class Player extends Role {
     }
 
     /**
-     * 加载卡牌
+     * 加载卡牌（将 CardEntry[] 转换为 Card[]）
      */
-    private loadCards(moveCards: Map<number, number>): void {
-        this._cards = [];
-        moveCards.forEach((count, kind) => {
-            this._cards.push({ kind, count });
-        });
+    private loadCards(moveCards: CardEntry[]): void {
+        this._cards = moveCards.map(entry => Card.fromEntry(entry.kind, entry.count));
 
         console.log(`[Player] 加载 ${this._cards.length} 种卡牌`);
     }
@@ -231,7 +205,7 @@ export class Player extends Role {
     /**
      * 获取所有卡牌
      */
-    public getAllCards(): CardEntry[] {
+    public getAllCards(): Card[] {
         return [...this._cards];
     }
 

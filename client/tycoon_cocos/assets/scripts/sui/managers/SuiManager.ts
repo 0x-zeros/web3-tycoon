@@ -468,20 +468,18 @@ export class SuiManager {
     public async getGameState(gameId: string): Promise<Game | null> {
         this._ensureInitialized();
 
-        return await this._gameClient!.game.getGameState(gameId);
+        return await this._queryService!.getGame(gameId);
     }
 
     /**
      * 获取当前玩家的座位
      * @param gameId 游戏 ID
      * @returns 座位对象
+     * @deprecated 该方法已废弃，Seat 信息从 AssetService 获取
      */
     public async getPlayerSeat(gameId: string): Promise<Seat | null> {
-        this._ensureInitialized();
-        this._ensureSigner();
-
-        const address = this._signer!.getAddress();
-        return await this._gameClient!.game.getPlayerSeat(address, gameId);
+        console.warn('[SuiManager] getPlayerSeat is deprecated');
+        return null;
     }
 
     // ============ 地图交互 API ============
@@ -1134,9 +1132,9 @@ export class SuiManager {
             in_prison_turns: 0,
             last_tile_id: 65535,  // INVALID_TILE_ID
             next_tile_id: 65535,  // INVALID_TILE_ID
-            temple_levels: [],    // ✅ 添加 temple_levels
+            temple_levels: [],
             buffs: [],
-            cards: new Map()  // 初始卡牌在客户端可以省略
+            cards: []  // ✅ 空数组
         };
 
         // 3. 添加到 players 数组
@@ -1217,8 +1215,8 @@ export class SuiManager {
 
             // 并行加载 Game + MapTemplate + GameData
             const [game, template, gameData] = await Promise.all([
-                this._gameClient!.game.getGameState(gameId),
-                this.getMapTemplate(templateMapId),  // ← 使用传入的 templateMapId
+                this._queryService!.getGame(gameId),
+                this.getMapTemplate(templateMapId),
                 this._queryService!.getGameData()
             ]);
 

@@ -47,8 +47,17 @@ export interface Player {
     temple_levels: number[];
     /** 活跃的Buff列表 */
     buffs: BuffEntry[];
-    /** 持有的卡牌（key: card_kind, value: count） */
-    cards: Map<number, number>;
+    /** 持有的卡牌（vector<CardEntry>） */
+    cards: CardEntry[];
+}
+
+/**
+ * 卡牌条目（玩家持有的卡牌）
+ * 对应Move: struct CardEntry
+ */
+export interface CardEntry {
+    kind: number;
+    count: number;
 }
 
 /**

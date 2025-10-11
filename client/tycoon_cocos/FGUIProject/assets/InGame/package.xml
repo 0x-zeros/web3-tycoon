@@ -18,6 +18,7 @@
     <component id="105vop" name="MapElement.xml" path="/components/"/>
     <component id="105vor" name="Editor.xml" path="/components/"/>
     <component id="pd4wos" name="Debug.xml" path="/components/"/>
+    <component id="pn5rou" name="Tile.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

@@ -39,7 +39,7 @@ export class UIInGameDice extends UIBase {
     private _setupComponents(): void {
         // dice 组件结构：dice > n2（按钮组件）
         // n2 本身是 Button 组件（extention="Button"）
-        this.m_btn_roll = this.getButton('n2');
+        this.m_btn_roll = this.getButton('btn_roll');
 
         if (this.m_btn_roll) {
             console.log('[UIInGameDice] Dice button found');
@@ -53,7 +53,7 @@ export class UIInGameDice extends UIBase {
      */
     protected bindEvents(): void {
         if (this.m_btn_roll) {
-            this.m_btn_roll.onClick(this._onRollDiceClick, this);
+            this.m_btn_roll.onClick(this._onRollDiceOnSui, this);
         }
 
         // 监听骰子事件
@@ -66,7 +66,7 @@ export class UIInGameDice extends UIBase {
      */
     protected unbindEvents(): void {
         if (this.m_btn_roll) {
-            this.m_btn_roll.offClick(this._onRollDiceClick, this);
+            this.m_btn_roll.offClick(this._onRollDiceOnSui, this);
         }
 
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
@@ -76,9 +76,45 @@ export class UIInGameDice extends UIBase {
     }
 
     /**
-     * 投掷骰子按钮点击
+     * 投掷骰子按钮点击, 留作测试用
      */
     private _onRollDiceClick(): void {
+        console.log("[UIInGameDice] Roll dice clicked");
+
+        // 禁用骰子按钮，防止重复点击
+        if (this.m_btn_roll) {
+            this.m_btn_roll.enabled = false;
+        }
+
+        // 生成随机骰子值 (1-6)
+        const diceValue = Math.floor(Math.random() * 6) + 1;
+        console.log(`[UIInGameDice] 骰子点数: ${diceValue}`);
+
+        // 使用DiceController播放骰子动画
+        DiceController.instance.roll(diceValue, () => {
+            console.log(`[UIInGameDice] 骰子动画完成，最终点数: ${diceValue}`);
+
+            // 动画完成后重新启用骰子按钮
+            if (this.m_btn_roll) {
+                this.m_btn_roll.enabled = true;
+            }
+
+            // 发送骰子投掷完成事件
+            EventBus.emit(EventTypes.Dice.RollComplete, {
+                value: diceValue,
+                playerId: Blackboard.instance.get("currentPlayerId"),
+                source: "in_game_ui"
+            });
+        });
+
+        // 发送投掷骰子事件
+        EventBus.emit(EventTypes.Dice.StartRoll, {
+            playerId: Blackboard.instance.get("currentPlayerId"),
+            source: "in_game_ui"
+        });
+    }
+
+    private _onRollDiceOnSui(): void {
         console.log("[UIInGameDice] Roll dice clicked");
 
         // 禁用骰子按钮，防止重复点击

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="256,256">
   <displayList>
-    <component id="n2_mumq" name="n2" src="mumq5" fileName="components/Dice.xml" xy="30,33"/>
+    <component id="n2_mumq" name="btn_roll" src="mumq5" fileName="components/Dice.xml" xy="30,33"/>
   </displayList>
 </component>

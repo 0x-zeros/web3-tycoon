@@ -134,46 +134,26 @@ export class UIInGame extends UIBase {
             console.log('[UIInGame] Info UI component created');
         }
 
-        // mode 控制器会在 MapLoaded 事件时动态更新
-
         // 功能按钮
         this._pauseBtn = this.getButton("btnPause");
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
         this._exitGameBtn = this.getButton("btn_exitGame");
+
+        // 初始化时主动设置一次 mode 控制器（防止错过 EditModeChanged 事件）
+        this.updateModeController();
     }
 
     /**
-     * 更新模式控制器
+     * 更新模式控制器（直接从 GameMap 读取）
      */
     private updateModeController(): void {
-        console.log('[UIInGame] updateModeController called');
+        if (!this.m_modeController) return;
 
-        if (!this.m_modeController) {
-            console.warn('[UIInGame] mode controller not found');
-            return;
-        }
+        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+        const isEditMode = gameMap?.isEditMode || false;
 
-        const mapManager = MapManager.getInstance();
-        const mapComponent = mapManager?.getCurrentGameMap();
-
-        console.log('  mapManager:', !!mapManager);
-        console.log('  mapComponent:', !!mapComponent);
-
-        if (mapComponent) {
-            console.log('  mapComponent.isEditMode:', mapComponent.isEditMode);
-        }
-
-        const isEditMode = mapManager?.getCurrentMapEditMode() || false;
-
-        console.log('  getCurrentMapEditMode():', isEditMode);
-        console.log('  will set selectedIndex to:', isEditMode ? 1 : 0);
-
-        // 0:play模式 1:editor模式
         this.m_modeController.selectedIndex = isEditMode ? 1 : 0;
-
-        console.log('  actual selectedIndex:', this.m_modeController.selectedIndex);
-        console.log('  current page:', this.m_modeController.selectedPage);
     }
     
     /**
@@ -208,7 +188,7 @@ export class UIInGame extends UIBase {
         EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
         EventBus.on(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
-        EventBus.on(EventTypes.Game.MapLoaded, this._onMapLoaded, this);
+        EventBus.on(EventTypes.Map.EditModeChanged, this._onEditModeChanged, this);
         EventBus.on(EventTypes.UI.ScreenSizeChanged, this._onScreenSizeChanged, this);
         EventBus.on(EventTypes.UI.ShowMapSelect, this._onShowMapSelect, this);
     }
@@ -236,7 +216,7 @@ export class UIInGame extends UIBase {
         EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
         EventBus.off(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.off(EventTypes.Game.GameResume, this._onGameResume, this);
-        EventBus.off(EventTypes.Game.MapLoaded, this._onMapLoaded, this);
+        EventBus.off(EventTypes.Map.EditModeChanged, this._onEditModeChanged, this);
         EventBus.off(EventTypes.UI.ScreenSizeChanged, this._onScreenSizeChanged, this);
         EventBus.off(EventTypes.UI.ShowMapSelect, this._onShowMapSelect, this);
 
@@ -373,17 +353,17 @@ export class UIInGame extends UIBase {
     }
 
     /**
-     * 地图加载完成事件（更新 mode 控制器）
+     * 编辑器模式变化事件
      */
-    private _onMapLoaded(data: any): void {
-        console.log('[UIInGame] MapLoaded event, updating mode controller');
-        console.log('  Map ID:', data.mapId);
-        console.log('  isEdit:', data.isEdit);
+    private _onEditModeChanged(data: any): void {
+        console.log('[UIInGame] EditModeChanged event received');
+        console.log('  isEditMode:', data.isEditMode);
 
-        // 延迟一点，确保 MapManager 状态已完全更新
-        this.scheduleOnce(() => {
-            this.updateModeController();
-        }, 0.1);
+        if (this.m_modeController) {
+            // 0:play, 1:editor
+            this.m_modeController.selectedIndex = data.isEditMode ? 1 : 0;
+            console.log('[UIInGame] Mode controller set to:', this.m_modeController.selectedIndex);
+        }
     }
 
     /**

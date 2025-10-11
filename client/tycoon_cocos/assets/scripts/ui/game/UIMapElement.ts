@@ -387,8 +387,10 @@ export class UIMapElement extends UIBase {
         // 显示方块名称
         const blockName = web3Block ? web3Block.name : 
                          VoxelSystem.getInstance().getBlockDefinition(blockId)?.displayName || blockId;
-        tile.title = `${index} ${blockName}`;
+        //tile.title = `${index} ${blockName}`; //不知道为啥无效
 
+        const tileTitle = tile.getChild("title") as fgui.GTextField;
+        tileTitle.text = `${index} ${blockName}`;;
 
         const tileIcon = tile.getChild("tileIcon") as fgui.GLoader;
         

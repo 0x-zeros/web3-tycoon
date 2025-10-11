@@ -187,13 +187,21 @@ export class GameMap extends Component {
      */
     public async init(config: MapConfig, isEdit: boolean): Promise<void> {
         console.log('[GameMap] Initializing with config:', config.id, 'isEdit:', isEdit);
-        
+
         // 保存配置
         this._mapConfig = config;
         this._isEditMode = isEdit;
         this.enableEditMode = isEdit;
         this.mapId = config.id || this.DEFAULT_MAP_ID;
-        
+
+        // 发送编辑器模式变化事件
+        EventBus.emit(EventTypes.Map.EditModeChanged, {
+            isEditMode: this._isEditMode,
+            mapId: this.mapId,
+            gameMap: this
+        });
+        console.log(`[GameMap] EditModeChanged event sent: isEditMode=${this._isEditMode}`);
+
         // 创建容器节点
         this.ensureContainers();
         

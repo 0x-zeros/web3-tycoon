@@ -51,6 +51,8 @@ export const EventTypes = {
         BlockRemoved: "map_block_removed",
         /** 地图编辑模式切换 */
         EditModeToggled: "map_edit_mode_toggled",
+        /** 编辑器模式变化 */
+        EditModeChanged: "map_edit_mode_changed",
         /** NPC生成 */
         NpcSpawned: "map_npc_spawned"
     },

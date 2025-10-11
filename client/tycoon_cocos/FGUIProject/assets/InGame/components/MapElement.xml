@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1280,1280">
-  <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="1"/>
+  <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="0"/>
   <displayList>
     <graph id="n2_105vo" name="n2" xy="0,0" size="1278,869" type="rect" lineSize="2" lineColor="#ff6666cc" fillColor="#00ffffff"/>
-    <list id="n0_105vo" name="tiles" xy="0,0" size="1280,868" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou">
+    <list id="n0_105vo" name="tiles" xy="0,0" size="1280,868" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
       <item title="1"/>
       <item title="地块 01"/>
@@ -21,10 +21,10 @@
       <item/>
       <item/>
     </list>
-    <list id="n3_105vo" name="objects" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou">
+    <list id="n3_105vo" name="objects" xy="0,-1" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="1"/>
       <item title="object1"/>
-      <item/>
+      <item title="object2"/>
       <item/>
       <item/>
       <item/>
@@ -34,7 +34,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou">
+    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="2"/>
       <item title="building 1"/>
       <item/>
@@ -47,7 +47,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou">
+    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="3"/>
       <item title="decorations 1"/>
       <item/>
@@ -61,10 +61,10 @@
       <item/>
     </list>
     <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1284,5" size="126,180">
-      <Button title="地块" controller="category" page="0"/>
+      <Button checked="true" title="地块" controller="category" page="0"/>
     </component>
     <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,184" size="126,180">
-      <Button checked="true" title="NPC" controller="category" page="1"/>
+      <Button title="NPC" controller="category" page="1"/>
     </component>
     <component id="n8_ez89" name="btn_buildings" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1283,371" size="126,180">
       <Button title="建筑" controller="category" page="2"/>

@@ -114,39 +114,211 @@ export class UIInGameDice extends UIBase {
         });
     }
 
-    private _onRollDiceOnSui(): void {
-        console.log("[UIInGameDice] Roll dice clicked");
+    /**
+     * 掷骰子按钮点击（链上交互版本）
+     *
+     * 流程：
+     * 1. 获取游戏会话和玩家信息
+     * 2. 根据 buffs 确定骰子数量（1-3个）
+     * 3. 根据行走偏好计算路径
+     * 4. 播放骰子动画
+     * 5. 构建 PTB 并提交链上交易
+     * 6. 等待事件处理和动画播放
+     */
+    private async _onRollDiceOnSui(): Promise<void> {
+        console.log("[UIInGameDice] 掷骰子按钮点击（链上版本）");
 
         // 禁用骰子按钮，防止重复点击
         if (this.m_btn_roll) {
             this.m_btn_roll.enabled = false;
         }
 
-        // 生成随机骰子值 (1-6)
-        const diceValue = Math.floor(Math.random() * 6) + 1;
-        console.log(`[UIInGameDice] 骰子点数: ${diceValue}`);
+        try {
+            // ===== 1. 获取游戏数据 =====
+            const session = Blackboard.instance.get<any>("currentGameSession");
+            if (!session) {
+                throw new Error("GameSession 未找到");
+            }
 
-        // 使用DiceController播放骰子动画
-        DiceController.instance.roll(diceValue, () => {
-            console.log(`[UIInGameDice] 骰子动画完成，最终点数: ${diceValue}`);
+            const player = session.getMyPlayer();
+            if (!player) {
+                throw new Error("当前玩家未找到");
+            }
 
-            // 动画完成后重新启用骰子按钮
+            const template = session.getMapTemplate();
+            if (!template) {
+                throw new Error("地图模板未找到");
+            }
+
+            console.log("[UIInGameDice] 游戏数据获取成功", {
+                gameId: session.getGameId(),
+                player: player.getPlayerIndex(),
+                currentTile: player.getPos()
+            });
+
+            // ===== 2. 确定骰子数量 =====
+            const diceCount = this._getDiceCount(player, session.getRound());
+            const maxSteps = diceCount * 6;  // 每个骰子最多6步
+
+            console.log(`[UIInGameDice] 骰子数量: ${diceCount}, 最大步数: ${maxSteps}`);
+
+            // ===== 3. 计算路径 =====
+            const preference = this._getWalkingPreference();
+            console.log(`[UIInGameDice] 使用行走偏好: ${preference}`);
+
+            // 导入 PathCalculator（动态导入避免循环依赖）
+            const { PathCalculator } = await import("../../sui/pathfinding/PathCalculator");
+            const pathCalculator = new PathCalculator(template);
+
+            const pathResult = pathCalculator.calculatePath({
+                startTile: player.getPos(),
+                steps: maxSteps,
+                preference: preference,
+                lastTile: player.getLastTileId()
+            });
+
+            if (!pathResult.success) {
+                throw new Error(`路径计算失败: ${pathResult.error}`);
+            }
+
+            console.log("[UIInGameDice] 路径计算成功", {
+                path: pathResult.path,
+                steps: pathResult.actualSteps
+            });
+
+            // ===== 4. 播放骰子动画 =====
+            await this._playDiceAnimation(diceCount);
+
+            // ===== 5. 提交链上交易 =====
+            console.log("[UIInGameDice] 准备提交链上交易...");
+
+            // TODO: 获取 Seat 信息和 keypair
+            // 这些信息应该从 SuiManager 或相关管理器获取
+            // const seatId = Blackboard.instance.get("currentSeatId");
+            // const keypair = SuiManager.instance.getCurrentKeypair();
+
+            // 暂时使用模拟值（实际实现时需要替换）
+            console.warn("[UIInGameDice] TODO: 集成真实的 Seat 和 keypair");
+
+            // TODO: 构建 PTB 并提交交易
+            // const { TurnInteraction } = await import("../../sui/interactions/turn");
+            // const turnInteraction = new TurnInteraction(
+            //     SuiManager.instance.client,
+            //     SuiManager.instance.packageId,
+            //     SuiManager.instance.gameDataId
+            // );
+            //
+            // const result = await turnInteraction.rollAndStep(
+            //     session.getGameId(),
+            //     seatId,
+            //     session.getTemplateMapId(),
+            //     pathResult.path,
+            //     keypair
+            // );
+            //
+            // console.log("[UIInGameDice] 交易成功", {
+            //     txHash: result.txHash,
+            //     dice: result.dice,
+            //     endPos: result.endPos
+            // });
+
+            // 模拟交易成功
+            console.log("[UIInGameDice] 交易提交成功（模拟）");
+
+            // ===== 6. 发送事件（等待 RollAndStepHandler 处理） =====
+            EventBus.emit(EventTypes.Dice.RollComplete, {
+                diceCount: diceCount,
+                path: pathResult.path,
+                player: player.getPlayerIndex(),
+                source: "ui_dice"
+            });
+
+        } catch (error) {
+            console.error("[UIInGameDice] 掷骰子失败:", error);
+
+            // 显示错误提示
+            // TODO: 集成 UINotification
+            // UINotification.error(`掷骰子失败: ${error.message}`);
+
+            alert(`掷骰子失败: ${error.message}`);
+
+        } finally {
+            // 重新启用骰子按钮
             if (this.m_btn_roll) {
                 this.m_btn_roll.enabled = true;
             }
+        }
+    }
 
-            // 发送骰子投掷完成事件
-            EventBus.emit(EventTypes.Dice.RollComplete, {
-                value: diceValue,
-                playerId: Blackboard.instance.get("currentPlayerId"),
-                source: "in_game_ui"
+    /**
+     * 确定骰子数量
+     *
+     * 根据玩家的 buffs 判断：
+     * - 有遥控骰子 buff (MOVE_CTRL)：可以使用 1-3 个骰子
+     * - 无遥控骰子：固定 1 个骰子
+     *
+     * @param player 玩家对象
+     * @param currentRound 当前轮次
+     * @returns 骰子数量（1-3）
+     */
+    private _getDiceCount(player: any, currentRound: number): number {
+        // 导入 BuffKind 常量
+        const BuffKind = { MOVE_CTRL: 1 };  // TODO: 从 constants 导入
+
+        // 检查是否有遥控骰子 buff
+        const hasMoveCtr = player.hasActiveBuff(BuffKind.MOVE_CTRL, currentRound);
+
+        if (hasMoveCtr) {
+            // 有遥控骰子，可以选择 1-3 个
+            // TODO: 弹出选择器让玩家选择骰子数量
+            // 目前默认使用 2 个骰子
+            return 2;
+        } else {
+            // 无遥控骰子，固定 1 个
+            return 1;
+        }
+    }
+
+    /**
+     * 获取行走偏好设置
+     *
+     * @returns 行走偏好（默认 ROTOR_ROUTER）
+     */
+    private _getWalkingPreference(): any {
+        // 导入 WalkingPreference 枚举
+        const WalkingPreference = {
+            ROTOR_ROUTER: 'rotor_router',
+            RIGHT_HAND_RULE: 'right_hand_rule'
+        };  // TODO: 从 pathfinding 模块导入
+
+        // 从 Blackboard 获取用户设置，默认使用 ROTOR_ROUTER
+        return Blackboard.instance.get("walkingPreference", WalkingPreference.ROTOR_ROUTER);
+    }
+
+    /**
+     * 播放骰子动画
+     *
+     * @param diceCount 骰子数量
+     * @returns Promise，动画完成后 resolve
+     */
+    private _playDiceAnimation(diceCount: number): Promise<void> {
+        return new Promise((resolve) => {
+            // 生成随机骰子值（实际值由链上决定，这里只是动画）
+            const diceValue = Math.floor(Math.random() * 6) + 1;
+
+            console.log(`[UIInGameDice] 播放骰子动画，数量: ${diceCount}, 显示值: ${diceValue}`);
+
+            // 使用 DiceController 播放动画
+            DiceController.instance.roll(diceValue, () => {
+                console.log("[UIInGameDice] 骰子动画完成");
+                resolve();
             });
-        });
 
-        // 发送投掷骰子事件
-        EventBus.emit(EventTypes.Dice.StartRoll, {
-            playerId: Blackboard.instance.get("currentPlayerId"),
-            source: "in_game_ui"
+            // 发送投掷开始事件
+            EventBus.emit(EventTypes.Dice.StartRoll, {
+                diceCount: diceCount,
+                source: "ui_dice"
+            });
         });
     }
 

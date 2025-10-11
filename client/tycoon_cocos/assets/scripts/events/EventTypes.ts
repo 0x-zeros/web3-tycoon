@@ -120,7 +120,33 @@ export const EventTypes = {
         /** 请求切换地图 */
         RequestMapChange: "game_request_map_change",
         /** 地面点击 */
-        GroundClicked: "game_ground_clicked"
+        GroundClicked: "game_ground_clicked",
+
+        // RollAndStepAction 播放控制事件
+        /** 动作播放开始 */
+        ActionPlaybackStart: "game_action_playback_start",
+        /** 动作播放暂停 */
+        ActionPlaybackPaused: "game_action_playback_paused",
+        /** 动作播放恢复 */
+        ActionPlaybackResumed: "game_action_playback_resumed",
+        /** 动作播放停止 */
+        ActionPlaybackStopped: "game_action_playback_stopped",
+        /** 动作播放完成 */
+        ActionPlaybackComplete: "game_action_playback_complete",
+        /** 动作播放错误 */
+        ActionPlaybackError: "game_action_playback_error",
+        /** 步骤开始 */
+        ActionStepStart: "game_action_step_start",
+        /** 步骤完成 */
+        ActionStepComplete: "game_action_step_complete",
+
+        // 游戏动作效果事件
+        /** 卡牌获得 */
+        CardDrawn: "game_card_drawn",
+        /** NPC 交互 */
+        NPCInteraction: "game_npc_interaction",
+        /** 地块停留效果 */
+        TileStopEffect: "game_tile_stop_effect"
     },
 
     /** 地产相关事件 */

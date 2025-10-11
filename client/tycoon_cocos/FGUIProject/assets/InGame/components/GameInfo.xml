@@ -3,6 +3,6 @@
   <displayList>
     <text id="n0_mumq" name="weekday" xy="61,22" size="139,41" fontSize="12" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="星期一"/>
     <text id="n1_mumq" name="daysElapsed" xy="61,67" size="139,41" fontSize="12" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="011天"/>
-    <text id="n2_mumq" name="commodityPriceIndex" xy="61,114" size="139,41" fontSize="12" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="物价指数： 1"/>
+    <text id="n2_mumq" name="priceIndex" xy="61,114" size="139,41" fontSize="12" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="物价指数： 1"/>
   </displayList>
 </component>

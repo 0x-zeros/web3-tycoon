@@ -6,20 +6,16 @@
     <component id="mumq2" name="DiceCorner.xml" path="/"/>
     <image id="mumq4" name="dice10.png" path="/images/"/>
     <component id="mumq5" name="Dice.xml" path="/components/"/>
-    <component id="mumq6" name="CardList.xml" path="/"/>
+    <component id="mumq6" name="CardList.xml" path="/components/"/>
     <image id="ue83a" name="card11.png" path="/images/"/>
     <component id="ue83b" name="Card.xml" path="/components/"/>
-    <component id="ue83f" name="Player.xml" path="/components/"/>
+    <component id="ue83f" name="MyPlayer.xml" path="/components/"/>
     <image id="ue83g" name="capy1.png" path="/images/player/"/>
     <image id="ue83h" name="capy2.png" path="/images/player/"/>
     <image id="ue83i" name="capy3.png" path="/images/player/"/>
     <component id="ue83j" name="PlayerInfo.xml" path="/components/"/>
     <component id="ue83k" name="PlayerInfoList.xml" path="/images/"/>
-    <component id="ue83l" name="PlayerInfoWrap.xml" path="/components/"/>
-    <component id="105vom" name="Player_on_map.xml" path="/components/"/>
-    <component id="105von" name="NPC.xml" path="/components/"/>
-    <component id="105vop" name="MapElement.xml" path="/" exported="true"/>
-    <component id="105voq" name="Tile.xml" path="/components/"/>
+    <component id="105vop" name="MapElement.xml" path="/components/"/>
     <component id="105vor" name="Editor.xml" path="/components/"/>
     <component id="pd4wos" name="Debug.xml" path="/components/"/>
   </resources>

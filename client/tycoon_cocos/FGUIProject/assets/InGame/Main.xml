@@ -2,22 +2,22 @@
 <component size="1920,1080" opaque="false">
   <controller name="mode" pages="0,play,1,editor" selected="0"/>
   <displayList>
-    <component id="n0_ue83" name="cards" src="mumq6" fileName="CardList.xml" xy="286,869" scale="0.8,0.8">
+    <component id="n0_ue83" name="cards" src="mumq6" fileName="components/CardList.xml" xy="286,869" scale="0.8,0.8">
       <relation target="" sidePair="center-center,bottom-bottom"/>
     </component>
     <component id="n1_ue83" name="dice" src="mumq2" fileName="DiceCorner.xml" xy="1649,807">
       <relation target="" sidePair="right-right,bottom-bottom"/>
     </component>
-    <component id="n2_ue83" name="myPlayer" src="ue83f" fileName="components/Player.xml" xy="14,814">
+    <component id="n2_ue83" name="myPlayer" src="ue83f" fileName="components/MyPlayer.xml" xy="14,814">
       <relation target="" sidePair="left-left,bottom-bottom"/>
     </component>
-    <component id="n3_ue83" name="playerList" src="ue83k" fileName="images/PlayerInfoList.xml" xy="1659,106">
+    <component id="n3_ue83" name="playerList" src="ue83k" fileName="images/PlayerInfoList.xml" xy="1659,106" scale="0.5,0.5">
       <relation target="" sidePair="right-right,top-top"/>
     </component>
     <component id="n4_ue83" name="gameInfo" src="mumq1" fileName="components/GameInfo.xml" xy="5,7">
       <relation target="" sidePair="left-left,top-top"/>
     </component>
-    <component id="n7_105vo" name="mapElement" src="105vop" fileName="MapElement.xml" xy="590,88" scale="0.5,0.5">
+    <component id="n7_105vo" name="mapElement" src="105vop" fileName="components/MapElement.xml" xy="590,88" scale="0.5,0.5">
       <gearDisplay controller="mode" pages="1"/>
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>

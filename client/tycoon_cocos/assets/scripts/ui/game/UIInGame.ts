@@ -56,8 +56,6 @@ export class UIInGame extends UIBase {
      */
     private _setupComponents(): void {
 
-        this.m_btn_dice = this.getChild('n1').asCom.getChild('n2') as fgui.GButton;
-        
         // 获取editor组件并设置UIEditor
         const editorComponent = this.getChild('editor').asCom;
         this.m_editorUI = editorComponent.node.addComponent(UIEditor);

@@ -40,10 +40,10 @@ export class UIInGamePlayerPanel extends UIBase {
             this.m_myPlayerAvatar = this.m_myPlayer.getChild('avatar') as fgui.GLoader;
         }
 
-        // playerList
+        // playerList（list 名称为 "players"）
         const playerListContainer = this.getChild('playerList')?.asCom;
         if (playerListContainer) {
-            this.m_playerList = playerListContainer.getChild('list') as fgui.GList;
+            this.m_playerList = playerListContainer.getChild('players') as fgui.GList;
             if (this.m_playerList) {
                 this.m_playerList.itemRenderer = this.renderPlayerItem.bind(this);
             }

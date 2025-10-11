@@ -36,8 +36,8 @@ export class UIInGameCards extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 获取 cards 组件中的 list
-        this.m_cardList = this.getList('list');
+        // 获取 cards 组件中的 list（名称为 "cards"）
+        this.m_cardList = this.getList('cards');
 
         if (this.m_cardList) {
             this.m_cardList.itemRenderer = this.renderCardItem.bind(this);

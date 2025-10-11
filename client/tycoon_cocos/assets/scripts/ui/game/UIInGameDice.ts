@@ -37,15 +37,14 @@ export class UIInGameDice extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // dice 组件结构：dice > n1 > n2（按钮）
-        const diceComponent = this.panel;
-        const n1 = diceComponent.getChild('n1')?.asCom;
+        // dice 组件结构：dice > n2（按钮组件）
+        // n2 本身是 Button 组件（extention="Button"）
+        this.m_btn_roll = this.getButton('n2');
 
-        if (n1) {
-            this.m_btn_roll = n1.getChild('n2') as fgui.GButton;
+        if (this.m_btn_roll) {
             console.log('[UIInGameDice] Dice button found');
         } else {
-            console.error('[UIInGameDice] Dice button (n1>n2) not found');
+            console.error('[UIInGameDice] Dice button (n2) not found');
         }
     }
 

@@ -34,6 +34,7 @@ import { UINotification } from '../../ui/utils/UINotification';
 import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerator';
 import { convertMapTemplateToSaveData } from '../../sui/utils/MapTemplateConverter';
 import { GameSession } from '../../core/GameSession';
+import { Player } from '../../role/Player';
 
 // Building信息接口
 interface BuildingInfo {
@@ -1439,7 +1440,7 @@ export class GameMap extends Component {
      * 渲染 Player
      * @param player Player 逻辑对象
      */
-    private async renderPlayer(player: any): Promise<void> {
+    private async renderPlayer(player: Player): Promise<void> {
         // 1. 从 GameSession 获取 GameTile，获取玩家位置
         const session = (this as any)._session;
         if (!session) {

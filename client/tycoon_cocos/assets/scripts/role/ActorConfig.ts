@@ -173,7 +173,7 @@ const NPC_CONFIGS: ActorConfig[] = [
         textures: {
             default: 'web3/actors/roadblock',
         },
-        size: { width: 1, height: 0.5, scale: 1 },
+        size: { width: 1, height: 0.8, scale: 1 },
         animations: {
             canJump: false,
             canSay: false,
@@ -236,7 +236,7 @@ const BUILDING_CONFIGS: ActorConfig[] = [
                 'web3/buildings/lv0',  // 空地 - 只有lv0表示空地
             ]
         },
-        size: { width: 2, height: 2, scale: 2 },
+        size: { width: 1, height: 1, scale: 2 },
         animations: {
             canUpgrade: true,
             canShake: true
@@ -260,7 +260,7 @@ const BUILDING_CONFIGS: ActorConfig[] = [
                 'web3/buildings/temple_lv5',
             ]
         },
-        size: { width: 2, height: 2, scale: 2 },
+        size: { width: 1, height: 1, scale: 2 },
         animations: {
             canUpgrade: true,
             canShake: true
@@ -283,7 +283,7 @@ const BUILDING_CONFIGS: ActorConfig[] = [
                 'web3/buildings/research_lv5',
             ]
         },
-        size: { width: 2, height: 2, scale: 2 },
+        size: { width: 1, height: 1, scale: 2 },
         animations: {
             canUpgrade: true,
             canShake: true
@@ -306,7 +306,7 @@ const BUILDING_CONFIGS: ActorConfig[] = [
                 'web3/buildings/oil_company_lv5',
             ]
         },
-        size: { width: 2, height: 2, scale: 2 },
+        size: { width: 1, height: 1, scale: 2 },
         animations: {
             canUpgrade: true,
             canShake: true
@@ -329,7 +329,7 @@ const BUILDING_CONFIGS: ActorConfig[] = [
                 'web3/buildings/commercial_lv5',
             ]
         },
-        size: { width: 2, height: 2, scale: 2 },
+        size: { width: 1, height: 1, scale: 2 },
         animations: {
             canUpgrade: true,
             canShake: true
@@ -352,7 +352,7 @@ const BUILDING_CONFIGS: ActorConfig[] = [
                 'web3/buildings/hotel_lv5',
             ]
         },
-        size: { width: 2, height: 2, scale: 2 },
+        size: { width: 1, height: 1, scale: 2 },
         animations: {
             canUpgrade: true,
             canShake: true
@@ -403,7 +403,7 @@ const PLAYER_CONFIGS: ActorConfig[] = [
                 jump: ['player_0_jump_1', 'player_0_jump_2']
             }
         },
-        size: { width: 1, height: 1.8, scale: 1 },
+        size: { width: 1, height: 1.5, scale: 2 },
         animations: {
             canJump: true,
             canSay: true,
@@ -426,7 +426,7 @@ const PLAYER_CONFIGS: ActorConfig[] = [
                 jump: ['player_1_jump_1', 'player_1_jump_2']
             }
         },
-        size: { width: 1, height: 1.8, scale: 1 },
+        size: { width: 1, height: 1.5, scale: 2 },
         animations: {
             canJump: true,
             canSay: true,
@@ -449,7 +449,7 @@ const PLAYER_CONFIGS: ActorConfig[] = [
                 jump: ['player_2_jump_1', 'player_2_jump_2']
             }
         },
-        size: { width: 1, height: 1.8, scale: 1 },
+        size: { width: 1, height: 1.5, scale: 2 },
         animations: {
             canJump: true,
             canSay: true,
@@ -472,7 +472,7 @@ const PLAYER_CONFIGS: ActorConfig[] = [
                 jump: ['player_3_jump_1', 'player_3_jump_2']
             }
         },
-        size: { width: 1, height: 1.8, scale: 1 },
+        size: { width: 1, height: 1.5, scale: 2 },
         animations: {
             canJump: true,
             canSay: true,

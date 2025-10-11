@@ -20,6 +20,7 @@ import {
     Quat, tween, Tween, resources, ImageAsset, UITransform,
     Size, Sprite, find, EffectAsset, Prefab, instantiate
 } from 'cc';
+import type { Role } from './Role';
 
 const { ccclass, property } = _decorator;
 
@@ -83,6 +84,10 @@ export class PaperActor extends Component {
     // ===== UI元素 =====
     private textBubble: Node | null = null;  // 对话气泡
     private arrowNode: Node | null = null;   // 方向指示箭头（仅建筑类型使用）
+
+    // ===== 逻辑关联 =====
+    /** 关联的逻辑对象（Player/NPC/等，都继承自 Role） */
+    public role: Role | null = null;
 
     // Billboard更新用的临时变量
     private _tmp = new Vec3();
@@ -749,5 +754,29 @@ export class PaperActor extends Component {
      */
     public getState(): string {
         return this.state;
+    }
+
+    // ===== 逻辑对象关联 =====
+
+    /**
+     * 设置关联的逻辑对象（Player/NPC 等）
+     */
+    public setRole(role: Role | null): void {
+        this.role = role;
+    }
+
+    /**
+     * 获取关联的逻辑对象
+     * 使用泛型支持类型转换
+     */
+    public getRole<T extends Role>(): T | null {
+        return this.role as T;
+    }
+
+    /**
+     * 检查是否有关联的逻辑对象
+     */
+    public hasRole(): boolean {
+        return this.role !== null;
     }
 }

@@ -22,6 +22,7 @@ import {
 } from './RoleTypes';
 import { Actor } from './Actor';
 import { RoleAction } from './RoleAction';
+import type { PaperActor } from './PaperActor';
 
 /**
  * 角色基类
@@ -65,24 +66,16 @@ export abstract class Role {
     /** 临时属性 */
     protected m_tmpAttr: Map<RoleAttribute, number> = new Map();
     
-    // ========================= 组件引用 =========================
-    
-    /** 表现层组件（所有Cocos相关API） */
+    // ========================= 渲染组件引用 =========================
+
+    /** 新的渲染组件（PaperActor） */
+    protected _paperActor: PaperActor | null = null;
+
+    /** @deprecated 使用 _paperActor 替代 */
     protected m_actor: Actor | null = null;
-    
-    /** 行为组件 */
+
+    /** @deprecated 不再使用 */
     protected m_roleAction: RoleAction | null = null;
-    
-    // ========================= 游戏相关 =========================
-    
-    /** 目标角色 */
-    protected m_target: Role | null = null;
-    
-    /** 攻击者列表 */
-    protected m_attackerList: Role[] = [];
-    
-    /** 背包容器（简化版背包） */
-    protected m_inventory: { [key: string]: number } = {};
 
     // ========================= 状态标记 =========================
     
@@ -266,17 +259,37 @@ export abstract class Role {
         this.onTileChanged(oldTileId, tileId);
     }
     
-    // ========================= 组件管理 =========================
-    
+    // ========================= 渲染组件管理 =========================
+
+    /**
+     * 设置 PaperActor 渲染组件
+     */
+    public setPaperActor(actor: PaperActor | null): void {
+        this._paperActor = actor;
+    }
+
+    /**
+     * 获取 PaperActor 渲染组件
+     */
+    public getPaperActor(): PaperActor | null {
+        return this._paperActor;
+    }
+
+    /** @deprecated 使用 setPaperActor 替代 */
     public getActor(): Actor | null { return this.m_actor; }
-    public setActor(actor: Actor): void { 
+
+    /** @deprecated 使用 setPaperActor 替代 */
+    public setActor(actor: Actor): void {
         this.m_actor = actor;
         if (actor) {
             actor.bindRole(this);
         }
     }
-    
+
+    /** @deprecated 不再使用 */
     public getRoleAction(): RoleAction | null { return this.m_roleAction; }
+
+    /** @deprecated 不再使用 */
     public setRoleAction(action: RoleAction): void { this.m_roleAction = action; }
 
     // ========================= 移动相关 =========================
@@ -452,9 +465,12 @@ export abstract class Role {
         this.setState(RoleState.IDLE);
         this.m_currentTileId = -1;
         this.m_targetTileId = -1;
-        this.m_target = null;
-        this.m_attackerList.length = 0;
         this.clearTmpAttr();
+
+        // 清理渲染组件
+        this._paperActor = null;
+        this.m_actor = null;
+        this.m_roleAction = null;
 
         console.log(`[Role] 角色重置完成: ${this.m_strName}`);
     }
@@ -463,34 +479,36 @@ export abstract class Role {
      * 销毁角色
      */
     public destroy(): void {
-        // 清理所有事件监听（通过EventBus管理）
-        // EventBus会自动清理相关事件监听器
-        
-        // 清理组件引用
+        // 清理渲染组件
+        if (this._paperActor) {
+            const node = this._paperActor.node;
+            if (node && node.isValid) {
+                node.destroy();
+            }
+            this._paperActor = null;
+        }
+
+        // 清理旧的组件引用
         if (this.m_actor) {
             this.m_actor.destroy();
             this.m_actor = null;
         }
-        
+
         if (this.m_roleAction) {
             this.m_roleAction.destroy();
             this.m_roleAction = null;
         }
-        
-        // 清理背包
-        this.m_inventory = {};
-        
+
         // 触发销毁事件
         EventBus.emit(EventTypes.Role.Destroyed, {
             roleId: this.m_oId,
             roleType: this.m_eType,
             roleName: this.m_strName
         });
-        
+
         // 清理数据
         this.m_attr.clear();
         this.m_tmpAttr.clear();
-        this.m_attackerList.length = 0;
 
         console.log(`[Role] 角色销毁完成: ${this.m_strName}`);
     }

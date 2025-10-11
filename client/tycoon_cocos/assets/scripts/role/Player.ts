@@ -302,6 +302,9 @@ export class Player extends Role {
 
     public getTempleLevels(): number[] { return [...this._templeLevels]; }
 
+    // PaperActor 关联方法继承自 Role 基类
+    // setPaperActor(), getPaperActor()
+
     // ========================= 重写方法 =========================
 
     /**
@@ -323,6 +326,8 @@ export class Player extends Role {
         this._templeLevels = [];
         this._buffs = [];
         this._cards = [];
+
+        // _paperActor 由 Role.reset() 处理
 
         console.log('[Player] 玩家重置完成');
     }

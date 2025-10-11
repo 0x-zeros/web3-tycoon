@@ -185,6 +185,9 @@ export class NPC extends Role {
         this.setCurrentTileId(tileId);
     }
 
+    // PaperActor 关联方法继承自 Role 基类
+    // setPaperActor(), getPaperActor()
+
     // ========================= 重写方法 =========================
 
     /**
@@ -198,6 +201,8 @@ export class NPC extends Role {
         this._consumable = false;
         this._spawnIndex = 0xFFFF;
         this._tileId = -1;
+
+        // _paperActor 由 Role.reset() 处理
 
         console.log('[NPC] NPC重置完成');
     }

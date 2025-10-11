@@ -28,10 +28,12 @@ import { PaperActorFactory } from '../../role/PaperActorFactory';
 import { PaperActor } from '../../role/PaperActor';
 import { ActorConfigManager } from '../../role/ActorConfig';
 import { BlockOverlayManager } from '../../voxel/overlay/BlockOverlayManager';
+import { NpcKind } from '../../sui/types/constants';
 import { OverlayConfig, OverlayFace } from '../../voxel/overlay/OverlayTypes';
 import { UINotification } from '../../ui/utils/UINotification';
 import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerator';
 import { convertMapTemplateToSaveData } from '../../sui/utils/MapTemplateConverter';
+import { GameSession } from '../../core/GameSession';
 
 // Building信息接口
 interface BuildingInfo {
@@ -124,12 +126,18 @@ export class GameMap extends Component {
     private _isInitialized: boolean = false;
 
     /** PaperActor管理 */
-    private _actors: Map<string, Node> = new Map();         // NPC和物体的PaperActor
-    private _buildings: Map<string, Node> = new Map();      // 建筑的PaperActor
+    private _actors: Map<string, Node> = new Map();         // 旧的 NPC和物体的PaperActor（待废弃）
+    private _buildings: Map<string, Node> = new Map();      // 建筑的PaperActor（按位置索引）
     private _decorations: Map<string, Node> = new Map();    // 装饰物的体素节点
-    private _actorsRoot: Node | null = null;                // Actor的根节点
+    private _actorsRoot: Node | null = null;                // 旧的 Actor根节点（待废弃）
     private _buildingsRoot: Node | null = null;             // 建筑的根节点
     private _decorationsRoot: Node | null = null;           // 装饰物的根节点
+
+    /** 新的 NPC/Player 管理（按索引） */
+    private _npcActors: Map<number, Node> = new Map();     // tileId -> NPC Node
+    private _playerActors: Map<number, Node> = new Map();  // playerIndex -> Player Node
+    private _npcsRoot: Node | null = null;                 // NPC 容器
+    private _playersRoot: Node | null = null;              // Player 容器
     
     /** 地图数据（用于保存） */
     private _mapSaveData: MapSaveData | null = null;
@@ -250,6 +258,20 @@ export class GameMap extends Component {
             this._decorationsRoot = new Node('DecorationsRoot');
             this.node.addChild(this._decorationsRoot);
             console.log('[GameMap] Created DecorationsRoot');
+        }
+
+        // 创建 NPC 容器
+        if (!this._npcsRoot) {
+            this._npcsRoot = new Node('NPCsRoot');
+            this.node.addChild(this._npcsRoot);
+            console.log('[GameMap] Created NPCsRoot');
+        }
+
+        // 创建 Player 容器
+        if (!this._playersRoot) {
+            this._playersRoot = new Node('PlayersRoot');
+            this.node.addChild(this._playersRoot);
+            console.log('[GameMap] Created PlayersRoot');
         }
     }
     
@@ -1185,9 +1207,12 @@ export class GameMap extends Component {
      * @param session GameSession 实例
      * @returns 是否加载成功
      */
-    public async loadFromGameSession(session: any): Promise<boolean> {
+    public async loadFromGameSession(session: GameSession): Promise<boolean> {
         try {
             console.log('[GameMap] 从 GameSession 加载场景');
+
+            // 保存 session 引用（供渲染方法使用）
+            (this as any)._session = session;
 
             // 清空现有场景
             this.clearMap();
@@ -1201,8 +1226,8 @@ export class GameMap extends Component {
             console.log('[GameMap] 场景数据统计');
             console.log('  Tiles:', tiles.length);
             console.log('  Buildings:', buildings.length);
-            console.log('  NPCs:', npcs.size);
-            console.log('  Players:', players.length);
+            console.log('  NPCs:', npcs.size, npcs);
+            console.log('  Players:', players.length, players);
 
             // 渲染 Tiles
             for (const gameTile of tiles) {
@@ -1337,19 +1362,134 @@ export class GameMap extends Component {
 
     /**
      * 渲染 NPC
+     * @param npc NPC 逻辑对象
+     * @param tileId NPC 所在的 tile ID
      */
     private async renderNPC(npc: any, tileId: number): Promise<void> {
-        // TODO: 实现 NPC 渲染逻辑
-        // 需要从 tileId 找到对应的 GameTile，获取位置
-        console.log(`[GameMap] TODO: Render NPC at tile ${tileId}`);
+        // 1. 从 GameSession 获取 GameTile，获取位置
+        const session = (this as any)._session;
+        if (!session) {
+            console.warn('[GameMap] Session not set, cannot render NPC');
+            return;
+        }
+
+        const gameTile = session.getTileByIndex(tileId);
+        if (!gameTile) {
+            console.warn(`[GameMap] Tile ${tileId} not found for NPC`);
+            return;
+        }
+
+        // 2. 计算世界位置（tile 中心，y=0.5）
+        const position = new Vec3(
+            gameTile.x + 0.5,
+            0.5,
+            gameTile.y + 0.5
+        );
+
+        // 3. 根据 NPC kind 获取 actorId
+        const actorId = this.getNPCActorId(npc.getKind());
+
+        // 4. 使用 PaperActorFactory 创建 NPC
+        const npcNode = PaperActorFactory.createNPC(actorId, position);
+
+        if (!npcNode) {
+            console.error(`[GameMap] Failed to create NPC: ${actorId}`);
+            return;
+        }
+
+        // 5. 添加到容器
+        npcNode.setParent(this._npcsRoot!);
+
+        // 6. 命名（包含 tile ID）
+        npcNode.name = `NPC_${npc.getKind()}_T${tileId}`;
+
+        // 7. 双向关联
+        const actor = npcNode.getComponent(PaperActor);
+        if (actor) {
+            actor.setRole(npc);        // PaperActor → NPC
+            npc.setPaperActor(actor);  // NPC → PaperActor
+        }
+
+        // 8. 存储到索引
+        this._npcActors.set(tileId, npcNode);
+
+        console.log(`[GameMap] Rendered NPC at tile ${tileId}:`, actorId);
+    }
+
+    /**
+     * NPC Kind → Actor ID 映射
+     */
+    private getNPCActorId(npcKind: number): string {
+
+        const kindToActorMap: Record<number, string> = {
+            [NpcKind.BARRIER]: 'web3:roadblock',
+            [NpcKind.BOMB]: 'web3:bomb',
+            [NpcKind.DOG]: 'web3:dog',
+            [NpcKind.LAND_GOD]: 'web3:land_god',
+            [NpcKind.WEALTH_GOD]: 'web3:wealth_god',
+            [NpcKind.FORTUNE_GOD]: 'web3:fortune_god',
+            [NpcKind.POOR_GOD]: 'web3:poverty_god'
+        };
+
+        return kindToActorMap[npcKind] || 'web3:land_god';  // 默认土地神
     }
 
     /**
      * 渲染 Player
+     * @param player Player 逻辑对象
      */
     private async renderPlayer(player: any): Promise<void> {
-        // TODO: 实现 Player 渲染逻辑
-        console.log(`[GameMap] TODO: Render Player ${player.getPlayerIndex()}`);
+        // 1. 从 GameSession 获取 GameTile，获取玩家位置
+        const session = (this as any)._session;
+        if (!session) {
+            console.warn('[GameMap] Session not set, cannot render Player');
+            return;
+        }
+
+        const tileId = player.getPos();
+        const gameTile = session.getTileByIndex(tileId);
+
+        if (!gameTile) {
+            console.warn(`[GameMap] Tile ${tileId} not found for Player`);
+            return;
+        }
+
+        // 2. 计算世界位置（tile 中心，y=0.5）
+        const position = new Vec3(
+            gameTile.x + 0.5,
+            0.5,
+            gameTile.y + 0.5
+        );
+
+        // 3. 获取玩家索引（用于区分不同玩家）
+        const playerIndex = player.getPlayerIndex();
+        const playerId = `player_${playerIndex}`;
+
+        // 4. 使用 PaperActorFactory 创建 Player
+        const playerNode = PaperActorFactory.createPlayer(playerId, position);
+
+        if (!playerNode) {
+            console.error(`[GameMap] Failed to create Player: ${playerId}`);
+            return;
+        }
+
+        // 5. 添加到容器
+        playerNode.setParent(this._playersRoot!);
+
+        // 6. 命名
+        playerNode.name = `Player_${playerIndex}`;
+
+        // 7. 双向关联
+        const actor = playerNode.getComponent(PaperActor);
+        if (actor) {
+            actor.setRole(player);        // PaperActor → Player
+            player.setPaperActor(actor);  // Player → PaperActor
+        }
+
+        // 8. 存储到索引
+        this._playerActors.set(playerIndex, playerNode);
+
+        console.log(`[GameMap] Rendered Player ${playerIndex} at tile ${tileId}`);
     }
 
     /**

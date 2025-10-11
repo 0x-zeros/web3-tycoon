@@ -18,7 +18,7 @@
 
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
-import type { Game, Player as MovePlayer, NpcInst as MoveNpcInst } from '../sui/types/game';
+import type { Game, Player as MovePlayer, NpcInst, NpcInst as MoveNpcInst, Tile } from '../sui/types/game';
 import type { MapTemplate } from '../sui/types/map';
 import { GameStatus, PendingDecision, INVALID_TILE_ID } from '../sui/types/constants';
 import { Player } from '../role/Player';
@@ -26,6 +26,7 @@ import { NPC } from '../role/NPC';
 import { GameData } from '../sui/models/GameData';
 import { GameTile } from '../game/models/GameTile';
 import { GameBuilding } from '../game/models/GameBuilding';
+import { MapManager } from '../map/MapManager';
 
 /**
  * 待决策信息接口
@@ -171,7 +172,7 @@ export class GameSession {
 
         // 6. 加载玩家和 NPC
         this.loadPlayers(game.players);
-        this.loadNPCs(game.npc_on);
+        this.loadNPCs(game.npc_on, game.tiles);
 
         // 7. 加载待决策状态
         this.loadPendingDecision(game);
@@ -218,15 +219,20 @@ export class GameSession {
     /**
      * 加载NPC
      */
-    private loadNPCs(npcMap: Map<number, MoveNpcInst>): void {
+    private loadNPCs(npcList: NpcInst[], tiles: Tile[]): void {
         // 清空现有NPC
         this._npcs.clear();
 
-        // 创建或更新NPC对象
-        npcMap.forEach((moveNpc, tileId) => {
-            const npc = new NPC();
-            npc.loadFromMoveNPC(moveNpc);
-            this._npcs.set(tileId, npc);
+        tiles.forEach((tile, tileId) => {
+            const npcOn = tile.npc_on;  //地块上的NPC索引（65535表示无NPC，其他值为game.npc_on的index
+            if (npcOn !== 65535 && npcOn < npcList.length) {
+                const moveNpc = npcList[npcOn];
+                if (moveNpc) {
+                    const npc = new NPC();
+                    npc.loadFromMoveNPC(moveNpc);
+                    this._npcs.set(tileId, npc);
+                }
+            }
         });
 
         console.log(`[GameSession] 加载 ${this._npcs.size} 个NPC`);
@@ -293,8 +299,8 @@ export class GameSession {
     private async loadGameMap(): Promise<void> {
         console.log('[GameSession] 加载游戏地图...');
 
-        // 动态导入 MapManager（避免循环依赖）
-        const { MapManager } = await import('../map/MapManager');
+        // // 动态导入 MapManager（避免循环依赖）
+        // const { MapManager } = await import('../map/MapManager');
         const mapManager = MapManager.getInstance();
 
         if (!mapManager) {

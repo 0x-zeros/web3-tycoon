@@ -156,12 +156,7 @@ export class PaperActorFactory {
 
         node.setPosition(position);
 
-        // 应用配置中的 scale
-        const config = ActorConfigManager.getConfig('web3:player_' + playerId);
-        if (config && config.size.scale) {
-            const scale = config.size.scale;
-            node.setScale(scale, scale, scale);
-        }
+        // scale 由 PaperActor.initialize() 统一处理
 
         // 查找并设置相机
         this.setupCamera(actor);

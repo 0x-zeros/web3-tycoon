@@ -90,6 +90,10 @@ export class PaperActor extends Component {
     /** 关联的逻辑对象（Player/NPC/等，都继承自 Role） */
     public role: Role | null = null;
 
+    // ===== 配置缓存 =====
+    /** 缓存的 ActorConfig（用于快速访问 size、scale 等） */
+    private config: any = null;  // ActorConfig 类型
+
     // Billboard更新用的临时变量
     private _tmp = new Vec3();
 
@@ -152,27 +156,33 @@ export class PaperActor extends Component {
         try {
             // console.log(`[PaperActor] Initializing ${this.node.name}...`);
 
-            // 1. 先确保材质已创建并准备好
+            // 1. 获取配置
+            this.config = ActorConfigManager.getConfig(this.actorId);
+
+            // 2. 应用 scale（从配置中读取）
+            this.applyScale();
+
+            // 3. 确保材质已创建并准备好
             await this.ensureMaterialReady();
 
-            // 2. 加载纹理
+            // 4. 加载纹理
             if (this.actorId) {
                 await this.loadTexture();
             }
 
-            // 3. 应用方向旋转（仅对建筑生效，因为其他类型需要Billboard）
+            // 5. 应用方向旋转（仅对建筑生效，因为其他类型需要Billboard）
             if (this.actorType === ActorType.BUILDING && this.billboardMode === 'off') {
                 this.applyDirection();
                 // 为建筑加载方向指示箭头
                 await this.loadArrowIndicator();
             }
 
-            // 4. 根据类型设置默认动画
+            // 6. 根据类型设置默认动画
             if (this.actorType === ActorType.NPC || this.actorType === ActorType.PLAYER) {
                 this.playFrameAnimation('idle');
             }
 
-            // 5. 资源加载完成，显示节点
+            // 7. 资源加载完成，显示节点
             this.node.active = true;
             // console.log(`[PaperActor] Initialized ${this.node.name} successfully`);
             return true;
@@ -721,6 +731,20 @@ export class PaperActor extends Component {
         if (this.actorType === ActorType.BUILDING && this.billboardMode === 'off') {
             this.applyDirection();
         }
+    }
+
+    /**
+     * 应用 scale（从配置中读取）
+     */
+    private applyScale(): void {
+        if (!this.config || !this.config.size.scale) {
+            return;
+        }
+
+        const scale = this.config.size.scale;
+        this.node.setScale(scale, scale, scale);
+
+        // console.log(`[PaperActor] Applied scale ${scale} to ${this.actorId}`);
     }
 
     /**

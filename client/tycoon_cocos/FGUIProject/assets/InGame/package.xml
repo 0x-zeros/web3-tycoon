@@ -2,7 +2,7 @@
 <packageDescription id="8z385pim">
   <resources>
     <component id="mumq0" name="Main.xml" path="/" exported="true"/>
-    <component id="mumq1" name="TopLeftCorner.xml" path="/"/>
+    <component id="mumq1" name="GameInfo.xml" path="/components/"/>
     <component id="mumq2" name="DiceCorner.xml" path="/"/>
     <image id="mumq4" name="dice10.png" path="/images/"/>
     <component id="mumq5" name="Dice.xml" path="/components/"/>

@@ -17,6 +17,7 @@ import { VoxelSystem } from '../voxel/VoxelSystem';
 import { GridGround, GridGroundConfig } from './GridGround';
 import { UINotification } from '../ui/utils/UINotification';
 import { GameSession } from '../core/GameSession';
+import { IdFormatter } from '../ui/utils/IdFormatter';
 
 const { ccclass, property } = _decorator;
 
@@ -285,7 +286,8 @@ export class MapManager extends Component {
 
         // 2. 创建新的地图节点
         const gameId = session.getGameId();
-        const mapNode = new Node(`ChainGame_${gameId.slice(0, 8)}`);
+        const shortId = IdFormatter.shortenAddress(gameId).replace(/\.\.\./g, '___');
+        const mapNode = new Node(`ChainGame_${shortId}`);
 
         // 3. 添加 GameMap 组件
         const gameMap = mapNode.addComponent(GameMap);
@@ -469,7 +471,8 @@ export class MapManager extends Component {
     //         this.unloadCurrentMap();
 
     //         // 2. 创建新的地图节点
-    //         const mapInstance = new Node(`ChainGame_${data.game.id.slice(0, 8)}`);
+    //         const shortId = IdFormatter.shortenAddress(data.game.id).replace(/\.\.\./g, '___');
+    //         const mapInstance = new Node(`ChainGame_${shortId}`);
 
     //         // 3. 添加 GameMap 组件
     //         const mapComponent = mapInstance.addComponent(GameMap);

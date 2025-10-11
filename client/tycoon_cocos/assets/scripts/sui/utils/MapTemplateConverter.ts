@@ -9,6 +9,7 @@ import type { MapSaveData, TileData, BuildingData } from '../../map/data/MapData
 import type { Game } from '../types/game';
 import { TileKind, BuildingSize, NO_BUILDING, INVALID_TILE_ID } from '../types/constants';
 import { Web3TileType, Web3BuildingType } from '../../voxel/Web3BlockTypes';
+import { IdFormatter } from '../../ui/utils/IdFormatter';
 
 /**
  * 根据建筑和入口tile的相对位置计算朝向
@@ -156,7 +157,7 @@ export function convertMapTemplateToSaveData(
     const result = {
         // ✅ MapMetadata 必须字段
         mapId,
-        mapName: `Chain Game ${game.id.slice(0, 8)}...`,
+        mapName: `Chain Game ${IdFormatter.shortenAddress(game.id)}`,
         version: '1.0.0',
         createTime: Date.now(),
         updateTime: Date.now(),

@@ -16,12 +16,14 @@ import { EventTypes } from "../../events/EventTypes";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
+import { IdFormatter } from "../utils/IdFormatter";
 
 const { ccclass } = _decorator;
 
 @ccclass('UIInGameInfo')
 export class UIInGameInfo extends UIBase {
 
+    private m_gameId: fgui.GTextField;
     private m_daysElapsed: fgui.GTextField;
     private m_weekday: fgui.GTextField;
     private m_priceIndex: fgui.GTextField;
@@ -32,6 +34,7 @@ export class UIInGameInfo extends UIBase {
 
     private _setupComponents(): void {
         // gameInfo 组件
+        this.m_gameId = this.getText('gameid');
         this.m_daysElapsed = this.getText('daysElapsed');
         this.m_weekday = this.getText('weekday');
         this.m_priceIndex = this.getText('priceIndex');
@@ -61,6 +64,13 @@ export class UIInGameInfo extends UIBase {
 
         const round = session.getRound();
         const priceRiseDays = session.getPriceRiseDays();
+        const gameId = session.getGameId();
+
+        // Game ID（short address 格式）
+        if (this.m_gameId) {
+            const shortGameId = IdFormatter.shortenAddress(gameId);
+            this.m_gameId.text = shortGameId;
+        }
 
         // 天数（轮次）
         if (this.m_daysElapsed) {

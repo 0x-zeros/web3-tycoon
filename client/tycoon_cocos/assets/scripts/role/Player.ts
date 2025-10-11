@@ -14,6 +14,7 @@ import type { Player as MovePlayer, BuffEntry as MoveBuffEntry } from '../sui/ty
 import { INVALID_TILE_ID } from '../sui/types/constants';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
+import { IdFormatter } from '../ui/utils/IdFormatter';
 
 /**
  * Buff 条目接口（对应 Move 端）
@@ -102,7 +103,7 @@ export class Player extends Role {
         // 基础信息
         this._owner = movePlayer.owner;
         this._playerIndex = playerIndex;
-        this.m_oId = `player_${playerIndex}_${movePlayer.owner.slice(0, 8)}`;
+        this.m_oId = `player_${playerIndex}_${IdFormatter.shortenAddress(movePlayer.owner)}`;
         this.m_strName = `玩家 ${playerIndex + 1}`;
 
         // Move 端字段
@@ -338,7 +339,7 @@ export class Player extends Role {
     public debugInfo(): string {
         const baseInfo = super.debugInfo();
         const playerInfo = [
-            `Owner: ${this._owner.slice(0, 8)}...`,
+            `Owner: ${IdFormatter.shortenAddress(this._owner)}`,
             `Index: ${this._playerIndex}`,
             `Pos: ${this._pos}`,
             `Cash: ${this._cash.toString()}`,

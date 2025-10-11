@@ -28,6 +28,7 @@ import { GameTile } from '../game/models/GameTile';
 import { GameBuilding } from '../game/models/GameBuilding';
 import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
+import { IdFormatter } from '../ui/utils/IdFormatter';
 
 /**
  * 待决策信息接口
@@ -268,7 +269,7 @@ export class GameSession {
 
             console.log('[GameSession] My player identified:');
             console.log('  Player index:', myPlayerIndex);
-            console.log('  Address:', currentAddress.slice(0, 10) + '...');
+            console.log('  Address:', IdFormatter.shortenAddress(currentAddress));
         } else {
             console.warn('[GameSession] My player not found in game');
             console.warn('  Current address:', currentAddress);

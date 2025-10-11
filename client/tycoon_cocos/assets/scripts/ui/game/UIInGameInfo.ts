@@ -32,9 +32,9 @@ export class UIInGameInfo extends UIBase {
 
     private _setupComponents(): void {
         // gameInfo 组件
-        this.m_daysElapsed = this.getTextField('daysElapsed');
-        this.m_weekday = this.getTextField('weekday');
-        this.m_priceIndex = this.getTextField('priceIndex');
+        this.m_daysElapsed = this.getText('daysElapsed');
+        this.m_weekday = this.getText('weekday');
+        this.m_priceIndex = this.getText('priceIndex');
     }
 
     protected bindEvents(): void {

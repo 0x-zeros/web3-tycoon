@@ -78,10 +78,10 @@ export class UIInGamePlayerPanel extends UIBase {
     }
 
     private refreshMyPlayer(session: any): void {
-        const activePlayer = session.getActivePlayer();
-        if (!activePlayer || !this.m_myPlayerAvatar) return;
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer || !this.m_myPlayerAvatar) return;
 
-        const playerIndex = activePlayer.getPlayerIndex();
+        const playerIndex = myPlayer.getPlayerIndex();
         this.loadPlayerAvatar(this.m_myPlayerAvatar, playerIndex);
     }
 

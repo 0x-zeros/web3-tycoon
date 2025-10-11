@@ -92,9 +92,9 @@ export class UIInGameCards extends UIBase {
             return;
         }
 
-        const player = session.getActivePlayer();
+        const player = session.getMyPlayer();
         if (!player) {
-            console.warn('[UIInGameCards] Active player not found');
+            console.warn('[UIInGameCards] My player not found');
             this.m_cardList.numItems = 0;
             return;
         }
@@ -112,7 +112,7 @@ export class UIInGameCards extends UIBase {
         const item = obj.asCom;
 
         const session = GameInitializer.getInstance()?.getGameSession();
-        const player = session?.getActivePlayer();
+        const player = session?.getMyPlayer();
         const gameData = session?.getGameData();
 
         if (!player || !gameData) return;

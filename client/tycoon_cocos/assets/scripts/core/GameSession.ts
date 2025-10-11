@@ -27,6 +27,7 @@ import { GameData } from '../sui/models/GameData';
 import { GameTile } from '../game/models/GameTile';
 import { GameBuilding } from '../game/models/GameBuilding';
 import { MapManager } from '../map/MapManager';
+import { SuiManager } from '../sui/managers/SuiManager';
 
 /**
  * 待决策信息接口
@@ -75,6 +76,12 @@ export class GameSession {
 
     /** 玩家列表（对应Move的players vector） */
     private _players: Player[] = [];
+
+    /** 我的玩家（当前客户端连接的玩家） */
+    private _myPlayer: Player | null = null;
+
+    /** 我的玩家索引 */
+    private _myPlayerIndex: number = -1;
 
     /** NPC列表 */
     private _npcs: NPC[] = [];
@@ -174,7 +181,10 @@ export class GameSession {
         this.loadPlayers(game.players);
         this.loadNPCs(game.npc_on, game.tiles);
 
-        // 7. 加载待决策状态
+        // 7. 识别我的玩家（通过当前连接的地址）
+        this.identifyMyPlayer();
+
+        // 8. 加载待决策状态
         this.loadPendingDecision(game);
 
         // 8. 加载游戏地图（调用 MapManager）
@@ -236,6 +246,34 @@ export class GameSession {
         });
 
         console.log(`[GameSession] 加载 ${this._npcs.length} 个NPC`);
+    }
+
+    /**
+     * 识别我的玩家（通过当前连接的地址）
+     */
+    private identifyMyPlayer(): void {
+        const currentAddress = SuiManager.instance.currentAddress;
+
+        if (!currentAddress) {
+            console.warn('[GameSession] No current address, cannot identify my player');
+            return;
+        }
+
+        // 查找匹配地址的玩家
+        const myPlayerIndex = this._players.findIndex(p => p.getOwner() === currentAddress);
+
+        if (myPlayerIndex >= 0) {
+            this._myPlayer = this._players[myPlayerIndex];
+            this._myPlayerIndex = myPlayerIndex;
+
+            console.log('[GameSession] My player identified:');
+            console.log('  Player index:', myPlayerIndex);
+            console.log('  Address:', currentAddress.slice(0, 10) + '...');
+        } else {
+            console.warn('[GameSession] My player not found in game');
+            console.warn('  Current address:', currentAddress);
+            console.warn('  Game players:', this._players.map(p => p.getOwner()));
+        }
     }
 
     /**
@@ -465,6 +503,27 @@ export class GameSession {
         return this._players.length;
     }
 
+    /**
+     * 获取我的玩家（当前客户端连接的玩家）
+     */
+    public getMyPlayer(): Player | null {
+        return this._myPlayer;
+    }
+
+    /**
+     * 获取我的玩家索引
+     */
+    public getMyPlayerIndex(): number {
+        return this._myPlayerIndex;
+    }
+
+    /**
+     * 是否是我的回合
+     */
+    public isMyTurn(): boolean {
+        return this._myPlayerIndex === this._activePlayerIndex;
+    }
+
     // ========================= NPC管理 =========================
 
     /**
@@ -655,6 +714,8 @@ export class GameSession {
         this._activePlayerIndex = 0;
         this._hasRolled = false;
         this._players = [];
+        this._myPlayer = null;
+        this._myPlayerIndex = -1;
         this._npcs = [];
         this._pendingDecision = null;
         this._maxRounds = 0;

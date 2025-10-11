@@ -1226,8 +1226,8 @@ export class GameMap extends Component {
             console.log('[GameMap] 场景数据统计');
             console.log('  Tiles:', tiles.length);
             console.log('  Buildings:', buildings.length);
-            console.log('  NPCs:', npcs.size, npcs);
-            console.log('  Players:', players.length, players);
+            console.log('  NPCs:', npcs.length);
+            console.log('  Players:', players.length);
 
             // 渲染 Tiles
             for (const gameTile of tiles) {
@@ -1240,7 +1240,8 @@ export class GameMap extends Component {
             }
 
             // 渲染 NPCs
-            for (const [tileId, npc] of npcs) {
+            for (const npc of npcs) {
+                const tileId = npc.getTileId();
                 await this.renderNPC(npc, tileId);
             }
 
@@ -1463,7 +1464,7 @@ export class GameMap extends Component {
 
         // 3. 获取玩家索引（用于区分不同玩家）
         const playerIndex = player.getPlayerIndex();
-        const playerId = `player_${playerIndex}`;
+        const playerId = `${playerIndex}`;
 
         // 4. 使用 PaperActorFactory 创建 Player
         const playerNode = PaperActorFactory.createPlayer(playerId, position);

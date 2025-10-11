@@ -387,6 +387,103 @@ const BUILDING_CONFIGS: ActorConfig[] = [
 ];
 
 /**
+ * 玩家配置（4个玩家）
+ */
+const PLAYER_CONFIGS: ActorConfig[] = [
+    // 玩家 0
+    {
+        id: 'web3:player_0',
+        type: ActorType.PLAYER,
+        name: '玩家1',
+        textures: {
+            default: 'web3/actors/player_0',
+            animations: {
+                idle: ['player_0_idle_1', 'player_0_idle_2'],
+                walk: ['player_0_walk_1', 'player_0_walk_2', 'player_0_walk_3', 'player_0_walk_4'],
+                jump: ['player_0_jump_1', 'player_0_jump_2']
+            }
+        },
+        size: { width: 1, height: 1.8, scale: 1 },
+        animations: {
+            canJump: true,
+            canSay: true,
+            canMove: true,
+            canShake: true
+        },
+        billboardMode: 'yAxis'
+    },
+
+    // 玩家 1
+    {
+        id: 'web3:player_1',
+        type: ActorType.PLAYER,
+        name: '玩家2',
+        textures: {
+            default: 'web3/actors/player_1',
+            animations: {
+                idle: ['player_1_idle_1', 'player_1_idle_2'],
+                walk: ['player_1_walk_1', 'player_1_walk_2', 'player_1_walk_3', 'player_1_walk_4'],
+                jump: ['player_1_jump_1', 'player_1_jump_2']
+            }
+        },
+        size: { width: 1, height: 1.8, scale: 1 },
+        animations: {
+            canJump: true,
+            canSay: true,
+            canMove: true,
+            canShake: true
+        },
+        billboardMode: 'yAxis'
+    },
+
+    // 玩家 2
+    {
+        id: 'web3:player_2',
+        type: ActorType.PLAYER,
+        name: '玩家3',
+        textures: {
+            default: 'web3/actors/player_2',
+            animations: {
+                idle: ['player_2_idle_1', 'player_2_idle_2'],
+                walk: ['player_2_walk_1', 'player_2_walk_2', 'player_2_walk_3', 'player_2_walk_4'],
+                jump: ['player_2_jump_1', 'player_2_jump_2']
+            }
+        },
+        size: { width: 1, height: 1.8, scale: 1 },
+        animations: {
+            canJump: true,
+            canSay: true,
+            canMove: true,
+            canShake: true
+        },
+        billboardMode: 'yAxis'
+    },
+
+    // 玩家 3
+    {
+        id: 'web3:player_3',
+        type: ActorType.PLAYER,
+        name: '玩家4',
+        textures: {
+            default: 'web3/actors/player_3',
+            animations: {
+                idle: ['player_3_idle_1', 'player_3_idle_2'],
+                walk: ['player_3_walk_1', 'player_3_walk_2', 'player_3_walk_3', 'player_3_walk_4'],
+                jump: ['player_3_jump_1', 'player_3_jump_2']
+            }
+        },
+        size: { width: 1, height: 1.8, scale: 1 },
+        animations: {
+            canJump: true,
+            canSay: true,
+            canMove: true,
+            canShake: true
+        },
+        billboardMode: 'yAxis'
+    }
+];
+
+/**
  * 配置管理器
  */
 export class ActorConfigManager {
@@ -400,7 +497,7 @@ export class ActorConfigManager {
         if (this.initialized) return;
 
         // 加载所有配置
-        [...NPC_CONFIGS, ...BUILDING_CONFIGS].forEach(config => {
+        [...NPC_CONFIGS, ...BUILDING_CONFIGS, ...PLAYER_CONFIGS].forEach(config => {
             this.configs.set(config.id, config);
         });
 
@@ -466,6 +563,25 @@ export class ActorConfigManager {
     public static isNPC(actorId: string): boolean {
         const config = this.getConfig(actorId);
         return config ? config.type === ActorType.NPC : false;
+    }
+
+    /**
+     * 获取所有玩家配置
+     */
+    public static getPlayerConfigs(): ActorConfig[] {
+        if (!this.initialized) {
+            this.initialize();
+        }
+
+        return Array.from(this.configs.values()).filter(c => c.type === ActorType.PLAYER);
+    }
+
+    /**
+     * 检查是否是玩家类型
+     */
+    public static isPlayer(actorId: string): boolean {
+        const config = this.getConfig(actorId);
+        return config ? config.type === ActorType.PLAYER : false;
     }
 
     /**

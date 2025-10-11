@@ -76,8 +76,8 @@ export class GameSession {
     /** 玩家列表（对应Move的players vector） */
     private _players: Player[] = [];
 
-    /** NPC映射（tileId -> NPC） */
-    private _npcs: Map<number, NPC> = new Map();
+    /** NPC列表 */
+    private _npcs: NPC[] = [];
 
     // ========================= 待决策状态 =========================
 
@@ -221,7 +221,7 @@ export class GameSession {
      */
     private loadNPCs(npcList: NpcInst[], tiles: Tile[]): void {
         // 清空现有NPC
-        this._npcs.clear();
+        this._npcs = [];
 
         tiles.forEach((tile, tileId) => {
             const npcOn = tile.npc_on;  //地块上的NPC索引（65535表示无NPC，其他值为game.npc_on的index
@@ -229,13 +229,13 @@ export class GameSession {
                 const moveNpc = npcList[npcOn];
                 if (moveNpc) {
                     const npc = new NPC();
-                    npc.loadFromMoveNPC(moveNpc);
-                    this._npcs.set(tileId, npc);
+                    npc.loadFromMoveNPC(moveNpc, tileId);  // ✅ 传入 tileId
+                    this._npcs.push(npc);  // ✅ 使用 push
                 }
             }
         });
 
-        console.log(`[GameSession] 加载 ${this._npcs.size} 个NPC`);
+        console.log(`[GameSession] 加载 ${this._npcs.length} 个NPC`);
     }
 
     /**
@@ -470,24 +470,25 @@ export class GameSession {
     /**
      * 添加NPC
      */
-    public addNPC(tileId: number, npc: NPC): void {
-        this._npcs.set(tileId, npc);
-        console.log(`[GameSession] 添加NPC到地块 ${tileId}`);
+    public addNPC(npc: NPC): void {
+        this._npcs.push(npc);
+        console.log(`[GameSession] 添加NPC到地块 ${npc.getTileId()}`);
 
         EventBus.emit(EventTypes.Game.NPCSpawned, {
             session: this,
-            tileId: tileId,
+            tileId: npc.getTileId(),
             npc: npc
         });
     }
 
     /**
-     * 移除NPC
+     * 移除NPC（根据 tileId）
      */
     public removeNPC(tileId: number): void {
-        const npc = this._npcs.get(tileId);
-        if (npc) {
-            this._npcs.delete(tileId);
+        const index = this._npcs.findIndex(npc => npc.getTileId() === tileId);
+        if (index >= 0) {
+            const npc = this._npcs[index];
+            this._npcs.splice(index, 1);
             console.log(`[GameSession] 移除地块 ${tileId} 上的NPC`);
 
             EventBus.emit(EventTypes.Game.NPCRemoved, {
@@ -501,22 +502,36 @@ export class GameSession {
     /**
      * 获取指定地块上的NPC
      */
-    public getNPC(tileId: number): NPC | null {
-        return this._npcs.get(tileId) || null;
+    public getNPCAtTile(tileId: number): NPC | null {
+        return this._npcs.find(npc => npc.getTileId() === tileId) || null;
+    }
+
+    /**
+     * 根据索引获取NPC
+     */
+    public getNPCByIndex(index: number): NPC | null {
+        return this._npcs[index] || null;
     }
 
     /**
      * 获取所有NPC
      */
-    public getAllNPCs(): Map<number, NPC> {
-        return new Map(this._npcs);
+    public getAllNPCs(): NPC[] {
+        return [...this._npcs];
     }
 
     /**
      * 检查地块是否有NPC
      */
     public hasNPC(tileId: number): boolean {
-        return this._npcs.has(tileId);
+        return this._npcs.some(npc => npc.getTileId() === tileId);
+    }
+
+    /**
+     * 获取NPC数量
+     */
+    public getNPCCount(): number {
+        return this._npcs.length;
     }
 
     // ========================= 游戏状态管理 =========================
@@ -618,7 +633,7 @@ export class GameSession {
             `Turn: ${this._turn}`,
             `ActivePlayer: ${this._activePlayerIndex}`,
             `Players: ${this._players.length}`,
-            `NPCs: ${this._npcs.size}`,
+            `NPCs: ${this._npcs.length}`,
             `HasRolled: ${this._hasRolled}`,
             `PendingDecision: ${this._pendingDecision ? this._pendingDecision.type : 'None'}`
         ];
@@ -640,7 +655,7 @@ export class GameSession {
         this._activePlayerIndex = 0;
         this._hasRolled = false;
         this._players = [];
-        this._npcs.clear();
+        this._npcs = [];
         this._pendingDecision = null;
         this._maxRounds = 0;
         this._priceRiseDays = 15;
@@ -670,7 +685,7 @@ export class GameSession {
 
         // 清理NPC
         this._npcs.forEach(npc => npc.destroy());
-        this._npcs.clear();
+        this._npcs = [];
 
         EventBus.emit(EventTypes.Game.SessionDestroyed, {
             session: this

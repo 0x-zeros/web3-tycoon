@@ -290,9 +290,6 @@ export class InteractionManager extends Component {
     private _setupEventListeners(): void {
         // 监听相机模式变化事件
         EventBus.on(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
-        
-        // 监听游戏状态变化事件
-        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**
@@ -300,7 +297,6 @@ export class InteractionManager extends Component {
      */
     private _removeEventListeners(): void {
         EventBus.off(EventTypes.System.CameraModeChanged, this._onCameraModeChanged, this);
-        EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
     }
 
     /**
@@ -309,18 +305,6 @@ export class InteractionManager extends Component {
     private _onCameraModeChanged(data: { controllerType: string, controller: any }): void {
         if (data.controllerType === CameraControllerType.MAIN_GAME) {
             this.debugLog(`相机控制器切换到主游戏模式`);
-        }
-    }
-
-    /**
-     * 游戏开始事件处理
-     */
-    private _onGameStart(data: { mode: string }): void {
-        this.debugLog(`游戏开始，模式: ${data.mode}`);
-        
-        // 根据游戏模式调整相机设置
-        if (data.mode === 'monopoly' || data.mode === 'strategy') {
-            this.enableMainCamera();
         }
     }
 

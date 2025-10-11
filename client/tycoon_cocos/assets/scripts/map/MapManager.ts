@@ -431,9 +431,7 @@ export class MapManager extends Component {
             // 发送游戏开始事件
             console.log("[MapManager] loadMap成功, 发送GameStart事件");
             EventBus.emit(EventTypes.Game.GameStart, {
-                mode: "single_player", // 这里可以根据实际情况调整
-                mapId: data.mapId,
-                isEdit: data.isEdit,
+                mode: "editor", // 这里可以根据实际情况调整
                 source: "map_select"
             });
         } else {

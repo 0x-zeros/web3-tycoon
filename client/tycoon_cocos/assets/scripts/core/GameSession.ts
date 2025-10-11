@@ -142,15 +142,6 @@ export class GameSession {
         console.log('  Template tiles:', template.tiles_static.size);
         console.log('  Template buildings:', template.buildings_static.size);
 
-        // 立即发送 GameStart 事件，触发 UI 切换
-        console.log('[GameSession] 发送 GameStart 事件（UI 切换）');
-        EventBus.emit(EventTypes.Game.GameStart, {
-            game: game,
-            template: template,
-            gameData: gameData,
-            source: 'chain_game',
-            mode: 'play'
-        });
 
         // 1. 保存引用
         this._mapTemplate = template;
@@ -187,6 +178,17 @@ export class GameSession {
 
         // 8. 加载待决策状态
         this.loadPendingDecision(game);
+
+
+        //数据加载完成
+        console.log('[GameSession] ');
+        // 立即发送 GameStart 事件，触发 -> UIInGame 的切换
+        // UIInGame 在GameSession 数据填充好了再开始初始化（因为UI里很多地方都需要GameSession的数据）
+        console.log('[GameSession] 数据加载完成， 发送 GameStart 事件，触发 -> UIInGame 的切换。');
+        EventBus.emit(EventTypes.Game.GameStart, {
+            mode: 'play',
+            source: 'chain_game',
+        });
 
         // 8. 加载游戏地图（调用 MapManager）
         console.log('[GameSession] 开始加载游戏地图...');

@@ -185,7 +185,6 @@ export class UIInGame extends UIBase {
         }
 
         // 监听游戏事件
-        EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
         EventBus.on(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
         EventBus.on(EventTypes.Map.EditModeChanged, this._onEditModeChanged, this);
@@ -213,7 +212,6 @@ export class UIInGame extends UIBase {
             this._exitGameBtn.offClick(this._onExitGameClick, this);
         }
 
-        EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
         EventBus.off(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.off(EventTypes.Game.GameResume, this._onGameResume, this);
         EventBus.off(EventTypes.Map.EditModeChanged, this._onEditModeChanged, this);
@@ -338,19 +336,6 @@ export class UIInGame extends UIBase {
     
 
     // ================== 游戏事件处理 ==================
-
-    /**
-     * 游戏开始事件（只负责 UI 显示）
-     */
-    private _onGameStart(data: any): void {
-        console.log('[UIInGame] GameStart event received');
-        console.log('  Game ID:', data.game?.id);
-
-        // 显示 UIInGame
-        this.show();
-
-        console.log('[UIInGame] UI shown');
-    }
 
     /**
      * 编辑器模式变化事件

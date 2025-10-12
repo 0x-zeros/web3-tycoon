@@ -21,6 +21,8 @@ import { SuiManager } from "../../sui/managers/SuiManager";
 import { BuffKind } from "../../sui/types/constants";
 import { WalkingPreference } from "../../sui/pathfinding/WalkingPreference";
 import { HistoryStorage } from "../../sui/pathfinding/HistoryStorage";
+import { UIMessage } from "../utils/UIMessage";
+import { UINotification } from "../utils/UINotification";
 
 const { ccclass } = _decorator;
 
@@ -237,9 +239,23 @@ export class UIInGameDice extends UIBase {
         } catch (error) {
             console.error("[UIInGameDice] 掷骰子失败:", error);
 
-            // 显示错误提示
+            // 显示错误提示（根据错误类型选择提示方式）
             const errorMessage = error instanceof Error ? error.message : String(error);
-            alert(`掷骰子失败: ${errorMessage}`);
+
+            // 重要错误：需要用户确认（使用 UIMessage）
+            if (errorMessage.includes("GameSession") ||
+                errorMessage.includes("Seat not found") ||
+                errorMessage.includes("No current game") ||
+                errorMessage.includes("transaction") ||
+                errorMessage.includes("签名")) {
+                // 使用 MessageBox（需要用户点击确认）
+                UIMessage.error(errorMessage, "掷骰子失败").catch(e => {
+                    console.error('[UIInGameDice] UIMessage error:', e);
+                });
+            } else {
+                // 一般错误：自动消失（使用 Notification）
+                UINotification.error(errorMessage, "掷骰子失败");
+            }
 
         } finally {
             // 重新启用骰子按钮

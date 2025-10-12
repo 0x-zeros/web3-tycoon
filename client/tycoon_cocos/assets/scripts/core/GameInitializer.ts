@@ -503,6 +503,10 @@ export class GameInitializer extends Component {
             if (this.gameSession) {
                 await this.gameSession.loadFromMoveGame(game, template, gameData);
                 console.log('[GameInitializer] GameSession 数据加载完成');
+
+                // 设置到 Blackboard（供 UI 组件访问）
+                Blackboard.instance.set("currentGameSession", this.gameSession);
+                console.log('[GameInitializer] GameSession 设置到 Blackboard');
             } else {
                 console.error('[GameInitializer] GameSession 未初始化');
             }

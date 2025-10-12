@@ -3,17 +3,70 @@
  *
  * 对应Move端的Game对象，管理一局游戏的核心状态和流程
  *
+ * ==================== 重要架构说明 ====================
+ *
+ * 【Game 对象 vs GameSession 的使用】
+ *
+ * 1. Game 对象（sui/types/game.ts）
+ *    - 只在游戏开始时查询一次（SuiManager.loadGameScene）
+ *    - 用于初始化 GameSession（loadFromMoveGame）
+ *    - 之后除了各种 ID（gameId, templateMapId 等），其他字段都会过时
+ *    - **不应该**在游戏过程中重新查询和使用
+ *
+ * 2. GameSession（本类）
+ *    - 游戏过程中的**唯一权威数据源**
+ *    - 通过链上事件保持同步：
+ *      * RollAndStepActionEvent → 更新 round, turn, 玩家位置/现金等
+ *      * UseCardActionEvent → 更新 buffs, cards 等
+ *      * 其他事件...
+ *    - 所有 UI 组件和游戏逻辑都应该使用 GameSession 的数据
+ *    - 所有游戏交易（buildXxxTx）都从 GameSession 获取参数
+ *
+ * 3. 为什么不重新查询 Game？
+ *    - 减少 RPC 请求，降低延迟
+ *    - 事件已包含所有变化的数据，无需重复查询
+ *    - 事件驱动更新更实时，避免查询延迟导致的状态不一致
+ *
+ * 【正确的使用方式】
+ *
+ * ✅ 正确：
+ *   ```typescript
+ *   const session = Blackboard.instance.get("currentGameSession");
+ *   const gameId = session.getGameId();
+ *   const round = session.getRound();
+ *   const player = session.getMyPlayer();
+ *   SuiManager.instance.rollAndStep(session, path);
+ *   ```
+ *
+ * ❌ 错误：
+ *   ```typescript
+ *   const game = await SuiManager.instance.getGameState(gameId);  // 不要这样做
+ *   const round = game.round;  // game 的数据已经过时
+ *   ```
+ *
+ * 【事件驱动更新】
+ *
+ * GameSession 的数据更新流程：
+ *   链上事件 → EventIndexer → Handler → session.setXxx()
+ *
+ * 例如：
+ *   - RollAndStepActionEvent → session.setRound(), session.setTurn()
+ *   - UseCardActionEvent → session 更新 player buffs/cards
+ *
+ * ==================================================
+ *
  * 职责：
  * - 游戏状态管理（status, round, turn）
  * - 玩家列表管理（对应Move的players vector）
  * - NPC管理（对应Move的npc_on Table）
  * - 回合控制和决策管理
+ * - Seat 缓存（当前游戏的座位）
  *
  * 不包含：
  * - Map相关的tile、building管理（由GameMap负责）
  *
  * @author Web3 Tycoon Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import { EventBus } from '../events/EventBus';

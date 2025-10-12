@@ -18,7 +18,6 @@ import { RollAndStepAction } from '../actions/RollAndStepAction';
 import { EventBus } from '../../../events/EventBus';
 import { EventTypes } from '../../../events/EventTypes';
 import { Blackboard } from '../../../events/Blackboard';
-import { SuiManager } from '../../managers';
 
 /**
  * RollAndStepHandler 类
@@ -301,20 +300,16 @@ export class RollAndStepHandler {
                 return;
             }
 
-            // 2. 从链上重新获取 Game 状态
-            const updatedGame = await SuiManager.instance.getGameState(event.game);
+            // 2. 使用事件数据更新 GameSession（而不是重新查询 Game）
+            // RollAndStepActionEvent 包含 round 和 turn_in_round
+            // GameSession 通过事件保持与链上同步，不需要重新查询
+            session.setRound(event.round);
+            session.setTurn(event.turn_in_round);
 
-            if (updatedGame) {
-                // 3. 更新回合状态（分别调用，自动检测变化并发送事件）
-                session.setRound(updatedGame.round);
-                session.setTurn(updatedGame.turn);
-
-                console.log('[RollAndStepHandler] 回合状态已同步', {
-                    round: updatedGame.round,
-                    turn: updatedGame.turn,
-                    activePlayer: updatedGame.active_idx
-                });
-            }
+            console.log('[RollAndStepHandler] 回合状态已同步（from event）', {
+                round: event.round,
+                turn: event.turn_in_round
+            });
         }
 
         // 处理现金变动

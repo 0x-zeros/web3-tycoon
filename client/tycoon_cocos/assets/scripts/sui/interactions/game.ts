@@ -172,7 +172,8 @@ export class GameInteraction {
      */
     buildSkipBuildingDecisionTx(
         gameId: string,
-        seatId: string
+        seatId: string,
+        mapTemplateId: string
     ): Transaction {
         const tx = new Transaction();
 
@@ -180,7 +181,10 @@ export class GameInteraction {
             target: `${this.packageId}::game::skip_building_decision`,
             arguments: [
                 tx.object(gameId),
-                tx.object(seatId)
+                tx.object(seatId),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId),
+                tx.object('0x8')  // random
             ]
         });
 
@@ -206,7 +210,8 @@ export class GameInteraction {
                 tx.object(seatId),
                 tx.pure.bool(useRentFree),
                 tx.object(this.gameDataId),
-                tx.object(mapTemplateId)
+                tx.object(mapTemplateId),
+                tx.object('0x8')  // random
             ]
         });
 
@@ -230,7 +235,8 @@ export class GameInteraction {
                 tx.object(gameId),
                 tx.object(seatId),
                 tx.object(this.gameDataId),
-                tx.object(mapTemplateId)
+                tx.object(mapTemplateId),
+                tx.object('0x8')  // random
             ]
         });
 
@@ -254,7 +260,8 @@ export class GameInteraction {
                 tx.object(gameId),
                 tx.object(seatId),
                 tx.object(this.gameDataId),
-                tx.object(mapTemplateId)
+                tx.object(mapTemplateId),
+                tx.object('0x8')  // random
             ]
         });
 

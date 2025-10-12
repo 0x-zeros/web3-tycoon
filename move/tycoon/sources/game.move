@@ -702,8 +702,10 @@ public entry fun roll_and_step(
     // 清理回合状态
     clean_turn_state(game, player_index);
 
-    // 结束回合
-    advance_turn(game, game_data, map, r, ctx);
+    // 只在无待决策时推进回合
+    if (game.pending_decision == types::DECISION_NONE()) {
+        advance_turn(game, game_data, map, r, ctx);
+    };
 }
 
 // 决定租金支付方式（使用免租卡或支付现金）
@@ -713,6 +715,7 @@ public entry fun decide_rent_payment(
     use_rent_free: bool,
     game_data: &GameData,
     map: &map::MapTemplate,
+    r: &Random,
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
@@ -757,18 +760,36 @@ public entry fun decide_rent_payment(
         // 给所有者加钱
         let owner_player = &mut game.players[owner_index as u64];
         owner_player.cash = owner_player.cash + toll;
-
-        // TODO: 发出支付租金事件
     };
 
     // 清除待决策状态
     clear_decision_state(game);
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
+
+    // 发射租金决策事件
+    let owner_addr = game.players[owner_index as u64].owner;
+    events::emit_rent_decision_event(
+        game.id.to_inner(),
+        player_addr,
+        owner_addr,
+        building_id,
+        tile_id,
+        toll,
+        use_rent_free,
+        game.round,
+        game.turn
+    );
 }
 
 // 跳过建筑决策（不购买或不升级）
 public entry fun skip_building_decision(
     game: &mut Game,
     seat: &Seat,
+    game_data: &GameData,
+    map: &map::MapTemplate,
+    r: &Random,
     ctx: &mut TxContext
 ) {
     // 验证座位和回合
@@ -781,8 +802,25 @@ public entry fun skip_building_decision(
         EInvalidDecision
     );
 
+    let player_addr = seat.player;
+    let decision_type = game.pending_decision;  // 保存用于事件
+    let decision_tile = game.decision_tile;
+
     // 清除待决策状态
     clear_decision_state(game);
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
+
+    // 发射跳过决策事件
+    events::emit_decision_skipped_event(
+        game.id.to_inner(),
+        player_addr,
+        decision_type,
+        decision_tile,
+        game.round,
+        game.turn
+    );
 }
 
 // 结束回合（手动）
@@ -824,6 +862,7 @@ public entry fun buy_building(
     seat: &Seat,
     game_data: &GameData,
     map: &map::MapTemplate,
+    r: &Random,
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
@@ -884,9 +923,21 @@ public entry fun buy_building(
     // 清除待决策状态
     clear_decision_state(game);
 
-    // 发送购买事件
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
 
-    // 发送现金变化事件
+    // 发射建筑决策事件
+    events::emit_building_decision_event(
+        game.id.to_inner(),
+        player_addr,
+        types::DECISION_BUY_PROPERTY(),
+        building_id,
+        tile_id,
+        price,
+        1,  // new_level
+        game.round,
+        game.turn
+    );
 }
 
 // 升级建筑
@@ -895,6 +946,7 @@ public entry fun upgrade_building(
     seat: &Seat,
     game_data: &GameData,
     map: &map::MapTemplate,
+    r: &Random,
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
@@ -960,9 +1012,21 @@ public entry fun upgrade_building(
     // 清除待决策状态
     clear_decision_state(game);
 
-    // 发送升级事件
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
 
-    // 发送现金变化事件
+    // 发射建筑决策事件
+    events::emit_building_decision_event(
+        game.id.to_inner(),
+        player_addr,
+        types::DECISION_UPGRADE_PROPERTY(),
+        building_id,
+        tile_id,
+        upgrade_cost,
+        new_level,
+        game.round,
+        game.turn
+    );
 }
 
 // ===== Internal Functions 内部函数 =====

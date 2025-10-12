@@ -101,6 +101,44 @@ public struct BankruptEvent has copy, drop {
     creditor: option::Option<address>
 }
 
+// ===== Decision Events 决策事件 =====
+
+// 建筑决策事件（购买或升级）
+public struct BuildingDecisionEvent has copy, drop {
+    game: ID,
+    player: address,
+    decision_type: u8,  // BUY_PROPERTY or UPGRADE_PROPERTY
+    building_id: u16,
+    tile_id: u16,
+    amount: u64,
+    new_level: u8,
+    round: u16,
+    turn: u8
+}
+
+// 租金决策事件
+public struct RentDecisionEvent has copy, drop {
+    game: ID,
+    payer: address,
+    owner: address,
+    building_id: u16,
+    tile_id: u16,
+    rent_amount: u64,
+    used_rent_free: bool,
+    round: u16,
+    turn: u8
+}
+
+// 跳过决策事件
+public struct DecisionSkippedEvent has copy, drop {
+    game: ID,
+    player: address,
+    decision_type: u8,
+    tile_id: u16,
+    round: u16,
+    turn: u8
+}
+
 // ===== Aggregated Event Constants 聚合事件常量 =====
 
 
@@ -569,6 +607,77 @@ public fun emit_registry_created_event(
 /// 发射GameData创建事件
 public fun emit_game_data_created_event(data_id: ID) {
     event::emit(GameDataCreatedEvent { data_id });
+}
+
+// ===== Decision Event Emitters 决策事件发射函数 =====
+
+/// 发射建筑决策事件
+public(package) fun emit_building_decision_event(
+    game_id: ID,
+    player: address,
+    decision_type: u8,
+    building_id: u16,
+    tile_id: u16,
+    amount: u64,
+    new_level: u8,
+    round: u16,
+    turn: u8
+) {
+    event::emit(BuildingDecisionEvent {
+        game: game_id,
+        player,
+        decision_type,
+        building_id,
+        tile_id,
+        amount,
+        new_level,
+        round,
+        turn
+    });
+}
+
+/// 发射租金决策事件
+public(package) fun emit_rent_decision_event(
+    game_id: ID,
+    payer: address,
+    owner: address,
+    building_id: u16,
+    tile_id: u16,
+    rent_amount: u64,
+    used_rent_free: bool,
+    round: u16,
+    turn: u8
+) {
+    event::emit(RentDecisionEvent {
+        game: game_id,
+        payer,
+        owner,
+        building_id,
+        tile_id,
+        rent_amount,
+        used_rent_free,
+        round,
+        turn
+    });
+}
+
+/// 发射跳过决策事件
+public(package) fun emit_decision_skipped_event(
+    game_id: ID,
+    player: address,
+    decision_type: u8,
+    tile_id: u16,
+    round: u16,
+    turn: u8
+) {
+    event::emit(DecisionSkippedEvent {
+        game: game_id,
+        player,
+        decision_type,
+        tile_id,
+        round,
+        turn
+    });
 }
 
 

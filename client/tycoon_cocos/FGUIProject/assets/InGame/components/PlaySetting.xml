@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,600">
+  <displayList>
+    <component id="n0_f49a" name="n0" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="86,73" size="30,30"/>
+    <component id="n6_f49a" name="n6" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="86,231" size="30,30"/>
+    <component id="n7_f49a" name="n7" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="86,401" size="30,30"/>
+    <text id="n1_f49a" name="n1" xy="197,62" size="539,60" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动BUY_PROPERTY"/>
+    <text id="n2_f49a" name="n2" xy="13,472" size="701,68" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo： 设置寻路偏好"/>
+    <text id="n3_f49a" name="n3" xy="199,335" size="539,60" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动BUY_PROPERTY"/>
+    <text id="n4_f49a" name="n4" xy="200,212" size="539,60" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动BUY_PROPERTY"/>
+  </displayList>
+</component>

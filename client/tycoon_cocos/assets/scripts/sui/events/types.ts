@@ -142,6 +142,77 @@ export interface BankruptEvent {
     creditor?: string;
 }
 
+// ===== Decision Events 决策事件 =====
+
+/**
+ * 建筑决策事件（购买或升级）
+ * 对应Move: struct BuildingDecisionEvent
+ */
+export interface BuildingDecisionEvent {
+    /** 游戏ID */
+    game: string;
+    /** 玩家地址 */
+    player: string;
+    /** 决策类型（1=购买, 2=升级） */
+    decision_type: number;
+    /** 建筑ID */
+    building_id: number;
+    /** 地块ID */
+    tile_id: number;
+    /** 金额（购买价格或升级费用） */
+    amount: bigint;
+    /** 新等级 */
+    new_level: number;
+    /** 轮次 */
+    round: number;
+    /** 回合 */
+    turn: number;
+}
+
+/**
+ * 租金决策事件
+ * 对应Move: struct RentDecisionEvent
+ */
+export interface RentDecisionEvent {
+    /** 游戏ID */
+    game: string;
+    /** 支付者地址 */
+    payer: string;
+    /** 所有者地址 */
+    owner: string;
+    /** 建筑ID */
+    building_id: number;
+    /** 地块ID */
+    tile_id: number;
+    /** 租金金额 */
+    rent_amount: bigint;
+    /** 是否使用了免租卡 */
+    used_rent_free: boolean;
+    /** 轮次 */
+    round: number;
+    /** 回合 */
+    turn: number;
+}
+
+/**
+ * 跳过决策事件
+ * 对应Move: struct DecisionSkippedEvent
+ */
+export interface DecisionSkippedEvent {
+    /** 游戏ID */
+    game: string;
+    /** 玩家地址 */
+    player: string;
+    /** 决策类型 */
+    decision_type: number;
+    /** 地块ID */
+    tile_id: number;
+    /** 轮次 */
+    round: number;
+    /** 回合 */
+    turn: number;
+}
+
 // ===== 事件类型枚举 =====
 
 /**
@@ -166,6 +237,11 @@ export enum EventType {
     // 经济事件
     BANKRUPT = 'BankruptEvent',
 
+    // 决策事件
+    BUILDING_DECISION = 'BuildingDecisionEvent',
+    RENT_DECISION = 'RentDecisionEvent',
+    DECISION_SKIPPED = 'DecisionSkippedEvent',
+
     // 聚合事件（在aggregated.ts中定义）
     USE_CARD_ACTION = 'UseCardActionEvent',
     ROLL_AND_STEP_ACTION = 'RollAndStepActionEvent'
@@ -183,7 +259,10 @@ export type GameEvent =
     | SkipTurnEvent
     | EndTurnEvent
     | RoundEndedEvent
-    | BankruptEvent;
+    | BankruptEvent
+    | BuildingDecisionEvent
+    | RentDecisionEvent
+    | DecisionSkippedEvent;
 
 /**
  * 事件监听器类型

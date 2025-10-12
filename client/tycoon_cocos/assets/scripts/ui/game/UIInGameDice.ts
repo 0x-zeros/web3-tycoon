@@ -86,6 +86,44 @@ export class UIInGameDice extends UIBase {
     }
 
     /**
+     * 显示回调
+     */
+    protected onShow(data?: any): void {
+        console.log("[UIInGameDice] Showing");
+
+        // 根据当前回合设置按钮初始状态
+        this._updateButtonState();
+    }
+
+    /**
+     * 刷新回调
+     */
+    protected onRefresh(data?: any): void {
+        this._updateButtonState();
+    }
+
+    /**
+     * 更新按钮状态（根据当前回合）
+     */
+    private _updateButtonState(): void {
+        if (!this.m_btn_roll) return;
+
+        const session = Blackboard.instance.get<any>("currentGameSession");
+        if (!session) {
+            // 没有 GameSession，禁用按钮
+            this.m_btn_roll.enabled = false;
+            console.log('[UIInGameDice] No session, 骰子按钮禁用');
+            return;
+        }
+
+        // 根据是否是我的回合设置状态
+        const isMyTurn = session.isMyTurn();
+        this.m_btn_roll.enabled = isMyTurn;
+
+        console.log('[UIInGameDice] 按钮初始状态:', isMyTurn ? '启用' : '禁用');
+    }
+
+    /**
      * 投掷骰子按钮点击, 留作测试用
      */
     private _onRollDiceClick(): void {

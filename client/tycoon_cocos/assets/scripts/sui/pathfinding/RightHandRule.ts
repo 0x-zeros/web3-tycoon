@@ -161,7 +161,8 @@ export class RightHandRule {
         // 标记起始点访问
         visitCount.set(startTile, 1);
 
-        for (let i = 0; i < steps; i++) {
+        // 使用 while 循环，明确控制路径长度
+        while (path.length < steps) {
             // 获取所有有效邻居
             const neighbors = this.getValidNeighbors(currentTile, prevTile);
 
@@ -178,7 +179,6 @@ export class RightHandRule {
                     prevTile = junction.prevTile;
 
                     console.log(`[RightHandRule] 回溯到分叉点: tile ${currentTile}, path length ${path.length}`);
-                    i = path.length;  // 重置步数计数器
                     continue;
                 } else {
                     // 无法回溯，返回当前路径

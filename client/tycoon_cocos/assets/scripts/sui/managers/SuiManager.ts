@@ -766,48 +766,48 @@ export class SuiManager {
         };
     }
 
-    /**
-     * 获取可加入的游戏列表
-     * - 优先使用缓存数据
-     * - 过滤 STATUS_READY（准备中）的游戏
-     * - 自己创建的游戏排在第一位
-     * - 返回前 6 个
-     *
-     * @param forceRefresh 是否强制刷新（默认 false）
-     * @returns 游戏列表（最多 6 个）
-     */
-    public async getAvailableGames(forceRefresh: boolean = false): Promise<Game[]> {
-        this._ensureInitialized();
+    // /**
+    //  * 获取可加入的游戏列表
+    //  * - 优先使用缓存数据
+    //  * - 过滤 STATUS_READY（准备中）的游戏
+    //  * - 自己创建的游戏排在第一位
+    //  * - 返回前 6 个
+    //  *
+    //  * @param forceRefresh 是否强制刷新（默认 false）
+    //  * @returns 游戏列表（最多 6 个）
+    //  */
+    // public async getAvailableGames(forceRefresh: boolean = false): Promise<Game[]> {
+    //     this._ensureInitialized();
 
-        // 优先使用缓存
-        if (!forceRefresh && this._cachedGames.length > 0) {
-            this._log('[SuiManager] Returning cached games', {
-                count: this._cachedGames.length,
-                cacheAge: Date.now() - this._cacheTimestamp
-            });
-            return this._cachedGames;
-        }
+    //     // 优先使用缓存
+    //     if (!forceRefresh && this._cachedGames.length > 0) {
+    //         this._log('[SuiManager] Returning cached games', {
+    //             count: this._cachedGames.length,
+    //             cacheAge: Date.now() - this._cacheTimestamp
+    //         });
+    //         return this._cachedGames;
+    //     }
 
-        // 实时查询
-        this._log('[SuiManager] Querying available games (cache miss or force refresh)...');
-        UINotification.info("正在查询游戏列表...");
+    //     // 实时查询
+    //     this._log('[SuiManager] Querying available games (cache miss or force refresh)...');
+    //     UINotification.info("正在查询游戏列表...");
 
-        // 查询所有 READY 状态的游戏
-        let games = await this._queryService!.getReadyGames(
-            this._currentAddress || undefined,
-            50  // 查询更多以便筛选
-        );
+    //     // 查询所有 READY 状态的游戏
+    //     let games = await this._queryService!.getReadyGames(
+    //         this._currentAddress || undefined,
+    //         50  // 查询更多以便筛选
+    //     );
 
-        this._log(`[SuiManager] Found ${games.length} READY games`);
+    //     this._log(`[SuiManager] Found ${games.length} READY games`);
 
-        // 更新缓存
-        this._cachedGames = this._sortAndLimitGames(games);
-        this._cacheTimestamp = Date.now();
+    //     // 更新缓存
+    //     this._cachedGames = this._sortAndLimitGames(games);
+    //     this._cacheTimestamp = Date.now();
 
-        this._log(`[SuiManager] Returning ${this._cachedGames.length} games`);
+    //     this._log(`[SuiManager] Returning ${this._cachedGames.length} games`);
 
-        return this._cachedGames;
-    }
+    //     return this._cachedGames;
+    // }
 
     /**
      * 获取地图模板列表

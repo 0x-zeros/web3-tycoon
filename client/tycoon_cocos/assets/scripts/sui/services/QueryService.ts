@@ -85,60 +85,60 @@ export class QueryService {
         return games;
     }
 
-    /**
-     * 查询所有 Game 类型的共享对象
-     * 这是更通用的方法，但可能较慢
-     */
-    async queryAllGames(options: GameQueryOptions = {}): Promise<GameListItem[]> {
-        const games: GameListItem[] = [];
+    // /**
+    //  * 查询所有 Game 类型的共享对象
+    //  * 这是更通用的方法，但可能较慢
+    //  */
+    // async queryAllGames(options: GameQueryOptions = {}): Promise<GameListItem[]> {
+    //     const games: GameListItem[] = [];
 
-        try {
-            // 查询所有 Game 类型的对象
-            const response = await this.client.queryEvents({
-                query: {
-                    MoveEventType: `${this.packageId}::events::GameCreatedEvent`
-                },
-                limit: options.limit || 50,
-                order: options.order || 'descending'
-            });
+    //     try {
+    //         // 查询所有 Game 类型的对象
+    //         const response = await this.client.queryEvents({
+    //             query: {
+    //                 MoveEventType: `${this.packageId}::events::GameCreatedEvent`
+    //             },
+    //             limit: options.limit || 50,
+    //             order: options.order || 'descending'
+    //         });
 
-            console.log('[QueryService] queryAllGames num:', response.data.length);
+    //         console.log('[QueryService] queryAllGames num:', response.data.length);
 
-            // 提取游戏 ID 并获取详情
-            for (const event of response.data) {
-                const eventData = event.parsedJson as any;
-                const gameId = eventData.game;
+    //         // 提取游戏 ID 并获取详情
+    //         for (const event of response.data) {
+    //             const eventData = event.parsedJson as any;
+    //             const gameId = eventData.game;
 
-                // console.log('[QueryService] GameCreatedEvent:', eventData);
+    //             // console.log('[QueryService] GameCreatedEvent:', eventData);
 
-                if (!gameId) continue;
+    //             if (!gameId) continue;
 
-                // 获取 Game 对象详情
-                const game = await this.getGame(gameId);
-                if (!game) 
-                {
-                    console.log('[QueryService] Game not found:', gameId);
-                    continue;
-                }
+    //             // 获取 Game 对象详情
+    //             const game = await this.getGame(gameId);
+    //             if (!game) 
+    //             {
+    //                 console.log('[QueryService] Game not found:', gameId);
+    //                 continue;
+    //             }
 
-                // 过滤状态
-                if (options.status !== undefined && game.status !== options.status) {
-                    continue;
-                }
+    //             // 过滤状态
+    //             if (options.status !== undefined && game.status !== options.status) {
+    //                 continue;
+    //             }
 
-                games.push({
-                    game,
-                    objectId: gameId,
-                    createdAt: Number(event.timestampMs || 0),
-                    isMyCreation: false  // 后续由调用者设置
-                });
-            }
-        } catch (error) {
-            console.error('[QueryService] Failed to query all games:', error);
-        }
+    //             games.push({
+    //                 game,
+    //                 objectId: gameId,
+    //                 createdAt: Number(event.timestampMs || 0),
+    //                 isMyCreation: false  // 后续由调用者设置
+    //             });
+    //         }
+    //     } catch (error) {
+    //         console.error('[QueryService] Failed to query all games:', error);
+    //     }
 
-        return games;
-    }
+    //     return games;
+    // }
 
     /**
      * 查询所有 Game 类型的共享对象（批量版本，使用 multiGetObjects）
@@ -255,33 +255,33 @@ export class QueryService {
         }
     }
 
-    /**
-     * 获取可加入的游戏列表（STATUS_READY）
-     * @param myAddress 当前用户地址（用于标记自己创建的游戏）
-     * @param limit 最大返回数量
-     */
-    async getReadyGames(myAddress?: string, limit: number = 50): Promise<GameListItem[]> {
-        console.log('[QueryService] Querying READY games...');
+    // /**
+    //  * 获取可加入的游戏列表（STATUS_READY）
+    //  * @param myAddress 当前用户地址（用于标记自己创建的游戏）
+    //  * @param limit 最大返回数量
+    //  */
+    // async getReadyGames(myAddress?: string, limit: number = 50): Promise<GameListItem[]> {
+    //     console.log('[QueryService] Querying READY games...');
 
-        const games = await this.queryAllGames({
-            status: GameStatus.READY,
-            limit,
-            order: 'descending'
-        });
+    //     const games = await this.queryAllGames({
+    //         status: GameStatus.READY,
+    //         limit,
+    //         order: 'descending'
+    //     });
 
-        // 标记自己创建的游戏
-        if (myAddress) {
-            for (const item of games) {
-                // 检查创建者是否是自己（通过第一个玩家判断）
-                if (item.game.players.length > 0) {
-                    item.isMyCreation = item.game.players[0].owner === myAddress;
-                }
-            }
-        }
+    //     // 标记自己创建的游戏
+    //     if (myAddress) {
+    //         for (const item of games) {
+    //             // 检查创建者是否是自己（通过第一个玩家判断）
+    //             if (item.game.players.length > 0) {
+    //                 item.isMyCreation = item.game.players[0].owner === myAddress;
+    //             }
+    //         }
+    //     }
 
-        console.log(`[QueryService] Found ${games.length} READY games`);
-        return games;
-    }
+    //     console.log(`[QueryService] Found ${games.length} READY games`);
+    //     return games;
+    // }
 
     /**
      * 获取地图模板列表（通过事件查询）

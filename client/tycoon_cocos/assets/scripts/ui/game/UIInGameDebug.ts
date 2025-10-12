@@ -1,5 +1,8 @@
 import { UIBase } from "../core/UIBase";
 import { MapManager } from "../../map/MapManager";
+import { EventBus } from "../../events/EventBus";
+import { EventTypes } from "../../events/EventTypes";
+import { GameInitializer } from "../../core/GameInitializer";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -7,12 +10,15 @@ const { ccclass } = _decorator;
 
 /**
  * 游戏内调试组件
- * 提供调试功能（显示ID等）
+ * 提供调试功能（显示ID、round/turn等）
  */
 @ccclass('UIInGameDebug')
 export class UIInGameDebug extends UIBase {
     /** 显示ID按钮 */
     private m_btn_showIds: fgui.GButton;
+
+    /** Round/Turn 显示标签 */
+    private m_label_roundTurn: fgui.GTextField;
 
     /** ID显示状态 */
     private _isShowingIds: boolean = false;
@@ -29,7 +35,12 @@ export class UIInGameDebug extends UIBase {
      */
     private _setupComponents(): void {
         this.m_btn_showIds = this.getButton('btn_showIds');
-        console.log('[UIInGameDebug] Components setup');
+        this.m_label_roundTurn = this.getText('roundTurn');
+
+        console.log('[UIInGameDebug] Components setup', {
+            btn_showIds: !!this.m_btn_showIds,
+            label_roundTurn: !!this.m_label_roundTurn
+        });
     }
 
     /**
@@ -39,6 +50,10 @@ export class UIInGameDebug extends UIBase {
         if (this.m_btn_showIds) {
             this.m_btn_showIds.onClick(this._onShowIdsClick, this);
         }
+
+        // 监听回合变化
+        EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
+        EventBus.on(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
     }
 
     /**
@@ -48,6 +63,9 @@ export class UIInGameDebug extends UIBase {
         if (this.m_btn_showIds) {
             this.m_btn_showIds.offClick(this._onShowIdsClick, this);
         }
+
+        EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
+        EventBus.off(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
 
         super.unbindEvents();
     }
@@ -69,6 +87,9 @@ export class UIInGameDebug extends UIBase {
         if (gameMap) {
             gameMap.hideIdsWithOverlay();
         }
+
+        // 刷新 Round/Turn 显示
+        this._refreshRoundTurnDisplay();
     }
 
     /**
@@ -125,5 +146,37 @@ export class UIInGameDebug extends UIBase {
         }
 
         console.log(`[UIInGameDebug] IDs ${this._isShowingIds ? 'shown' : 'hidden'}`);
+    }
+
+    /**
+     * 回合变化处理（刷新显示）
+     */
+    private _onTurnChanged(): void {
+        this._refreshRoundTurnDisplay();
+    }
+
+    /**
+     * 轮次变化处理（刷新显示）
+     */
+    private _onRoundChanged(): void {
+        this._refreshRoundTurnDisplay();
+    }
+
+    /**
+     * 刷新 Round/Turn 显示
+     */
+    private _refreshRoundTurnDisplay(): void {
+        if (!this.m_label_roundTurn) return;
+
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            this.m_label_roundTurn.text = 'round: -\nturn: -';
+            return;
+        }
+
+        const round = session.getRound();
+        const turn = session.getTurn();
+
+        this.m_label_roundTurn.text = `round: ${round}\nturn: ${turn}`;
     }
 }

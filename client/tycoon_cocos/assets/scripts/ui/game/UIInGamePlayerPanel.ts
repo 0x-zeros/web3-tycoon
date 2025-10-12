@@ -53,11 +53,13 @@ export class UIInGamePlayerPanel extends UIBase {
     protected bindEvents(): void {
         EventBus.on(EventTypes.Game.TurnEnd, this._onGameUpdate, this);
         EventBus.on(EventTypes.Player.MoneyChange, this._onGameUpdate, this);
+        EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
     }
 
     protected unbindEvents(): void {
         EventBus.off(EventTypes.Game.TurnEnd, this._onGameUpdate, this);
         EventBus.off(EventTypes.Player.MoneyChange, this._onGameUpdate, this);
+        EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
         super.unbindEvents();
     }
 
@@ -130,6 +132,22 @@ export class UIInGamePlayerPanel extends UIBase {
                 status.text = '';
             }
         }
+
+        // 当前回合标记（通过背景高亮）
+        const activeIdx = session?.getActivePlayerIndex();
+        const isActiveTurn = (index === activeIdx);
+
+        // 如果 item 有 controller，使用 controller 控制选中状态
+        const ctrl = item.getController('selected');
+        if (ctrl) {
+            ctrl.selectedIndex = isActiveTurn ? 1 : 0;
+        }
+
+        // 如果 item 有 bg，调整透明度
+        const bg = item.getChild('bg') as fgui.GGraph;
+        if (bg) {
+            bg.alpha = isActiveTurn ? 1.0 : 0.6;
+        }
     }
 
     private loadPlayerAvatar(loader: fgui.GLoader, playerIndex: number): void {
@@ -149,6 +167,20 @@ export class UIInGamePlayerPanel extends UIBase {
     }
 
     private _onGameUpdate(): void {
+        this.refresh();
+    }
+
+    /**
+     * 回合变化处理（选中当前回合玩家）
+     */
+    private _onTurnChanged(data: { newPlayerIndex: number }): void {
+        if (this.m_playerList) {
+            // 选中当前回合的玩家
+            this.m_playerList.selectedIndex = data.newPlayerIndex;
+            console.log('[UIInGamePlayerPanel] 选中玩家:', data.newPlayerIndex);
+        }
+
+        // 刷新列表（更新高亮状态）
         this.refresh();
     }
 }

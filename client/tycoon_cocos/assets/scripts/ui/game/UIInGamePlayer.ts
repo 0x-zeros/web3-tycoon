@@ -92,6 +92,15 @@ export class UIInGamePlayer extends UIBase {
 
         const players = session.getAllPlayers();
         this.m_playerList.numItems = players.length;
+
+        // 初始化时选中当前回合玩家
+        const activeIdx = session.getActivePlayerIndex();
+        this.m_playerList.selectedIndex = activeIdx;
+
+        console.log('[UIInGamePlayer] Player list refreshed', {
+            count: players.length,
+            selectedIndex: activeIdx
+        });
     }
 
     private renderPlayerItem(index: number, obj: fgui.GObject): void {

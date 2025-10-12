@@ -18,7 +18,7 @@
 
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
-import type { Game, Player as MovePlayer, NpcInst, NpcInst as MoveNpcInst, Tile } from '../sui/types/game';
+import type { Game, Player as MovePlayer, NpcInst, NpcInst as MoveNpcInst, Tile, Seat } from '../sui/types/game';
 import type { MapTemplate } from '../sui/types/map';
 import { GameStatus, PendingDecision, INVALID_TILE_ID } from '../sui/types/constants';
 import { Player } from '../role/Player';
@@ -58,6 +58,9 @@ export class GameSession {
 
     /** 地图模板ID */
     private _templateMapId: string = '';
+
+    /** 当前游戏的 Seat（我的座位） */
+    private _mySeat: Seat | null = null;
 
     // ========================= 回合系统 =========================
 
@@ -221,6 +224,18 @@ export class GameSession {
         const { SuiManager } = await import('../sui/managers/SuiManager');
         await SuiManager.instance.loadPlayerAssets();
         console.log('[GameSession] 玩家资产已刷新');
+
+        // 11. 缓存当前游戏的 Seat
+        const playerAssets = SuiManager.instance.playerAssets;
+        if (playerAssets) {
+            this._mySeat = playerAssets.findSeatByGame(this._gameId);
+
+            if (this._mySeat) {
+                console.log('[GameSession] 当前游戏 Seat 已缓存:', this._mySeat.id);
+            } else {
+                console.warn('[GameSession] 未找到当前游戏的 Seat');
+            }
+        }
     }
 
     /**
@@ -666,6 +681,7 @@ export class GameSession {
     public getGameId(): string { return this._gameId; }
     public getStatus(): GameStatus { return this._status; }
     public getTemplateMapId(): string { return this._templateMapId; }
+    public getMySeat(): Seat | null { return this._mySeat; }
 
     public getRound(): number { return this._round; }
     public getTurn(): number { return this._turn; }
@@ -730,6 +746,7 @@ export class GameSession {
         this._players = [];
         this._myPlayer = null;
         this._myPlayerIndex = -1;
+        this._mySeat = null;
         this._npcs = [];
         this._pendingDecision = null;
         this._maxRounds = 0;

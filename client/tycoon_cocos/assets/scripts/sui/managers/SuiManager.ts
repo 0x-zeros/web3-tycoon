@@ -463,10 +463,11 @@ export class SuiManager {
      * 掷骰并移动
      * 对应Move: public entry fun roll_and_step
      *
+     * @param session GameSession 实例
      * @param path 路径数组（客户端使用行走偏好算法计算）
      * @returns 掷骰结果
      */
-    public async rollAndStep(path: number[]): Promise<{
+    public async rollAndStep(session: any, path: number[]): Promise<{
         dice: number;
         endPos: number;
         txHash: string;
@@ -474,37 +475,25 @@ export class SuiManager {
         this._ensureInitialized();
         this._ensureSigner();
 
-        // 检查当前游戏
-        if (!this._currentGame) {
-            throw new Error('[SuiManager] No current game set');
-        }
-
-        const gameId = this._currentGame.id;
-        const templateMapId = this._currentGame.template_map_id;
+        // 从 GameSession 获取数据
+        const gameId = session.getGameId();
+        const templateMapId = session.getTemplateMapId();
+        const seat = session.getMySeat();
 
         this._log('[SuiManager] Rolling dice and stepping...', {
             gameId,
-            pathLength: path.length
+            path: path
         });
 
-        console.log('[SuiManager] rollAndStep, playerAssets: ', this._playerAssets?.debugInfo());
-
-        // 从缓存中查找当前游戏的 Seat
-        const seat = this._playerAssets?.findSeatByGame(gameId);
+        // 校验 Seat
         if (!seat) {
-            throw new Error('[SuiManager] Seat not found for current game');
+            throw new Error('[SuiManager] No Seat found in GameSession');
         }
 
-        // 创建 TurnInteraction
-        const { TurnInteraction } = await import('../interactions/turn');
-        const turnInteraction = new TurnInteraction(
-            this._client!,
-            this._config!.packageId,
-            this._config!.gameDataId
-        );
+        console.log('[SuiManager] rollAndStep, seat: ', seat);
 
         // 构建交易
-        const tx = turnInteraction.buildRollAndStepTx(
+        const tx = this._gameClient!.game.buildRollAndStepTx(
             gameId,
             seat.id,
             templateMapId,

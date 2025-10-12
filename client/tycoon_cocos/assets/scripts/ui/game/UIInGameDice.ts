@@ -224,7 +224,7 @@ export class UIInGameDice extends UIBase {
             // ===== 6. 提交链上交易 =====
             console.log("[UIInGameDice] 提交链上交易...");
 
-            const result = await SuiManager.instance.rollAndStep(pathResult.path);
+            const result = await SuiManager.instance.rollAndStep(session, pathResult.path);
 
             console.log("[UIInGameDice] 交易成功", {
                 txHash: result.txHash,

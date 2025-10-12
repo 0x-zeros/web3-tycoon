@@ -113,6 +113,183 @@ export class GameInteraction {
         return tx;
     }
 
+    /**
+     * 构建掷骰并移动的交易
+     * 对应Move: public entry fun roll_and_step
+     */
+    buildRollAndStepTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string,
+        path: number[]
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::roll_and_step`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.pure.vector('u16', path),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId),
+                tx.object('0x8'),  // random
+                tx.object('0x6')   // clock
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 构建结束回合的交易
+     * 对应Move: public entry fun end_turn
+     */
+    buildEndTurnTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::end_turn`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId),
+                tx.object('0x8')  // random
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 构建跳过建筑决策的交易
+     * 对应Move: public entry fun skip_building_decision
+     */
+    buildSkipBuildingDecisionTx(
+        gameId: string,
+        seatId: string
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::skip_building_decision`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId)
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 构建租金支付决策的交易
+     * 对应Move: public entry fun decide_rent_payment
+     */
+    buildDecideRentPaymentTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string,
+        useRentFree: boolean
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::decide_rent_payment`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.pure.bool(useRentFree),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId)
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 构建购买建筑的交易
+     * 对应Move: public entry fun buy_building
+     */
+    buildBuyBuildingTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::buy_building`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId)
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 构建升级建筑的交易
+     * 对应Move: public entry fun upgrade_building
+     */
+    buildUpgradeBuildingTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::upgrade_building`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId)
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 构建使用卡牌的交易
+     * 对应Move: public entry fun use_card
+     */
+    buildUseCardTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string,
+        cardKind: number,
+        params: number[]
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::use_card`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.pure.u8(cardKind),
+                tx.pure.vector('u16', params),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId),
+                tx.object('0x8')  // random
+            ]
+        });
+
+        return tx;
+    }
+
     // ============ 查询方法已移除 ============
     // 所有查询操作请使用 QueryService
     // GameInteraction 只负责构建交易

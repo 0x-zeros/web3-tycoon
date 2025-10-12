@@ -154,8 +154,8 @@ export class PlayerAssets {
      * 根据游戏 ID 查找 Seat
      */
     public findSeatByGame(gameId: string): Seat | null {
-        console.log('[PlayerAssets] findSeatByGame, gameId: ', gameId);
-        console.log('[PlayerAssets] findSeatByGame, this._seats: ', this._seats);
+        // console.log('[PlayerAssets] findSeatByGame, gameId: ', gameId);
+        // console.log('[PlayerAssets] findSeatByGame, this._seats: ', this._seats);
         return this._seats.find(s => s.game_id === gameId) || null;
     }
 

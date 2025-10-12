@@ -3,14 +3,12 @@
  */
 
 export * from './game';
-export * from './turn';
 
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { MapTemplate } from '../types/map';
 import { GameInteraction } from './game';
-import { TurnInteraction } from './turn';
 
 // ===== Property Interactions 地产交互 =====
 
@@ -245,7 +243,6 @@ export class AdminInteraction {
  */
 export class TycoonGameClient {
     public game: GameInteraction;
-    public turn: TurnInteraction;
     public property: PropertyInteraction;
     public card: CardInteraction;
     public admin: AdminInteraction;
@@ -256,7 +253,6 @@ export class TycoonGameClient {
         gameDataId: string
     ) {
         this.game = new GameInteraction(client, packageId, gameDataId);
-        this.turn = new TurnInteraction(client, packageId, gameDataId);
         this.property = new PropertyInteraction(client, packageId, gameDataId);
         this.card = new CardInteraction(client, packageId, gameDataId);
         this.admin = new AdminInteraction(client, packageId, gameDataId);

@@ -167,6 +167,8 @@ export interface BuildingDecisionEvent {
     round: number;
     /** 回合 */
     turn: number;
+    /** 是否为自动决策 */
+    auto_decision: boolean;
 }
 
 /**
@@ -192,6 +194,8 @@ export interface RentDecisionEvent {
     round: number;
     /** 回合 */
     turn: number;
+    /** 是否为自动决策 */
+    auto_decision: boolean;
 }
 
 /**

@@ -786,7 +786,8 @@ public entry fun decide_rent_payment(
         toll,
         use_rent_free,
         event_round,
-        event_turn
+        event_turn,
+        false  // auto_decision: 手动决策
     );
 
     // 推进回合
@@ -1115,7 +1116,8 @@ public entry fun buy_building(
         price,
         1,  // new_level
         event_round,
-        event_turn
+        event_turn,
+        false  // auto_decision: 手动决策
     );
 
     // 推进回合
@@ -1208,7 +1210,8 @@ public entry fun upgrade_building(
         upgrade_cost,
         new_level,
         event_round,
-        event_turn
+        event_turn,
+        false  // auto_decision: 手动决策
     );
 
     // 推进回合
@@ -1785,7 +1788,8 @@ fun handle_tile_stop_with_collector(
                             price,
                             1,  // new_level
                             game.round,
-                            game.turn
+                            game.turn,
+                            true  // auto_decision: 自动决策
                         );
 
                         // 不设置 pending_decision
@@ -1843,7 +1847,8 @@ fun handle_tile_stop_with_collector(
                                     toll,
                                     true,  // use_rent_free
                                     game.round,
-                                    game.turn
+                                    game.turn,
+                                    true  // auto_decision: 自动决策
                                 );
                             } else {
                                 stop_type = events::stop_building_toll();
@@ -1854,6 +1859,21 @@ fun handle_tile_stop_with_collector(
                                     i = i + 1;
                                 };
                                 amount = toll;
+
+                                // 发射租金决策事件（使用现金）
+                                let owner_addr = game.players[owner_index as u64].owner;
+                                events::emit_rent_decision_event(
+                                    game.id.to_inner(),
+                                    player_addr,
+                                    owner_addr,
+                                    building_id,
+                                    tile_id,
+                                    toll,
+                                    false,  // use_rent_free
+                                    game.round,
+                                    game.turn,
+                                    true  // auto_decision: 自动决策
+                                );
                             };
 
                             let owner_addr = (&game.players[owner_index as u64]).owner;
@@ -1958,7 +1978,8 @@ fun handle_tile_stop_with_collector(
                                 upgrade_cost,
                                 new_level,
                                 game.round,
-                                game.turn
+                                game.turn,
+                                true  // auto_decision: 自动决策
                             );
 
                             // 不设置 pending_decision

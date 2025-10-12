@@ -113,7 +113,8 @@ public struct BuildingDecisionEvent has copy, drop {
     amount: u64,
     new_level: u8,
     round: u16,
-    turn: u8
+    turn: u8,
+    auto_decision: bool  // true=自动决策，false=手动决策
 }
 
 // 租金决策事件
@@ -126,7 +127,8 @@ public struct RentDecisionEvent has copy, drop {
     rent_amount: u64,
     used_rent_free: bool,
     round: u16,
-    turn: u8
+    turn: u8,
+    auto_decision: bool  // true=自动决策，false=手动决策
 }
 
 // 跳过决策事件
@@ -621,7 +623,8 @@ public(package) fun emit_building_decision_event(
     amount: u64,
     new_level: u8,
     round: u16,
-    turn: u8
+    turn: u8,
+    auto_decision: bool
 ) {
     event::emit(BuildingDecisionEvent {
         game: game_id,
@@ -632,7 +635,8 @@ public(package) fun emit_building_decision_event(
         amount,
         new_level,
         round,
-        turn
+        turn,
+        auto_decision
     });
 }
 
@@ -646,7 +650,8 @@ public(package) fun emit_rent_decision_event(
     rent_amount: u64,
     used_rent_free: bool,
     round: u16,
-    turn: u8
+    turn: u8,
+    auto_decision: bool
 ) {
     event::emit(RentDecisionEvent {
         game: game_id,
@@ -657,7 +662,8 @@ public(package) fun emit_rent_decision_event(
         rent_amount,
         used_rent_free,
         round,
-        turn
+        turn,
+        auto_decision
     });
 }
 

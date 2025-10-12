@@ -23,6 +23,7 @@ import { WalkingPreference } from "../../sui/pathfinding/WalkingPreference";
 import { HistoryStorage } from "../../sui/pathfinding/HistoryStorage";
 import { UIMessage } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
+import { GameInitializer } from "../../core/GameInitializer";
 
 const { ccclass } = _decorator;
 
@@ -108,7 +109,8 @@ export class UIInGameDice extends UIBase {
     private _updateButtonState(): void {
         if (!this.m_btn_roll) return;
 
-        const session = Blackboard.instance.get<any>("currentGameSession");
+        // ✅ 改为从 GameInitializer 获取（和 UIInGamePlayer 一致）
+        const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             // 没有 GameSession，禁用按钮
             this.m_btn_roll.enabled = false;
@@ -116,11 +118,22 @@ export class UIInGameDice extends UIBase {
             return;
         }
 
-        // 根据是否是我的回合设置状态
+        // ✅ 添加详细调试信息
+        const myPlayerIndex = session.getMyPlayerIndex();
+        const activePlayerIndex = session.getActivePlayerIndex();
         const isMyTurn = session.isMyTurn();
+
+        console.log('[UIInGameDice] _updateButtonState 调试:', {
+            myPlayerIndex,
+            activePlayerIndex,
+            isMyTurn,
+            calculation: `${myPlayerIndex} === ${activePlayerIndex} = ${isMyTurn}`
+        });
+
+        // 根据是否是我的回合设置状态
         this.m_btn_roll.enabled = isMyTurn;
 
-        console.log('[UIInGameDice] 按钮初始状态:', isMyTurn ? '启用' : '禁用');
+        console.log('[UIInGameDice] 按钮设置为:', isMyTurn ? '启用' : '禁用');
     }
 
     /**
@@ -181,9 +194,11 @@ export class UIInGameDice extends UIBase {
             this.m_btn_roll.enabled = false;
         }
 
+        let transactionSuccess = false;  // 记录交易是否成功
+
         try {
             // ===== 1. 获取游戏数据 =====
-            const session = Blackboard.instance.get<any>("currentGameSession");
+            const session = GameInitializer.getInstance()?.getGameSession();
             if (!session) {
                 throw new Error("GameSession 未找到");
             }
@@ -274,9 +289,12 @@ export class UIInGameDice extends UIBase {
                 endPos: result.endPos
             });
 
+            transactionSuccess = true;  // 标记交易成功
+
             // ===== 7. 交易成功，等待事件处理 =====
             // EventIndexer 会监听链上 RollAndStepActionEvent
             // 然后触发 RollAndStepHandler 处理，自动播放动画
+            // TurnChanged 事件会更新按钮状态，这里不需要恢复
 
         } catch (error) {
             console.error("[UIInGameDice] 掷骰子失败:", error);
@@ -300,10 +318,16 @@ export class UIInGameDice extends UIBase {
             }
 
         } finally {
-            // 重新启用骰子按钮
-            if (this.m_btn_roll) {
-                this.m_btn_roll.enabled = true;
+            // 只在失败时恢复按钮状态
+            if (!transactionSuccess && this.m_btn_roll) {
+                // 恢复为当前回合状态（而不是无条件 true）
+                const session = GameInitializer.getInstance()?.getGameSession();
+                const isMyTurn = session?.isMyTurn() || false;
+                this.m_btn_roll.enabled = isMyTurn;
+
+                console.log('[UIInGameDice] 交易失败，恢复按钮状态:', isMyTurn ? '启用' : '禁用');
             }
+            // 成功时保持 disabled，等待 TurnChanged 事件更新
         }
     }
 

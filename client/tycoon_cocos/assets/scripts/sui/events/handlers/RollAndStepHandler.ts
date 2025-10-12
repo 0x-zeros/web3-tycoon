@@ -287,6 +287,36 @@ export class RollAndStepHandler {
     private async handlePlaybackComplete(event: RollAndStepActionEvent): Promise<void> {
         console.log('[RollAndStepHandler] 所有步骤播放完成');
 
+        // 获取 GameSession
+        const session = Blackboard.instance.get<any>("currentGameSession");
+
+        if (session) {
+            // 1. 检查事件是否属于当前游戏
+            if (event.game !== session.getGameId()) {
+                console.warn('[RollAndStepHandler] Event game mismatch, ignoring', {
+                    eventGame: event.game,
+                    currentGame: session.getGameId()
+                });
+                return;
+            }
+
+            // 2. 从链上重新获取 Game 状态
+            const { SuiManager } = await import('../../managers/SuiManager');
+            const updatedGame = await SuiManager.instance.getGameState(event.game);
+
+            if (updatedGame) {
+                // 3. 更新回合状态（分别调用，自动检测变化并发送事件）
+                session.setRound(updatedGame.round);
+                session.setTurn(updatedGame.turn);
+
+                console.log('[RollAndStepHandler] 回合状态已同步', {
+                    round: updatedGame.round,
+                    turn: updatedGame.turn,
+                    activePlayer: updatedGame.active_idx
+                });
+            }
+        }
+
         // 处理现金变动
         if (event.cash_changes && event.cash_changes.length > 0) {
             console.log('[RollAndStepHandler] 处理现金变动', event.cash_changes);

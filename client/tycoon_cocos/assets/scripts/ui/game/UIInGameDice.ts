@@ -65,6 +65,7 @@ export class UIInGameDice extends UIBase {
         // 监听骰子事件
         EventBus.on(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.on(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
+        EventBus.on(EventTypes.Dice.SetEnabled, this._onSetEnabled, this);
     }
 
     /**
@@ -77,6 +78,7 @@ export class UIInGameDice extends UIBase {
 
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.off(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
+        EventBus.off(EventTypes.Dice.SetEnabled, this._onSetEnabled, this);
 
         super.unbindEvents();
     }
@@ -343,5 +345,15 @@ export class UIInGameDice extends UIBase {
     private _onDiceComplete(data: any): void {
         console.log("[UIInGameDice] Dice roll completed:", data);
         // 按钮在回调中已重新启用
+    }
+
+    /**
+     * 设置骰子按钮启用/禁用状态
+     */
+    private _onSetEnabled(data: { enabled: boolean }): void {
+        if (this.m_btn_roll) {
+            this.m_btn_roll.enabled = data.enabled;
+            console.log('[UIInGameDice] 骰子按钮状态:', data.enabled ? '启用' : '禁用');
+        }
     }
 }

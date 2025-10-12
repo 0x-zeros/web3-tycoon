@@ -427,8 +427,13 @@ export class GameSession {
 
     /**
      * 切换到下一个玩家（本地预测，实际以链上为准）
+     *
+     * @deprecated 不应该使用本地预测，容易导致状态不一致
+     *             应该通过事件同步 Move 端的状态，使用 setRound() 和 setTurn()
      */
     public nextPlayer(): void {
+        console.warn('[GameSession] nextPlayer() is deprecated, use setRound()/setTurn() with chain event data');
+
         const playerCount = this._players.length;
         if (playerCount === 0) return;
 
@@ -451,6 +456,58 @@ export class GameSession {
      */
     public setRolled(rolled: boolean): void {
         this._hasRolled = rolled;
+    }
+
+    /**
+     * 设置轮次（只在有变化时触发事件）
+     *
+     * @param round 新的轮次
+     */
+    public setRound(round: number): void {
+        if (this._round === round) {
+            return;  // 无变化，直接返回
+        }
+
+        const oldRound = this._round;
+        this._round = round;
+
+        console.log(`[GameSession] 轮次变化: ${oldRound} -> ${round}`);
+
+        EventBus.emit(EventTypes.Game.RoundChanged, {
+            session: this,
+            oldRound,
+            newRound: round
+        });
+    }
+
+    /**
+     * 设置轮内回合（只在有变化时触发事件）
+     *
+     * @param turn 新的轮内回合（0 到 player_count-1）
+     */
+    public setTurn(turn: number): void {
+        if (this._turn === turn && this._activePlayerIndex === turn) {
+            return;  // 无变化，直接返回
+        }
+
+        const oldTurn = this._turn;
+        const oldActiveIdx = this._activePlayerIndex;
+
+        this._turn = turn;
+        this._activePlayerIndex = turn;  // activePlayerIndex 就是 turn
+        this._hasRolled = false;  // 新回合重置掷骰状态
+
+        console.log(`[GameSession] 回合变化: Turn ${oldTurn} -> ${turn}, ActivePlayer: ${oldActiveIdx} -> ${turn}`);
+
+        const activePlayer = this.getActivePlayer();
+
+        EventBus.emit(EventTypes.Game.TurnChanged, {
+            session: this,
+            oldPlayerIndex: oldActiveIdx,
+            newPlayerIndex: turn,
+            activePlayer: activePlayer,
+            isMyTurn: this.isMyTurn()
+        });
     }
 
     // ========================= 决策管理 =========================

@@ -490,7 +490,7 @@ export class SuiManager {
             throw new Error('[SuiManager] No Seat found in GameSession');
         }
 
-        console.log('[SuiManager] rollAndStep, seat: ', seat);
+        // console.log('[SuiManager] rollAndStep, seat: ', seat);
 
         // 构建交易
         const tx = this._gameClient!.game.buildRollAndStepTx(

@@ -146,7 +146,13 @@ export const EventTypes = {
         /** NPC 交互 */
         NPCInteraction: "game_npc_interaction",
         /** 地块停留效果 */
-        TileStopEffect: "game_tile_stop_effect"
+        TileStopEffect: "game_tile_stop_effect",
+
+        // 回合状态变化事件
+        /** 轮次变化 */
+        RoundChanged: "game_round_changed",
+        /** 回合变化（玩家切换） */
+        TurnChanged: "game_turn_changed"
     },
 
     /** 地产相关事件 */
@@ -264,7 +270,9 @@ export const EventTypes = {
         /** 投掷结果 */
         RollResult: "dice_roll_result",
         /** 投掷完成 */
-        RollComplete: "dice_roll_complete"
+        RollComplete: "dice_roll_complete",
+        /** 设置启用/禁用状态 */
+        SetEnabled: "dice_set_enabled"
     },
 
     /** 音效相关事件 */

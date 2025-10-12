@@ -177,7 +177,10 @@ public struct StopEffect has copy, drop, store {
     owner: option::Option<address>,
     level: option::Option<u8>,
     turns: option::Option<u8>,
-    card_gains: vector<CardDrawItem>
+    card_gains: vector<CardDrawItem>,
+    pending_decision: u8,      // 待决策类型
+    decision_tile: u16,         // 相关的地块ID
+    decision_amount: u64        // 相关金额
 }
 
 // 步骤效果
@@ -417,7 +420,10 @@ public(package) fun make_stop_effect(
     owner: option::Option<address>,
     level: option::Option<u8>,
     turns: option::Option<u8>,
-    card_gains: vector<CardDrawItem>
+    card_gains: vector<CardDrawItem>,
+    pending_decision: u8,
+    decision_tile: u16,
+    decision_amount: u64
 ): StopEffect {
     StopEffect {
         tile_id,
@@ -427,7 +433,10 @@ public(package) fun make_stop_effect(
         owner,
         level,
         turns,
-        card_gains
+        card_gains,
+        pending_decision,
+        decision_tile,
+        decision_amount
     }
 }
 

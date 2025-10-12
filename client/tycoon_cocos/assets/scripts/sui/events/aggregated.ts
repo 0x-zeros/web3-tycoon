@@ -105,6 +105,12 @@ export interface StopEffect {
     turns: number | null;
     /** 获得的卡牌 */
     card_gains: CardDrawItem[];
+    /** 待决策类型 */
+    pending_decision: number;
+    /** 相关的地块ID */
+    decision_tile: number;
+    /** 相关金额 */
+    decision_amount: bigint;
 }
 
 /**

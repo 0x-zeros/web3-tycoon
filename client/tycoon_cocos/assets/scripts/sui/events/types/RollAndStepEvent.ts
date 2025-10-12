@@ -41,6 +41,9 @@ export interface StopEffect {
     level: number | null;
     turns: number | null;
     card_gains: CardDrawItem[];
+    pending_decision: number;
+    decision_tile: number;
+    decision_amount: bigint;
 }
 
 // 步骤效果（核心）

@@ -564,6 +564,9 @@ public entry fun use_card(
     // 验证座位和回合
     validate_seat_and_turn(game, seat);
 
+    // 验证没有待决策
+    assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
+
     // 验证还未掷骰（卡牌只能在掷骰前使用）
     assert!(!game.has_rolled, EAlreadyRolled);
 
@@ -624,6 +627,9 @@ public entry fun roll_and_step(
     if (validate_and_auto_skip(game, seat, game_data, map, r, ctx)) {
         return
     };
+
+    // 验证没有待决策
+    assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
 
     // 标记已掷骰
     game.has_rolled = true;
@@ -1705,7 +1711,10 @@ fun handle_tile_stop_with_collector(
         owner_opt,
         level_opt,
         turns_opt,
-        card_gains
+        card_gains,
+        game.pending_decision,
+        game.decision_tile,
+        game.decision_amount
     )
 }
 

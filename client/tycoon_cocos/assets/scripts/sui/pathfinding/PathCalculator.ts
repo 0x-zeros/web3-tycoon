@@ -114,17 +114,19 @@ export class PathCalculator {
         const actualSteps = path.length;
         const success = actualSteps === steps;
 
-        if (!success) {
+        if (!success && actualSteps > 0) {
             console.warn(
-                `[PathCalculator] Path incomplete: expected ${steps} steps, got ${actualSteps}`
+                `[PathCalculator] Path incomplete: expected ${steps} steps, got ${actualSteps} (回溯后仍不足)`
             );
+        } else if (actualSteps === 0) {
+            console.error(`[PathCalculator] No valid path found from tile ${startTile}`);
         }
 
         return {
             path,
             success,
             actualSteps,
-            error: success ? undefined : `Path blocked after ${actualSteps} steps`
+            error: success ? undefined : (actualSteps > 0 ? `Path incomplete: ${actualSteps}/${steps} steps` : 'No valid path found')
         };
     }
 

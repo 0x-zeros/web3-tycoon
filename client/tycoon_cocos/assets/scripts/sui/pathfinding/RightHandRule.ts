@@ -139,12 +139,12 @@ export class RightHandRule {
     }
 
     /**
-     * 计算完整路径
+     * 计算完整路径（带回溯）
      *
      * @param startTile 起始 tile_id
      * @param steps 需要走的步数
      * @param lastTile 上一步的 tile_id（用于推导第一步方向）
-     * @returns 路径数组（包含 steps 个 tile_id）
+     * @returns 路径数组（尽可能达到 steps 个 tile_id）
      */
     public calculatePath(
         startTile: number,
@@ -152,29 +152,58 @@ export class RightHandRule {
         lastTile: number = INVALID_TILE_ID
     ): number[] {
         const path: number[] = [];
+        const visitCount = new Map<number, number>();
+        const junctions: Array<{tile: number; prevTile: number; pathLength: number}> = [];
+
         let currentTile = startTile;
         let prevTile = lastTile;
 
+        // 标记起始点访问
+        visitCount.set(startTile, 1);
+
         for (let i = 0; i < steps; i++) {
-            // 第一步特殊处理：如果没有 lastTile，选择任意方向
-            let nextTile: number;
+            // 获取所有有效邻居
+            const neighbors = this.getValidNeighbors(currentTile, prevTile);
 
-            if (i === 0 && prevTile === INVALID_TILE_ID) {
-                // 第一步且没有历史，随机选择一个有效邻居
-                nextTile = this.getAnyValidNeighbor(currentTile, INVALID_TILE_ID);
-            } else {
-                // 正常情况：使用右手法则
-                nextTile = this.getNextTile(currentTile, prevTile);
+            if (neighbors.length === 0) {
+                // 死胡同：尝试回溯
+                if (junctions.length > 0) {
+                    const junction = junctions.pop()!;
+
+                    // 回退路径
+                    path.splice(junction.pathLength);
+
+                    // 恢复状态
+                    currentTile = junction.tile;
+                    prevTile = junction.prevTile;
+
+                    console.log(`[RightHandRule] 回溯到分叉点: tile ${currentTile}, path length ${path.length}`);
+                    i = path.length;  // 重置步数计数器
+                    continue;
+                } else {
+                    // 无法回溯，返回当前路径
+                    console.warn(`[RightHandRule] 无法继续，返回 ${path.length} 步`);
+                    break;
+                }
             }
 
-            if (nextTile === INVALID_TILE_ID) {
-                // 无法继续前进，路径计算提前结束
-                console.warn(`[RightHandRule] Path blocked at step ${i}, tile ${currentTile}`);
-                break;
+            // 记录分叉点（有多个选择时）
+            if (neighbors.length > 1) {
+                junctions.push({
+                    tile: currentTile,
+                    prevTile: prevTile,
+                    pathLength: path.length
+                });
             }
+
+            // 选择下一个节点（使用右手法则优先级，但在同优先级时选访问少的）
+            const nextTile = this.selectBestNeighbor(currentTile, prevTile, neighbors, visitCount);
 
             // 添加到路径
             path.push(nextTile);
+
+            // 更新访问计数
+            visitCount.set(nextTile, (visitCount.get(nextTile) || 0) + 1);
 
             // 更新状态
             prevTile = currentTile;
@@ -182,6 +211,75 @@ export class RightHandRule {
         }
 
         return path;
+    }
+
+    /**
+     * 获取所有有效邻居（排除上一个 tile）
+     */
+    private getValidNeighbors(currentTile: number, lastTile: number): number[] {
+        const tileStatic = this.template.tiles_static.get(currentTile);
+        if (!tileStatic) return [];
+
+        const neighbors: number[] = [];
+        const allNeighbors = [
+            tileStatic.w,
+            tileStatic.n,
+            tileStatic.e,
+            tileStatic.s
+        ];
+
+        for (const neighbor of allNeighbors) {
+            if (neighbor !== INVALID_TILE_ID && neighbor !== lastTile) {
+                neighbors.push(neighbor);
+            }
+        }
+
+        return neighbors;
+    }
+
+    /**
+     * 选择最佳邻居（结合右手法则和访问次数）
+     */
+    private selectBestNeighbor(
+        currentTile: number,
+        prevTile: number,
+        neighbors: number[],
+        visitCount: Map<number, number>
+    ): number {
+        // 如果只有一个选择，直接返回
+        if (neighbors.length === 1) {
+            return neighbors[0];
+        }
+
+        // 尝试使用右手法则（如果能推导方向）
+        const movingDirection = this.inferMovingDirection(currentTile, prevTile);
+        if (movingDirection !== null) {
+            const tileStatic = this.template.tiles_static.get(currentTile)!;
+            const neighborMap = {
+                [Direction.WEST]: tileStatic.w,
+                [Direction.NORTH]: tileStatic.n,
+                [Direction.EAST]: tileStatic.e,
+                [Direction.SOUTH]: tileStatic.s
+            };
+
+            // 按右手法则优先级尝试
+            const priorities = this.getDirectionPriority(movingDirection);
+            for (const direction of priorities) {
+                const candidate = neighborMap[direction];
+                if (neighbors.includes(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+
+        // 无法使用右手法则，按访问次数选择
+        neighbors.sort((a, b) => {
+            const countA = visitCount.get(a) || 0;
+            const countB = visitCount.get(b) || 0;
+            return countA - countB;
+        });
+
+        return neighbors[0];
     }
 
     /**

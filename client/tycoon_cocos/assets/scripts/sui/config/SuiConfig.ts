@@ -13,6 +13,12 @@ export type NetworkType = "localnet" | "devnet" | "testnet" | "mainnet";
 export type ExplorerItemType = 'object' | 'txblock' | 'address' | 'tx';
 
 /**
+ * 默认 Sui 系统对象 ID
+ */
+export const DEFAULT_RANDOM_OBJECT_ID = '0x8';
+export const DEFAULT_CLOCK_OBJECT_ID = '0x6';
+
+/**
  * Sui 配置接口
  */
 export interface SuiConfig {
@@ -30,6 +36,10 @@ export interface SuiConfig {
     rpcUrl?: string;
     /** 签名器类型（wallet=钱包签名，keypair=本地密钥对，默认 wallet） */
     signerType?: 'wallet' | 'keypair';
+    /** Random 对象 ID（可选，默认 '0x8'） */
+    randomObjectId?: string;
+    /** Clock 对象 ID（可选，默认 '0x6'） */
+    clockObjectId?: string;
 }
 
 /**

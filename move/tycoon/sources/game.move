@@ -771,10 +771,11 @@ public entry fun decide_rent_payment(
     // 清除待决策状态
     clear_decision_state(game);
 
-    // 推进回合
-    advance_turn(game, game_data, map, r, ctx);
+    // 保存当前值用于事件
+    let event_round = game.round;
+    let event_turn = game.turn;
 
-    // 发射租金决策事件
+    // 发射租金决策事件（使用执行前的值）
     let owner_addr = game.players[owner_index as u64].owner;
     events::emit_rent_decision_event(
         game.id.to_inner(),
@@ -784,9 +785,12 @@ public entry fun decide_rent_payment(
         tile_id,
         toll,
         use_rent_free,
-        game.round,
-        game.turn
+        event_round,
+        event_turn
     );
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 // 跳过建筑决策（不购买或不升级）
@@ -815,18 +819,22 @@ public entry fun skip_building_decision(
     // 清除待决策状态
     clear_decision_state(game);
 
-    // 推进回合
-    advance_turn(game, game_data, map, r, ctx);
+    // 保存当前值用于事件
+    let event_round = game.round;
+    let event_turn = game.turn;
 
-    // 发射跳过决策事件
+    // 发射跳过决策事件（使用执行前的值）
     events::emit_decision_skipped_event(
         game.id.to_inner(),
         player_addr,
         decision_type,
         decision_tile,
-        game.round,
-        game.turn
+        event_round,
+        event_turn
     );
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 // ============ 内部决策执行函数（供自动决策使用）============
@@ -1093,10 +1101,11 @@ public entry fun buy_building(
     // 清除待决策状态
     clear_decision_state(game);
 
-    // 推进回合
-    advance_turn(game, game_data, map, r, ctx);
+    // 保存当前值用于事件
+    let event_round = game.round;
+    let event_turn = game.turn;
 
-    // 发射建筑决策事件
+    // 发射建筑决策事件（使用执行前的值）
     events::emit_building_decision_event(
         game.id.to_inner(),
         player_addr,
@@ -1105,9 +1114,12 @@ public entry fun buy_building(
         tile_id,
         price,
         1,  // new_level
-        game.round,
-        game.turn
+        event_round,
+        event_turn
     );
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 // 升级建筑
@@ -1182,10 +1194,11 @@ public entry fun upgrade_building(
     // 清除待决策状态
     clear_decision_state(game);
 
-    // 推进回合
-    advance_turn(game, game_data, map, r, ctx);
+    // 保存当前值用于事件
+    let event_round = game.round;
+    let event_turn = game.turn;
 
-    // 发射建筑决策事件
+    // 发射建筑决策事件（使用执行前的值）
     events::emit_building_decision_event(
         game.id.to_inner(),
         player_addr,
@@ -1194,9 +1207,12 @@ public entry fun upgrade_building(
         tile_id,
         upgrade_cost,
         new_level,
-        game.round,
-        game.turn
+        event_round,
+        event_turn
     );
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 // ===== Internal Functions 内部函数 =====

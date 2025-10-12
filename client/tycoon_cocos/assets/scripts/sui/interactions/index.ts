@@ -92,7 +92,8 @@ export class CardInteraction {
     constructor(
         private client: SuiClient,
         private packageId: string,
-        private gameDataId: string
+        private gameDataId: string,
+        private randomObjectId: string = '0x8'
     ) {}
 
     /**
@@ -118,7 +119,7 @@ export class CardInteraction {
                 tx.pure.vector('u16', params),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8') // Random
+                tx.object(this.randomObjectId) // Random
             ]
         });
 
@@ -250,11 +251,13 @@ export class TycoonGameClient {
     constructor(
         client: SuiClient,
         packageId: string,
-        gameDataId: string
+        gameDataId: string,
+        randomObjectId: string = '0x8',
+        clockObjectId: string = '0x6'
     ) {
-        this.game = new GameInteraction(client, packageId, gameDataId);
+        this.game = new GameInteraction(client, packageId, gameDataId, randomObjectId, clockObjectId);
         this.property = new PropertyInteraction(client, packageId, gameDataId);
-        this.card = new CardInteraction(client, packageId, gameDataId);
+        this.card = new CardInteraction(client, packageId, gameDataId, randomObjectId);
         this.admin = new AdminInteraction(client, packageId, gameDataId);
     }
 
@@ -265,12 +268,20 @@ export class TycoonGameClient {
         network: 'testnet' | 'mainnet' | 'devnet' | string;
         packageId: string;
         gameDataId: string;
+        randomObjectId?: string;
+        clockObjectId?: string;
     }): TycoonGameClient {
         const rpcUrl = typeof config.network === 'string' && config.network.startsWith('http')
             ? config.network
             : `https://fullnode.${config.network}.sui.io`;
 
         const client = new SuiClient({ url: rpcUrl });
-        return new TycoonGameClient(client, config.packageId, config.gameDataId);
+        return new TycoonGameClient(
+            client,
+            config.packageId,
+            config.gameDataId,
+            config.randomObjectId,
+            config.clockObjectId
+        );
     }
 }

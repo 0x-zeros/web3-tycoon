@@ -17,7 +17,9 @@ export class GameInteraction {
     constructor(
         private client: SuiClient,
         private packageId: string,
-        private gameDataId: string  // GameData共享对象ID
+        private gameDataId: string,  // GameData共享对象ID
+        private randomObjectId: string = '0x8',  // Random对象ID
+        private clockObjectId: string = '0x6'    // Clock对象ID
     ) {}
 
     // ============ 新版本：返回 Transaction（推荐使用）============
@@ -105,8 +107,8 @@ export class GameInteraction {
                 tx.object(gameId),          // game: &mut Game
                 tx.object(this.gameDataId), // game_data: &GameData
                 tx.object(mapTemplateId),   // map: &MapTemplate
-                tx.object('0x8'),           // random: &Random
-                tx.object('0x6')            // clock: &Clock
+                tx.object(this.randomObjectId),  // random: &Random
+                tx.object(this.clockObjectId)    // clock: &Clock
             ]
         });
 
@@ -139,8 +141,8 @@ export class GameInteraction {
                 tx.pure.bool(preferRentCard),    // 优先使用免租卡支付租金
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8'),  // random
-                tx.object('0x6')   // clock
+                tx.object(this.randomObjectId),  // random
+                tx.object(this.clockObjectId)    // clock
             ]
         });
 
@@ -165,7 +167,7 @@ export class GameInteraction {
                 tx.object(seatId),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8')  // random
+                tx.object(this.randomObjectId)  // random
             ]
         });
 
@@ -190,7 +192,7 @@ export class GameInteraction {
                 tx.object(seatId),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8')  // random
+                tx.object(this.randomObjectId)  // random
             ]
         });
 
@@ -217,7 +219,7 @@ export class GameInteraction {
                 tx.pure.bool(useRentFree),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8')  // random
+                tx.object(this.randomObjectId)  // random
             ]
         });
 
@@ -242,7 +244,7 @@ export class GameInteraction {
                 tx.object(seatId),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8')  // random
+                tx.object(this.randomObjectId)  // random
             ]
         });
 
@@ -267,7 +269,7 @@ export class GameInteraction {
                 tx.object(seatId),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8')  // random
+                tx.object(this.randomObjectId)  // random
             ]
         });
 
@@ -296,7 +298,7 @@ export class GameInteraction {
                 tx.pure.vector('u16', params),
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
-                tx.object('0x8')  // random
+                tx.object(this.randomObjectId)  // random
             ]
         });
 

@@ -110,6 +110,17 @@ export enum PendingDecision {
     PAY_RENT = 3               // 需要决定如何支付租金（有免租卡时）
 }
 
+/**
+ * 决策类型（用于事件）
+ * 对应Move: types.move 中的 DECISION_* 常量
+ */
+export enum DecisionType {
+    NONE = 0,
+    BUY_PROPERTY = 1,
+    UPGRADE_PROPERTY = 2,
+    PAY_RENT = 3
+}
+
 // ===== SkipReason 跳过回合原因 =====
 export enum SkipReason {
     PRISON = 1,    // 监狱

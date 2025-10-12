@@ -50,6 +50,9 @@ export class TycoonEventIndexer {
         'EndTurnEvent': EventType.END_TURN,
         'RoundEndedEvent': EventType.ROUND_ENDED,
         'BankruptEvent': EventType.BANKRUPT,
+        'BuildingDecisionEvent': EventType.BUILDING_DECISION,
+        'RentDecisionEvent': EventType.RENT_DECISION,
+        'DecisionSkippedEvent': EventType.DECISION_SKIPPED,
         'UseCardActionEvent': EventType.USE_CARD_ACTION,
         'RollAndStepActionEvent': EventType.ROLL_AND_STEP_ACTION,
     };

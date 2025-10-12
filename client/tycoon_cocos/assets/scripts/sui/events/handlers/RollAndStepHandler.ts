@@ -18,6 +18,7 @@ import { RollAndStepAction } from '../actions/RollAndStepAction';
 import { EventBus } from '../../../events/EventBus';
 import { EventTypes } from '../../../events/EventTypes';
 import { Blackboard } from '../../../events/Blackboard';
+import { SuiManager } from '../../managers';
 
 /**
  * RollAndStepHandler 类
@@ -301,7 +302,6 @@ export class RollAndStepHandler {
             }
 
             // 2. 从链上重新获取 Game 状态
-            const { SuiManager } = await import('../../managers/SuiManager');
             const updatedGame = await SuiManager.instance.getGameState(event.game);
 
             if (updatedGame) {

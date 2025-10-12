@@ -10,7 +10,7 @@ import { UIEditor } from "./UIEditor";
 import { UIInGameDebug } from "./UIInGameDebug";
 import { UIInGameCards } from "./UIInGameCards";
 import { UIInGameDice } from "./UIInGameDice";
-import { UIInGamePlayerPanel } from "./UIInGamePlayerPanel";
+import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { MapManager } from "../../map/MapManager";
 
@@ -28,7 +28,7 @@ export class UIInGame extends UIBase {
     private m_debugUI: UIInGameDebug | null = null;
     private m_cardsUI: UIInGameCards | null = null;
     private m_diceUI: UIInGameDice | null = null;
-    private m_playerPanelUI: UIInGamePlayerPanel | null = null;
+    private m_playerPanelUI: UIInGamePlayer | null = null;
     private m_infoUI: UIInGameInfo | null = null;
 
     // ================ 控制器 ================
@@ -117,12 +117,12 @@ export class UIInGame extends UIBase {
 
         // m_playerPanelUI（管理 myPlayer 和 playerList）
         // 假设 myPlayer 和 playerList 在同一个容器或直接在主面板
-        // 创建一个包装组件传给 UIInGamePlayerPanel
-        this.m_playerPanelUI = this.panel.node.addComponent(UIInGamePlayerPanel);
-        this.m_playerPanelUI.setUIName("InGamePlayerPanel");
+        // 创建一个包装组件传给 UIInGamePlayer
+        this.m_playerPanelUI = this.panel.node.addComponent(UIInGamePlayer);
+        this.m_playerPanelUI.setUIName("InGamePlayer");
         this.m_playerPanelUI.setPanel(this.panel);
         this.m_playerPanelUI.init();
-        console.log('[UIInGame] Player Panel UI component created');
+        console.log('[UIInGame] Player UI component created');
 
         // m_infoUI
         const infoComponent = this.getChild('gameInfo')?.asCom;

@@ -1,5 +1,5 @@
 /**
- * UIInGamePlayerPanel - 游戏内玩家面板模块
+ * UIInGamePlayer - 游戏内玩家面板模块
  *
  * 功能：
  * - 显示当前玩家信息（myPlayer）
@@ -19,8 +19,8 @@ import { GameInitializer } from "../../core/GameInitializer";
 
 const { ccclass } = _decorator;
 
-@ccclass('UIInGamePlayerPanel')
-export class UIInGamePlayerPanel extends UIBase {
+@ccclass('UIInGamePlayer')
+export class UIInGamePlayer extends UIBase {
 
     // myPlayer 组件
     private m_myPlayer: fgui.GComponent;
@@ -161,7 +161,7 @@ export class UIInGamePlayerPanel extends UIBase {
                 spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
                 loader.texture = spriteFrame;
             } else {
-                console.warn(`[UIInGamePlayerPanel] Failed to load player avatar: ${texturePath}`);
+                console.warn(`[UIInGamePlayer] Failed to load player avatar: ${texturePath}`);
             }
         });
     }
@@ -177,7 +177,7 @@ export class UIInGamePlayerPanel extends UIBase {
         if (this.m_playerList) {
             // 选中当前回合的玩家
             this.m_playerList.selectedIndex = data.newPlayerIndex;
-            console.log('[UIInGamePlayerPanel] 选中玩家:', data.newPlayerIndex);
+            console.log('[UIInGamePlayer] 选中玩家:', data.newPlayerIndex);
         }
 
         // 刷新列表（更新高亮状态）

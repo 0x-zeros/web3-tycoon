@@ -17,6 +17,10 @@ import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { DiceController } from "../../game/DiceController";
+import { SuiManager } from "../../sui/managers/SuiManager";
+import { BuffKind } from "../../sui/types/constants";
+import { WalkingPreference } from "../../sui/pathfinding/WalkingPreference";
+import { HistoryStorage } from "../../sui/pathfinding/HistoryStorage";
 
 const { ccclass } = _decorator;
 
@@ -168,13 +172,24 @@ export class UIInGameDice extends UIBase {
 
             // 导入 PathCalculator（动态导入避免循环依赖）
             const { PathCalculator } = await import("../../sui/pathfinding/PathCalculator");
-            const pathCalculator = new PathCalculator(template);
+
+            // 加载 Rotor-Router 历史记录（如果使用该偏好）
+            let rotorHistory = undefined;
+            if (preference === WalkingPreference.ROTOR_ROUTER) {
+                rotorHistory = HistoryStorage.load(session.getGameId(), player.getPlayerIndex());
+                console.log("[UIInGameDice] Rotor-Router 历史记录已加载", {
+                    recordCount: rotorHistory.lastDirection.size
+                });
+            }
+
+            const pathCalculator = new PathCalculator(template, rotorHistory);
 
             const pathResult = pathCalculator.calculatePath({
                 startTile: player.getPos(),
                 steps: maxSteps,
                 preference: preference,
-                lastTile: player.getLastTileId()
+                lastTile: player.getLastTileId(),
+                rotorHistory: rotorHistory
             });
 
             if (!pathResult.success) {
@@ -186,61 +201,45 @@ export class UIInGameDice extends UIBase {
                 steps: pathResult.actualSteps
             });
 
-            // ===== 4. 播放骰子动画 =====
+            // 保存 Rotor-Router 历史记录（如果使用该偏好）
+            if (preference === WalkingPreference.ROTOR_ROUTER) {
+                const updatedHistory = pathCalculator.getRotorHistory();
+                HistoryStorage.save(session.getGameId(), player.getPlayerIndex(), updatedHistory);
+                console.log("[UIInGameDice] Rotor-Router 历史记录已保存");
+            }
+
+            // ===== 4. 校验路径合法性 =====
+            const isValid = pathCalculator.validatePath(player.getPos(), pathResult.path);
+            if (!isValid) {
+                throw new Error("路径校验失败：包含无效的邻接关系");
+            }
+
+            console.log("[UIInGameDice] 路径校验通过");
+
+            // ===== 5. 播放骰子动画 =====
             await this._playDiceAnimation(diceCount);
 
-            // ===== 5. 提交链上交易 =====
-            console.log("[UIInGameDice] 准备提交链上交易...");
+            // ===== 6. 提交链上交易 =====
+            console.log("[UIInGameDice] 提交链上交易...");
 
-            // TODO: 获取 Seat 信息和 keypair
-            // 这些信息应该从 SuiManager 或相关管理器获取
-            // const seatId = Blackboard.instance.get("currentSeatId");
-            // const keypair = SuiManager.instance.getCurrentKeypair();
+            const result = await SuiManager.instance.rollAndStep(pathResult.path);
 
-            // 暂时使用模拟值（实际实现时需要替换）
-            console.warn("[UIInGameDice] TODO: 集成真实的 Seat 和 keypair");
-
-            // TODO: 构建 PTB 并提交交易
-            // const { TurnInteraction } = await import("../../sui/interactions/turn");
-            // const turnInteraction = new TurnInteraction(
-            //     SuiManager.instance.client,
-            //     SuiManager.instance.packageId,
-            //     SuiManager.instance.gameDataId
-            // );
-            //
-            // const result = await turnInteraction.rollAndStep(
-            //     session.getGameId(),
-            //     seatId,
-            //     session.getTemplateMapId(),
-            //     pathResult.path,
-            //     keypair
-            // );
-            //
-            // console.log("[UIInGameDice] 交易成功", {
-            //     txHash: result.txHash,
-            //     dice: result.dice,
-            //     endPos: result.endPos
-            // });
-
-            // 模拟交易成功
-            console.log("[UIInGameDice] 交易提交成功（模拟）");
-
-            // ===== 6. 发送事件（等待 RollAndStepHandler 处理） =====
-            EventBus.emit(EventTypes.Dice.RollComplete, {
-                diceCount: diceCount,
-                path: pathResult.path,
-                player: player.getPlayerIndex(),
-                source: "ui_dice"
+            console.log("[UIInGameDice] 交易成功", {
+                txHash: result.txHash,
+                dice: result.dice,
+                endPos: result.endPos
             });
+
+            // ===== 7. 交易成功，等待事件处理 =====
+            // EventIndexer 会监听链上 RollAndStepActionEvent
+            // 然后触发 RollAndStepHandler 处理，自动播放动画
 
         } catch (error) {
             console.error("[UIInGameDice] 掷骰子失败:", error);
 
             // 显示错误提示
-            // TODO: 集成 UINotification
-            // UINotification.error(`掷骰子失败: ${error.message}`);
-
-            alert(`掷骰子失败: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            alert(`掷骰子失败: ${errorMessage}`);
 
         } finally {
             // 重新启用骰子按钮
@@ -262,9 +261,6 @@ export class UIInGameDice extends UIBase {
      * @returns 骰子数量（1-3）
      */
     private _getDiceCount(player: any, currentRound: number): number {
-        // 导入 BuffKind 常量
-        const BuffKind = { MOVE_CTRL: 1 };  // TODO: 从 constants 导入
-
         // 检查是否有遥控骰子 buff
         const hasMoveCtr = player.hasActiveBuff(BuffKind.MOVE_CTRL, currentRound);
 
@@ -284,13 +280,7 @@ export class UIInGameDice extends UIBase {
      *
      * @returns 行走偏好（默认 ROTOR_ROUTER）
      */
-    private _getWalkingPreference(): any {
-        // 导入 WalkingPreference 枚举
-        const WalkingPreference = {
-            ROTOR_ROUTER: 'rotor_router',
-            RIGHT_HAND_RULE: 'right_hand_rule'
-        };  // TODO: 从 pathfinding 模块导入
-
+    private _getWalkingPreference(): WalkingPreference {
         // 从 Blackboard 获取用户设置，默认使用 ROTOR_ROUTER
         return Blackboard.instance.get("walkingPreference", WalkingPreference.ROTOR_ROUTER);
     }

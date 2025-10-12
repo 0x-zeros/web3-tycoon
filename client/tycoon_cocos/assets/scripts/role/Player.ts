@@ -56,7 +56,7 @@ export class Player extends Role {
     protected _templeLevels: number[] = [];
 
     /** Buff 列表（对应 Move Player.buffs） */
-    protected _buffs: BuffEntry[] = [];
+    protected _buffs: MoveBuffEntry[] = [];
 
     /** 卡牌列表（客户端 Card 对象） */
     protected _cards: Card[] = [];
@@ -174,14 +174,14 @@ export class Player extends Role {
     /**
      * 获取指定类型的 Buff
      */
-    public getBuff(buffKind: number): BuffEntry | null {
+    public getBuff(buffKind: number): MoveBuffEntry | null {
         return this._buffs.find(buff => buff.kind === buffKind) || null;
     }
 
     /**
      * 获取所有 Buffs
      */
-    public getAllBuffs(): BuffEntry[] {
+    public getAllBuffs(): MoveBuffEntry[] {
         return [...this._buffs];
     }
 

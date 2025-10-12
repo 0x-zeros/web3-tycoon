@@ -11,8 +11,8 @@
  */
 
 import type { RollAndStepActionEvent, StepEffect } from '../types/RollAndStepEvent';
-import { EventBus } from '../../events/EventBus';
-import { EventTypes } from '../../events/EventTypes';
+import { EventBus } from '../../../events/EventBus';
+import { EventTypes } from '../../../events/EventTypes';
 
 /**
  * 播放状态枚举

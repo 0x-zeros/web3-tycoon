@@ -64,7 +64,7 @@ export interface BuffChangeItem {
     /** 目标玩家地址 */
     target: string;
     /** 最后激活轮次（包含） */
-    last_active_round?: number;
+    last_active_round: number | null;
 }
 
 /**
@@ -81,7 +81,7 @@ export interface NpcStepEvent {
     /** NPC是否被消耗 */
     consumed: boolean;
     /** 结果地块（如送医院的目标地块） */
-    result_tile?: number;
+    result_tile: number | null;
 }
 
 /**
@@ -98,11 +98,11 @@ export interface StopEffect {
     /** 金额（过路费、奖金、罚款等） */
     amount: bigint;
     /** 地产所有者地址 */
-    owner?: string;
+    owner: string | null;
     /** 地产等级 */
-    level?: number;
+    level: number | null;
     /** 停留回合数（医院、监狱） */
-    turns?: number;
+    turns: number | null;
     /** 获得的卡牌 */
     card_gains: CardDrawItem[];
 }
@@ -123,9 +123,9 @@ export interface StepEffect {
     /** 经过时获得的卡牌 */
     pass_draws: CardDrawItem[];
     /** NPC交互事件 */
-    npc_event?: NpcStepEvent;
+    npc_event: NpcStepEvent | null;
     /** 停留效果 */
-    stop_effect?: StopEffect;
+    stop_effect: StopEffect | null;
 }
 
 // ===== Aggregated Events 聚合事件 =====

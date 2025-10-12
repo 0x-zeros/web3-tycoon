@@ -37,7 +37,7 @@ export class TycoonEventIndexer {
     private pollInterval: number;
     private batchSize: number;
     private isRunning: boolean = false;
-    private pollTimer?: NodeJS.Timeout;
+    private pollTimer?: ReturnType<typeof setTimeout>;
     // 事件类型映射与监听列表
     private readonly typeMap: { [key: string]: EventType } = {
         'GameCreatedEvent': EventType.GAME_CREATED,

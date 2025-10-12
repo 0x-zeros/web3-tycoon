@@ -207,7 +207,7 @@ export class GameSession {
             playerCount: this._players.length,
             tileCount: this._tiles.length,
             buildingCount: this._buildings.length,
-            npcCount: this._npcs.size
+            npcCount: this._npcs.length
         });
 
         // 9. 触发加载完成事件

@@ -332,8 +332,7 @@ export class Blackboard extends EventTarget {
         // 清理所有数据和监听器
         this.clear();
 
-        // 清理EventTarget
-        this.removeAll();
+        // 清理EventTarget（已通过 clear/unwatch 移除监听）
 
         Blackboard._instance = null;
 

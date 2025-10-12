@@ -107,9 +107,9 @@ export class TycoonEventProcessor {
     processEvent(metadata: EventMetadata): GameStateChange | null {
         switch (metadata.type) {
             case EventType.ROLL_AND_STEP_ACTION:
-                return this.processRollAndStep(metadata);
+                return this.processRollAndStep(metadata as EventMetadata<RollAndStepActionEvent>);
             case EventType.USE_CARD_ACTION:
-                return this.processUseCard(metadata);
+                return this.processUseCard(metadata as EventMetadata<UseCardActionEvent>);
             case EventType.BANKRUPT:
                 return this.processBankrupt(metadata);
             default:

@@ -15,9 +15,9 @@ import type { EventMetadata } from '../types';
 import type { RollAndStepActionEvent } from '../types/RollAndStepEvent';
 import { EventType } from '../types';
 import { RollAndStepAction } from '../actions/RollAndStepAction';
-import { EventBus } from '../../events/EventBus';
-import { EventTypes } from '../../events/EventTypes';
-import { Blackboard } from '../../events/Blackboard';
+import { EventBus } from '../../../events/EventBus';
+import { EventTypes } from '../../../events/EventTypes';
+import { Blackboard } from '../../../events/Blackboard';
 
 /**
  * RollAndStepHandler 类

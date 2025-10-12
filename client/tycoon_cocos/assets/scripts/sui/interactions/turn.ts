@@ -21,8 +21,45 @@ export class TurnInteraction {
     ) {}
 
     /**
-     * 掷骰并移动
+     * 构建掷骰并移动的交易
      * 对应Move: public entry fun roll_and_step
+     *
+     * @param gameId 游戏 ID
+     * @param seatId 座位 ID
+     * @param mapTemplateId 地图模板 ID
+     * @param path 路径数组
+     * @returns Transaction 对象
+     */
+    buildRollAndStepTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string,
+        path: number[]
+    ): Transaction {
+        const tx = new Transaction();
+
+        // 调用roll_and_step函数
+        tx.moveCall({
+            target: `${this.packageId}::game::roll_and_step`,
+            arguments: [
+                tx.object(gameId),          // game: &mut Game
+                tx.object(seatId),          // seat: &Seat
+                tx.pure.vector('u16', path), // path: vector<u16>
+                tx.object(this.gameDataId), // game_data: &GameData
+                tx.object(mapTemplateId),   // map: &MapTemplate
+                tx.object('0x8'),           // random: &Random
+                tx.object('0x6')            // clock: &Clock
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
+     * 掷骰并移动（完整执行版本）
+     * 对应Move: public entry fun roll_and_step
+     *
+     * @deprecated 建议使用 buildRollAndStepTx + SuiManager.signAndExecuteTransaction
      */
     async rollAndStep(
         gameId: string,
@@ -212,6 +249,15 @@ export class TurnInteraction {
         for (const event of events) {
             if (event.type.includes('RollAndStepActionEvent')) {
                 const data = event.parsedJson;
+                // 规范字段类型（特别是金额为bigint）
+                const cashChanges = (data.cash_changes || []).map((c: any) => ({
+                    player: c.player,
+                    is_debit: Boolean(c.is_debit),
+                    amount: BigInt(c.amount ?? 0),
+                    reason: Number(c.reason ?? 0),
+                    details: Number(c.details ?? 0),
+                }));
+
                 return {
                     game: data.game,
                     player: data.player,
@@ -221,7 +267,7 @@ export class TurnInteraction {
                     path_choices: data.path_choices || [],
                     from: data.from,
                     steps: data.steps || [],
-                    cash_changes: data.cash_changes || [],
+                    cash_changes: cashChanges,
                     end_pos: data.end_pos
                 };
             }

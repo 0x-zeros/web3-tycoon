@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "assets/scripts/sui/events/actions/RollAndStepAction.ts",
+    "assets/scripts/sui/events/handlers/RollAndStepHandler.ts",
+    "assets/scripts/sui/events/types/*.ts",
+    "assets/scripts/ui/game/UIInGameDice.ts",
+    "assets/scripts/sui/pathfinding/**/*.ts"
+  ],
+  "exclude": [
+    "assets/scripts/sui/**",
+    "!assets/scripts/sui/events/**",
+    "!assets/scripts/sui/pathfinding/**",
+    "assets/scripts/voxel/**",
+    "assets/scripts/camera/**",
+    "assets/scripts/map/**",
+    "assets/scripts/**/temp/**",
+    "temp/**",
+    "library/**",
+    "node_modules/**"
+  ]
+}

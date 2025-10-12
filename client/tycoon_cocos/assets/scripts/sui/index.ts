@@ -5,7 +5,7 @@
  */
 
 // ===== 导出类型定义 =====
-export * from './types';
+export type * from './types';
 
 // ===== 导出事件系统 =====
 export * from './events';

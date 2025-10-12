@@ -27,6 +27,7 @@ import { UINotification } from '../../ui/utils/UINotification';
 import { UIMessage, MessageBoxIcon } from '../../ui/utils/UIMessage';
 import { loadKeypairFromKeystore } from '../utils/KeystoreLoader';
 import { GameData } from '../models/GameData';
+import { rollAndStepHandler } from '../events/handlers/RollAndStepHandler';
 
 /**
  * Sui Manager 配置选项
@@ -461,6 +462,73 @@ export class SuiManager {
     }
 
     /**
+     * 掷骰并移动
+     * 对应Move: public entry fun roll_and_step
+     *
+     * @param path 路径数组（客户端使用行走偏好算法计算）
+     * @returns 掷骰结果
+     */
+    public async rollAndStep(path: number[]): Promise<{
+        dice: number;
+        endPos: number;
+        txHash: string;
+    }> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        // 检查当前游戏
+        if (!this._currentGame) {
+            throw new Error('[SuiManager] No current game set');
+        }
+
+        const gameId = this._currentGame.id;
+        const templateMapId = this._currentGame.template_map_id;
+
+        this._log('[SuiManager] Rolling dice and stepping...', {
+            gameId,
+            pathLength: path.length
+        });
+
+        // 从缓存中查找当前游戏的 Seat
+        const seat = this._cachedSeats.find(s => s.game === gameId);
+        if (!seat) {
+            throw new Error('[SuiManager] Seat not found for current game');
+        }
+
+        // 创建 TurnInteraction
+        const { TurnInteraction } = await import('../interactions/turn');
+        const turnInteraction = new TurnInteraction(
+            this._client!,
+            this._config!.packageId,
+            this._config!.gameDataId
+        );
+
+        // 构建交易
+        const tx = turnInteraction.buildRollAndStepTx(
+            gameId,
+            seat.id,
+            templateMapId,
+            path
+        );
+
+        // 签名并执行
+        const result = await this.signAndExecuteTransaction(tx);
+
+        // 从事件中提取结果
+        const rollEvent = this._extractRollAndStepEvent(result);
+
+        const response = {
+            dice: rollEvent.dice,
+            endPos: rollEvent.end_pos,
+            txHash: result.digest
+        };
+
+        this._log('[SuiManager] Roll and step completed', response);
+
+        return response;
+    }
+
+    /**
      * 获取游戏状态
      * @param gameId 游戏 ID
      * @returns 游戏对象
@@ -889,6 +957,26 @@ export class SuiManager {
     }
 
     /**
+     * 从交易结果中提取 RollAndStepActionEvent
+     */
+    private _extractRollAndStepEvent(result: SuiTransactionBlockResponse): any {
+        const events = result.events || [];
+        for (const event of events) {
+            if (event.type.includes('RollAndStepActionEvent')) {
+                return event.parsedJson;
+            }
+        }
+        // 如果没找到事件，返回默认值
+        return {
+            dice: 0,
+            end_pos: 0,
+            from: 0,
+            steps: [],
+            cash_changes: []
+        };
+    }
+
+    /**
      * 调试日志
      */
     private _log(message: string, data?: any): void {
@@ -1046,6 +1134,14 @@ export class SuiManager {
 
             // 转发到 EventBus
             EventBus.emit(EventTypes.Move.MapTemplatePublished, event.data);
+        });
+
+        // 监听掷骰移动事件
+        this._eventIndexer.on(EventType.ROLL_AND_STEP_ACTION, async (event) => {
+            console.log('[SuiManager] RollAndStepActionEvent from chain:', event.data);
+
+            // 分发给 RollAndStepHandler 处理
+            await rollAndStepHandler.instance.handleEvent(event);
         });
 
         console.log('[SuiManager] Event listener started');

@@ -188,7 +188,7 @@ export type GameEvent =
 /**
  * 事件监听器类型
  */
-export type EventListener<T = GameEvent> = (event: T) => void;
+export type EventListener<T = any> = (event: T) => void;
 
 /**
  * 事件过滤器
@@ -208,8 +208,9 @@ export interface EventFilter {
 
 /**
  * 事件元数据（包装事件数据）
+ * 泛型 T 为具体的事件类型（如 GameCreatedEvent, RollAndStepActionEvent 等）
  */
-export interface EventMetadata<T = GameEvent> {
+export interface EventMetadata<T = any> {
     /** 事件类型 */
     type: EventType;
     /** 事件数据 */

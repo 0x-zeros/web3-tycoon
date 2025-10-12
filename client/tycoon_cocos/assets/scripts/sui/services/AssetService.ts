@@ -4,7 +4,8 @@
  */
 
 import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
-import type { SeatNFT, MapTemplateNFT, DeFiAssets, CoinInfo } from '../types/assets';
+import type { Seat } from '../types/game';
+import type { MapTemplateNFT, DeFiAssets, CoinInfo } from '../types/assets';
 
 /**
  * 资产服务类
@@ -69,9 +70,9 @@ export class AssetService {
     /**
      * 获取玩家拥有的 Seat NFT
      * @param address 钱包地址
-     * @returns Seat NFT 列表
+     * @returns Seat 列表
      */
-    async getPlayerSeats(address: string): Promise<SeatNFT[]> {
+    async getPlayerSeats(address: string): Promise<Seat[]> {
         try {
             const response = await this.client.getOwnedObjects({
                 owner: address,
@@ -84,16 +85,16 @@ export class AssetService {
                 }
             });
 
-            const seats: SeatNFT[] = [];
+            const seats: Seat[] = [];
 
             for (const obj of response.data) {
-                const seat = this._parseSeatNFT(obj);
+                const seat = this._parseSeat(obj);
                 if (seat) {
                     seats.push(seat);
                 }
             }
 
-            console.log(`[AssetService] Found ${seats.length} Seat NFTs for ${address}`);
+            console.log(`[AssetService] Found ${seats.length} Seats for ${address}`);
             return seats;
 
         } catch (error) {
@@ -202,9 +203,9 @@ export class AssetService {
     // ============ 私有辅助方法 ============
 
     /**
-     * 解析 Seat NFT
+     * 解析 Seat（保持 camelCase，与其他 struct 统一）
      */
-    private _parseSeatNFT(response: SuiObjectResponse): SeatNFT | null {
+    private _parseSeat(response: SuiObjectResponse): Seat | null {
         if (response.data?.content?.dataType !== 'moveObject') {
             return null;
         }
@@ -213,13 +214,13 @@ export class AssetService {
             const fields = response.data.content.fields as any;
 
             return {
-                objectId: response.data.objectId,
-                gameId: fields.game || '',
-                playerIndex: Number(fields.player_index) || 0,
-                player: fields.player || ''
+                id: response.data.objectId,
+                game: fields.game || '',
+                player: fields.player || '',
+                player_index: Number(fields.player_index) || 0
             };
         } catch (error) {
-            console.error('[AssetService] Failed to parse Seat NFT:', error);
+            console.error('[AssetService] Failed to parse Seat:', error);
             return null;
         }
     }

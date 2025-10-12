@@ -14,12 +14,14 @@ import { TycoonGameClient } from '../interactions';
 import { MapAdminInteraction } from '../interactions/mapAdmin';
 import { QueryService, GameListItem, AssetService, DataPollingService } from '../services';
 import { TycoonEventIndexer } from '../events/indexer';
-import { EventType } from '../events/types';
+import { EventType, type GameCreatedEvent } from '../events/types';
+import type { RollAndStepActionEvent } from '../events/types/RollAndStepEvent';
 import type { Game, Player, Seat, GameCreateConfig } from '../types/game';
 import type { MapTemplate, TileStatic, BuildingStatic } from '../types/map';
 import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';
-import type { SeatNFT, MapTemplateNFT, DeFiAssets } from '../types/assets';
+import { PlayerAssets } from '../types/assets';
+import type { MapTemplateNFT, DeFiAssets } from '../types/assets';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { Blackboard } from '../../events/Blackboard';
@@ -69,11 +71,7 @@ export class SuiManager {
     private _cacheTimestamp: number = 0;
 
     // 缓存数据（玩家资产）
-    private _cachedSuiBalance: bigint = 0n;
-    private _cachedSeats: SeatNFT[] = [];
-    private _cachedMapTemplateNFTs: MapTemplateNFT[] = [];
-    private _cachedDeFiAssets: DeFiAssets = {};
-    private _assetsCacheTimestamp: number = 0;
+    private _playerAssets: PlayerAssets | null = null;
 
     // 最近发布的模板 ID
     private _lastPublishedTemplateId: string | null = null;
@@ -489,8 +487,10 @@ export class SuiManager {
             pathLength: path.length
         });
 
+        console.log('[SuiManager] rollAndStep, playerAssets: ', this._playerAssets?.debugInfo());
+
         // 从缓存中查找当前游戏的 Seat
-        const seat = this._cachedSeats.find(s => s.game === gameId);
+        const seat = this._playerAssets?.findSeatByGame(gameId);
         if (!seat) {
             throw new Error('[SuiManager] Seat not found for current game');
         }
@@ -822,9 +822,9 @@ export class SuiManager {
 
     /**
      * 获取地图模板列表
-     * @returns 地图模板列表
+     * @returns 地图模板发布事件列表
      */
-    public async getMapTemplates(): Promise<{ id: number; name: string }[]> {
+    public async getMapTemplates(): Promise<MapTemplatePublishedEvent[]> {
         this._ensureInitialized();
 
         this._log('[SuiManager] Querying map templates...');
@@ -1079,7 +1079,7 @@ export class SuiManager {
         });
 
         // 监听游戏创建事件
-        this._eventIndexer.on(EventType.GAME_CREATED, async (event) => {
+        this._eventIndexer.on<GameCreatedEvent>(EventType.GAME_CREATED, async (event) => {
             console.log('[SuiManager] GameCreatedEvent from chain:', event.data);
 
             // 1. 查询新创建的游戏
@@ -1118,7 +1118,7 @@ export class SuiManager {
         });
 
         // 监听地图模板发布事件
-        this._eventIndexer.on(EventType.MAP_TEMPLATE_PUBLISHED, (event) => {
+        this._eventIndexer.on<MapTemplatePublishedEvent>(EventType.MAP_TEMPLATE_PUBLISHED, (event) => {
             console.log('[SuiManager] MapTemplatePublishedEvent from chain:', event.data);
 
             // 添加到缓存（包含所有事件字段）
@@ -1137,7 +1137,7 @@ export class SuiManager {
         });
 
         // 监听掷骰移动事件
-        this._eventIndexer.on(EventType.ROLL_AND_STEP_ACTION, async (event) => {
+        this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, async (event) => {
             console.log('[SuiManager] RollAndStepActionEvent from chain:', event.data);
 
             // 分发给 RollAndStepHandler 处理
@@ -1434,22 +1434,24 @@ export class SuiManager {
                 // this._assetService!.getDeFiAssets(this._currentAddress)
             ]);
 
-            // 更新缓存
-            this._cachedSuiBalance = balance;
-            this._cachedSeats = seats;
-            this._assetsCacheTimestamp = Date.now();
+            // 更新缓存为 PlayerAssets 类实例
+            this._playerAssets = new PlayerAssets(
+                balance,
+                seats,
+                [],  // mapTemplateNFTs
+                {}   // defiAssets
+            );
 
             console.log('[SuiManager] Player assets loaded', {
                 balance: balance.toString(),
                 seats: seats.length
             });
 
-            // 通过 Blackboard 通知 UI 更新
+            // 通过 Blackboard 通知 UI 更新（只存余额）
             Blackboard.instance.set("sui_balance", balance);
-            Blackboard.instance.set("sui_seats", seats);
 
             const formattedBalance = this._formatSuiAmount(balance);
-            UINotification.success(`资产加载完成：${formattedBalance} SUI`);
+            UINotification.success(`资产加载完成：${formattedBalance} SUI，${seats.length} 个 Seat`);
 
         } catch (error) {
             console.error('[SuiManager] Failed to load player assets:', error);
@@ -1466,8 +1468,12 @@ export class SuiManager {
         try {
             const balance = await this._assetService!.getSuiBalance(this._currentAddress);
 
-            if (balance !== this._cachedSuiBalance) {
-                this._cachedSuiBalance = balance;
+            const oldBalance = this._playerAssets?.suiBalance || 0n;
+            if (balance !== oldBalance) {
+                // 更新 PlayerAssets 中的余额
+                if (this._playerAssets) {
+                    this._playerAssets.setSuiBalance(balance);
+                }
                 Blackboard.instance.set("sui_balance", balance);
                 console.log('[SuiManager] Balance updated:', balance.toString());
             }
@@ -1486,31 +1492,38 @@ export class SuiManager {
     }
 
     /**
-     * 获取缓存的 SUI 余额
+     * 获取 PlayerAssets 对象
      */
-    public get suiBalance(): bigint {
-        return this._cachedSuiBalance;
+    public get playerAssets(): PlayerAssets | null {
+        return this._playerAssets;
     }
 
     /**
-     * 获取缓存的 Seat NFTs
+     * 获取缓存的 SUI 余额
      */
-    public get seats(): SeatNFT[] {
-        return this._cachedSeats;
+    public get suiBalance(): bigint {
+        return this._playerAssets?.suiBalance || 0n;
+    }
+
+    /**
+     * 获取缓存的 Seats
+     */
+    public get seats(): Seat[] {
+        return this._playerAssets?.seats || [];
     }
 
     /**
      * 获取缓存的 Map Template NFTs（预留）
      */
     public get mapTemplateNFTs(): MapTemplateNFT[] {
-        return this._cachedMapTemplateNFTs;
+        return this._playerAssets?.mapTemplateNFTs || [];
     }
 
     /**
      * 获取缓存的 DeFi 资产（预留）
      */
     public get defiAssets(): DeFiAssets {
-        return this._cachedDeFiAssets;
+        return this._playerAssets?.defiAssets || {};
     }
 
     // ============ Explorer 工具方法 ============
@@ -1587,23 +1600,11 @@ export class SuiManager {
             'sui_balance'  // 自动更新 Blackboard
         );
 
-        // // 注册 Seat NFT 轮询（10 秒一次，不需要太频繁）
-        // this._pollingService.registerSimple(
-        //     'sui_seats',
-        //     async () => {
-        //         const seats = await this._assetService!.getPlayerSeats(this._currentAddress!);
-        //         return seats;
-        //     },
-        //     10000,  // 10 秒
-        //     'sui_seats'
-        // );
-
         // 启动轮询
         this._pollingService.start();
 
         console.log('[SuiManager] Asset polling started');
         console.log('  Balance: every 2s');
-        console.log('  Seats: every 10s');
     }
 
     /**

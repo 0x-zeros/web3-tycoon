@@ -215,6 +215,12 @@ export class GameSession {
             session: this,
             game: game
         });
+
+        // 10. 刷新玩家资产（获取最新 Seat）
+        console.log('[GameSession] 刷新玩家资产...');
+        const { SuiManager } = await import('../sui/managers/SuiManager');
+        await SuiManager.instance.loadPlayerAssets();
+        console.log('[GameSession] 玩家资产已刷新');
     }
 
     /**

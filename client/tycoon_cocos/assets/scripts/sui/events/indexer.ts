@@ -103,8 +103,9 @@ export class TycoonEventIndexer {
 
     /**
      * 订阅特定类型的事件
+     * 泛型 T 为具体的事件类型（如 GameCreatedEvent, RollAndStepActionEvent 等）
      */
-    on<T extends GameEvent>(eventType: EventType, callback: EventCallback<T>): void {
+    on<T = any>(eventType: EventType, callback: EventCallback<T>): void {
         if (!this.eventHandlers.has(eventType)) {
             this.eventHandlers.set(eventType, []);
         }

@@ -215,7 +215,7 @@ export class AssetService {
 
             return {
                 id: response.data.objectId,
-                game: fields.game || '',
+                game_id: fields.game_id || '',
                 player: fields.player || '',
                 player_index: Number(fields.player_index) || 0
             };

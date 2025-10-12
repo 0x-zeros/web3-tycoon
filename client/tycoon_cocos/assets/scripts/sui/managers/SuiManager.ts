@@ -408,7 +408,7 @@ export class SuiManager {
         // 保存当前座位
         this._currentSeat = {
             id: seatId,
-            game: gameId,
+            game_id: gameId,
             player: this._currentAddress!,
             player_index: playerIndex
         };

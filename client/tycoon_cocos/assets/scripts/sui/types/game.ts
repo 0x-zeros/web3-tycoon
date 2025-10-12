@@ -96,7 +96,7 @@ export interface Seat {
     /** 座位ID */
     id: string;
     /** 游戏ID */
-    game: string;
+    game_id: string;
     /** 玩家地址 */
     player: string;
     /** 玩家索引（0-based） */

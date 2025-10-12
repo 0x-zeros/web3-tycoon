@@ -154,7 +154,9 @@ export class PlayerAssets {
      * 根据游戏 ID 查找 Seat
      */
     public findSeatByGame(gameId: string): Seat | null {
-        return this._seats.find(s => s.game === gameId) || null;
+        console.log('[PlayerAssets] findSeatByGame, gameId: ', gameId);
+        console.log('[PlayerAssets] findSeatByGame, this._seats: ', this._seats);
+        return this._seats.find(s => s.game_id === gameId) || null;
     }
 
     /**
@@ -162,7 +164,7 @@ export class PlayerAssets {
      */
     public findSeatByPlayerIndex(gameId: string, playerIndex: number): Seat | null {
         return this._seats.find(s =>
-            s.game === gameId && s.player_index === playerIndex
+            s.game_id === gameId && s.player_index === playerIndex
         ) || null;
     }
 
@@ -177,7 +179,7 @@ export class PlayerAssets {
      * 检查是否有指定游戏的 Seat
      */
     public hasSeatForGame(gameId: string): boolean {
-        return this._seats.some(s => s.game === gameId);
+        return this._seats.some(s => s.game_id === gameId);
     }
 
     // ===== 调试方法 =====

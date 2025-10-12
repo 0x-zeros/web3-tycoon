@@ -121,7 +121,10 @@ export class GameInteraction {
         gameId: string,
         seatId: string,
         mapTemplateId: string,
-        path: number[]
+        path: number[],
+        autoBuy: boolean = true,
+        autoUpgrade: boolean = true,
+        preferRentCard: boolean = true
     ): Transaction {
         const tx = new Transaction();
 
@@ -131,6 +134,9 @@ export class GameInteraction {
                 tx.object(gameId),
                 tx.object(seatId),
                 tx.pure.vector('u16', path),
+                tx.pure.bool(autoBuy),           // 自动购买无主建筑
+                tx.pure.bool(autoUpgrade),       // 自动升级自己的建筑
+                tx.pure.bool(preferRentCard),    // 优先使用免租卡支付租金
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
                 tx.object('0x8'),  // random

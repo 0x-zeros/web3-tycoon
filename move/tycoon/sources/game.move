@@ -615,6 +615,9 @@ public entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
     path: vector<u16>,  // 完整路径（客户端寻路生成）
+    auto_buy: bool,     // 自动购买无主建筑
+    auto_upgrade: bool, // 自动升级自己的建筑
+    prefer_rent_card: bool, // 优先使用免租卡支付租金
     game_data: &GameData,
     map: &map::MapTemplate,
     r: &Random,
@@ -668,6 +671,9 @@ public entry fun roll_and_step(
         &path,  // 直接传原始path，dice控制使用前N个
         &mut steps,
         &mut cash_changes,
+        auto_buy,           // 传递自动购买参数
+        auto_upgrade,       // 传递自动升级参数
+        prefer_rent_card,   // 传递优先使用免租卡参数
         game_data,
         map,
         &mut generator
@@ -822,6 +828,170 @@ public entry fun skip_building_decision(
         game.turn
     );
 }
+
+// ============ 内部决策执行函数（供自动决策使用）============
+
+/// 尝试执行购买建筑（内部逻辑复用）
+/// 返回：(是否成功, Option<CashDelta>)
+fun try_execute_buy_building(
+    game: &mut Game,
+    player_index: u8,
+    building_id: u16,
+    tile_id: u16,
+    price: u64,
+    building_static: &map::BuildingStatic
+): (bool, option::Option<events::CashDelta>) {
+    let player = &game.players[player_index as u64];
+
+    // 检查现金
+    if (player.cash < price) {
+        return (false, option::none())
+    };
+
+    let player_addr = player.owner;
+
+    // 扣除现金
+    let player_mut = &mut game.players[player_index as u64];
+    player_mut.cash = player_mut.cash - price;
+
+    // 设置建筑所有权和等级
+    let building_mut = &mut game.buildings[building_id as u64];
+    building_mut.owner = player_index;
+    building_mut.level = 1;
+
+    // 维护 temple_levels 缓存（如果购买的是土地庙）
+    if (building_mut.building_type == types::BUILDING_TEMPLE()) {
+        player_mut.temple_levels.push_back(1);  // 新购土地庙初始L1
+    };
+
+    // 生成 CashDelta（购买不直接添加到collector，由调用方处理）
+    let cash_delta = events::make_cash_delta(
+        player_addr,
+        true,   // is_debit
+        price,
+        2,      // reason=buy
+        tile_id
+    );
+
+    (true, option::some(cash_delta))
+}
+
+/// 尝试执行升级建筑（内部逻辑复用）
+/// 返回：(是否成功, Option<CashDelta>, 新等级)
+fun try_execute_upgrade_building(
+    game: &mut Game,
+    player_index: u8,
+    building_id: u16,
+    tile_id: u16,
+    upgrade_cost: u64,
+    current_level: u8,
+    game_data: &GameData
+): (bool, option::Option<events::CashDelta>, u8) {
+    let player = &game.players[player_index as u64];
+
+    // 检查现金
+    if (player.cash < upgrade_cost) {
+        return (false, option::none(), current_level)
+    };
+
+    let player_addr = player.owner;
+
+    // 扣除现金
+    let player_mut = &mut game.players[player_index as u64];
+    player_mut.cash = player_mut.cash - upgrade_cost;
+
+    // 提升等级
+    let new_level = current_level + 1;
+    let building_type = game.buildings[building_id as u64].building_type;  // 先保存type
+    game.buildings[building_id as u64].level = new_level;
+
+    // 维护 temple_levels 缓存（如果是土地庙）
+    if (building_type == types::BUILDING_TEMPLE()) {
+        rebuild_temple_levels_cache(game, player_index);
+    };
+
+    // 生成 CashDelta
+    let cash_delta = events::make_cash_delta(
+        player_addr,
+        true,   // is_debit
+        upgrade_cost,
+        3,      // reason=upgrade
+        tile_id
+    );
+
+    (true, option::some(cash_delta), new_level)
+}
+
+/// 尝试执行租金支付（内部逻辑复用）
+/// prefer_rent_card: true表示优先使用免租卡，false表示优先现金支付
+/// 返回：(是否成功支付, Vector<CashDelta>, 是否使用了免租卡)
+fun try_execute_rent_payment(
+    game: &mut Game,
+    player_index: u8,
+    owner_index: u8,
+    tile_id: u16,
+    toll: u64,
+    prefer_rent_card: bool
+): (bool, vector<events::CashDelta>, bool) {
+    let mut cash_deltas = vector<events::CashDelta>[];
+    let player = &game.players[player_index as u64];
+    let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
+
+    // 决策逻辑：根据 prefer_rent_card 和卡牌可用性
+    let use_card = prefer_rent_card && has_rent_free_card;
+
+    if (use_card) {
+        // 使用免租卡
+        let player_mut = &mut game.players[player_index as u64];
+        let used = cards::use_player_card(&mut player_mut.cards, types::CARD_RENT_FREE());
+        if (!used) {
+            // 卡牌使用失败（不应该发生）
+            return (false, cash_deltas, false)
+        };
+
+        // 使用卡牌成功，无需支付现金
+        return (true, cash_deltas, true)
+    } else {
+        // 现金支付
+        if (player.cash < toll) {
+            // 现金不足
+            return (false, cash_deltas, false)
+        };
+
+        let player_addr = player.owner;
+        let owner_addr = (&game.players[owner_index as u64]).owner;
+
+        // 扣除租金
+        let player_mut = &mut game.players[player_index as u64];
+        player_mut.cash = player_mut.cash - toll;
+
+        // 给所有者加钱
+        let owner_player = &mut game.players[owner_index as u64];
+        owner_player.cash = owner_player.cash + toll;
+
+        // 记录现金变动 - 支付方
+        cash_deltas.push_back(events::make_cash_delta(
+            player_addr,
+            true,  // is_debit
+            toll,
+            1,     // reason: toll
+            tile_id
+        ));
+
+        // 记录现金变动 - 收款方
+        cash_deltas.push_back(events::make_cash_delta(
+            owner_addr,
+            false, // is_debit (income)
+            toll,
+            1,     // reason: toll
+            tile_id
+        ));
+
+        return (true, cash_deltas, false)
+    }
+}
+
+// ============ 公共entry函数 ============
 
 // 结束回合（手动）
 public entry fun end_turn(
@@ -1194,6 +1364,9 @@ fun execute_step_movement_with_choices(
     path_choices: &vector<u16>,
     steps: &mut vector<events::StepEffect>,
     cash_changes: &mut vector<events::CashDelta>,
+    auto_buy: bool,           // 自动购买无主建筑
+    auto_upgrade: bool,       // 自动升级自己的建筑
+    prefer_rent_card: bool,   // 优先使用免租卡支付租金
     game_data: &GameData,
     map: &map::MapTemplate,
     generator: &mut RandomGenerator
@@ -1212,6 +1385,9 @@ fun execute_step_movement_with_choices(
             player_index,
             from_pos,
             cash_changes,
+            auto_buy,
+            auto_upgrade,
+            prefer_rent_card,
             game_data,
             map,
             generator
@@ -1324,6 +1500,9 @@ fun execute_step_movement_with_choices(
                     player_index,
                     next_pos,
                     cash_changes,
+                    auto_buy,
+                    auto_upgrade,
+                    prefer_rent_card,
                     game_data,
                     map,
                     generator
@@ -1387,6 +1566,9 @@ fun execute_step_movement_with_choices(
                 player_index,
                 next_pos,
                 cash_changes,
+                auto_buy,
+                auto_upgrade,
+                prefer_rent_card,
                 game_data,
                 map,
                 generator
@@ -1534,6 +1716,9 @@ fun handle_tile_stop_with_collector(
     player_index: u8,
     tile_id: u16,
     cash_changes: &mut vector<events::CashDelta>,
+    auto_buy: bool,           // 自动购买无主建筑
+    auto_upgrade: bool,       // 自动升级自己的建筑
+    prefer_rent_card: bool,   // 优先使用免租卡支付租金
     game_data: &GameData,
     map: &map::MapTemplate,
     generator: &mut RandomGenerator
@@ -1556,13 +1741,52 @@ fun handle_tile_stop_with_collector(
         let building_static = map::get_building(map, building_id);
 
         if (building.owner == NO_OWNER) {
-                // 无主建筑 - 设置待决策状态（应用物价指数）
-                stop_type = events::stop_building_unowned();
-                game.pending_decision = types::DECISION_BUY_PROPERTY();
-                game.decision_tile = tile_id;
+                // 无主建筑 - 尝试自动购买或设置待决策状态
                 let base_price = map::building_price(building_static);
                 let price_index = calculate_price_index(game);
-                game.decision_amount = base_price * price_index;
+                let price = base_price * price_index;
+
+                if (auto_buy) {
+                    // 尝试自动购买
+                    let (success, cash_delta_opt) = try_execute_buy_building(
+                        game, player_index, building_id, tile_id, price, building_static
+                    );
+
+                    if (success) {
+                        // 自动购买成功
+                        stop_type = events::stop_building_unowned();
+                        if (cash_delta_opt.is_some()) {
+                            cash_changes.push_back(cash_delta_opt.destroy_some());
+                        };
+
+                        // 发射建筑决策事件
+                        events::emit_building_decision_event(
+                            game.id.to_inner(),
+                            player_addr,
+                            types::DECISION_BUY_PROPERTY(),
+                            building_id,
+                            tile_id,
+                            price,
+                            1,  // new_level
+                            game.round,
+                            game.turn
+                        );
+
+                        // 不设置 pending_decision
+                    } else {
+                        // 现金不足，设置待决策（让玩家选择其他方式或跳过）
+                        stop_type = events::stop_building_unowned();
+                        game.pending_decision = types::DECISION_BUY_PROPERTY();
+                        game.decision_tile = tile_id;
+                        game.decision_amount = price;
+                    }
+                } else {
+                    // 自动购买未启用，设置待决策
+                    stop_type = events::stop_building_unowned();
+                    game.pending_decision = types::DECISION_BUY_PROPERTY();
+                    game.decision_tile = tile_id;
+                    game.decision_amount = price;
+                }
             } else {
                 let owner_index = building.owner;
                 if (owner_index != player_index) {
@@ -1573,94 +1797,169 @@ fun handle_tile_stop_with_collector(
                     // 检查免租情况
                     let player = &game.players[player_index as u64];
                     let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
-                let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
+                    let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
 
-                if (has_rent_free_buff) {
-                    // 有免租buff - 直接免租，无需决策
-                    stop_type = events::stop_building_no_rent();
-                    let owner_addr = (&game.players[owner_index as u64]).owner;
-                    owner_opt = option::some(owner_addr);
-                    level_opt = option::some(level);
-                    amount = 0;
-                } else if (has_rent_free_card) {
-                    // 没有buff但有免租卡 - 设置待决策状态
-                    stop_type = events::stop_building_toll();
-                    game.pending_decision = types::DECISION_PAY_RENT();
-                    game.decision_tile = tile_id;
-                    game.decision_amount = toll;
-                    let owner_addr = (&game.players[owner_index as u64]).owner;
-                    owner_opt = option::some(owner_addr);
-                    level_opt = option::some(level);
-                    amount = toll;
-                } else {
-                    // 既没有buff也没有卡 - 直接扣费
-                    let (actual_payment, should_bankrupt) = {
-                        let player_mut = &mut game.players[player_index as u64];
-                        // 支付过路费
-                        let payment = if (player_mut.cash >= toll) {
-                            player_mut.cash = player_mut.cash - toll;
-                            toll
-                        } else {
-                            let payment = player_mut.cash;
-                            player_mut.cash = 0;
-                            payment
-                        };
-                        let bankrupt = player_mut.cash == 0 && toll > payment;
-                        (payment, bankrupt)
-
-                    };
-
-                    if (actual_payment > 0) {
-                        // 给所有者加钱
-                        let owner_player = &mut game.players[owner_index as u64];
-                        owner_player.cash = owner_player.cash + actual_payment;
-                        let owner_addr = owner_player.owner;
-
-                        // 记录现金变动 - 支付方
-                        cash_changes.push_back( events::make_cash_delta(
-                            player_addr,
-                            true,  // is_debit
-                            actual_payment,
-                            1,  // reason: toll
-                            tile_id
-                        ));
-
-                        // 记录现金变动 - 收款方
-                        cash_changes.push_back( events::make_cash_delta(
-                            owner_addr,
-                            false,  // is_debit (income)
-                            actual_payment,
-                            1,  // reason: toll
-                            tile_id
-                        ));
-
-                        stop_type = events::stop_building_toll();
-                        amount = actual_payment;
-                    };
-
-                    // 检查破产
-                    if (should_bankrupt) {
+                    if (has_rent_free_buff) {
+                        // 有免租buff - 直接免租，无需决策
+                        stop_type = events::stop_building_no_rent();
                         let owner_addr = (&game.players[owner_index as u64]).owner;
-                        handle_bankruptcy(game, game_data, map, player_addr, option::some(owner_addr));
-                    };
+                        owner_opt = option::some(owner_addr);
+                        level_opt = option::some(level);
+                        amount = 0;
+                    } else if (has_rent_free_card || prefer_rent_card) {
+                        // 有免租卡或prefer_rent_card=true - 尝试自动支付
+                        let (success, cash_deltas, used_card) = try_execute_rent_payment(
+                            game, player_index, owner_index, tile_id, toll, prefer_rent_card
+                        );
 
-                    let owner_addr = (&game.players[owner_index as u64]).owner;
-                    owner_opt = option::some(owner_addr);
-                    level_opt = option::some(level);
-                }
+                        if (success) {
+                            // 自动支付成功
+                            if (used_card) {
+                                stop_type = events::stop_building_no_rent();
+                                // 发射租金决策事件（使用卡牌）
+                                let owner_addr = game.players[owner_index as u64].owner;
+                                events::emit_rent_decision_event(
+                                    game.id.to_inner(),
+                                    player_addr,
+                                    owner_addr,
+                                    building_id,
+                                    tile_id,
+                                    toll,
+                                    true,  // use_rent_free
+                                    game.round,
+                                    game.turn
+                                );
+                            } else {
+                                stop_type = events::stop_building_toll();
+                                // 添加现金变动记录
+                                let mut i = 0;
+                                while (i < cash_deltas.length()) {
+                                    cash_changes.push_back(cash_deltas[i]);
+                                    i = i + 1;
+                                };
+                                amount = toll;
+                            };
+
+                            let owner_addr = (&game.players[owner_index as u64]).owner;
+                            owner_opt = option::some(owner_addr);
+                            level_opt = option::some(level);
+                        } else {
+                            // 自动支付失败（现金不足），设置待决策
+                            stop_type = events::stop_building_toll();
+                            game.pending_decision = types::DECISION_PAY_RENT();
+                            game.decision_tile = tile_id;
+                            game.decision_amount = toll;
+                            let owner_addr = (&game.players[owner_index as u64]).owner;
+                            owner_opt = option::some(owner_addr);
+                            level_opt = option::some(level);
+                            amount = toll;
+                        }
+                    } else {
+                        // 既没有buff也没有卡，且prefer_rent_card=false - 直接扣费
+                        let (actual_payment, should_bankrupt) = {
+                            let player_mut = &mut game.players[player_index as u64];
+                            // 支付过路费
+                            let payment = if (player_mut.cash >= toll) {
+                                player_mut.cash = player_mut.cash - toll;
+                                toll
+                            } else {
+                                let payment = player_mut.cash;
+                                player_mut.cash = 0;
+                                payment
+                            };
+                            let bankrupt = player_mut.cash == 0 && toll > payment;
+                            (payment, bankrupt)
+
+                        };
+
+                        if (actual_payment > 0) {
+                            // 给所有者加钱
+                            let owner_player = &mut game.players[owner_index as u64];
+                            owner_player.cash = owner_player.cash + actual_payment;
+                            let owner_addr = owner_player.owner;
+
+                            // 记录现金变动 - 支付方
+                            cash_changes.push_back( events::make_cash_delta(
+                                player_addr,
+                                true,  // is_debit
+                                actual_payment,
+                                1,  // reason: toll
+                                tile_id
+                            ));
+
+                            // 记录现金变动 - 收款方
+                            cash_changes.push_back( events::make_cash_delta(
+                                owner_addr,
+                                false,  // is_debit (income)
+                                actual_payment,
+                                1,  // reason: toll
+                                tile_id
+                            ));
+
+                            stop_type = events::stop_building_toll();
+                            amount = actual_payment;
+                        };
+
+                        // 检查破产
+                        if (should_bankrupt) {
+                            let owner_addr = (&game.players[owner_index as u64]).owner;
+                            handle_bankruptcy(game, game_data, map, player_addr, option::some(owner_addr));
+                        };
+
+                        let owner_addr = (&game.players[owner_index as u64]).owner;
+                        owner_opt = option::some(owner_addr);
+                        level_opt = option::some(level);
+                    }
             } else {
                 // 自己的建筑 - 检查是否可以升级
                 let level = building.level;
                 let player_addr = (&game.players[player_index as u64]).owner;
 
                 if (level < types::LEVEL_4()) {
-                    // 可以升级 - 设置待决策状态
-                    stop_type = events::stop_none();  // 自己的建筑，无特殊效果
-                    game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
-                    game.decision_tile = tile_id;
-                    // 计算从当前等级升到下一级的费用
+                    // 可以升级 - 尝试自动升级或设置待决策状态
                     let upgrade_cost = calculate_building_price(building_static, building, level, level + 1, game, game_data);
-                    game.decision_amount = upgrade_cost;
+
+                    if (auto_upgrade) {
+                        // 尝试自动升级
+                        let (success, cash_delta_opt, new_level) = try_execute_upgrade_building(
+                            game, player_index, building_id, tile_id, upgrade_cost, level, game_data
+                        );
+
+                        if (success) {
+                            // 自动升级成功
+                            stop_type = events::stop_none();  // 自己的建筑，无特殊效果
+                            if (cash_delta_opt.is_some()) {
+                                cash_changes.push_back(cash_delta_opt.destroy_some());
+                            };
+
+                            // 发射建筑决策事件
+                            events::emit_building_decision_event(
+                                game.id.to_inner(),
+                                player_addr,
+                                types::DECISION_UPGRADE_PROPERTY(),
+                                building_id,
+                                tile_id,
+                                upgrade_cost,
+                                new_level,
+                                game.round,
+                                game.turn
+                            );
+
+                            // 不设置 pending_decision
+                        } else {
+                            // 现金不足，设置待决策
+                            stop_type = events::stop_none();  // 自己的建筑，无特殊效果
+                            game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
+                            game.decision_tile = tile_id;
+                            game.decision_amount = upgrade_cost;
+                        }
+                    } else {
+                        // 自动升级未启用，设置待决策
+                        stop_type = events::stop_none();  // 自己的建筑，无特殊效果
+                        game.pending_decision = types::DECISION_UPGRADE_PROPERTY();
+                        game.decision_tile = tile_id;
+                        game.decision_amount = upgrade_cost;
+                    }
                 } else {
                     // 已达最高级
                     stop_type = events::stop_none();  // 自己的建筑，无特殊效果

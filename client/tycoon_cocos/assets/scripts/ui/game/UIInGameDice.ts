@@ -65,7 +65,9 @@ export class UIInGameDice extends UIBase {
         // 监听骰子事件
         EventBus.on(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.on(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
-        EventBus.on(EventTypes.Dice.SetEnabled, this._onSetEnabled, this);
+
+        // 监听回合变化（更新骰子按钮状态）
+        EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
     }
 
     /**
@@ -78,7 +80,7 @@ export class UIInGameDice extends UIBase {
 
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.off(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
-        EventBus.off(EventTypes.Dice.SetEnabled, this._onSetEnabled, this);
+        EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
 
         super.unbindEvents();
     }
@@ -348,12 +350,12 @@ export class UIInGameDice extends UIBase {
     }
 
     /**
-     * 设置骰子按钮启用/禁用状态
+     * 回合变化处理（更新骰子按钮状态）
      */
-    private _onSetEnabled(data: { enabled: boolean }): void {
+    private _onTurnChanged(data: { isMyTurn: boolean }): void {
         if (this.m_btn_roll) {
-            this.m_btn_roll.enabled = data.enabled;
-            console.log('[UIInGameDice] 骰子按钮状态:', data.enabled ? '启用' : '禁用');
+            this.m_btn_roll.enabled = data.isMyTurn;
+            console.log('[UIInGameDice] 回合变化，骰子按钮:', data.isMyTurn ? '启用' : '禁用');
         }
     }
 }

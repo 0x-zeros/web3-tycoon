@@ -270,9 +270,7 @@ export const EventTypes = {
         /** 投掷结果 */
         RollResult: "dice_roll_result",
         /** 投掷完成 */
-        RollComplete: "dice_roll_complete",
-        /** 设置启用/禁用状态 */
-        SetEnabled: "dice_set_enabled"
+        RollComplete: "dice_roll_complete"
     },
 
     /** 音效相关事件 */

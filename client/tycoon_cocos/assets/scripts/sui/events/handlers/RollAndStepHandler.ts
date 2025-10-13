@@ -364,7 +364,7 @@ export class RollAndStepHandler {
             // RollAndStepActionEvent 包含 round 和 turn_in_round
             // GameSession 通过事件保持与链上同步，不需要重新查询
             session.setRound(event.round);
-            session.setTurn(event.turn_in_round);
+            session.setTurn(event.turn_in_round + 1);
 
             console.log('[RollAndStepHandler] 回合状态已同步（from event）', {
                 round: event.round,

@@ -993,7 +993,7 @@ fun try_execute_rent_payment(
     }
 }
 
-// 处在监狱或医院中，跳过回合； 只能只用这个，不能使用end_turn
+// 处在监狱或医院中，跳过回合； 
 entry fun skip_turn(
     game: &mut Game,
     seat: &Seat,
@@ -1320,13 +1320,17 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
     let player = &mut game.players[player_index as u64];
     let player_addr = player.owner;
 
-    let reason = if (player.in_prison_turns > 0) {
+    let (reason, remaining_turns) = if (player.in_prison_turns > 0) {
         player.in_prison_turns = player.in_prison_turns - 1;
-        types::SKIP_PRISON()
+        (types::SKIP_PRISON(), player.in_prison_turns)
     } else {
         player.in_hospital_turns = player.in_hospital_turns - 1;
-        types::SKIP_HOSPITAL()
+        (types::SKIP_HOSPITAL(), player.in_hospital_turns)
     };
+
+    // 保存 round 和 turn（在 clean_turn_state 之前）
+    let event_round = game.round;
+    let event_turn = game.turn;
 
     // 清理回合状态
     clean_turn_state(game, player_index);
@@ -1334,7 +1338,10 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
     events::emit_skip_turn_event(
         game.id.to_inner(),
         player_addr,
-        reason
+        reason,
+        remaining_turns,
+        event_round,
+        event_turn
     );
 }
 

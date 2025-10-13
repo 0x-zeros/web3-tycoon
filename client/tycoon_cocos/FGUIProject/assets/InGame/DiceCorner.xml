@@ -2,5 +2,8 @@
 <component size="256,256">
   <displayList>
     <component id="n2_mumq" name="btn_roll" src="mumq5" fileName="components/Dice.xml" xy="30,33"/>
+    <component id="n3_f49a" name="btn_skipturn" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="0,-63" size="256,128">
+      <Button title="结束回合"/>
+    </component>
   </displayList>
 </component>

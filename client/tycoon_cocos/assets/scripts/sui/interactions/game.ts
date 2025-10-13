@@ -305,6 +305,31 @@ export class GameInteraction {
         return tx;
     }
 
+    /**
+     * 构建跳过回合的交易
+     * 对应Move: public entry fun skip_turn
+     */
+    buildSkipTurnTx(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string
+    ): Transaction {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game::skip_turn`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.object(this.gameDataId),
+                tx.object(mapTemplateId),
+                tx.object(this.randomObjectId)
+            ]
+        });
+
+        return tx;
+    }
+
     // ============ 查询方法已移除 ============
     // 所有查询操作请使用 QueryService
     // GameInteraction 只负责构建交易

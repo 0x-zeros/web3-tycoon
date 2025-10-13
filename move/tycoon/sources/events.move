@@ -69,10 +69,13 @@ public struct TurnStartEvent has copy, drop {
 }
 
 // 跳过回合事件
-public struct SkipTurnEvent has copy, drop {//todo miss turn
+public struct SkipTurnEvent has copy, drop {
     game: ID,
     player: address,
-    reason: u8  // 1=监狱, 2=医院
+    reason: u8,            // 1=监狱, 2=医院
+    remaining_turns: u8,   // 剩余天数
+    round: u16,
+    turn: u8
 }
 
 // 回合结束事件
@@ -335,12 +338,18 @@ public(package) fun emit_bankrupt_event(
 public(package) fun emit_skip_turn_event(
     game_id: ID,
     player: address,
-    reason: u8
+    reason: u8,
+    remaining_turns: u8,
+    round: u16,
+    turn: u8
 ) {
     event::emit(SkipTurnEvent {
         game: game_id,
         player,
-        reason
+        reason,
+        remaining_turns,
+        round,
+        turn
     });
 }
 

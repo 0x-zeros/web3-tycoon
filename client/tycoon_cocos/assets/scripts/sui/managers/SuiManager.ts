@@ -33,7 +33,8 @@ import { rollAndStepHandler } from '../events/handlers/RollAndStepHandler';
 import { buildingDecisionHandler } from '../events/handlers/BuildingDecisionHandler';
 import { rentDecisionHandler } from '../events/handlers/RentDecisionHandler';
 import { decisionSkippedHandler } from '../events/handlers/DecisionSkippedHandler';
-import type { BuildingDecisionEvent, RentDecisionEvent, DecisionSkippedEvent } from '../events/types';
+import { skipTurnHandler } from '../events/handlers/SkipTurnHandler';
+import type { BuildingDecisionEvent, RentDecisionEvent, DecisionSkippedEvent, SkipTurnEvent } from '../events/types';
 
 /**
  * Sui Manager 配置选项
@@ -1159,6 +1160,12 @@ export class SuiManager {
 
             // 分发给 DecisionSkippedHandler 处理
             await decisionSkippedHandler.instance.handleEvent(event);
+        });
+
+        // 监听跳过回合事件
+        this._eventIndexer.on<SkipTurnEvent>(EventType.SKIP_TURN, async (event) => {
+            console.log('[SuiManager] SkipTurnEvent from chain:', event.data);
+            await skipTurnHandler.instance.handleEvent(event);
         });
 
         console.log('[SuiManager] Event listener started');

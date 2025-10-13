@@ -8,7 +8,7 @@
     <component id="mumq5" name="Dice.xml" path="/components/"/>
     <component id="mumq6" name="CardList.xml" path="/components/"/>
     <image id="ue83a" name="card11.png" path="/images/"/>
-    <component id="ue83b" name="Card.xml" path="/components/"/>
+    <component id="ue83b" name="Card.xml" path="/" exported="true"/>
     <component id="ue83f" name="MyPlayer.xml" path="/components/"/>
     <image id="ue83g" name="capy1.png" path="/images/player/"/>
     <image id="ue83h" name="capy2.png" path="/images/player/"/>

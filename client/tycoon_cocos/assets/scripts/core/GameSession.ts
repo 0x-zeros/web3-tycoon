@@ -453,12 +453,18 @@ export class GameSession {
             const tileNode = this._gameMap.getTileNode?.(tileId);
             if (tileNode) {
                 const worldPos = tileNode.getWorldPosition().clone();
-                // Tile block 高度为 1，顶部 y = center.y + 0.5
-                worldPos.y += 0.5;
+                // Voxel block 的 position 是角落，中心点需要 +0.5
+                worldPos.x += 0.5;  // X 轴中心
+                worldPos.y += 0.5;  // Y 轴顶部
+                worldPos.z += 0.5;  // Z 轴中心
                 gameTile.setWorldCenter(worldPos);
             } else {
                 // Fallback：使用 tile 的 x, y 坐标计算（假设每个 tile 是 1x1）
-                const worldPos = new Vec3(gameTile.x, 0.5, gameTile.y);
+                const worldPos = new Vec3(
+                    gameTile.x + 0.5,  // X 中心
+                    0.5,               // Y 顶部
+                    gameTile.y + 0.5   // Z 中心
+                );
                 gameTile.setWorldCenter(worldPos);
                 console.warn(`[GameSession] Tile ${tileId} 节点未找到，使用计算坐标`);
             }

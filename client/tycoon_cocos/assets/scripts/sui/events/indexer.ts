@@ -238,19 +238,22 @@ export class TycoonEventIndexer {
 
     /**
      * 规整事件数据字段，避免 ID 对象/字符串不一致导致匹配失败
+     * 展开嵌套的 fields 结构
      */
     private normalizeEventData(raw: any): any {
         try {
             const data: any = { ...raw };
+
             // 将 game 字段统一为字符串
             if (data && data.game && typeof data.game === 'object') {
                 if (typeof data.game.id === 'string') {
                     data.game = data.game.id;
                 } else if (typeof data.game.bytes === 'string') {
-                    data.game = data.game.bytes; // 某些节点表示为 bytes
+                    data.game = data.game.bytes;
                 }
             }
-            // 将 player 字段统一为字符串（address 一般已是字符串）
+
+            // 将 player 字段统一为字符串
             if (data && data.player && typeof data.player === 'object') {
                 if (typeof data.player.id === 'string') {
                     data.player = data.player.id;
@@ -258,6 +261,30 @@ export class TycoonEventIndexer {
                     data.player = data.player.bytes;
                 }
             }
+
+            // 递归展开 steps 中的 stop_effect.fields
+            if (data.steps && Array.isArray(data.steps)) {
+                data.steps = data.steps.map((step: any) => {
+                    const normalizedStep = { ...step };
+
+                    // 展开 stop_effect.fields
+                    if (normalizedStep.stop_effect && typeof normalizedStep.stop_effect === 'object') {
+                        if (normalizedStep.stop_effect.fields) {
+                            normalizedStep.stop_effect = { ...normalizedStep.stop_effect.fields };
+                        }
+                    }
+
+                    // 展开 npc_event.fields
+                    if (normalizedStep.npc_event && typeof normalizedStep.npc_event === 'object') {
+                        if (normalizedStep.npc_event.fields) {
+                            normalizedStep.npc_event = { ...normalizedStep.npc_event.fields };
+                        }
+                    }
+
+                    return normalizedStep;
+                });
+            }
+
             return data;
         } catch (_) {
             return raw;

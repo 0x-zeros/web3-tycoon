@@ -425,11 +425,17 @@ export class RollAndStepHandler {
         const lastStep = event.steps[event.steps.length - 1];
         const stopEffect = lastStep?.stop_effect;
 
-        if (!stopEffect || stopEffect.pending_decision === DecisionType.NONE) {
+        // 检查是否需要决策
+        if (!stopEffect ||
+            stopEffect.pending_decision === undefined ||
+            stopEffect.pending_decision === DecisionType.NONE) {
             return; // 无需决策
         }
 
-        console.log('[RollAndStepHandler] 检测到待决策', stopEffect);
+        console.log('[RollAndStepHandler] 检测到待决策', {
+            decisionType: stopEffect.pending_decision,
+            amount: stopEffect.decision_amount
+        });
 
         // 从 GameSession 获取最新数据
         const session = Blackboard.instance.get<any>("currentGameSession");
@@ -446,41 +452,8 @@ export class RollAndStepHandler {
 
         const canAfford = Number(player.getCash()) >= Number(stopEffect.decision_amount);
 
-        // 现金不足自动跳过（购买/升级）
-        if (!canAfford && stopEffect.pending_decision !== DecisionType.PAY_RENT) {
-            await this._autoSkipDecision(stopEffect.pending_decision, session);
-            return;
-        }
-
         // 显示决策 MessageBox
         await this._showDecisionDialog(stopEffect, player, canAfford, session);
-    }
-
-    /**
-     * 现金不足自动跳过
-     */
-    private async _autoSkipDecision(decisionType: number, session: any): Promise<void> {
-        const message = decisionType === DecisionType.BUY_PROPERTY
-            ? '现金不足，无法购买建筑'
-            : '现金不足，无法升级建筑';
-
-        UINotification.warning(message);
-
-        try {
-            const suiManager = SuiManager.instance;
-            const tx = suiManager.gameClient.game.buildSkipBuildingDecisionTx(
-                session.getGameId(),
-                session.getMySeat().id,
-                session.getTemplateMapId()
-            );
-
-            await suiManager.signAndExecuteTransaction(tx);
-            console.log('[RollAndStepHandler] 已自动跳过决策');
-
-        } catch (error) {
-            console.error('[RollAndStepHandler] 跳过决策失败', error);
-            UINotification.error('操作失败');
-        }
     }
 
     /**
@@ -517,17 +490,15 @@ export class RollAndStepHandler {
 
         await UIMessage.show({
             title: "购买建筑",
-            message: `购买价格：${price}\n当前现金：${balance}\n购买后余额：${balance - price}`,
+            message: `购买价格：${price}\n当前现金：${balance}${canAfford ? '' : ' (现金不足)'}\n购买后余额：${balance - price}`,
             icon: MessageBoxIcon.NONE,
             type: MessageBoxType.STYLE1,
             buttons: {
                 primary: {
-                    text: "购买",
-                    // TODO: 当 MessageBoxButtonConfig 支持 disabled 时启用
-                    // disabled: !canAfford,
+                    text: canAfford ? "购买" : "购买 (现金不足)",
                     callback: async () => {
                         if (!canAfford) {
-                            UINotification.warning('现金不足');
+                            UINotification.warning('现金不足，无法购买');
                             return;
                         }
                         await this._executeBuyBuilding(session);
@@ -562,17 +533,15 @@ export class RollAndStepHandler {
 
         await UIMessage.show({
             title: "升级建筑",
-            message: `当前等级：${currentLevel}\n升级价格：${price}\n当前现金：${balance}\n升级后余额：${balance - price}`,
+            message: `当前等级：${currentLevel}\n升级价格：${price}\n当前现金：${balance}${canAfford ? '' : ' (现金不足)'}\n升级后余额：${balance - price}`,
             icon: MessageBoxIcon.NONE,
             type: MessageBoxType.STYLE1,
             buttons: {
                 primary: {
-                    text: "升级",
-                    // TODO: 当 MessageBoxButtonConfig 支持 disabled 时启用
-                    // disabled: !canAfford,
+                    text: canAfford ? "升级" : "升级 (现金不足)",
                     callback: async () => {
                         if (!canAfford) {
-                            UINotification.warning('现金不足');
+                            UINotification.warning('现金不足，无法升级');
                             return;
                         }
                         await this._executeUpgradeBuilding(session);

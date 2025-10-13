@@ -373,25 +373,23 @@ export class UIInGameDice extends UIBase {
      * @param diceCount 骰子数量
      * @returns Promise，动画完成后 resolve
      */
-    private _playDiceAnimation(diceCount: number): Promise<void> {
-        return new Promise((resolve) => {
-            // 生成随机骰子值（实际值由链上决定，这里只是动画）
-            const diceValue = Math.floor(Math.random() * 6) + 1;
+    private async _playDiceAnimation(diceCount: number): Promise<void> {
+        console.log(`[UIInGameDice] 开始播放骰子循环动画，数量: ${diceCount}`);
 
-            console.log(`[UIInGameDice] 播放骰子动画，数量: ${diceCount}, 显示值: ${diceValue}`);
-
-            // 使用 DiceController 播放动画
-            DiceController.instance.roll(diceValue, () => {
-                console.log("[UIInGameDice] 骰子动画完成");
-                resolve();
-            });
-
-            // 发送投掷开始事件
-            EventBus.emit(EventTypes.Dice.StartRoll, {
-                diceCount: diceCount,
-                source: "ui_dice"
-            });
+        // 使用 DiceController 播放循环动画（不等待链上结果）
+        // DiceController 会持续循环，直到收到 Dice.RollResult 事件
+        DiceController.instance.startRolling(diceCount, () => {
+            console.log("[UIInGameDice] 骰子动画完成（已停在链上值）");
         });
+
+        // 发送投掷开始事件
+        EventBus.emit(EventTypes.Dice.StartRoll, {
+            diceCount: diceCount,
+            source: "ui_dice"
+        });
+
+        // 立即返回，不等待链上结果（避免阻塞交易提交）
+        // 骰子会在后台持续循环，收到 RollResult 事件后自动停止
     }
 
     /**

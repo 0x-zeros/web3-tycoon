@@ -70,6 +70,20 @@ export class RollAndStepHandler {
         const event = metadata.data;
 
         try {
+            // 0. 发送链上骰子结果，让骰子动画停在正确的值
+            // 骰子动画在 dice 点击时就开始播放（循环动画）
+            // 收到链上真实值后，让动画停止在该值
+            // 无论是普通骰子还是遥控骰子，都以链上返回的 dice 值为准
+            EventBus.emit(EventTypes.Dice.RollResult, {
+                value: event.dice,  // 链上真实骰子值（1-6 或遥控骰子时可能更大）
+                source: 'chain'
+            });
+
+            console.log('[RollAndStepHandler] 发送骰子结果:', event.dice);
+
+            // TODO: DiceController 需要监听 Dice.RollResult 事件
+            // 在收到后停止循环动画，播放减速到目标值的动画
+
             // 1. 更新 GameSession 数据
             await this.updateGameSession(event);
 

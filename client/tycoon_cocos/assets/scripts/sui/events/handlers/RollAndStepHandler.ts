@@ -419,13 +419,13 @@ export class RollAndStepHandler {
             return;
         }
 
-        const player = session.getCurrentPlayer();
+        const player = session.getActivePlayer();
         if (!player) {
-            console.warn('[RollAndStepHandler] Current player not found');
+            console.warn('[RollAndStepHandler] Active player not found');
             return;
         }
 
-        const canAfford = Number(player.cash) >= Number(stopEffect.decision_amount);
+        const canAfford = Number(player.getCash()) >= Number(stopEffect.decision_amount);
 
         // 现金不足自动跳过（购买/升级）
         if (!canAfford && stopEffect.pending_decision !== DecisionType.PAY_RENT) {
@@ -494,7 +494,7 @@ export class RollAndStepHandler {
         session: any
     ): Promise<void> {
         const price = Number(stopEffect.decision_amount);
-        const balance = Number(player.cash);
+        const balance = Number(player.getCash());
 
         await UIMessage.show({
             title: "购买建筑",
@@ -538,7 +538,7 @@ export class RollAndStepHandler {
         session: any
     ): Promise<void> {
         const price = Number(stopEffect.decision_amount);
-        const balance = Number(player.cash);
+        const balance = Number(player.getCash());
         const currentLevel = stopEffect.level ?? 0;
 
         await UIMessage.show({
@@ -583,11 +583,11 @@ export class RollAndStepHandler {
         session: any
     ): Promise<void> {
         const rent = Number(stopEffect.decision_amount);
-        const balance = Number(player.cash);
+        const balance = Number(player.getCash());
         const owner = stopEffect.owner ?? '未知';
 
-        // 检查是否有免租卡
-        const hasRentFreeCard = player.cards?.some(card => card.kind === 3 && card.count > 0) ?? false;
+        // 检查是否有免租卡（kind=3 是免租卡）
+        const hasRentFreeCard = player.getCardCount(3) > 0;
 
         await UIMessage.show({
             title: "支付租金",

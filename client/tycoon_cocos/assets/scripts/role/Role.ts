@@ -307,11 +307,11 @@ export abstract class Role {
         this.m_targetTileId = params.targetTileId;
         
         try {
-            // 通知Actor执行移动动画
-            if (this.m_actor) {
-                await this.m_actor.moveToTile(params);
+            // 通知 PaperActor 执行移动动画
+            if (this._paperActor) {
+                await this._paperActor.moveToTile(params);
             }
-            
+
             // 更新位置
             this.setCurrentTileId(params.targetTileId);
             this.setState(RoleState.IDLE);

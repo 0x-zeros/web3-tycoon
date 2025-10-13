@@ -508,6 +508,140 @@ export class PaperActor extends Component {
     }
 
     /**
+     * 移动到指定 Tile（配合 Role 系统）
+     * 根据 playerIndex 使用不同的移动动画
+     */
+    public async moveToTile(params: any): Promise<void> {
+        const targetPos = params.targetPosition;
+        const playerIndex = params.playerIndex ?? 0;
+
+        if (!targetPos) {
+            console.warn('[PaperActor] No targetPosition in params');
+            return;
+        }
+
+        // 根据玩家索引选择移动动画
+        switch (playerIndex % 4) {
+            case 0:
+                await this._moveWithHop(targetPos);  // 轻快跳跃
+                break;
+            case 1:
+                await this._moveWithBounce(targetPos);  // 弹性蹦跳
+                break;
+            case 2:
+                await this._moveWithDash(targetPos);  // 快速冲刺
+                break;
+            case 3:
+                await this._moveWithGlide(targetPos);  // 平滑滑行
+                break;
+        }
+    }
+
+    /**
+     * Player 0 - 轻快跳跃（Hop）
+     * 小弧线，快速节奏
+     */
+    private _moveWithHop(targetPos: Vec3): Promise<void> {
+        return new Promise((resolve) => {
+            this.stopTween('move');
+            this.state = 'moving';
+            this.playFrameAnimation('walk');
+
+            const startPos = this.node.position.clone();
+            const midPos = startPos.clone().add(targetPos).multiplyScalar(0.5);
+            midPos.y += 0.3;  // 小弧线
+
+            tween(this.node)
+                .to(0.2, { position: midPos }, { easing: 'quadOut' })
+                .to(0.2, { position: targetPos }, { easing: 'quadIn' })
+                .call(() => {
+                    this.state = 'idle';
+                    this.playFrameAnimation('idle');
+                    resolve();
+                })
+                .start();
+        });
+    }
+
+    /**
+     * Player 1 - 弹性蹦跳（Bounce）
+     * 弹性起跳，弹性落地
+     */
+    private _moveWithBounce(targetPos: Vec3): Promise<void> {
+        return new Promise((resolve) => {
+            this.stopTween('move');
+            this.state = 'moving';
+            this.playFrameAnimation('walk');
+
+            const startPos = this.node.position.clone();
+            const midPos = startPos.clone().add(targetPos).multiplyScalar(0.5);
+            midPos.y += 0.5;  // 较高弧线
+
+            tween(this.node)
+                .to(0.3, { position: midPos }, { easing: 'backOut' })  // 弹性起跳
+                .to(0.3, { position: targetPos }, { easing: 'bounceOut' })  // 弹性落地
+                .call(() => {
+                    this.state = 'idle';
+                    this.playFrameAnimation('idle');
+                    resolve();
+                })
+                .start();
+        });
+    }
+
+    /**
+     * Player 2 - 快速冲刺（Dash）
+     * 加速-减速，略微升高
+     */
+    private _moveWithDash(targetPos: Vec3): Promise<void> {
+        return new Promise((resolve) => {
+            this.stopTween('move');
+            this.state = 'moving';
+            this.playFrameAnimation('walk');
+
+            const startPos = this.node.position.clone();
+            const midPos = startPos.clone().add(targetPos).multiplyScalar(0.5);
+            midPos.y += 0.2;  // 略微升高
+
+            tween(this.node)
+                .to(0.15, { position: midPos }, { easing: 'quadIn' })  // 加速
+                .to(0.2, { position: targetPos }, { easing: 'quadOut' })  // 减速
+                .call(() => {
+                    this.state = 'idle';
+                    this.playFrameAnimation('idle');
+                    resolve();
+                })
+                .start();
+        });
+    }
+
+    /**
+     * Player 3 - 平滑滑行（Glide）
+     * 平滑曲线，轻盈感
+     */
+    private _moveWithGlide(targetPos: Vec3): Promise<void> {
+        return new Promise((resolve) => {
+            this.stopTween('move');
+            this.state = 'moving';
+            this.playFrameAnimation('walk');
+
+            const startPos = this.node.position.clone();
+            const midPos = startPos.clone().add(targetPos).multiplyScalar(0.5);
+            midPos.y += 0.3;  // 平滑弧线
+
+            tween(this.node)
+                .to(0.25, { position: midPos }, { easing: 'sineOut' })
+                .to(0.25, { position: targetPos }, { easing: 'sineIn' })
+                .call(() => {
+                    this.state = 'idle';
+                    this.playFrameAnimation('idle');
+                    resolve();
+                })
+                .start();
+        });
+    }
+
+    /**
      * 建筑升级动画
      */
     public upgrade(newLevel: number) {

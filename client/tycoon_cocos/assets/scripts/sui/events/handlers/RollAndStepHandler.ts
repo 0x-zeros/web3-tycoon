@@ -89,7 +89,7 @@ export class RollAndStepHandler {
 
             // 2. 创建 RollAndStepAction 播放实例
             const action = new RollAndStepAction(event, {
-                stepDelay: 800,        // 每步延迟 800ms
+                stepDelay: 400,        // 每步延迟 400ms（缩短间隔）
                 autoPlay: true,        // 自动播放
                 playbackSpeed: 1.0     // 正常速度
             });
@@ -207,13 +207,14 @@ export class RollAndStepHandler {
         // 获取目标 tile 的顶部中心点
         const targetCenter = session.getTileWorldCenter(step.to_tile);
 
-        // 触发玩家移动动画（直线移动到 tile 顶部中心）
+        // 触发玩家移动动画（根据玩家索引使用不同动画）
         try {
             await player.moveTo({
                 targetTileId: step.to_tile,
                 steps: 1,
                 path: [step.to_tile],
-                targetPosition: targetCenter  // Tile 顶部中心点
+                targetPosition: targetCenter,  // Tile 顶部中心点
+                playerIndex: player.getPlayerIndex()  // 玩家索引（用于选择动画）
             });
 
             console.log(`[RollAndStepHandler] 玩家移动完成: ${step.from_tile} -> ${step.to_tile}`);

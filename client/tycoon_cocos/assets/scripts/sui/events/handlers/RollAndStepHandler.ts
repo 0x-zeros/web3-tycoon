@@ -34,6 +34,9 @@ export class RollAndStepHandler {
     /** 当前播放的 action */
     private currentAction: RollAndStepAction | null = null;
 
+    /** 当前 GameSession（缓存，避免重复获取） */
+    private currentSession: any = null;
+
     private constructor() {
         console.log('[RollAndStepHandler] Handler 创建');
     }
@@ -70,6 +73,13 @@ export class RollAndStepHandler {
         const event = metadata.data;
 
         try {
+            // 获取并缓存 GameSession
+            this.currentSession = Blackboard.instance.get<any>("currentGameSession");
+            if (!this.currentSession) {
+                console.warn('[RollAndStepHandler] GameSession not found');
+                return;
+            }
+
             // 0. 发送链上骰子结果，让骰子动画停在正确的值
             // 骰子动画在 dice 点击时就开始播放（循环动画）
             // 收到链上真实值后，让动画停止在该值
@@ -88,11 +98,15 @@ export class RollAndStepHandler {
             await this.updateGameSession(event);
 
             // 2. 创建 RollAndStepAction 播放实例
-            const action = new RollAndStepAction(event, {
-                stepDelay: 400,        // 每步延迟 400ms（缩短间隔）
-                autoPlay: true,        // 自动播放
-                playbackSpeed: 1.0     // 正常速度
-            });
+            const action = new RollAndStepAction(
+                event,
+                this.currentSession,  // 传递缓存的 session
+                {
+                    stepDelay: 400,        // 每步延迟 400ms（缩短间隔）
+                    autoPlay: true,        // 自动播放
+                    playbackSpeed: 1.0     // 正常速度
+                }
+            );
 
             // 3. 注册回调
             action
@@ -135,12 +149,8 @@ export class RollAndStepHandler {
     private async updateGameSession(event: RollAndStepActionEvent): Promise<void> {
         console.log('[RollAndStepHandler] 更新 GameSession 数据');
 
-        // 获取 GameSession
-        const session = Blackboard.instance.get<any>("currentGameSession");
-        if (!session) {
-            console.warn('[RollAndStepHandler] GameSession 未找到');
-            return;
-        }
+        // 使用缓存的 GameSession
+        const session = this.currentSession;
 
         // 找到对应的玩家
         const player = session.getPlayerByAddress(event.player);
@@ -197,9 +207,8 @@ export class RollAndStepHandler {
         index: number,
         event: RollAndStepActionEvent
     ): Promise<void> {
-        // 获取 GameSession 和玩家
-        const session = Blackboard.instance.get<any>("currentGameSession");
-        if (!session) return;
+        // 使用缓存的 GameSession
+        const session = this.currentSession;
 
         const player = session.getPlayerByAddress(event.player);
         if (!player) return;
@@ -311,8 +320,8 @@ export class RollAndStepHandler {
     private async handlePlaybackComplete(event: RollAndStepActionEvent): Promise<void> {
         console.log('[RollAndStepHandler] 所有步骤播放完成');
 
-        // 获取 GameSession
-        const session = Blackboard.instance.get<any>("currentGameSession");
+        // 使用缓存的 GameSession
+        const session = this.currentSession;
 
         if (session) {
             // 1. 检查事件是否属于当前游戏
@@ -437,12 +446,8 @@ export class RollAndStepHandler {
             amount: stopEffect.decision_amount
         });
 
-        // 从 GameSession 获取最新数据
-        const session = Blackboard.instance.get<any>("currentGameSession");
-        if (!session) {
-            console.warn('[RollAndStepHandler] GameSession not found');
-            return;
-        }
+        // 使用缓存的 GameSession
+        const session = this.currentSession;
 
         const player = session.getActivePlayer();
         if (!player) {

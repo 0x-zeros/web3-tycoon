@@ -21,6 +21,7 @@
     <component id="pn5rou" name="Tile.xml" path="/components/"/>
     <component id="f49aov" name="PlaySetting.xml" path="/components/"/>
     <component id="f49aow" name="DecisionBuilding.xml" path="/components/"/>
+    <component id="f49aox" name="CardDraws.xml" path="/" exported="true"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

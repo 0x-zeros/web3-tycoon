@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="380,333">
+  <displayList>
+    <list id="n0_f49a" name="list" xy="1,76" size="376,256" layout="row" overflow="scroll" scroll="horizontal" defaultItem="ui://8z385pimue83b">
+      <item/>
+      <item/>
+    </list>
+    <text id="n2_f49a" name="title" xy="2,12" size="375,45" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="玩家xxx 获取卡牌 2张"/>
+  </displayList>
+</component>

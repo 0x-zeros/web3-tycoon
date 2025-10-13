@@ -64,6 +64,9 @@ export class RollAndStepAction {
     /** 事件数据 */
     private event: RollAndStepActionEvent;
 
+    /** GameSession 引用（缓存） */
+    private session: any;
+
     /** 当前播放状态 */
     private state: PlaybackState = PlaybackState.IDLE;
 
@@ -87,8 +90,9 @@ export class RollAndStepAction {
     /** 是否正在执行 step（防止重复执行） */
     private isExecutingStep: boolean = false;
 
-    constructor(event: RollAndStepActionEvent, config?: PlaybackConfig) {
+    constructor(event: RollAndStepActionEvent, session: any, config?: PlaybackConfig) {
         this.event = event;
+        this.session = session;
 
         // 设置默认配置
         this.config = {
@@ -407,6 +411,13 @@ export class RollAndStepAction {
      */
     public getEvent(): RollAndStepActionEvent {
         return this.event;
+    }
+
+    /**
+     * 获取 GameSession
+     */
+    public getSession(): any {
+        return this.session;
     }
 
     /**

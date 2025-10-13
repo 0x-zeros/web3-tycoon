@@ -285,6 +285,26 @@ export class RollAndStepHandler {
         if (step.npc_event) {
             console.log('[RollAndStepHandler] 处理 NPC 交互', step.npc_event);
 
+            // 1. 显示 NPC 事件中文描述
+            const description = this._getNpcEventDescription(step.npc_event);
+            UINotification.info(description, 'NPC事件');
+
+            // 2. 如果 NPC 被消耗，删除
+            if (step.npc_event.consumed) {
+                const session = this.currentSession;
+
+                // 从 GameSession 数据删除
+                session.removeNPC(step.npc_event.tile_id);
+
+                // 从 GameMap 渲染删除
+                const gameMap = session.getGameMap();
+                if (gameMap && gameMap.removeNPCActor) {
+                    gameMap.removeNPCActor(step.npc_event.tile_id);
+                }
+
+                console.log('[RollAndStepHandler] NPC 已消耗并删除:', step.npc_event.tile_id);
+            }
+
             // TODO: 播放 NPC 交互动画
             // 根据 NPC result 播放不同动画：
             //
@@ -303,14 +323,21 @@ export class RollAndStepHandler {
         if (step.pass_draws && step.pass_draws.length > 0) {
             console.log('[RollAndStepHandler] 处理路过卡牌', step.pass_draws);
 
-            // TODO: 显示卡牌获取动画
-            // 每个卡牌：
-            // - 从地块位置飞向玩家
-            // - 显示卡牌图标和数量（+count）
-            // - 播放获取音效
-            //
-            // 数据：step.pass_draws 数组
-            // 格式：{ tile_id, kind, count, is_pass: true }
+            const session = this.currentSession;
+            const player = session.getPlayerByAddress(event.player);
+
+            if (player) {
+                // 1. 添加卡牌到玩家数据
+                for (const cardDraw of step.pass_draws) {
+                    player.addCard(cardDraw.kind, cardDraw.count);
+                }
+
+                // 2. 显示 CardDraws UI
+                // TODO: 需要创建 CardDraws UI 组件
+                // 暂时使用 Notification 显示
+                const cardNames = step.pass_draws.map(c => `卡牌${c.kind} x${c.count}`).join(', ');
+                UINotification.info(`获得: ${cardNames}`, '卡牌');
+            }
         }
     }
 
@@ -384,8 +411,46 @@ export class RollAndStepHandler {
             steps: event.steps.length
         });
 
+        // 检查是否需要瞬移（最后一步的 to_tile vs end_pos）
+        await this._handleTeleportIfNeeded(event);
+
         // 检查是否有待决策状态
         await this._handleDecisionIfNeeded(event);
+    }
+
+    /**
+     * 检查并处理玩家瞬移
+     */
+    private async _handleTeleportIfNeeded(event: RollAndStepActionEvent): Promise<void> {
+        const lastStep = event.steps[event.steps.length - 1];
+
+        if (!lastStep || lastStep.to_tile === event.end_pos) {
+            return; // 无需瞬移
+        }
+
+        console.log('[RollAndStepHandler] 检测到玩家瞬移', {
+            lastTile: lastStep.to_tile,
+            endPos: event.end_pos,
+            reason: '遇到炸弹/恶犬等 NPC'
+        });
+
+        // 瞬移玩家到 end_pos
+        const session = this.currentSession;
+        const player = session.getPlayerByAddress(event.player);
+
+        if (player) {
+            const targetCenter = session.getTileWorldCenter(event.end_pos);
+
+            // 使用 teleport 参数瞬移（无动画）
+            await player.moveTo({
+                targetTileId: event.end_pos,
+                steps: 0,
+                targetPosition: targetCenter,
+                teleport: true
+            });
+
+            console.log('[RollAndStepHandler] 玩家已瞬移到:', event.end_pos);
+        }
     }
 
     /**
@@ -722,11 +787,47 @@ export class RollAndStepHandler {
         }
     }
 
+    // ==================== 辅助方法 ====================
+
+    /**
+     * 获取 NPC 事件的中文描述
+     */
+    private _getNpcEventDescription(npcEvent: any): string {
+        const npcName = this._getNpcKindName(npcEvent.kind);
+
+        const NpcResult = { NONE: 0, SEND_HOSPITAL: 1, BARRIER_STOP: 2 };
+
+        if (npcEvent.result === NpcResult.SEND_HOSPITAL) {
+            return `遇到${npcName}！被送往医院`;
+        } else if (npcEvent.result === NpcResult.BARRIER_STOP) {
+            return `遇到${npcName}！前进受阻`;
+        } else {
+            return `遇到${npcName}`;
+        }
+    }
+
+    /**
+     * NPC 类型中文名称
+     */
+    private _getNpcKindName(kind: number): string {
+        switch (kind) {
+            case 20: return '路障';
+            case 21: return '炸弹';
+            case 22: return '恶犬';
+            case 23: return '土地神';
+            case 24: return '财神';
+            case 25: return '福神';
+            case 26: return '穷神';
+            default: return 'NPC';
+        }
+    }
+
     /**
      * 销毁
      */
     public destroy(): void {
         this.stopCurrentAction();
+        this.currentSession = null;
         RollAndStepHandler._instance = null;
         console.log('[RollAndStepHandler] Handler 销毁');
     }

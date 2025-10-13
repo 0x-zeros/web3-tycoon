@@ -223,6 +223,33 @@ export class Player extends Role {
         return this._cards.reduce((sum, card) => sum + card.count, 0);
     }
 
+    /**
+     * 添加卡牌
+     * @param cardKind 卡牌类型
+     * @param count 数量
+     */
+    public addCard(cardKind: number, count: number): void {
+        const existingCard = this._cards.find(c => c.kind === cardKind);
+
+        if (existingCard) {
+            // 已有该类型卡牌，增加数量
+            existingCard.count += count;
+        } else {
+            // 新卡牌类型
+            this._cards.push(Card.fromEntry(cardKind, count));
+        }
+
+        console.log(`[Player] 添加卡牌: kind=${cardKind}, count=${count}`);
+
+        // 触发卡牌变化事件
+        EventBus.emit(EventTypes.Player.CardChange, {
+            playerId: this.m_oId,
+            cardKind,
+            count,
+            totalCount: this.getTotalCardCount()
+        });
+    }
+
     // ========================= 状态查询 =========================
 
     /**

@@ -215,6 +215,11 @@ const BUILDING_CONFIGS: ActorConfig[] = [
         textures: {
             levels: [
                 'web3/buildings/lv0',  // 空地 - 只有lv0表示空地
+                'web3/buildings/lv1',
+                'web3/buildings/lv2',
+                'web3/buildings/lv3',
+                'web3/buildings/lv4',
+                'web3/buildings/lv5',
             ]
         },
         size: { width: 1, height: 1, scale: 1 },

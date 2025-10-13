@@ -351,18 +351,27 @@ export class PaperActor extends Component {
      */
     private getTexturePath(): string {
         if (!this.actorId) return '';
-
+    
+        // 使用配置中的纹理路径，而不是简单拼接
+        if (this.config && this.config.textures) {
+            if (this.actorType === ActorType.BUILDING && this.config.textures.levels) {
+                // 建筑：使用配置中的等级纹理
+                const levelIndex = Math.min(this.level, this.config.textures.levels.length - 1);
+                return this.config.textures.levels[levelIndex];
+            } else if (this.config.textures.default) {
+                // NPC/物体/玩家：使用默认纹理
+                return this.config.textures.default;
+            }
+        }
+    
+        // 回退到原来的逻辑（保持兼容性）
         const id = this.actorId.replace('web3:', '');
-
-        // 根据类型决定路径
         if (this.actorType === ActorType.BUILDING) {
-            // 建筑：包含等级
             if (this.level === 0) {
                 return `web3/buildings/lv${this.level}`;
             }
             return `web3/buildings/${id}_lv${this.level}`;
         } else {
-            // NPC/物体/玩家
             return `web3/actors/${id}`;
         }
     }

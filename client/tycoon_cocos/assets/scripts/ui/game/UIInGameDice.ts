@@ -33,6 +33,9 @@ export class UIInGameDice extends UIBase {
     /** 投掷骰子按钮 */
     private m_btn_roll: fgui.GButton;
 
+    /** 跳过回合按钮 */
+    private m_btn_skipTurn: fgui.GButton;
+
     /**
      * 初始化回调
      */
@@ -47,11 +50,20 @@ export class UIInGameDice extends UIBase {
         // dice 组件结构：dice > n2（按钮组件）
         // n2 本身是 Button 组件（extention="Button"）
         this.m_btn_roll = this.getButton('btn_roll');
+        this.m_btn_skipTurn = this.getButton('btn_skipTurn');
 
         if (this.m_btn_roll) {
             console.log('[UIInGameDice] Dice button found');
         } else {
             console.error('[UIInGameDice] Dice button (n2) not found');
+        }
+
+        // 默认隐藏 skipTurn 按钮
+        if (this.m_btn_skipTurn) {
+            this.m_btn_skipTurn.visible = false;
+            console.log('[UIInGameDice] Skip turn button found');
+        } else {
+            console.error('[UIInGameDice] Skip turn button not found');
         }
     }
 
@@ -61,6 +73,10 @@ export class UIInGameDice extends UIBase {
     protected bindEvents(): void {
         if (this.m_btn_roll) {
             this.m_btn_roll.onClick(this._onRollDiceOnSui, this);
+        }
+
+        if (this.m_btn_skipTurn) {
+            this.m_btn_skipTurn.onClick(this._onSkipTurnClick, this);
         }
 
         // 监听骰子事件
@@ -77,6 +93,10 @@ export class UIInGameDice extends UIBase {
     protected unbindEvents(): void {
         if (this.m_btn_roll) {
             this.m_btn_roll.offClick(this._onRollDiceOnSui, this);
+        }
+
+        if (this.m_btn_skipTurn) {
+            this.m_btn_skipTurn.offClick(this._onSkipTurnClick, this);
         }
 
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
@@ -107,33 +127,34 @@ export class UIInGameDice extends UIBase {
      * 更新按钮状态（根据当前回合）
      */
     private _updateButtonState(): void {
-        if (!this.m_btn_roll) return;
-
-        // ✅ 改为从 GameInitializer 获取（和 UIInGamePlayer 一致）
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
-            // 没有 GameSession，禁用按钮
             this.m_btn_roll.enabled = false;
+            if (this.m_btn_skipTurn) {
+                this.m_btn_skipTurn.visible = false;
+            }
             console.log('[UIInGameDice] No session, 骰子按钮禁用');
             return;
         }
 
-        // ✅ 添加详细调试信息
-        const myPlayerIndex = session.getMyPlayerIndex();
-        const activePlayerIndex = session.getActivePlayerIndex();
         const isMyTurn = session.isMyTurn();
+        const myPlayer = session.getMyPlayer();
 
-        console.log('[UIInGameDice] _updateButtonState 调试:', {
-            myPlayerIndex,
-            activePlayerIndex,
-            isMyTurn,
-            calculation: `${myPlayerIndex} === ${activePlayerIndex} = ${isMyTurn}`
-        });
+        // 检查是否在监狱或医院
+        const shouldSkip = myPlayer && (
+            myPlayer.isInPrison() || myPlayer.isInHospital()
+        );
 
-        // 根据是否是我的回合设置状态
-        this.m_btn_roll.enabled = isMyTurn;
+        // btn_skipTurn: 轮到自己 && 在监狱/医院
+        if (this.m_btn_skipTurn) {
+            this.m_btn_skipTurn.visible = isMyTurn && shouldSkip;
+            console.log('[UIInGameDice] SkipTurn 按钮:', shouldSkip ? '显示' : '隐藏');
+        }
 
-        console.log('[UIInGameDice] 按钮设置为:', isMyTurn ? '启用' : '禁用');
+        // dice: 轮到自己 && 不在监狱/医院
+        this.m_btn_roll.enabled = isMyTurn && !shouldSkip;
+
+        console.log('[UIInGameDice] Dice 按钮:', (isMyTurn && !shouldSkip) ? '启用' : '禁用');
     }
 
     /**
@@ -368,6 +389,39 @@ export class UIInGameDice extends UIBase {
     }
 
     /**
+     * 跳过回合按钮点击
+     */
+    private async _onSkipTurnClick(): Promise<void> {
+        console.log('[UIInGameDice] Skip turn button clicked');
+
+        // 禁用按钮防止重复点击
+        if (this.m_btn_skipTurn) {
+            this.m_btn_skipTurn.enabled = false;
+        }
+
+        try {
+            const session = GameInitializer.getInstance()?.getGameSession();
+            if (!session) {
+                throw new Error('GameSession 未找到');
+            }
+
+            // 调用 SuiManager 封装方法
+            await SuiManager.instance.skipTurn(session);
+
+            console.log('[UIInGameDice] 跳过回合交易已发送');
+
+        } catch (error) {
+            console.error('[UIInGameDice] 跳过回合失败', error);
+            UINotification.error('跳过回合失败');
+
+            // 恢复按钮（如果仍然需要跳过）
+            if (this.m_btn_skipTurn) {
+                this.m_btn_skipTurn.enabled = true;
+            }
+        }
+    }
+
+    /**
      * 播放骰子动画
      *
      * @param diceCount 骰子数量
@@ -413,9 +467,6 @@ export class UIInGameDice extends UIBase {
      * 回合变化处理（更新骰子按钮状态）
      */
     private _onTurnChanged(data: { isMyTurn: boolean }): void {
-        if (this.m_btn_roll) {
-            this.m_btn_roll.enabled = data.isMyTurn;
-            console.log('[UIInGameDice] 回合变化，骰子按钮:', data.isMyTurn ? '启用' : '禁用');
-        }
+        this._updateButtonState();  // 统一使用 _updateButtonState
     }
 }

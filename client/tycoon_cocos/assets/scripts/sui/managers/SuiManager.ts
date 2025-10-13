@@ -523,6 +523,42 @@ export class SuiManager {
     }
 
     /**
+     * 跳过回合（监狱/医院）
+     * @param session GameSession 实例
+     * @returns 交易结果
+     */
+    public async skipTurn(session: any): Promise<{
+        success: boolean;
+        txHash: string;
+    }> {
+        this._ensureInitialized();
+        this._ensureSigner();
+
+        this._log('[SuiManager] Skipping turn...', {
+            gameId: session.getGameId()
+        });
+
+        // 构建交易
+        const tx = this._gameClient!.game.buildSkipTurnTx(
+            session.getGameId(),
+            session.getMySeat().id,
+            session.getTemplateMapId()
+        );
+
+        // 签名并执行
+        const result = await this.signAndExecuteTransaction(tx);
+
+        const response = {
+            success: true,
+            txHash: result.digest
+        };
+
+        this._log('[SuiManager] Skip turn completed', response);
+
+        return response;
+    }
+
+    /**
      * 获取游戏状态
      * @param gameId 游戏 ID
      * @returns 游戏对象

@@ -29,6 +29,7 @@ const ENotEnoughPlayers: u64 = 6004;
 const EAlreadyJoined: u64 = 6005;
 const EInvalidDecision: u64 = 6006;
 const EPendingDecision: u64 = 6007;
+const EShouldSkipTurn: u64 = 6008;  // 当前状态不应跳过回合
 
 // 经济相关错误
 const EInsufficientFunds: u64 = 7001;
@@ -312,7 +313,7 @@ fun parse_game_params(params: &vector<u64>): (u64, u8, u8) {
 }
 
 // 创建游戏
-public entry fun create_game(
+entry fun create_game(
     game_data: &GameData,
     map: &map::MapTemplate,  // 新增：直接传map引用
     params: vector<u64>,  // 通用参数（params[0]=max_rounds, 0表示无限）
@@ -397,7 +398,7 @@ public entry fun create_game(
 }
 
 // 加入游戏
-public entry fun join(
+entry fun join(
     game: &mut Game,
     game_data: &GameData,
     ctx: &mut TxContext
@@ -448,7 +449,7 @@ public entry fun join(
 }
 
 // 开始游戏
-public entry fun start(
+entry fun start(
     game: &mut Game,
     game_data: &GameData,
     map: &map::MapTemplate,
@@ -550,7 +551,7 @@ public entry fun start(
 // mint_turncap 已被移除，直接使用 Seat 验证身份
 
 // 使用卡牌
-public entry fun use_card(
+entry fun use_card(
     game: &mut Game,
     seat: &Seat,
     kind: u8,
@@ -560,8 +561,6 @@ public entry fun use_card(
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
-
-    // 验证座位和回合
     validate_seat_and_turn(game, seat);
 
     // 验证没有待决策
@@ -611,7 +610,7 @@ public entry fun use_card(
 
 // 掷骰并移动
 // path现在必须始终传递（客户端寻路）
-public entry fun roll_and_step(
+entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
     path: vector<u16>,  // 完整路径（客户端寻路生成）
@@ -625,11 +624,7 @@ public entry fun roll_and_step(
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
-
-    // 验证并自动处理跳过
-    if (validate_and_auto_skip(game, seat, game_data, map, r, ctx)) {
-        return
-    };
+    validate_seat_and_turn(game, seat);
 
     // 验证没有待决策
     assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
@@ -715,7 +710,7 @@ public entry fun roll_and_step(
 }
 
 // 决定租金支付方式（使用免租卡或支付现金）
-public entry fun decide_rent_payment(
+entry fun decide_rent_payment(
     game: &mut Game,
     seat: &Seat,
     use_rent_free: bool,
@@ -725,8 +720,6 @@ public entry fun decide_rent_payment(
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
-
-    // 验证座位和回合
     validate_seat_and_turn(game, seat);
 
     // 验证待决策状态
@@ -795,7 +788,7 @@ public entry fun decide_rent_payment(
 }
 
 // 跳过建筑决策（不购买或不升级）
-public entry fun skip_building_decision(
+entry fun skip_building_decision(
     game: &mut Game,
     seat: &Seat,
     game_data: &GameData,
@@ -803,7 +796,7 @@ public entry fun skip_building_decision(
     r: &Random,
     ctx: &mut TxContext
 ) {
-    // 验证座位和回合
+    validate_map(game, map);
     validate_seat_and_turn(game, seat);
 
     // 验证有待决策
@@ -1000,43 +993,8 @@ fun try_execute_rent_payment(
     }
 }
 
-// ============ 公共entry函数 ============
-
-// 结束回合（手动）
-public entry fun end_turn(
-    game: &mut Game,
-    seat: &Seat,
-    game_data: &GameData,
-    map: &map::MapTemplate,
-    r: &Random,
-    ctx: &mut TxContext
-) {
-    // 验证座位和回合
-    validate_seat_and_turn(game, seat);
-
-    // 验证没有待决策
-    assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
-
-    let player_addr = seat.player;
-    let player_index = seat.player_index;
-
-    // 清理回合状态
-    clean_turn_state(game, player_index);
-
-    // 发出结束回合事件
-    events::emit_end_turn_event(
-        game.id.to_inner(),
-        player_addr,
-        (game.round as u16),
-        (game.turn as u8)
-    );
-
-    // 推进回合
-    advance_turn(game, game_data, map, r, ctx);
-}
-
-// 购买建筑
-public entry fun buy_building(
+// 处在监狱或医院中，跳过回合； 只能只用这个，不能使用end_turn
+entry fun skip_turn(
     game: &mut Game,
     seat: &Seat,
     game_data: &GameData,
@@ -1045,8 +1003,63 @@ public entry fun buy_building(
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
+    validate_seat_and_turn(game, seat);
 
-    // 验证座位和回合
+    // 验证没有待决策
+    assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
+
+    //验证should_skip_turn
+    assert!(should_skip_turn(game, seat.player_index), EShouldSkipTurn);
+
+    handle_skip_turn(game, seat.player_index);
+
+    // 推进回合
+    advance_turn(game, game_data, map, r, ctx);
+}
+
+// // 结束回合，暂时没有使用，现在的游戏设计用不到这个一个，所以去掉entry, 不然调用
+// fun end_turn(
+//     game: &mut Game,
+//     seat: &Seat,
+//     game_data: &GameData,
+//     map: &map::MapTemplate,
+//     r: &Random,
+//     ctx: &mut TxContext
+// ) {
+//     validate_map(game, map);
+//     validate_seat_and_turn(game, seat);
+
+//     // 验证没有待决策
+//     assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
+
+//     let player_addr = seat.player;
+//     let player_index = seat.player_index;
+
+//     // 清理回合状态
+//     clean_turn_state(game, player_index);
+
+//     // 发出结束回合事件
+//     events::emit_end_turn_event(
+//         game.id.to_inner(),
+//         player_addr,
+//         (game.round as u16),
+//         (game.turn as u8)
+//     );
+
+//     // 推进回合
+//     advance_turn(game, game_data, map, r, ctx);
+// }
+
+// 购买建筑
+entry fun buy_building(
+    game: &mut Game,
+    seat: &Seat,
+    game_data: &GameData,
+    map: &map::MapTemplate,
+    r: &Random,
+    ctx: &mut TxContext
+) {
+    validate_map(game, map);
     validate_seat_and_turn(game, seat);
 
     // 验证待决策状态
@@ -1125,7 +1138,7 @@ public entry fun buy_building(
 }
 
 // 升级建筑
-public entry fun upgrade_building(
+entry fun upgrade_building(
     game: &mut Game,
     seat: &Seat,
     game_data: &GameData,
@@ -1134,8 +1147,6 @@ public entry fun upgrade_building(
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
-
-    // 验证座位和回合
     validate_seat_and_turn(game, seat);
 
     // 验证待决策状态
@@ -1298,26 +1309,6 @@ fun validate_seat_and_turn(game: &Game, seat: &Seat) {
     assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
 }
 
-// 验证并自动处理跳过
-fun validate_and_auto_skip(
-    game: &mut Game,
-    seat: &Seat,
-    game_data: &GameData,
-    map: &map::MapTemplate,
-    r: &Random,
-    ctx: &mut TxContext
-): bool {
-    validate_seat_and_turn(game, seat);
-
-    // 如果需要跳过，自动处理
-    if (should_skip_turn(game, seat.player_index)) {
-        handle_skip_turn(game, seat.player_index);
-        advance_turn(game, game_data, map, r, ctx);
-        return true  // 表示已跳过
-    };
-    false  // 表示未跳过
-}
-
 // 检查是否应该跳过回合
 fun should_skip_turn(game: &Game, player_index: u8): bool {
     let player = &game.players[player_index as u64];
@@ -1336,6 +1327,9 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
         player.in_hospital_turns = player.in_hospital_turns - 1;
         types::SKIP_HOSPITAL()
     };
+
+    // 清理回合状态
+    clean_turn_state(game, player_index);
 
     events::emit_skip_turn_event(
         game.id.to_inner(),

@@ -250,6 +250,42 @@ export class Player extends Role {
         });
     }
 
+    /**
+     * 删除卡牌（带事件触发）
+     * @param cardKind 卡牌类型
+     * @param count 数量（默认1）
+     * @returns 是否成功删除
+     */
+    public removeCard(cardKind: number, count: number = 1): boolean {
+        const card = this._cards.find(c => c.kind === cardKind);
+
+        if (!card || card.count < count) {
+            console.warn(`[Player] 卡牌不足: kind=${cardKind}, have=${card?.count || 0}, need=${count}`);
+            return false;
+        }
+
+        card.count -= count;
+
+        // 如果数量为0，从数组移除
+        if (card.count === 0) {
+            const index = this._cards.indexOf(card);
+            this._cards.splice(index, 1);
+        }
+
+        console.log(`[Player] 删除卡牌: kind=${cardKind}, count=${count}, remaining=${card.count}`);
+
+        // 触发卡牌删除事件
+        EventBus.emit(EventTypes.Player.CardRemoved, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            cardKind,
+            count,
+            remainingCount: card.count
+        });
+
+        return true;
+    }
+
     // ========================= 状态查询 =========================
 
     /**
@@ -295,6 +331,29 @@ export class Player extends Role {
     public getPos(): number { return this._pos; }
     public getCash(): bigint { return this._cash; }
     public getBankrupt(): boolean { return this._bankrupt; }
+
+    /**
+     * 更新现金（带事件触发和UI同步）
+     * @param cash 新的现金数量
+     */
+    public setCash(cash: bigint): void {
+        const oldCash = this._cash;
+        this._cash = cash;
+
+        // 同步到Role基类属性
+        this.setAttr(RoleAttribute.MONEY, Number(cash));
+
+        console.log(`[Player] 现金变化: ${oldCash} -> ${cash}`);
+
+        // 触发现金变化事件
+        EventBus.emit(EventTypes.Player.CashChange, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            oldCash,
+            newCash: cash,
+            delta: cash - oldCash
+        });
+    }
 
     public getInPrisonTurns(): number { return this._inPrisonTurns; }
     public getInHospitalTurns(): number { return this._inHospitalTurns; }

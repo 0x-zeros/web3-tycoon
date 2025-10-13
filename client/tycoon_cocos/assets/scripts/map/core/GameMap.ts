@@ -853,6 +853,52 @@ export class GameMap extends Component {
         return success;
     }
 
+    /**
+     * 更新建筑渲染（owner和level）
+     * 用于链上事件更新建筑显示
+     *
+     * @param buildingId 建筑ID
+     * @param x 建筑X坐标
+     * @param y 建筑Y坐标
+     * @param owner 新的拥有者索引
+     * @param level 新的等级
+     */
+    public updateBuildingRender(
+        buildingId: number,
+        x: number,
+        y: number,
+        owner: number,
+        level: number
+    ): void {
+        const key = `${x}_${y}`;
+        const buildingNode = this._buildings.get(key);
+
+        if (!buildingNode || !buildingNode.isValid) {
+            console.warn(`[GameMap] Building node not found at (${x}, ${y})`);
+            return;
+        }
+
+        // 1. 更新等级（使用现有的upgradeBuilding逻辑）
+        const success = PaperActorFactory.upgradeBuilding(buildingNode, level);
+
+        if (!success) {
+            console.warn(`[GameMap] Failed to upgrade building at (${x}, ${y}) to level ${level}`);
+        }
+
+        // 2. TODO: 更新拥有者显示（颜色/标记等）
+        // 可以在PaperActorFactory中添加setOwner方法
+        // PaperActorFactory.setBuildingOwner(buildingNode, owner);
+
+        // 3. 更新Property注册信息
+        const buildingInfo = this._buildingRegistry.get(key);
+        if (buildingInfo) {
+            buildingInfo.owner = owner;
+            buildingInfo.level = level;
+        }
+
+        console.log(`[GameMap] Building render updated: (${x}, ${y}), Owner: ${owner}, Level: ${level}`);
+    }
+
     // ========================= 自动保存 =========================
     
     /**

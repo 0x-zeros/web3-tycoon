@@ -772,6 +772,67 @@ export class GameSession {
         return this._npcs.length;
     }
 
+    // ========================= Building管理 =========================
+
+    /**
+     * 更新建筑数据（owner和level）并触发渲染更新
+     * @param buildingId 建筑ID
+     * @param owner 新的拥有者索引
+     * @param level 新的等级
+     */
+    public updateBuilding(buildingId: number, owner: number, level: number): void {
+        const building = this._buildings[buildingId];
+
+        if (!building) {
+            console.warn(`[GameSession] 建筑不存在: ${buildingId}`);
+            return;
+        }
+
+        const oldOwner = building.owner;
+        const oldLevel = building.level;
+
+        // 1. 更新逻辑数据（因为GameBuilding字段是readonly，需要创建新实例）
+        this._buildings[buildingId] = new GameBuilding(
+            building.buildingId,
+            building.x,
+            building.y,
+            building.size,
+            building.price,
+            building.chainPrevId,
+            building.chainNextId,
+            owner,  // 新owner
+            level,  // 新level
+            building.buildingType,
+            building.blockId,
+            building.direction,
+            building.entranceTileIds
+        );
+
+        console.log(`[GameSession] 建筑数据更新: Building ${buildingId}, Owner: ${oldOwner}->${owner}, Level: ${oldLevel}->${level}`);
+
+        // 2. 触发渲染更新（通过GameMap）
+        if (this._gameMap && this._gameMap.updateBuildingRender) {
+            const updatedBuilding = this._buildings[buildingId];
+            this._gameMap.updateBuildingRender(
+                buildingId,
+                updatedBuilding.x,
+                updatedBuilding.y,
+                owner,
+                level
+            );
+        }
+
+        // 3. 触发建筑更新事件
+        EventBus.emit(EventTypes.Game.BuildingChanged, {
+            session: this,
+            buildingId,
+            oldOwner,
+            newOwner: owner,
+            oldLevel,
+            newLevel: level
+        });
+    }
+
     // ========================= 游戏状态管理 =========================
 
     /**

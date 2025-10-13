@@ -10,7 +10,7 @@ export const EventTypes = {
         /** 开始游戏 */
         StartGame: "ui_start_game",
         /** 打开背包 */
-        OpenBag: "ui_open_bag", 
+        OpenBag: "ui_open_bag",
         /** 显示玩家信息 */
         ShowPlayerInfo: "ui_show_player_info",
         /** 显示地产卡片 */
@@ -38,7 +38,9 @@ export const EventTypes = {
         /** 切换地图元素UI显示 */
         ToggleMapElement: "ui_toggle_map_element",
         /** 屏幕尺寸变化 */
-        ScreenSizeChanged: "ui_screen_size_changed"
+        ScreenSizeChanged: "ui_screen_size_changed",
+        /** 卡牌飞出动画 */
+        CardFlyOut: "ui_card_fly_out"
     },
 
     /** 地图相关事件 */
@@ -152,7 +154,9 @@ export const EventTypes = {
         /** 轮次变化 */
         RoundChanged: "game_round_changed",
         /** 回合变化（玩家切换） */
-        TurnChanged: "game_turn_changed"
+        TurnChanged: "game_turn_changed",
+        /** 建筑变化（owner/level更新） */
+        BuildingChanged: "game_building_changed"
     },
 
     /** 地产相关事件 */
@@ -173,6 +177,8 @@ export const EventTypes = {
     Player: {
         /** 金钱变化 */
         MoneyChange: "player_money_change",
+        /** 现金变化 */
+        CashChange: "player_cash_change",
         /** 位置变化 */
         PositionChange: "player_position_change",
         /** 状态变化 */
@@ -186,7 +192,11 @@ export const EventTypes = {
         /** 掷骰子 */
         DiceRolled: "player_dice_rolled",
         /** 玩家移动 */
-        Moved: "player_moved"
+        Moved: "player_moved",
+        /** 卡牌变化 */
+        CardChange: "player_card_change",
+        /** 卡牌删除 */
+        CardRemoved: "player_card_removed"
     },
 
     /** 卡片相关事件 */

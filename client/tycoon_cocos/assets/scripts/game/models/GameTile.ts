@@ -20,6 +20,7 @@ import type { TileStatic, Tile } from '../../sui/types/game';
 import type { MapTemplate } from '../../sui/types/map';
 import { TileKind, INVALID_TILE_ID, NO_BUILDING } from '../../sui/types/constants';
 import { Web3TileType } from '../../voxel/Web3BlockTypes';
+import { Vec3 } from 'cc';
 
 /**
  * GameTile 类
@@ -73,6 +74,11 @@ export class GameTile {
 
     /** Type ID（Web3TileType） */
     public readonly typeId: number;
+
+    // ========================= 缓存数据 =========================
+
+    /** Tile 顶部中心点的世界坐标（用于 Player/NPC 放置） */
+    private _worldCenter: Vec3 | null = null;
 
     // ========================= 构造函数 =========================
 
@@ -190,6 +196,20 @@ export class GameTile {
      */
     public getKindName(): string {
         return getTileKindName(this.kind);
+    }
+
+    /**
+     * 设置世界中心点（顶部）
+     */
+    public setWorldCenter(center: Vec3): void {
+        this._worldCenter = center;
+    }
+
+    /**
+     * 获取世界中心点（顶部）
+     */
+    public getWorldCenter(): Vec3 | null {
+        return this._worldCenter;
     }
 
     /**

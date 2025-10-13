@@ -82,6 +82,7 @@ import { GameBuilding } from '../game/models/GameBuilding';
 import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
 import { IdFormatter } from '../ui/utils/IdFormatter';
+import { Vec3 } from 'cc';
 
 /**
  * 待决策信息接口
@@ -431,6 +432,39 @@ export class GameSession {
         this._gameMap = await mapManager.loadGameMapFromSession(this);
 
         console.log('[GameSession] 游戏地图加载完成');
+
+        // 初始化 Tile 顶部中心点（从 GameMap 的 tile 节点获取）
+        this._initializeTileCenters();
+    }
+
+    /**
+     * 初始化 Tile 顶部中心点
+     * 从 GameMap 的 tile 节点获取世界坐标并缓存
+     */
+    private _initializeTileCenters(): void {
+        if (!this._gameMap) {
+            console.warn('[GameSession] GameMap not found, skip tile centers initialization');
+            return;
+        }
+
+        // 遍历所有 tiles
+        this._tiles.forEach((gameTile, tileId) => {
+            // 从 GameMap 获取 tile 节点的世界坐标
+            const tileNode = this._gameMap.getTileNode?.(tileId);
+            if (tileNode) {
+                const worldPos = tileNode.getWorldPosition().clone();
+                // Tile block 高度为 1，顶部 y = center.y + 0.5
+                worldPos.y += 0.5;
+                gameTile.setWorldCenter(worldPos);
+            } else {
+                // Fallback：使用 tile 的 x, y 坐标计算（假设每个 tile 是 1x1）
+                const worldPos = new Vec3(gameTile.x, 0.5, gameTile.y);
+                gameTile.setWorldCenter(worldPos);
+                console.warn(`[GameSession] Tile ${tileId} 节点未找到，使用计算坐标`);
+            }
+        });
+
+        console.log(`[GameSession] 已初始化 ${this._tiles.length} 个 Tile 的顶部中心点`);
     }
 
     // ========================= 回合控制 =========================
@@ -817,6 +851,16 @@ export class GameSession {
 
     public getBuildingByIndex(index: number): GameBuilding | null {
         return this._buildings[index] || null;
+    }
+
+    /**
+     * 获取 Tile 的世界中心点（顶部）
+     * @param tileId Tile ID
+     * @returns 世界坐标中心点，如果未缓存则返回 null
+     */
+    public getTileWorldCenter(tileId: number): Vec3 | null {
+        const tile = this._tiles[tileId];
+        return tile?.getWorldCenter() || null;
     }
 
     // ========================= 调试方法 =========================

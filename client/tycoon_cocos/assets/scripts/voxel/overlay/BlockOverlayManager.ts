@@ -117,7 +117,7 @@ export class BlockOverlayManager {
             //     console.log('[BlockOverlayManager] Material set with mainTexture & mainColor');
             // }
 
-            console.log(`[BlockOverlayManager] Created overlay layer ${layerIndex} with ${faces.length} faces`);
+            // console.log(`[BlockOverlayManager] Created overlay layer ${layerIndex} with ${faces.length} faces`);
             return overlayNode;
 
         } catch (error) {

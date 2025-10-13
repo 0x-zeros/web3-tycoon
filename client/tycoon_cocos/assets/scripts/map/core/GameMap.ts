@@ -3029,7 +3029,7 @@ export class GameMap extends Component {
             }
             this._tileOverlays.get(key)!.set(config.layerIndex || 0, overlayNode);
 
-            console.log(`[GameMap] Added overlay to tile at (${gridPos.x}, ${gridPos.y}), layer ${config.layerIndex || 0}`);
+            // console.log(`[GameMap] Added overlay to tile at (${gridPos.x}, ${gridPos.y}), layer ${config.layerIndex || 0}`);
             return true;
         }
 

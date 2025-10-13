@@ -68,7 +68,7 @@ export class NumberTextureGenerator {
         const texture = this.generateTexture(num, options);
         this.cache.set(cacheKey, texture);
 
-        console.log(`[NumberTextureGenerator] Generated texture for ${prefix}${num}, cache size: ${this.cache.size}`);
+        // console.log(`[NumberTextureGenerator] Generated texture for ${prefix}${num}, cache size: ${this.cache.size}`);
         return texture;
     }
 

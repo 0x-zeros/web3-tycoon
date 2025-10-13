@@ -204,12 +204,16 @@ export class RollAndStepHandler {
         const player = session.getPlayerByAddress(event.player);
         if (!player) return;
 
-        // 触发玩家移动动画
+        // 获取目标 tile 的顶部中心点
+        const targetCenter = session.getTileWorldCenter(step.to_tile);
+
+        // 触发玩家移动动画（直线移动到 tile 顶部中心）
         try {
             await player.moveTo({
                 targetTileId: step.to_tile,
                 steps: 1,
-                path: [step.to_tile]  // 单步移动
+                path: [step.to_tile],
+                targetPosition: targetCenter  // Tile 顶部中心点
             });
 
             console.log(`[RollAndStepHandler] 玩家移动完成: ${step.from_tile} -> ${step.to_tile}`);

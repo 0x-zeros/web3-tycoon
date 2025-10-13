@@ -349,36 +349,27 @@ export class Actor extends Component {
             console.warn('[Actor] 正在移动中，忽略新的移动请求');
             return;
         }
-        
+
         this.m_isMoving = true;
-        
+
         try {
             // 播放移动动画
             this.playAnimation('move');
-            
-            // 计算目标位置（这里需要通过Map获取地块位置）
-            const targetPos = await this.getTilePosition(params.targetTileId);
-            
+
+            // 使用传入的目标位置（Tile 顶部中心点）
+            const targetPos = params.targetPosition;
+
             if (targetPos) {
                 // 执行移动动画
                 await this.executeMove(targetPos, params);
             }
-            
+
             // 播放到达动画
             this.playAnimation('idle');
-            
+
         } finally {
             this.m_isMoving = false;
         }
-    }
-    
-    /**
-     * 获取地块世界位置
-     */
-    private async getTilePosition(tileId: number): Promise<Vec3 | null> {
-        // 这里需要通过Map获取地块位置
-        // 暂时返回一个模拟位置
-        return new Vec3(tileId * 2, 0, 0);
     }
     
     /**

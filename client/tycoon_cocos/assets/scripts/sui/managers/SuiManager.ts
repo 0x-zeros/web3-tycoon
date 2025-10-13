@@ -30,6 +30,10 @@ import { UIMessage, MessageBoxIcon } from '../../ui/utils/UIMessage';
 import { loadKeypairFromKeystore } from '../utils/KeystoreLoader';
 import { GameData } from '../models/GameData';
 import { rollAndStepHandler } from '../events/handlers/RollAndStepHandler';
+import { buildingDecisionHandler } from '../events/handlers/BuildingDecisionHandler';
+import { rentDecisionHandler } from '../events/handlers/RentDecisionHandler';
+import { decisionSkippedHandler } from '../events/handlers/DecisionSkippedHandler';
+import type { BuildingDecisionEvent, RentDecisionEvent, DecisionSkippedEvent } from '../events/types';
 
 /**
  * Sui Manager 配置选项
@@ -1131,6 +1135,30 @@ export class SuiManager {
 
             // 分发给 RollAndStepHandler 处理
             await rollAndStepHandler.instance.handleEvent(event);
+        });
+
+        // 监听建筑决策事件（购买/升级）
+        this._eventIndexer.on<BuildingDecisionEvent>(EventType.BUILDING_DECISION, async (event) => {
+            console.log('[SuiManager] BuildingDecisionEvent from chain:', event.data);
+
+            // 分发给 BuildingDecisionHandler 处理
+            await buildingDecisionHandler.instance.handleEvent(event);
+        });
+
+        // 监听租金决策事件
+        this._eventIndexer.on<RentDecisionEvent>(EventType.RENT_DECISION, async (event) => {
+            console.log('[SuiManager] RentDecisionEvent from chain:', event.data);
+
+            // 分发给 RentDecisionHandler 处理
+            await rentDecisionHandler.instance.handleEvent(event);
+        });
+
+        // 监听跳过决策事件
+        this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, async (event) => {
+            console.log('[SuiManager] DecisionSkippedEvent from chain:', event.data);
+
+            // 分发给 DecisionSkippedHandler 处理
+            await decisionSkippedHandler.instance.handleEvent(event);
         });
 
         console.log('[SuiManager] Event listener started');

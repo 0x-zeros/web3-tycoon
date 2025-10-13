@@ -9,11 +9,11 @@ handlers/
 ├── BuildingDecisionHandler.ts    # 建筑购买/升级事件处理器
 ├── RentDecisionHandler.ts        # 租金决策事件处理器
 ├── DecisionSkippedHandler.ts     # 跳过决策事件处理器
-├── RollAndStepHandler.ts          # 掷骰移动事件处理器（已有）
-├── registerHandlers.ts            # 注册所有handlers的函数
-├── index.ts                       # 统一导出
+├── RollAndStepHandler.ts          # 掷骰移动事件处理器
 └── README.md                      # 本文档
 ```
+
+**注意**：Handlers 由 `SuiManager.ts` 的 `_startEventListener()` 方法统一注册和管理。
 
 ## 🎯 Handler职责
 
@@ -46,46 +46,37 @@ handlers/
 
 ## 🚀 使用方法
 
-### 1. 在游戏初始化时注册handlers
+**Handlers 已自动注册，无需手动配置！**
 
-在 SuiManager 或游戏启动代码中：
+所有 Handlers 在 `SuiManager.ts` 的 `_startEventListener()` 方法中自动注册：
 
 ```typescript
-import { createEventIndexer } from './sui/events/indexer';
-import { registerEventHandlers } from './sui/events/handlers';
+// 在 SuiManager.ts 中（1058-1165行）
+private _startEventListener(): void {
+    // 创建 EventIndexer
+    this._eventIndexer = new TycoonEventIndexer({
+        client: this._client!,
+        packageId: this._config!.packageId,
+        autoStart: true,
+        pollInterval: 1000
+    });
 
-// 创建EventIndexer
-const indexer = createEventIndexer({
-    network: 'testnet',
-    packageId: '0x...', // 你的package ID
-    autoStart: true
-});
-
-// 注册所有handlers
-registerEventHandlers(indexer);
+    // 注册所有事件监听
+    this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, ...);
+    this._eventIndexer.on<BuildingDecisionEvent>(EventType.BUILDING_DECISION, ...);
+    this._eventIndexer.on<RentDecisionEvent>(EventType.RENT_DECISION, ...);
+    this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, ...);
+}
 ```
 
-### 2. 在游戏退出时清理
+**启动流程**：
+1. `SuiManager.init()` - 初始化 SuiManager
+2. `SuiManager.startBackgroundSync()` - 启动后台数据同步和事件监听
+3. `_startEventListener()` - 自动创建 EventIndexer 并注册所有 handlers
 
+**停止**：
 ```typescript
-import { cleanupEventHandlers } from './sui/events/handlers';
-
-// 游戏退出时
-cleanupEventHandlers();
-```
-
-### 3. 单独使用某个Handler（可选）
-
-如果需要单独使用某个handler：
-
-```typescript
-import { BuildingDecisionHandler } from './sui/events/handlers';
-
-const handler = BuildingDecisionHandler.getInstance();
-handler.initialize();
-
-// 手动处理事件
-await handler.handleEvent(eventMetadata);
+SuiManager.instance.stopEventListener();
 ```
 
 ## 🔄 事件流程
@@ -93,15 +84,33 @@ await handler.handleEvent(eventMetadata);
 ```
 链上交易
     ↓
-EventIndexer 轮询查询事件
+SuiManager._eventIndexer 轮询查询事件（每1秒）
     ↓
 EventIndexer 解析事件并调用注册的handler
     ↓
-Handler 更新 GameSession 数据
+Handler 更新 GameSession 数据（turn、玩家现金、建筑等）
     ↓
-GameSession 触发渲染更新
+GameSession 触发渲染更新（通过 GameMap）
     ↓
 UI 显示 notification
+```
+
+## 🔌 与 SuiManager 的集成
+
+Handlers 在 `SuiManager.ts:1058-1165` 的 `_startEventListener()` 方法中注册：
+
+```typescript
+// 1128-1138: RollAndStepActionEvent
+this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, ...);
+
+// 1140-1146: BuildingDecisionEvent
+this._eventIndexer.on<BuildingDecisionEvent>(EventType.BUILDING_DECISION, ...);
+
+// 1148-1154: RentDecisionEvent
+this._eventIndexer.on<RentDecisionEvent>(EventType.RENT_DECISION, ...);
+
+// 1156-1162: DecisionSkippedEvent
+this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, ...);
 ```
 
 ## ⚡ Turn更新规则
@@ -128,22 +137,35 @@ session.setTurn(event.turn + 1);  // ← 注意这里的 +1
 ## 📝 开发注意事项
 
 1. **事件类型定义**：所有事件类型在 `sui/events/types.ts` 中定义
-2. **EventIndexer配置**：已在 `sui/events/indexer.ts` 中配置了这3个事件
+2. **EventIndexer配置**：已在 `sui/events/indexer.ts` 中配置了事件映射
 3. **单例模式**：所有Handler使用单例模式，通过 `getInstance()` 获取实例
 4. **错误处理**：所有Handler都有完整的try-catch错误处理
 5. **日志输出**：所有关键操作都有console日志，便于调试
+6. **自动启动**：`SuiManager.startBackgroundSync()` 会自动启动EventIndexer和所有handlers
 
 ## 🐛 测试
 
 测试时需要确保：
-1. EventIndexer正确连接到Sui网络
-2. PackageId正确配置
-3. GameSession已正确初始化
-4. 链上有相应的事件产生
+1. `SuiManager` 已正确初始化（`SuiManager.init()`）
+2. 后台同步已启动（`SuiManager.startBackgroundSync()`）
+3. EventIndexer正确连接到Sui网络（检查console日志）
+4. PackageId正确配置（在 `SuiConfig` 中）
+5. GameSession已正确初始化（有当前游戏）
+6. 链上有相应的事件产生
+
+**调试日志关键字**：
+- `[SuiManager] BuildingDecisionEvent from chain`
+- `[BuildingDecisionHandler]`
+- `[RentDecisionHandler]`
+- `[DecisionSkippedHandler]`
+- `[GameSession] 建筑数据更新`
+- `[GameMap] Building render updated`
 
 ## 📚 相关文档
 
-- EventIndexer文档: `../indexer.ts`
+- SuiManager: `../../managers/SuiManager.ts:1058-1165`
+- EventIndexer: `../indexer.ts`
 - 事件类型定义: `../types.ts`
-- GameSession文档: `../../../core/GameSession.ts`
+- GameSession: `../../../core/GameSession.ts:777-834`
+- GameMap: `../../../map/core/GameMap.ts:856-900`
 - Move合约: `../../../../../../move/tycoon/sources/game.move`

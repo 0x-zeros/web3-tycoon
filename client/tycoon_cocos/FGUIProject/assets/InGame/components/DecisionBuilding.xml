@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="512,256">
+  <controller name="c1" pages="0,buy,1,upgrade" selected="1"/>
+  <displayList>
+    <image id="n0_f49a" name="bg" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="512,256">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n1_f49a" name="title" xy="256,54" pivot="0.5,0.5" anchor="true" size="157,42" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="购买地产"/>
+    <component id="n3_f49a" name="btn_Confirm" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="309,187" size="174,46">
+      <Button title="购买"/>
+    </component>
+    <component id="n4_f49a" name="btn_Confirm" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="32,187" size="174,46">
+      <Button title="跳过"/>
+    </component>
+  </displayList>
+</component>

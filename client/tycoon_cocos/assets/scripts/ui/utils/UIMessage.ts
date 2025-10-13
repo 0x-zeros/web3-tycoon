@@ -19,6 +19,18 @@ export enum MessageBoxIcon {
 }
 
 /**
+ * MessageBox组件类型
+ * 用于切换不同外观的MessageBox组件
+ */
+export enum MessageBoxType {
+    /** 默认样式 (MessageBox) */
+    DEFAULT = "MessageBox",
+    /** 样式1 (MessageBox1) */
+    STYLE1 = "MessageBox1"
+    // 未来可扩展：STYLE2 = "MessageBox2" 等
+}
+
+/**
  * MessageBox结果
  */
 export enum MessageBoxResult {
@@ -75,6 +87,9 @@ export interface MessageBoxOptions {
 
     /** 皮肤配置 */
     skin?: MessageBoxSkin;
+
+    /** 组件类型（可选，用于单次调用时临时切换样式） */
+    componentType?: MessageBoxType;
 
     /** 关闭回调 */
     onClose?: (result: MessageBoxResult) => void;
@@ -256,6 +271,8 @@ export class UIMessage extends UIBase {
     private static _queue: MessageBoxQueue = new MessageBoxQueue();
     // 默认皮肤
     private static _defaultSkin: MessageBoxSkin = {};
+    // 当前使用的组件类型
+    private static _currentComponentType: MessageBoxType = MessageBoxType.DEFAULT;
 
     // ==================== 生命周期 ====================
 
@@ -569,10 +586,30 @@ export class UIMessage extends UIBase {
     /**
      * 初始化UIMessage（由UIManager调用）
      * @param uiManagerGetter UIManager获取器函数
+     * @param componentType 组件类型（可选）
      */
-    public static initialize(uiManagerGetter: () => any): void {
+    public static initialize(uiManagerGetter: () => any, componentType?: MessageBoxType): void {
         UIMessage._queue.setUIManagerGetter(uiManagerGetter);
-        console.log("[UIMessage] Initialized with UIManager getter");
+        if (componentType !== undefined) {
+            UIMessage._currentComponentType = componentType;
+        }
+        console.log("[UIMessage] Initialized with UIManager getter, componentType:", UIMessage._currentComponentType);
+    }
+
+    /**
+     * 设置组件类型
+     * @param type MessageBox组件类型
+     */
+    public static setComponentType(type: MessageBoxType): void {
+        UIMessage._currentComponentType = type;
+        console.log("[UIMessage] Component type set to:", type);
+    }
+
+    /**
+     * 获取当前组件类型
+     */
+    public static getComponentType(): MessageBoxType {
+        return UIMessage._currentComponentType;
     }
 
     /**

@@ -13,7 +13,7 @@ import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
 import { UIWallet } from "../game/UIWallet";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
-import { UIMessage } from "../utils/UIMessage";
+import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
 
 /**
@@ -908,8 +908,18 @@ export class UIManager {
 
     /**
      * 便捷注册方法 - 注册MessageBox UI
+     * @param packageName 包名（默认"Common"）
+     * @param componentType 组件类型或组件名（默认MessageBoxType.DEFAULT）
      */
-    public registerMessageBoxUI(packageName: string = "Common", componentName: string = "MessageBox"): void {
+    public registerMessageBoxUI(
+        packageName: string = "Common",
+        componentType: MessageBoxType | string = MessageBoxType.DEFAULT
+    ): void {
+        // 如果传入的是MessageBoxType枚举，取其值；否则直接使用字符串
+        const componentName = typeof componentType === 'string' && componentType.startsWith("MessageBox")
+            ? componentType
+            : (componentType as MessageBoxType);
+
         this.registerUI<UIMessage>("MessageBox", {
             packageName,
             componentName,
@@ -918,11 +928,15 @@ export class UIManager {
             layer: UILayer.MODAL
         }, UIMessage);
 
-        // 初始化UIMessage，传入UIManager获取器
+        // 初始化UIMessage，传入UIManager获取器和组件类型
+        const messageBoxType = typeof componentType === 'string' && componentType.startsWith("MessageBox")
+            ? (componentType as MessageBoxType)
+            : componentType;
+
         UIMessage.initialize(() => {
             // 返回UIManager类，避免循环依赖
             return { instance: UIManager.instance };
-        });
+        }, messageBoxType as MessageBoxType);
     }
 
     /**

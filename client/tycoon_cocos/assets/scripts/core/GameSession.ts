@@ -73,7 +73,7 @@ import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import type { Game, Player as MovePlayer, NpcInst, NpcInst as MoveNpcInst, Tile, Seat } from '../sui/types/game';
 import type { MapTemplate } from '../sui/types/map';
-import { GameStatus, PendingDecision, INVALID_TILE_ID } from '../sui/types/constants';
+import { GameStatus, PendingDecision, INVALID_TILE_ID, NO_OWNER } from '../sui/types/constants';
 import { Player } from '../role/Player';
 import { NPC } from '../role/NPC';
 import { GameData } from '../sui/models/GameData';
@@ -530,16 +530,9 @@ export class GameSession {
         const playerCount = this._players.length;
         if (playerCount === 0) return;
 
-        this._turn = (this._turn + 1) % playerCount;
-
-        // 如果一轮结束，增加轮次
-        if (this._turn === 0) {
-            this._round++;
-            console.log(`[GameSession] 轮次增加: ${this._round}`);
-        }
-
-        this._activePlayerIndex = this._turn;
-        this._hasRolled = false;
+        // 使用 setTurn() 统一处理 turn、round、activePlayerIndex 和 hasRolled
+        const nextTurn = this._turn + 1;
+        this.setTurn(nextTurn);
 
         console.log(`[GameSession] 切换到下一个玩家: Player ${this._activePlayerIndex}`);
     }
@@ -579,6 +572,28 @@ export class GameSession {
      * @param turn 新的轮内回合（0 到 player_count-1）
      */
     public setTurn(turn: number): void {
+        const playerCount = this._players.length;
+
+        // 安全检查：如果没有玩家，直接返回
+        if (playerCount === 0) {
+            console.warn('[GameSession] Cannot set turn: no players in game');
+            return;
+        }
+
+        // 检测是否会发生轮次切换（turn >= playerCount 表示会进入下一轮）
+        const originalTurn = turn;
+
+        // 关键：对玩家数量取模，确保 turn 在 [0, playerCount) 范围内
+        // 匹配 Move 合约的 advance_turn 逻辑：game.active_idx = ((game.active_idx + 1) % player_count)
+        turn = turn % playerCount;
+
+        // 匹配 Move 合约逻辑：if (game.active_idx == 0) { game.round++; }
+        // 如果取模后回到0（且原值 >= playerCount），说明进入新一轮
+        if (turn === 0 && originalTurn >= playerCount) {
+            console.log(`[GameSession] 检测到轮次切换 (turn从${originalTurn}变为${turn})`);
+            this.setRound(this._round + 1);
+        }
+
         if (this._turn === turn && this._activePlayerIndex === turn) {
             return;  // 无变化，直接返回
         }

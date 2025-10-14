@@ -260,6 +260,10 @@ export class GameBuilding {
      * @returns Prefab 资源路径（用于 resources.load）
      */
     public getPrefabPath(): string {
+        // 无主且无 originalOwner：不显示 prefab
+        if (!this.shouldShowPrefab()) {
+            return '';
+        }
         // 确定使用的 owner index
         let ownerIndex = this.owner;
         if (ownerIndex === NO_OWNER) {

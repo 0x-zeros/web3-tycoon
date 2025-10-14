@@ -758,6 +758,15 @@ export class Actor extends Component {
     private async loadBuildingPrefab(): Promise<void> {
         if (!this.m_buildingConfig) return;
 
+        // 如果不应显示（无主且无originalOwner），销毁并跳过加载
+        if (this.m_buildingConfig.shouldShowPrefab && !this.m_buildingConfig.shouldShowPrefab()) {
+            if (this.m_buildingPrefab) {
+                this.m_buildingPrefab.destroy();
+                this.m_buildingPrefab = null;
+            }
+            return;
+        }
+
         const prefabPath = this.m_buildingConfig.getPrefabPath();
         if (!prefabPath) return;
 
@@ -803,6 +812,15 @@ export class Actor extends Component {
 
         // 检查 prefab 路径是否变化（owner/originalOwner 变化会导致路径变化）
         const newPrefabPath = gameBuilding.getPrefabPath();
+
+        // 若新路径为空，表示无需显示，确保销毁现有prefab
+        if (!newPrefabPath) {
+            if (this.m_buildingPrefab) {
+                this.m_buildingPrefab.destroy();
+                this.m_buildingPrefab = null;
+            }
+            return;
+        }
 
         if (newPrefabPath !== oldPrefabPath) {
             // 路径变化，重新加载 prefab

@@ -120,18 +120,20 @@ export class DecisionSkippedHandler {
                 decisionType: decisionTypeStr,
                 building: buildingName
             });
-        }
-
-        // 发射游戏事件（在try-catch外，确保总是发射）
-        try {
-            EventBus.emit(EventTypes.Game.TurnEnd, {
-                round: event.round,
-                turn: event.turn + 1
-            });
-            console.log('[DecisionSkippedHandler] 发射 TurnEnd 事件');
         } catch (error) {
-            console.error('[DecisionSkippedHandler] 处理事件失败', error);
+            console.error('[DecisionSkippedHandler] 处理主逻辑失败', error);
             UINotification.error(`跳过决策处理失败: ${error.message || error}`);
+        } finally {
+            // 发射游戏事件（在finally中，确保总是发射）
+            try {
+                EventBus.emit(EventTypes.Game.TurnEnd, {
+                    round: event.round,
+                    turn: event.turn + 1
+                });
+                console.log('[DecisionSkippedHandler] 发射 TurnEnd 事件');
+            } catch (error) {
+                console.error('[DecisionSkippedHandler] 发射事件失败', error);
+            }
         }
     }
 

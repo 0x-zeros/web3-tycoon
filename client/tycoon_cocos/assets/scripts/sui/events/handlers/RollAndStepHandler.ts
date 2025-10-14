@@ -379,10 +379,13 @@ export class RollAndStepHandler {
             for (const change of event.cash_changes) {
                 const player = session.getPlayerByAddress(change.player);
                 if (player) {
+                    // 确保 amount 是 BigInt 类型（防止 JSON 解析时类型丢失）
+                    const amount = BigInt(change.amount);
+
                     // 更新玩家现金（根据 is_debit）
                     const newCash = change.is_debit
-                        ? player.getCash() - change.amount
-                        : player.getCash() + change.amount;
+                        ? player.getCash() - amount
+                        : player.getCash() + amount;
 
                     // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
                     player.setCash(newCash);
@@ -390,7 +393,7 @@ export class RollAndStepHandler {
                     console.log('[RollAndStepHandler] 玩家现金已更新', {
                         player: change.player,
                         isDebit: change.is_debit,
-                        amount: change.amount.toString(),
+                        amount: amount.toString(),
                         newCash: newCash.toString(),
                         reason: change.reason
                     });

@@ -23,6 +23,7 @@ import { UINotification } from '../../../ui/utils/UINotification';
 import { SuiManager } from '../../managers/SuiManager';
 import { DecisionType } from '../../types/constants';
 import type { Player } from '../../types/game';
+import { CashFlyAnimation } from '../../../ui/effects/CashFlyAnimation';
 
 /**
  * RollAndStepHandler 类
@@ -389,6 +390,15 @@ export class RollAndStepHandler {
 
                     // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
                     player.setCash(newCash);
+
+                    // 播放飞字动画
+                    if (change.is_debit) {
+                        // 减钱动画（向上飘，红色）
+                        CashFlyAnimation.getInstance().playCashDecrease(player, amount);
+                    } else {
+                        // 加钱动画（向下飘，绿色）
+                        CashFlyAnimation.getInstance().playCashIncrease(player, amount);
+                    }
 
                     console.log('[RollAndStepHandler] 玩家现金已更新', {
                         player: change.player,

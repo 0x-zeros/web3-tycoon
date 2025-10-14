@@ -20,6 +20,7 @@ import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
 import { CURRENT_SUI_CONFIG } from '../sui/config';
 import { GameSession } from './GameSession';
+import * as TWEEN from '@tweenjs/tween.js';
 
 const { ccclass, property } = _decorator;
 
@@ -126,6 +127,15 @@ export class GameInitializer extends Component {
         if (GameInitializer._instance === this) {
             GameInitializer._instance = null;
         }
+    }
+
+    /**
+     * 每帧更新
+     * 用于驱动 TWEEN 动画
+     */
+    protected update(deltaTime: number): void {
+        // 更新 Tween 动画
+        TWEEN.update();
     }
 
     /**

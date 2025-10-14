@@ -15,6 +15,7 @@ import { UIWallet } from "../game/UIWallet";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
+import { CashFlyAnimation } from "../effects/CashFlyAnimation";
 
 /**
  * UI层级枚举
@@ -855,6 +856,10 @@ export class UIManager {
 
             // 4.5. 初始化全局 Wallet UI（持久化显示）
             await UIManager.instance.initWalletUI();
+
+            // 4.6. 初始化现金飞字动画系统
+            CashFlyAnimation.getInstance().initialize('InGame', 'Cash');
+            console.log("[UISystem] CashFlyAnimation system initialized");
 
             // 5. 显示初始界面
             await UIManager.instance.showModeSelect();

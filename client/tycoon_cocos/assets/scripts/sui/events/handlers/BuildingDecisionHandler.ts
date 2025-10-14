@@ -17,6 +17,7 @@ import { EventType } from '../types';
 import { Blackboard } from '../../../events/Blackboard';
 import { UINotification } from '../../../ui/utils/UINotification';
 import type { GameSession } from '../../../core/GameSession';
+import { CashFlyAnimation } from '../../../ui/effects/CashFlyAnimation';
 
 /**
  * BuildingDecisionHandler 类
@@ -94,6 +95,10 @@ export class BuildingDecisionHandler {
             // 4. 扣除玩家现金
             const newCash = player.getCash() - BigInt(event.amount);
             player.setCash(newCash);
+
+            // 播放减钱动画
+            CashFlyAnimation.getInstance().playCashDecrease(player, BigInt(event.amount));
+            console.log('[BuildingDecisionHandler] 触发减钱动画');
 
             console.log('[BuildingDecisionHandler] 玩家现金已更新', {
                 player: player.getPlayerIndex(),

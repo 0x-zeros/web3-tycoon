@@ -26,6 +26,26 @@ export class SkipTurnHandler {
         const session = Blackboard.instance.get<any>("currentGameSession");
         if (session) {
             session.setTurn(event.turn + 1);  // ← 注意：+1
+
+            // 更新玩家的prison/hospital状态
+            const player = session.getPlayerByAddress(event.player);
+            if (player && event.remaining_turns !== null && event.remaining_turns !== undefined) {
+                // 根据reason判断是prison还是hospital
+                // reason: 1=监狱, 2=医院
+                if (event.reason === 1) {
+                    player.setInPrisonTurns(event.remaining_turns);
+                    console.log('[SkipTurnHandler] 更新监狱剩余回合', {
+                        player: event.player,
+                        remainingTurns: event.remaining_turns
+                    });
+                } else if (event.reason === 2) {
+                    player.setInHospitalTurns(event.remaining_turns);
+                    console.log('[SkipTurnHandler] 更新医院剩余回合', {
+                        player: event.player,
+                        remainingTurns: event.remaining_turns
+                    });
+                }
+            }
         }
 
         // 显示通知

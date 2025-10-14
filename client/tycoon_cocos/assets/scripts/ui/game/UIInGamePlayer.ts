@@ -53,12 +53,22 @@ export class UIInGamePlayer extends UIBase {
     protected bindEvents(): void {
         EventBus.on(EventTypes.Game.TurnEnd, this._onGameUpdate, this);
         EventBus.on(EventTypes.Player.MoneyChange, this._onGameUpdate, this);
+        EventBus.on(EventTypes.Player.CashChange, this._onGameUpdate, this);
+        EventBus.on(EventTypes.Player.StatusChange, this._onGameUpdate, this);
+        EventBus.on(EventTypes.Player.BuffAdded, this._onGameUpdate, this);
+        EventBus.on(EventTypes.Player.BuffRemoved, this._onGameUpdate, this);
+        EventBus.on(EventTypes.Player.BuffsUpdated, this._onGameUpdate, this);
         EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
     }
 
     protected unbindEvents(): void {
         EventBus.off(EventTypes.Game.TurnEnd, this._onGameUpdate, this);
         EventBus.off(EventTypes.Player.MoneyChange, this._onGameUpdate, this);
+        EventBus.off(EventTypes.Player.CashChange, this._onGameUpdate, this);
+        EventBus.off(EventTypes.Player.StatusChange, this._onGameUpdate, this);
+        EventBus.off(EventTypes.Player.BuffAdded, this._onGameUpdate, this);
+        EventBus.off(EventTypes.Player.BuffRemoved, this._onGameUpdate, this);
+        EventBus.off(EventTypes.Player.BuffsUpdated, this._onGameUpdate, this);
         EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
         super.unbindEvents();
     }
@@ -159,6 +169,59 @@ export class UIInGamePlayer extends UIBase {
         if (bg) {
             bg.alpha = isActiveTurn ? 1.0 : 0.6;
         }
+
+        // Buffs列表
+        const buffsList = item.getChild('buffs') as fgui.GList;
+        if (buffsList) {
+            this.renderBuffsList(buffsList, player, session);
+        }
+    }
+
+    /**
+     * 渲染玩家的Buffs列表
+     */
+    private renderBuffsList(buffsList: fgui.GList, player: any, session: any): void {
+        const allBuffs = player.getAllBuffs();
+        const currentRound = session.getRound();
+
+        // 过滤激活的buffs
+        const activeBuffs = allBuffs.filter(buff => currentRound <= buff.last_active_round);
+
+        // 设置列表项数量
+        buffsList.numItems = activeBuffs.length;
+
+        // 设置列表项渲染器
+        buffsList.itemRenderer = (index: number, obj: fgui.GObject) => {
+            const buffItem = obj.asCom;
+            const buff = activeBuffs[index];
+
+            // 获取title label
+            const titleLabel = buffItem.getChild('title') as fgui.GTextField;
+            if (titleLabel) {
+                titleLabel.text = this.getBuffDisplayName(buff.kind);
+            }
+        };
+    }
+
+    /**
+     * 获取Buff的中文显示名称
+     */
+    private getBuffDisplayName(buffKind: number): string {
+        // Buff类型映射（参考Move合约types.move中的BUFF_*常量）
+        const buffNames: { [key: number]: string } = {
+            1: '移动控制',    // BUFF_MOVE_CTRL
+            2: '冻结',        // BUFF_FROZEN
+            3: '免租',        // BUFF_RENT_FREE
+            4: '停止',        // BUFF_STOP
+            5: '转向',        // BUFF_TURN
+            6: '飞行',        // BUFF_FLY
+            7: '隐身',        // BUFF_STEALTH
+            8: '加速',        // BUFF_SPEED_UP
+            9: '减速',        // BUFF_SPEED_DOWN
+            10: '护盾'        // BUFF_SHIELD
+        };
+
+        return buffNames[buffKind] || `Buff${buffKind}`;
     }
 
     private loadPlayerAvatar(loader: fgui.GLoader, playerIndex: number): void {

@@ -13,6 +13,8 @@
 import type { EventMetadata, DecisionSkippedEvent } from '../types';
 import { EventType } from '../types';
 import { Blackboard } from '../../../events/Blackboard';
+import { EventBus } from '../../../events/EventBus';
+import { EventTypes } from '../../../events/EventTypes';
 import { UINotification } from '../../../ui/utils/UINotification';
 import type { GameSession } from '../../../core/GameSession';
 import { INVALID_TILE_ID } from '../../types/constants';
@@ -118,7 +120,15 @@ export class DecisionSkippedHandler {
                 decisionType: decisionTypeStr,
                 building: buildingName
             });
+        }
 
+        // 发射游戏事件（在try-catch外，确保总是发射）
+        try {
+            EventBus.emit(EventTypes.Game.TurnEnd, {
+                round: event.round,
+                turn: event.turn + 1
+            });
+            console.log('[DecisionSkippedHandler] 发射 TurnEnd 事件');
         } catch (error) {
             console.error('[DecisionSkippedHandler] 处理事件失败', error);
             UINotification.error(`跳过决策处理失败: ${error.message || error}`);

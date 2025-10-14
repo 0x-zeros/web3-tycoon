@@ -376,28 +376,53 @@ export class RollAndStepHandler {
         if (event.cash_changes && event.cash_changes.length > 0) {
             console.log('[RollAndStepHandler] 处理现金变动', event.cash_changes);
 
-            // TODO: 更新玩家现金显示
-            // 遍历所有 cash_changes，更新对应玩家的现金：
-            //
-            // for (const change of event.cash_changes) {
-            //     const player = session.getPlayerByAddress(change.player);
-            //     if (player) {
-            //         // 更新玩家现金（根据 is_debit）
-            //         const newCash = change.is_debit
-            //             ? player.getCash() - change.amount
-            //             : player.getCash() + change.amount;
-            //
-            //         player.setCash(newCash);  // 需要在 Player 类中添加 setCash 方法
-            //
-            //         // 触发现金飞字动画
-            //         EventBus.emit(EventTypes.Player.MoneyChange, {
-            //             player: change.player,
-            //             amount: change.is_debit ? -change.amount : change.amount,
-            //             reason: change.reason,  // CashReason 枚举
-            //             details: change.details
-            //         });
-            //     }
-            // }
+            for (const change of event.cash_changes) {
+                const player = session.getPlayerByAddress(change.player);
+                if (player) {
+                    // 更新玩家现金（根据 is_debit）
+                    const newCash = change.is_debit
+                        ? player.getCash() - change.amount
+                        : player.getCash() + change.amount;
+
+                    // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
+                    player.setCash(newCash);
+
+                    console.log('[RollAndStepHandler] 玩家现金已更新', {
+                        player: change.player,
+                        isDebit: change.is_debit,
+                        amount: change.amount.toString(),
+                        newCash: newCash.toString(),
+                        reason: change.reason
+                    });
+                }
+            }
+        }
+
+        // 处理Prison/Hospital状态（从最后一个step的StopEffect获取）
+        const lastStep = event.steps[event.steps.length - 1];
+        if (lastStep && lastStep.stop_effect) {
+            const stopEffect = lastStep.stop_effect;
+            const player = session.getPlayerByAddress(event.player);
+
+            if (player && stopEffect.turns !== null && stopEffect.turns !== undefined) {
+                // 根据stop_type判断是prison还是hospital
+                // StopType.HOSPITAL = 3, StopType.PRISON = 4
+                if (stopEffect.stop_type === 3) {
+                    // 住院
+                    player.setInHospitalTurns(stopEffect.turns);
+                    console.log('[RollAndStepHandler] 玩家进入医院', {
+                        player: event.player,
+                        turns: stopEffect.turns
+                    });
+                } else if (stopEffect.stop_type === 4) {
+                    // 入狱
+                    player.setInPrisonTurns(stopEffect.turns);
+                    console.log('[RollAndStepHandler] 玩家进入监狱', {
+                        player: event.player,
+                        turns: stopEffect.turns
+                    });
+                }
+            }
         }
 
         // 清除当前 action

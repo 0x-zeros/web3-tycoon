@@ -192,6 +192,78 @@ export class Player extends Role {
         return this._buffs.some(buff => currentRound <= buff.last_active_round);
     }
 
+    /**
+     * 添加单个Buff
+     * @param buff Buff数据
+     */
+    public addBuff(buff: MoveBuffEntry): void {
+        // 检查是否已存在相同kind的buff
+        const existingIndex = this._buffs.findIndex(b => b.kind === buff.kind);
+
+        if (existingIndex >= 0) {
+            // 替换现有buff（通常更新last_active_round）
+            this._buffs[existingIndex] = { ...buff };
+            console.log(`[Player] 更新Buff: kind=${buff.kind}, last_active_round=${buff.last_active_round}`);
+        } else {
+            // 新增buff
+            this._buffs.push({ ...buff });
+            console.log(`[Player] 添加Buff: kind=${buff.kind}, last_active_round=${buff.last_active_round}`);
+        }
+
+        // 触发Buff添加事件
+        EventBus.emit(EventTypes.Player.BuffAdded, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            buff: buff
+        });
+    }
+
+    /**
+     * 删除指定类型的Buff
+     * @param buffKind Buff类型
+     * @returns 是否成功删除
+     */
+    public removeBuff(buffKind: number): boolean {
+        const index = this._buffs.findIndex(b => b.kind === buffKind);
+
+        if (index >= 0) {
+            const removedBuff = this._buffs[index];
+            this._buffs.splice(index, 1);
+
+            console.log(`[Player] 删除Buff: kind=${buffKind}`);
+
+            // 触发Buff删除事件
+            EventBus.emit(EventTypes.Player.BuffRemoved, {
+                playerId: this.m_oId,
+                playerIndex: this._playerIndex,
+                buffKind: buffKind,
+                removedBuff: removedBuff
+            });
+
+            return true;
+        }
+
+        console.warn(`[Player] Buff不存在: kind=${buffKind}`);
+        return false;
+    }
+
+    /**
+     * 批量更新Buff列表
+     * @param buffs 新的Buff列表
+     */
+    public updateBuffs(buffs: MoveBuffEntry[]): void {
+        this._buffs = buffs.map(buff => ({ ...buff }));
+
+        console.log(`[Player] 批量更新Buffs: count=${buffs.length}`);
+
+        // 触发Buff列表更新事件
+        EventBus.emit(EventTypes.Player.BuffsUpdated, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            buffs: this._buffs
+        });
+    }
+
     // ========================= 卡牌管理 =========================
 
     /**
@@ -229,11 +301,12 @@ export class Player extends Role {
      * @param count 数量
      */
     public addCard(cardKind: number, count: number): void {
-        const existingCard = this._cards.find(c => c.kind === cardKind);
+        const existingIndex = this._cards.findIndex(c => c.kind === cardKind);
 
-        if (existingCard) {
-            // 已有该类型卡牌，增加数量
-            existingCard.count += count;
+        if (existingIndex >= 0) {
+            // 已有该类型卡牌，创建新Card替换（因为count是readonly）
+            const oldCount = this._cards[existingIndex].count;
+            this._cards[existingIndex] = Card.fromEntry(cardKind, oldCount + count);
         } else {
             // 新卡牌类型
             this._cards.push(Card.fromEntry(cardKind, count));
@@ -257,22 +330,24 @@ export class Player extends Role {
      * @returns 是否成功删除
      */
     public removeCard(cardKind: number, count: number = 1): boolean {
-        const card = this._cards.find(c => c.kind === cardKind);
+        const cardIndex = this._cards.findIndex(c => c.kind === cardKind);
 
-        if (!card || card.count < count) {
-            console.warn(`[Player] 卡牌不足: kind=${cardKind}, have=${card?.count || 0}, need=${count}`);
+        if (cardIndex < 0 || this._cards[cardIndex].count < count) {
+            console.warn(`[Player] 卡牌不足: kind=${cardKind}, have=${this._cards[cardIndex]?.count || 0}, need=${count}`);
             return false;
         }
 
-        card.count -= count;
+        const oldCount = this._cards[cardIndex].count;
+        const newCount = oldCount - count;
 
-        // 如果数量为0，从数组移除
-        if (card.count === 0) {
-            const index = this._cards.indexOf(card);
-            this._cards.splice(index, 1);
+        // 如果数量为0，从数组移除；否则创建新Card替换
+        if (newCount === 0) {
+            this._cards.splice(cardIndex, 1);
+        } else {
+            this._cards[cardIndex] = Card.fromEntry(cardKind, newCount);
         }
 
-        console.log(`[Player] 删除卡牌: kind=${cardKind}, count=${count}, remaining=${card.count}`);
+        console.log(`[Player] 删除卡牌: kind=${cardKind}, count=${count}, remaining=${newCount}`);
 
         // 触发卡牌删除事件
         EventBus.emit(EventTypes.Player.CardRemoved, {
@@ -280,7 +355,7 @@ export class Player extends Role {
             playerIndex: this._playerIndex,
             cardKind,
             count,
-            remainingCount: card.count
+            remainingCount: newCount
         });
 
         return true;
@@ -357,6 +432,63 @@ export class Player extends Role {
 
     public getInPrisonTurns(): number { return this._inPrisonTurns; }
     public getInHospitalTurns(): number { return this._inHospitalTurns; }
+
+    /**
+     * 设置监狱剩余回合数
+     * @param turns 剩余回合数
+     */
+    public setInPrisonTurns(turns: number): void {
+        const oldTurns = this._inPrisonTurns;
+        this._inPrisonTurns = turns;
+
+        // 同步到Role基类属性
+        this.setAttr(RoleAttribute.JAIL_TURNS, turns);
+
+        // 更新状态
+        if (turns > 0) {
+            this.setState(RoleState.JAILED);
+        } else if (!this._bankrupt && !this.isInHospital()) {
+            this.setState(RoleState.IDLE);
+        }
+
+        console.log(`[Player] 监狱回合变化: ${oldTurns} -> ${turns}`);
+
+        // 触发状态变化事件
+        EventBus.emit(EventTypes.Player.StatusChange, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            statusType: 'prison',
+            oldValue: oldTurns,
+            newValue: turns
+        });
+    }
+
+    /**
+     * 设置医院剩余回合数
+     * @param turns 剩余回合数
+     */
+    public setInHospitalTurns(turns: number): void {
+        const oldTurns = this._inHospitalTurns;
+        this._inHospitalTurns = turns;
+
+        // 更新状态
+        if (turns > 0 && !this.isInPrison()) {
+            this.setState(RoleState.IDLE); // 医院状态暂时用IDLE，可以考虑新增状态
+        } else if (!this._bankrupt && !this.isInPrison() && turns === 0) {
+            this.setState(RoleState.IDLE);
+        }
+
+        console.log(`[Player] 医院回合变化: ${oldTurns} -> ${turns}`);
+
+        // 触发状态变化事件
+        EventBus.emit(EventTypes.Player.StatusChange, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            statusType: 'hospital',
+            oldValue: oldTurns,
+            newValue: turns
+        });
+    }
 
     public getLastTileId(): number { return this._lastTileId; }
     public getNextTileId(): number { return this._nextTileId; }

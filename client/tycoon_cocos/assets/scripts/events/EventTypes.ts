@@ -196,7 +196,13 @@ export const EventTypes = {
         /** 卡牌变化 */
         CardChange: "player_card_change",
         /** 卡牌删除 */
-        CardRemoved: "player_card_removed"
+        CardRemoved: "player_card_removed",
+        /** Buff添加 */
+        BuffAdded: "player_buff_added",
+        /** Buff删除 */
+        BuffRemoved: "player_buff_removed",
+        /** Buff列表更新 */
+        BuffsUpdated: "player_buffs_updated"
     },
 
     /** 卡片相关事件 */

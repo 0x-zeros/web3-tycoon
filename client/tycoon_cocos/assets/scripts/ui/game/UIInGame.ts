@@ -12,6 +12,7 @@ import { UIInGameCards } from "./UIInGameCards";
 import { UIInGameDice } from "./UIInGameDice";
 import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
+import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { MapManager } from "../../map/MapManager";
 
 const { ccclass } = _decorator;
@@ -30,6 +31,7 @@ export class UIInGame extends UIBase {
     private m_diceUI: UIInGameDice | null = null;
     private m_playerPanelUI: UIInGamePlayer | null = null;
     private m_infoUI: UIInGameInfo | null = null;
+    private m_buildingSelectUI: UIInGameBuildingSelect | null = null;
 
     // ================ 控制器 ================
     private m_modeController: fgui.Controller;
@@ -132,6 +134,16 @@ export class UIInGame extends UIBase {
             this.m_infoUI.setPanel(infoComponent);
             this.m_infoUI.init();
             console.log('[UIInGame] Info UI component created');
+        }
+
+        // m_buildingSelectUI
+        const buildingSelectComponent = this.getChild('buildingSelect')?.asCom;
+        if (buildingSelectComponent) {
+            this.m_buildingSelectUI = buildingSelectComponent.node.addComponent(UIInGameBuildingSelect);
+            this.m_buildingSelectUI.setUIName("InGameBuildingSelect");
+            this.m_buildingSelectUI.setPanel(buildingSelectComponent);
+            this.m_buildingSelectUI.init();
+            console.log('[UIInGame] BuildingSelect UI component created');
         }
 
         // 功能按钮

@@ -4,7 +4,8 @@
     <image id="n0_n6n6" name="n0" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="256,256">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <text id="n1_n6n6" name="title" xy="46,84" size="170,74" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="土地庙" input="true"/>
+    <text id="n1_n6n6" name="title" xy="51,45" size="170,74" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="土地庙"/>
+    <text id="n3_n6n6" name="status" xy="26,165" size="213,46" fontSize="25" color="#cccccc" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="当前版本暂未支持"/>
   </displayList>
   <Button mode="Radio" downEffect="scale" downEffectValue="1.1"/>
 </component>

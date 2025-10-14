@@ -18,12 +18,12 @@ import { RollAndStepAction } from '../actions/RollAndStepAction';
 import { EventBus } from '../../../events/EventBus';
 import { EventTypes } from '../../../events/EventTypes';
 import { Blackboard } from '../../../events/Blackboard';
-import { UIMessage, MessageBoxType, MessageBoxIcon } from '../../../ui/utils/UIMessage';
 import { UINotification } from '../../../ui/utils/UINotification';
-import { SuiManager } from '../../managers/SuiManager';
 import { DecisionType } from '../../types/constants';
 import type { Player } from '../../types/game';
 import { CashFlyAnimation } from '../../../ui/effects/CashFlyAnimation';
+import { DecisionDialogHelper } from '../../../ui/utils/DecisionDialogHelper';
+import type { PendingDecisionInfo } from '../../../core/GameSession';
 
 /**
  * RollAndStepHandler 类
@@ -574,10 +574,8 @@ export class RollAndStepHandler {
             return;
         }
 
-        const canAfford = Number(player.getCash()) >= Number(stopEffect.decision_amount);
-
         // 显示决策 MessageBox
-        await this._showDecisionDialog(stopEffect, player, canAfford, session);
+        await this._showDecisionDialog(stopEffect, session);
     }
 
     /**
@@ -585,259 +583,23 @@ export class RollAndStepHandler {
      */
     private async _showDecisionDialog(
         stopEffect: StopEffect,
-        player: Player,
-        canAfford: boolean,
         session: any
     ): Promise<void> {
         const decisionType = stopEffect.pending_decision;
 
+        // 构建 PendingDecisionInfo 对象
+        const decision: PendingDecisionInfo = {
+            type: decisionType,
+            tileId: 0,  // stopEffect 中没有 tileId，使用 0
+            amount: BigInt(stopEffect.decision_amount || 0)
+        };
+
         if (decisionType === DecisionType.BUY_PROPERTY) {
-            await this._showBuyDialog(stopEffect, player, canAfford, session);
+            await DecisionDialogHelper.showBuyDialog(decision, session);
         } else if (decisionType === DecisionType.UPGRADE_PROPERTY) {
-            await this._showUpgradeDialog(stopEffect, player, canAfford, session);
+            await DecisionDialogHelper.showUpgradeDialog(decision, session, stopEffect.level);
         } else if (decisionType === DecisionType.PAY_RENT) {
-            await this._showRentDialog(stopEffect, player, canAfford, session);
-        }
-    }
-
-    /**
-     * 显示购买对话框
-     */
-    private async _showBuyDialog(
-        stopEffect: StopEffect,
-        player: Player,
-        canAfford: boolean,
-        session: any
-    ): Promise<void> {
-        const price = Number(stopEffect.decision_amount);
-        const balance = Number(player.getCash());
-
-        await UIMessage.show({
-            title: "购买建筑",
-            message: `购买价格：${price}\n当前现金：${balance}${canAfford ? '' : ' (现金不足)'}\n购买后余额：${balance - price}`,
-            icon: MessageBoxIcon.NONE,
-            type: MessageBoxType.STYLE1,
-            buttons: {
-                primary: {
-                    text: canAfford ? "购买" : "购买 (现金不足)",
-                    callback: async () => {
-                        if (!canAfford) {
-                            UINotification.warning('现金不足，无法购买');
-                            return;
-                        }
-                        await this._executeBuyBuilding(session);
-                    }
-                },
-                secondary: {
-                    text: "跳过",
-                    visible: true,
-                    callback: async () => {
-                        await this._executeSkipDecision(session);
-                    }
-                },
-                close: {
-                    visible: false
-                }
-            }
-        });
-    }
-
-    /**
-     * 显示升级对话框
-     */
-    private async _showUpgradeDialog(
-        stopEffect: StopEffect,
-        player: Player,
-        canAfford: boolean,
-        session: any
-    ): Promise<void> {
-        const price = Number(stopEffect.decision_amount);
-        const balance = Number(player.getCash());
-        const currentLevel = stopEffect.level ?? 0;
-
-        await UIMessage.show({
-            title: "升级建筑",
-            message: `当前等级：${currentLevel}\n升级价格：${price}\n当前现金：${balance}${canAfford ? '' : ' (现金不足)'}\n升级后余额：${balance - price}`,
-            icon: MessageBoxIcon.NONE,
-            type: MessageBoxType.STYLE1,
-            buttons: {
-                primary: {
-                    text: canAfford ? "升级" : "升级 (现金不足)",
-                    callback: async () => {
-                        if (!canAfford) {
-                            UINotification.warning('现金不足，无法升级');
-                            return;
-                        }
-                        await this._executeUpgradeBuilding(session);
-                    }
-                },
-                secondary: {
-                    text: "跳过",
-                    visible: true,
-                    callback: async () => {
-                        await this._executeSkipDecision(session);
-                    }
-                },
-                close: {
-                    visible: false
-                }
-            }
-        });
-    }
-
-    /**
-     * 显示租金对话框
-     */
-    private async _showRentDialog(
-        stopEffect: StopEffect,
-        player: Player,
-        canAfford: boolean,
-        session: any
-    ): Promise<void> {
-        const rent = Number(stopEffect.decision_amount);
-        const balance = Number(player.getCash());
-        const owner = stopEffect.owner ?? '未知';
-
-        // 检查是否有免租卡（kind=3 是免租卡）
-        const hasRentFreeCard = player.getCardCount(3) > 0;
-
-        await UIMessage.show({
-            title: "支付租金",
-            message: `地产所有者：${owner}\n租金金额：${rent}\n当前现金：${balance}\n${hasRentFreeCard ? '(持有免租卡)' : ''}`,
-            icon: MessageBoxIcon.WARNING,
-            type: MessageBoxType.STYLE1,
-            buttons: {
-                primary: {
-                    text: "使用免租卡",
-                    visible: hasRentFreeCard,
-                    callback: async () => {
-                        await this._executePayRent(session, true);
-                    }
-                },
-                secondary: {
-                    text: "支付现金",
-                    visible: true,
-                    // TODO: 当 MessageBoxButtonConfig 支持 disabled 时启用
-                    // disabled: !canAfford,
-                    callback: async () => {
-                        if (!canAfford) {
-                            UINotification.error('现金不足，将破产');
-                            // 仍然允许执行（链上会处理破产逻辑）
-                        }
-                        await this._executePayRent(session, false);
-                    }
-                },
-                btn_3: {
-                    text: "取消",
-                    visible: true,
-                    callback: () => {
-                        UINotification.info('已取消支付');
-                    }
-                },
-                close: {
-                    visible: false
-                }
-            }
-        });
-    }
-
-    /**
-     * 执行购买建筑
-     */
-    private async _executeBuyBuilding(session: any): Promise<void> {
-        try {
-            const suiManager = SuiManager.instance;
-            const tx = suiManager.gameClient.game.buildBuyBuildingTx(
-                session.getGameId(),
-                session.getMySeat().id,
-                session.getTemplateMapId()
-            );
-
-            await suiManager.signAndExecuteTransaction(tx);
-            UINotification.success('建筑购买成功');
-            console.log('[RollAndStepHandler] 建筑购买成功');
-
-        } catch (error) {
-            console.error('[RollAndStepHandler] 购买建筑失败', error);
-            UINotification.error('购买失败');
-        }
-    }
-
-    /**
-     * 执行升级建筑
-     */
-    private async _executeUpgradeBuilding(session: any): Promise<void> {
-        try {
-            const suiManager = SuiManager.instance;
-            const tx = suiManager.gameClient.game.buildUpgradeBuildingTx(
-                session.getGameId(),
-                session.getMySeat().id,
-                session.getTemplateMapId()
-            );
-
-            await suiManager.signAndExecuteTransaction(tx);
-            UINotification.success('建筑升级成功');
-            console.log('[RollAndStepHandler] 建筑升级成功');
-
-        } catch (error) {
-            console.error('[RollAndStepHandler] 升级建筑失败', error);
-            UINotification.error('升级失败');
-        }
-    }
-
-    /**
-     * 执行支付租金
-     */
-    private async _executePayRent(session: any, useRentFree: boolean): Promise<void> {
-        try {
-            const suiManager = SuiManager.instance;
-            let tx;
-
-            if (useRentFree) {
-                // 使用免租卡支付
-                tx = suiManager.gameClient.game.buildPayRentWithCardTx(
-                    session.getGameId(),
-                    session.getMySeat().id,
-                    session.getTemplateMapId()
-                );
-            } else {
-                // 使用现金支付
-                tx = suiManager.gameClient.game.buildPayRentWithCashTx(
-                    session.getGameId(),
-                    session.getMySeat().id,
-                    session.getTemplateMapId()
-                );
-            }
-
-            await suiManager.signAndExecuteTransaction(tx);
-            UINotification.success(useRentFree ? '已使用免租卡' : '租金支付成功');
-            console.log('[RollAndStepHandler] 租金支付成功', { useRentFree });
-
-        } catch (error) {
-            console.error('[RollAndStepHandler] 支付租金失败', error);
-            UINotification.error('支付失败');
-        }
-    }
-
-    /**
-     * 执行跳过决策
-     */
-    private async _executeSkipDecision(session: any): Promise<void> {
-        try {
-            const suiManager = SuiManager.instance;
-            const tx = suiManager.gameClient.game.buildSkipBuildingDecisionTx(
-                session.getGameId(),
-                session.getMySeat().id,
-                session.getTemplateMapId()
-            );
-
-            await suiManager.signAndExecuteTransaction(tx);
-            UINotification.info('已跳过');
-            console.log('[RollAndStepHandler] 已跳过决策');
-
-        } catch (error) {
-            console.error('[RollAndStepHandler] 跳过决策失败', error);
-            UINotification.error('操作失败');
+            await DecisionDialogHelper.showRentDialog(decision, session, stopEffect.owner);
         }
     }
 

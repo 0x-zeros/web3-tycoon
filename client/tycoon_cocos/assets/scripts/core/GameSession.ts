@@ -965,6 +965,18 @@ export class GameSession {
     }
 
     /**
+     * 根据 tileId 获取对应的 building
+     * @param tileId Tile ID
+     * @returns 包含该 tileId 作为入口的 building，如果没有则返回 null
+     */
+    public getBuildingByTileId(tileId: number): GameBuilding | null {
+        // 遍历所有建筑，查找 entranceTileIds 包含该 tileId 的建筑
+        return this._buildings.find(building =>
+            building.entranceTileIds.includes(tileId)
+        ) || null;
+    }
+
+    /**
      * 获取 Tile 的世界中心点（顶部）
      * @param tileId Tile ID
      * @returns 世界坐标中心点，如果未缓存则返回 null

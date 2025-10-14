@@ -15,11 +15,9 @@ import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { MapManager } from "../../map/MapManager";
 import { GameInitializer } from "../../core/GameInitializer";
-import { UIMessage, MessageBoxType, MessageBoxIcon } from "../utils/UIMessage";
-import { UINotification } from "../utils/UINotification";
-import { SuiManager } from "../../sui/managers/SuiManager";
 import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
+import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
 
 const { ccclass } = _decorator;
 
@@ -519,187 +517,16 @@ export class UIInGame extends UIBase {
     private _showDecisionDialog(decision: PendingDecisionInfo, myPlayer: any, session: any): void {
         switch (decision.type) {
             case DecisionType.BUY_PROPERTY:
-                this._showBuyDialog(decision, myPlayer, session);
+                DecisionDialogHelper.showBuyDialog(decision, session);
                 break;
             case DecisionType.UPGRADE_PROPERTY:
-                this._showUpgradeDialog(decision, myPlayer, session);
+                DecisionDialogHelper.showUpgradeDialog(decision, session);
                 break;
             case DecisionType.PAY_RENT:
-                this._showRentDialog(decision, myPlayer, session);
+                DecisionDialogHelper.showRentDialog(decision, session);
                 break;
             default:
                 console.warn('[UIInGame] 未知的决策类型', decision.type);
-        }
-    }
-
-    /**
-     * 显示购买建筑对话框
-     */
-    private _showBuyDialog(decision: PendingDecisionInfo, myPlayer: any, session: any): void {
-        const building = session.getBuildingByTileId(decision.tileId);
-        const buildingName = building?.getBuildingTypeName() || `建筑${decision.tileId}`;
-        const amount = decision.amount;
-
-        UIMessage.show(
-            `是否购买${buildingName}？`,
-            `购买价格：${amount.toString()}`,
-            MessageBoxType.OkCancel,
-            MessageBoxIcon.Question,
-            (result) => {
-                if (result === 'ok') {
-                    this._executeBuyBuilding(decision.tileId, amount);
-                } else {
-                    this._executeSkipDecision();
-                }
-            }
-        );
-    }
-
-    /**
-     * 显示升级建筑对话框
-     */
-    private _showUpgradeDialog(decision: PendingDecisionInfo, myPlayer: any, session: any): void {
-        const building = session.getBuildingByTileId(decision.tileId);
-        const buildingName = building?.getBuildingTypeName() || `建筑${decision.tileId}`;
-        const amount = decision.amount;
-
-        UIMessage.show(
-            `是否升级${buildingName}？`,
-            `升级费用：${amount.toString()}`,
-            MessageBoxType.OkCancel,
-            MessageBoxIcon.Question,
-            (result) => {
-                if (result === 'ok') {
-                    this._executeUpgradeBuilding(decision.tileId, amount);
-                } else {
-                    this._executeSkipDecision();
-                }
-            }
-        );
-    }
-
-    /**
-     * 显示支付租金对话框
-     */
-    private _showRentDialog(decision: PendingDecisionInfo, myPlayer: any, session: any): void {
-        const building = session.getBuildingByTileId(decision.tileId);
-        const buildingName = building?.getBuildingTypeName() || `建筑${decision.tileId}`;
-        const amount = decision.amount;
-
-        UIMessage.show(
-            `需要支付租金`,
-            `${buildingName}的租金：${amount.toString()}`,
-            MessageBoxType.Ok,
-            MessageBoxIcon.Warning,
-            () => {
-                this._executePayRent(decision.tileId, amount);
-            }
-        );
-    }
-
-    // ================== 交易执行 ==================
-
-    /**
-     * 执行购买建筑交易
-     */
-    private async _executeBuyBuilding(tileId: number, amount: bigint): Promise<void> {
-        console.log('[UIInGame] 执行购买建筑', { tileId, amount: amount.toString() });
-
-        try {
-            const session = GameInitializer.getInstance()?.getGameSession();
-            if (!session) {
-                throw new Error('GameSession 未找到');
-            }
-
-            const suiManager = SuiManager.getInstance();
-            const gameId = session.getGameId();
-
-            // 调用合约
-            await suiManager.buyBuilding(gameId, tileId);
-
-            UINotification.success('购买建筑交易已发送');
-
-        } catch (error) {
-            console.error('[UIInGame] 购买建筑失败', error);
-            UINotification.error(`购买建筑失败: ${error.message || error}`);
-        }
-    }
-
-    /**
-     * 执行升级建筑交易
-     */
-    private async _executeUpgradeBuilding(tileId: number, amount: bigint): Promise<void> {
-        console.log('[UIInGame] 执行升级建筑', { tileId, amount: amount.toString() });
-
-        try {
-            const session = GameInitializer.getInstance()?.getGameSession();
-            if (!session) {
-                throw new Error('GameSession 未找到');
-            }
-
-            const suiManager = SuiManager.getInstance();
-            const gameId = session.getGameId();
-
-            // 调用合约
-            await suiManager.upgradeBuilding(gameId, tileId);
-
-            UINotification.success('升级建筑交易已发送');
-
-        } catch (error) {
-            console.error('[UIInGame] 升级建筑失败', error);
-            UINotification.error(`升级建筑失败: ${error.message || error}`);
-        }
-    }
-
-    /**
-     * 执行支付租金交易
-     */
-    private async _executePayRent(tileId: number, amount: bigint): Promise<void> {
-        console.log('[UIInGame] 执行支付租金', { tileId, amount: amount.toString() });
-
-        try {
-            const session = GameInitializer.getInstance()?.getGameSession();
-            if (!session) {
-                throw new Error('GameSession 未找到');
-            }
-
-            const suiManager = SuiManager.getInstance();
-            const gameId = session.getGameId();
-
-            // 调用合约
-            await suiManager.payRent(gameId, tileId);
-
-            UINotification.success('支付租金交易已发送');
-
-        } catch (error) {
-            console.error('[UIInGame] 支付租金失败', error);
-            UINotification.error(`支付租金失败: ${error.message || error}`);
-        }
-    }
-
-    /**
-     * 执行跳过决策交易
-     */
-    private async _executeSkipDecision(): Promise<void> {
-        console.log('[UIInGame] 执行跳过决策');
-
-        try {
-            const session = GameInitializer.getInstance()?.getGameSession();
-            if (!session) {
-                throw new Error('GameSession 未找到');
-            }
-
-            const suiManager = SuiManager.getInstance();
-            const gameId = session.getGameId();
-
-            // 调用合约
-            await suiManager.skipDecision(gameId);
-
-            UINotification.success('跳过决策交易已发送');
-
-        } catch (error) {
-            console.error('[UIInGame] 跳过决策失败', error);
-            UINotification.error(`跳过决策失败: ${error.message || error}`);
         }
     }
 

@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import { _decorator, Component, Node, Vec3, Animation, Prefab, resources, instantiate, Tween, tween, ParticleSystem, AudioSource, MeshRenderer, Material, Color, Label } from 'cc';
+import { _decorator, Component, Node, Vec3, Animation, Prefab, resources, instantiate, Tween, tween, ParticleSystem, AudioSource, MeshRenderer, Material, Color, Label, Sprite } from 'cc';
 import { Role } from './Role';
 import { RoleMoveParams } from './RoleTypes';
 
@@ -126,7 +126,15 @@ export class Actor extends Component {
     
     /** 是否正在移动 */
     private m_isMoving: boolean = false;
-    
+
+    // ========================= 建筑相关属性（新增）=========================
+
+    /** 建筑 Prefab 节点 */
+    private m_buildingPrefab: Node | null = null;
+
+    /** 建筑配置（GameBuilding引用） */
+    private m_buildingConfig: any = null;  // GameBuilding 类型
+
     // ========================= 生命周期方法 =========================
     
     protected onLoad(): void {
@@ -689,26 +697,177 @@ export class Actor extends Component {
     private cleanup(): void {
         // 停止所有动画
         this.stopAnimation();
-        
+
         // 停止移动
         if (this.m_moveTween) {
             this.m_moveTween.stop();
             this.m_moveTween = null;
         }
-        
+
         // 停止所有特效
         this.stopAllEffects();
-        
+
         // 解绑角色
         this.unbindRole();
-        
+
         // 清理模型
         if (this.m_currentModel && this.m_currentModel.isValid) {
             this.m_currentModel.destroy();
             this.m_currentModel = null;
         }
-        
+
+        // 清理建筑 prefab
+        if (this.m_buildingPrefab) {
+            this.m_buildingPrefab.destroy();
+            this.m_buildingPrefab = null;
+        }
+
         console.log('[Actor] 清理完成');
+    }
+
+    // ========================= 建筑Prefab渲染方法（新增）=========================
+
+    /**
+     * 创建建筑 Actor（静态工厂方法）
+     * @param gameBuilding GameBuilding 实例
+     * @returns Actor 节点（如果无主则返回 null）
+     */
+    public static createBuildingActor(gameBuilding: any): Node | null {
+        if (!gameBuilding.shouldShowPrefab()) {
+            return null; // 无主建筑不显示
+        }
+
+        // 创建节点
+        const node = new Node('BuildingActor');
+        const actor = node.addComponent(Actor);
+
+        // 保存配置
+        actor.m_buildingConfig = gameBuilding;
+
+        // 设置位置（Y=1.0，在block顶部）
+        const position = gameBuilding.getActorPosition();
+        node.setWorldPosition(position);
+
+        // 异步加载 prefab
+        actor.loadBuildingPrefab();
+
+        console.log(`[Actor] Building Actor 创建: buildingId=${gameBuilding.buildingId}, owner=${gameBuilding.owner}, level=${gameBuilding.level}`);
+
+        return node;
+    }
+
+    /**
+     * 加载建筑 Prefab
+     */
+    private async loadBuildingPrefab(): Promise<void> {
+        if (!this.m_buildingConfig) return;
+
+        const prefabPath = this.m_buildingConfig.getPrefabPath();
+        if (!prefabPath) return;
+
+        return new Promise((resolve) => {
+            resources.load(prefabPath, Prefab, (err, prefab) => {
+                if (err) {
+                    console.warn(`[Actor] Building prefab 加载失败: ${prefabPath}`, err);
+                    resolve();
+                    return;
+                }
+
+                // 移除旧 prefab
+                if (this.m_buildingPrefab) {
+                    this.m_buildingPrefab.destroy();
+                }
+
+                // 实例化 prefab
+                this.m_buildingPrefab = instantiate(prefab);
+                this.m_buildingPrefab.parent = this.modelRoot || this.node;
+                this.m_buildingPrefab.name = 'Prefab';
+                this.m_buildingPrefab.setPosition(0, 0, 0);
+
+                // 应用 scale 和 color
+                const scale = this.m_buildingConfig.getLevelScale();
+                const colorFactor = this.m_buildingConfig.getLevelColorFactor();
+
+                this.m_buildingPrefab.setScale(scale, scale, scale);
+                this.applyColorFactor(this.m_buildingPrefab, colorFactor);
+
+                console.log(`[Actor] Building prefab 加载完成: ${prefabPath}, scale=${scale}, colorFactor=${colorFactor}`);
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * 更新建筑渲染（owner/level 变化时调用）
+     * @param gameBuilding 新的 GameBuilding 数据
+     */
+    public updateBuildingRender(gameBuilding: any): void {
+        const oldPrefabPath = this.m_buildingConfig?.getPrefabPath();
+        this.m_buildingConfig = gameBuilding;
+
+        if (!gameBuilding.shouldShowPrefab()) {
+            // 变成无主，移除 prefab
+            if (this.m_buildingPrefab) {
+                this.m_buildingPrefab.destroy();
+                this.m_buildingPrefab = null;
+            }
+            return;
+        }
+
+        // 检查 prefab 路径是否变化（owner 变化会导致路径变化）
+        const newPrefabPath = gameBuilding.getPrefabPath();
+
+        if (newPrefabPath !== oldPrefabPath) {
+            // 路径变化，重新加载 prefab
+            this.loadBuildingPrefab();
+        } else if (this.m_buildingPrefab) {
+            // 路径未变，只更新 scale 和 color
+            const scale = gameBuilding.getLevelScale();
+            const colorFactor = gameBuilding.getLevelColorFactor();
+
+            // 平滑过渡 scale
+            tween(this.m_buildingPrefab)
+                .to(0.3, { scale: new Vec3(scale, scale, scale) }, {
+                    easing: 'backOut'
+                })
+                .start();
+
+            // 更新颜色
+            this.applyColorFactor(this.m_buildingPrefab, colorFactor);
+
+            console.log(`[Actor] Building render 更新: scale=${scale}, colorFactor=${colorFactor}`);
+        }
+    }
+
+    /**
+     * 应用颜色因子到节点树（调整亮度，保持色系）
+     * @param node 目标节点
+     * @param factor 亮度因子（0.8-1.2）
+     */
+    private applyColorFactor(node: Node, factor: number): void {
+        node.walk((n) => {
+            // 处理 Sprite 组件
+            const sprite = n.getComponent(Sprite);
+            if (sprite) {
+                const color = sprite.color.clone();
+                color.r = Math.min(255, Math.floor(color.r * factor));
+                color.g = Math.min(255, Math.floor(color.g * factor));
+                color.b = Math.min(255, Math.floor(color.b * factor));
+                sprite.color = color;
+            }
+
+            // 处理 MeshRenderer 组件
+            const meshRenderer = n.getComponent(MeshRenderer);
+            if (meshRenderer && meshRenderer.material) {
+                const albedo = meshRenderer.material.getProperty('albedo') as Color;
+                if (albedo) {
+                    albedo.r = Math.min(255, Math.floor(albedo.r * factor));
+                    albedo.g = Math.min(255, Math.floor(albedo.g * factor));
+                    albedo.b = Math.min(255, Math.floor(albedo.b * factor));
+                    meshRenderer.material.setProperty('albedo', albedo);
+                }
+            }
+        });
     }
     
     // ========================= 调试方法 =========================

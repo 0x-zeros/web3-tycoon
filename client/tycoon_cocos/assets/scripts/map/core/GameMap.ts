@@ -27,8 +27,10 @@ import { sys } from 'cc';
 import { PaperActorFactory } from '../../role/PaperActorFactory';
 import { PaperActor } from '../../role/PaperActor';
 import { ActorConfigManager } from '../../role/ActorConfig';
+import { ActorFactory } from '../../role/ActorFactory';
+import { Actor } from '../../role/Actor';
 import { BlockOverlayManager } from '../../voxel/overlay/BlockOverlayManager';
-import { NpcKind } from '../../sui/types/constants';
+import { NpcKind, NO_OWNER } from '../../sui/types/constants';
 import { OverlayConfig, OverlayFace } from '../../voxel/overlay/OverlayTypes';
 import { UINotification } from '../../ui/utils/UINotification';
 import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerator';
@@ -129,6 +131,7 @@ export class GameMap extends Component {
     /** PaperActor管理 */
     private _actors: Map<string, Node> = new Map();         // 旧的 NPC和物体的PaperActor（待废弃）
     private _buildings: Map<string, Node> = new Map();      // 建筑的PaperActor（按位置索引）
+    private _buildingActors: Map<string, Node> = new Map(); // 建筑的Actor节点（3D模型，按位置索引）
     private _decorations: Map<string, Node> = new Map();    // 装饰物的体素节点
     private _actorsRoot: Node | null = null;                // 旧的 Actor根节点（待废弃）
     private _buildingsRoot: Node | null = null;             // 建筑的根节点
@@ -871,32 +874,85 @@ export class GameMap extends Component {
         level: number
     ): void {
         const key = `${x}_${y}`;
+
+        // 1. 更新 PaperActor（2D精灵）
         const buildingNode = this._buildings.get(key);
-
-        if (!buildingNode || !buildingNode.isValid) {
-            console.warn(`[GameMap] Building node not found at (${x}, ${y})`);
-            return;
+        if (buildingNode && buildingNode.isValid) {
+            const success = PaperActorFactory.upgradeBuilding(buildingNode, level);
+            if (!success) {
+                console.warn(`[GameMap] PaperActor 更新失败 at (${x}, ${y})`);
+            }
         }
 
-        // 1. 更新等级（使用现有的upgradeBuilding逻辑）
-        const success = PaperActorFactory.upgradeBuilding(buildingNode, level);
+        // 2. 更新 Actor（3D模型）
+        const actorNode = this._buildingActors.get(key);
+        const session = (this as any)._session;
+        const gameBuilding = session?.getBuildingByIndex(buildingId);
 
-        if (!success) {
-            console.warn(`[GameMap] Failed to upgrade building at (${x}, ${y}) to level ${level}`);
+        if (actorNode && actorNode.isValid) {
+            // Actor 节点已存在，更新渲染
+            const actor = actorNode.getComponent(Actor);
+            if (actor && gameBuilding) {
+                actor.updateBuildingRender(gameBuilding);
+            }
+        } else if (owner !== NO_OWNER && gameBuilding) {
+            // 之前无主，现在有主，需要创建 Actor
+            const gridPos = new Vec2(x, y);
+            this.createBuildingActor(gameBuilding, gridPos);
         }
 
-        // 2. TODO: 更新拥有者显示（颜色/标记等）
-        // 可以在PaperActorFactory中添加setOwner方法
-        // PaperActorFactory.setBuildingOwner(buildingNode, owner);
-
-        // 3. 更新Property注册信息
+        // 3. 更新注册信息
         const buildingInfo = this._buildingRegistry.get(key);
         if (buildingInfo) {
             buildingInfo.owner = owner;
             buildingInfo.level = level;
         }
 
-        console.log(`[GameMap] Building render updated: (${x}, ${y}), Owner: ${owner}, Level: ${level}`);
+        console.log(`[GameMap] Building render 更新完成: (${x}, ${y}), Owner: ${owner}, Level: ${level}`);
+    }
+
+    /**
+     * 创建建筑的 Actor 节点（3D prefab渲染）
+     * @param gameBuilding GameBuilding 实例
+     * @param gridPos 网格位置
+     */
+    private createBuildingActor(gameBuilding: any, gridPos: Vec2): void {
+        // 只有有主人的建筑才创建 Actor
+        if (!gameBuilding.shouldShowPrefab()) {
+            return;
+        }
+
+        const key = `${gridPos.x}_${gridPos.y}`;
+
+        // 清除已存在的 Actor
+        const existingActor = this._buildingActors.get(key);
+        if (existingActor) {
+            existingActor.destroy();
+            this._buildingActors.delete(key);
+        }
+
+        // 使用 ActorFactory 创建
+        const actorNode = ActorFactory.createForBuilding(gameBuilding);
+
+        if (actorNode) {
+            actorNode.parent = this._buildingsRoot;
+            actorNode.name = `B_${gameBuilding.size}x${gameBuilding.size}_${gridPos.x}_${gridPos.y}_3D`;
+
+            // 保存引用
+            if (gameBuilding.size === 2) {
+                // 2x2: 所有格子都指向同一个 Actor
+                for (let dx = 0; dx < 2; dx++) {
+                    for (let dz = 0; dz < 2; dz++) {
+                        const occupiedKey = `${gridPos.x + dx}_${gridPos.y + dz}`;
+                        this._buildingActors.set(occupiedKey, actorNode);
+                    }
+                }
+            } else {
+                this._buildingActors.set(key, actorNode);
+            }
+
+            console.log(`[GameMap] Building Actor 创建完成: ${key}`);
+        }
     }
 
     // ========================= 自动保存 =========================
@@ -1414,6 +1470,9 @@ export class GameMap extends Component {
             gameBuilding.level || 0,
             gameBuilding.direction
         );
+
+        // 4. 创建 Building 的 Actor（3D prefab）
+        this.createBuildingActor(gameBuilding, gridPos);
     }
 
     /**
@@ -1697,6 +1756,13 @@ export class GameMap extends Component {
             if (node && node.isValid) node.destroy();
         });
         this._buildings.clear();
+
+        // 清空建筑Actor（3D模型）
+        const uniqueActors = new Set(this._buildingActors.values());
+        uniqueActors.forEach((node) => {
+            if (node && node.isValid) node.destroy();
+        });
+        this._buildingActors.clear();
 
         // 清空建筑注册表
         this._buildingRegistry.clear();

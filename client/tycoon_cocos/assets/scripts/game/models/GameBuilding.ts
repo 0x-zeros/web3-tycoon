@@ -244,6 +244,80 @@ export class GameBuilding {
         return { x: this.x, z: this.y };
     }
 
+    // ========================= 渲染配置方法 =========================
+
+    /**
+     * 获取建筑 Prefab 路径
+     * @returns Prefab 资源路径（用于 resources.load）
+     */
+    public getPrefabPath(): string {
+        if (this.size === BuildingSize.SIZE_1X1) {
+            // 1x1 建筑：根据 owner 选择 prefab（0-3）
+            // 如果无主，返回空（不渲染prefab）
+            if (this.owner === NO_OWNER) {
+                return '';
+            }
+            return `prefabs/building/${this.owner}`;
+        } else {
+            // 2x2 建筑：根据 buildingType 选择 prefab
+            const typeName = this.getBuildingTypePrefabName();
+            return `prefabs/building/${typeName}`;
+        }
+    }
+
+    /**
+     * 获取建筑类型对应的 prefab 名称
+     */
+    private getBuildingTypePrefabName(): string {
+        switch (this.buildingType) {
+            case BuildingType.TEMPLE: return 'temple';
+            case BuildingType.RESEARCH: return 'research';
+            case BuildingType.OIL: return 'oil';
+            case BuildingType.COMMERCIAL: return 'commercial';
+            case BuildingType.HOTEL: return 'hotel';
+            default: return 'temple'; // 默认
+        }
+    }
+
+    /**
+     * 获取等级对应的 scale 值
+     * Level 0-4 对应 1.0, 1.1, 1.2, 1.3, 1.4
+     */
+    public getLevelScale(): number {
+        return 1.0 + (this.level * 0.1);
+    }
+
+    /**
+     * 获取等级对应的颜色调整因子（在色系内调整亮度）
+     * Level 0-4 对应 0.8, 0.9, 1.0, 1.1, 1.2
+     */
+    public getLevelColorFactor(): number {
+        return 0.8 + (this.level * 0.1);
+    }
+
+    /**
+     * 是否需要显示 prefab（有主人才显示）
+     */
+    public shouldShowPrefab(): boolean {
+        return this.isOwned();
+    }
+
+    /**
+     * 获取 Actor 节点的世界位置（Y在block顶部）
+     * @returns 世界坐标（Y=1.0）
+     */
+    public getActorPosition(): Vec3 {
+        const { Vec3 } = require('cc');
+
+        if (this.size === BuildingSize.SIZE_1X1) {
+            // 1x1: 中心在 (x+0.5, 1.0, y+0.5)
+            return new Vec3(this.x + 0.5, 1.0, this.y + 0.5);
+        } else {
+            // 2x2: 中心在 (x+1, 1.0, y+1)
+            return new Vec3(this.x + 1, 1.0, this.y + 1);
+        }
+    }
+
     // ========================= 私有静态方法（计算） =========================
 
     /**

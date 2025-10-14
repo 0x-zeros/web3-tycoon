@@ -851,15 +851,15 @@ export class Actor extends Component {
      */
     private applyColorFactor(node: Node, factor: number): void {
         node.walk((n) => {
-            // 处理 Sprite 组件
-            const sprite = n.getComponent(Sprite);
-            if (sprite) {
-                const color = sprite.color.clone();
-                color.r = Math.min(255, Math.floor(color.r * factor));
-                color.g = Math.min(255, Math.floor(color.g * factor));
-                color.b = Math.min(255, Math.floor(color.b * factor));
-                sprite.color = color;
-            }
+            // // 处理 Sprite 组件
+            // const sprite = n.getComponent(Sprite);
+            // if (sprite) {
+            //     const color = sprite.color.clone();
+            //     color.r = Math.min(255, Math.floor(color.r * factor));
+            //     color.g = Math.min(255, Math.floor(color.g * factor));
+            //     color.b = Math.min(255, Math.floor(color.b * factor));
+            //     sprite.color = color;
+            // }
 
             // 处理 MeshRenderer 组件
             const meshRenderer = n.getComponent(MeshRenderer);

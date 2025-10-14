@@ -92,7 +92,7 @@ export class BuildingDecisionHandler {
             }
 
             // 4. 扣除玩家现金
-            const newCash = player.getCash() - event.amount;
+            const newCash = player.getCash() - BigInt(event.amount);
             player.setCash(newCash);
 
             console.log('[BuildingDecisionHandler] 玩家现金已更新', {
@@ -124,7 +124,7 @@ export class BuildingDecisionHandler {
             const buildingName = building?.getBuildingTypeName() || `建筑${event.building_id}`;
 
             UINotification.success(
-                `玩家${player.getPlayerIndex() + 1}${autoTag}${decisionTypeStr}了${buildingName}，花费${event.amount}`
+                `玩家${player.getPlayerIndex() + 1}${autoTag}${decisionTypeStr}了${buildingName}，花费${BigInt(event.amount).toString()}`
             );
 
             console.log('[BuildingDecisionHandler] BuildingDecisionEvent 处理完成');

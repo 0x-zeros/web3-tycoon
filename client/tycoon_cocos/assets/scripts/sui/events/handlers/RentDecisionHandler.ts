@@ -129,8 +129,8 @@ export class RentDecisionHandler {
                 }
             } else {
                 // 支付现金
-                const newPayerCash = payer.getCash() - event.rent_amount;
-                const newOwnerCash = owner.getCash() + event.rent_amount;
+                const newPayerCash = payer.getCash() - BigInt(event.rent_amount);
+                const newOwnerCash = owner.getCash() + BigInt(event.rent_amount);
 
                 payer.setCash(newPayerCash);
                 owner.setCash(newOwnerCash);
@@ -142,7 +142,7 @@ export class RentDecisionHandler {
                 });
 
                 UINotification.info(
-                    `玩家${payer.getPlayerIndex() + 1}${autoTag}支付${event.rent_amount}租金给玩家${owner.getPlayerIndex() + 1}`
+                    `玩家${payer.getPlayerIndex() + 1}${autoTag}支付${BigInt(event.rent_amount).toString()}租金给玩家${owner.getPlayerIndex() + 1}`
                 );
             }
 

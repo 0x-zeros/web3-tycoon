@@ -1,8 +1,8 @@
 const env = {
-    packageId: '0xdad45de2223569c9e07d9a00682a928dc3e01cc29cb187da0ac1d332ea62d7d0',
-    upgradeCap: '0xa3b3373bf777a905bfe47090fe63a249f4f917a9f04bff94f8f55ebb2e779adc',
-    adminCap: '0xe05c3b880cabf065e42a066db37ebed7578e3b1a34d2fb884626ef4f0de1aaf4',
-    gameData: '0x67498fe7ca5bb97b851d8b3199d9e36ad85dd966b98368a84f47142762653a01',
+    packageId: '0x9dbd5f84b9a1e961ade00f40e8cb2c5ada035e2f1d76c28440cb892591cfa12a',
+    upgradeCap: '0x514dff993766a91b02978557e1949d9177c5d4877b7a688039cfa7d586c47828',
+    adminCap: '0x6a3318f18ab9d9611e806d3f4137662f0b8f46d54da17abce009b25874c31bb6',
+    gameData: '0x50d5a4a1e499c361ece183dbd7ef1cc037fe5d9e7e8d5d8c6616518f85651280',
 };
 
 export default env;

@@ -552,6 +552,22 @@ export class RollAndStepHandler {
         // 使用缓存的 GameSession
         const session = this.currentSession;
 
+        // 只有轮到我的玩家时才显示决策UI
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer) {
+            console.warn('[RollAndStepHandler] My player not found, skip decision UI');
+            return;
+        }
+
+        const eventPlayer = session.getPlayerByAddress(event.player);
+        if (eventPlayer !== myPlayer) {
+            console.log('[RollAndStepHandler] Not my turn, skip decision UI', {
+                eventPlayer: event.player,
+                myPlayer: myPlayer.getOwner()
+            });
+            return;
+        }
+
         const player = session.getActivePlayer();
         if (!player) {
             console.warn('[RollAndStepHandler] Active player not found');

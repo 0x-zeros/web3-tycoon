@@ -134,9 +134,11 @@ export class UIInGamePlayer extends UIBase {
             if (player.isBankrupt()) {
                 status.text = '破产';
             } else if (player.isInPrison()) {
-                status.text = '监狱';
+                const turns = player.getInPrisonTurns();
+                status.text = `服刑中 (剩余${turns}回合)`;
             } else if (player.isInHospital()) {
-                status.text = '医院';
+                const turns = player.getInHospitalTurns();
+                status.text = `住院中 (剩余${turns}回合)`;
             } else {
                 status.text = '';
             }

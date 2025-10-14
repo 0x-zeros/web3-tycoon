@@ -10,11 +10,11 @@
     <text id="n3_ue83" name="n3" xy="247,91" size="52,34" fontSize="24" color="#ffffff" text="存款"/>
     <text id="n4_ue83" name="cash" xy="318,33" size="84,34" fontSize="24" color="#ffffff" text="100000"/>
     <text id="n5_ue83" name="savings" xy="318,91" size="84,34" fontSize="24" color="#ffffff" text="150000"/>
-    <text id="n6_ue83" name="cards" xy="250,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
-    <text id="n7_ue83" name="buff0" xy="322,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
-    <text id="n8_ue83" name="buff1" xy="373,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
-    <text id="n9_ue83" name="buff2" xy="426,188" size="40,34" fontSize="24" color="#ffffff" text=""/>
-    <text id="n11_ue83" name="playerName" xy="132,196" size="80,44" fontSize="24" color="#ffffff" autoSize="none" text="capy1"/>
+    <text id="n6_ue83" name="status" xy="251,208" size="248,34" fontSize="24" color="#ffffff" autoSize="none" text=""/>
+    <text id="n7_ue83" name="buff0" xy="251,151" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n8_ue83" name="buff1" xy="302,151" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n9_ue83" name="buff2" xy="355,151" size="40,34" fontSize="24" color="#ffffff" text=""/>
+    <text id="n11_ue83" name="playerName" xy="111,196" size="129,44" fontSize="24" color="#ffffff" autoSize="none" text="capy1"/>
   </displayList>
   <Button mode="Radio" downEffect="scale" downEffectValue="1.1"/>
 </component>

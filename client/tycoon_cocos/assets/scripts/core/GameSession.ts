@@ -342,6 +342,19 @@ export class GameSession {
             return;
         }
 
+        // 【调试日志】详细输出玩家识别过程
+        console.log('[GameSession] identifyMyPlayer DEBUG:', {
+            currentAddress: currentAddress,
+            currentAddressShort: IdFormatter.shortenAddress(currentAddress),
+            playerCount: this._players.length,
+            players: this._players.map((p, i) => ({
+                index: i,
+                address: p.getOwner(),
+                addressShort: IdFormatter.shortenAddress(p.getOwner()),
+                match: p.getOwner() === currentAddress
+            }))
+        });
+
         // 查找匹配地址的玩家
         const myPlayerIndex = this._players.findIndex(p => p.getOwner() === currentAddress);
 

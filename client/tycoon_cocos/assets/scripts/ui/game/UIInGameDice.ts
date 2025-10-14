@@ -145,6 +145,21 @@ export class UIInGameDice extends UIBase {
             myPlayer.isInPrison() || myPlayer.isInHospital()
         );
 
+        // 【调试日志】详细输出状态信息
+        console.log('[UIInGameDice] _updateButtonState DEBUG:', {
+            myPlayerIndex: session.getMyPlayerIndex(),
+            activePlayerIndex: session.getActivePlayerIndex(),
+            turn: session.getTurn(),
+            round: session.getRound(),
+            isMyTurn: isMyTurn,
+            hasMyPlayer: !!myPlayer,
+            inPrison: myPlayer?.getInPrisonTurns() || 0,
+            inHospital: myPlayer?.getInHospitalTurns() || 0,
+            shouldSkip: shouldSkip,
+            btnRollEnabled: isMyTurn && !shouldSkip,
+            btnSkipVisible: isMyTurn && shouldSkip
+        });
+
         // btn_skipTurn: 轮到自己 && 在监狱/医院
         if (this.m_btn_skipTurn) {
             this.m_btn_skipTurn.visible = isMyTurn && shouldSkip;

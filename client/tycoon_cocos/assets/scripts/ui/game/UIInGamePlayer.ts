@@ -126,16 +126,22 @@ export class UIInGamePlayer extends UIBase {
             this.loadPlayerAvatar(avatar, index);
         }
 
-        // 名字（可选）
-        const name = item.getChild('name') as fgui.GTextField;
-        if (name) {
-            name.text = `玩家 ${index + 1}`;
+        // 玩家编号
+        const indexText = item.getChild('index') as fgui.GTextField;
+        if (indexText) {
+            indexText.text = `${index + 1}`;
         }
 
-        // 金钱（可选）
-        const money = item.getChild('money') as fgui.GTextField;
-        if (money) {
-            money.text = player.getCash().toString();
+        // 玩家名称
+        const playerName = item.getChild('playerName') as fgui.GTextField;
+        if (playerName) {
+            playerName.text = `玩家 ${index + 1}`;
+        }
+
+        // 现金
+        const cash = item.getChild('cash') as fgui.GTextField;
+        if (cash) {
+            cash.text = player.getCash().toString();
         }
 
         // 状态（可选）

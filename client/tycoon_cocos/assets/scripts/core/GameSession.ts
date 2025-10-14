@@ -377,12 +377,12 @@ export class GameSession {
      */
     private loadPendingDecision(game: Game): void {
         if (game.pending_decision !== PendingDecision.NONE) {
-            this._pendingDecision = {
+            // 使用 setPendingDecision()，会自动发射 DecisionPending 事件
+            this.setPendingDecision({
                 type: game.pending_decision,
                 tileId: game.decision_tile,
                 amount: game.decision_amount
-            };
-            console.log('[GameSession] 待决策状态加载', this._pendingDecision);
+            });
         } else {
             this._pendingDecision = null;
         }

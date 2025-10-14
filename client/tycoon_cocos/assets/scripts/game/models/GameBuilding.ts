@@ -16,12 +16,13 @@
  * @version 1.0.0
  */
 
-import type { BuildingStatic, Building } from '../../sui/types/game';
-import type { MapTemplate } from '../../sui/types/map';
+import type { Building } from '../../sui/types/game';
+import type { BuildingStatic, MapTemplate } from '../../sui/types/map';
 import { BuildingSize, BuildingType, NO_OWNER, INVALID_TILE_ID } from '../../sui/types/constants';
 import { Web3BuildingType } from '../../voxel/Web3BlockTypes';
 import { GameData } from '../../sui/models/GameData';
 import type { Player } from '../../role/Player';
+import { Vec3 } from 'cc';
 
 /**
  * GameBuilding 类
@@ -65,6 +66,11 @@ export class GameBuilding {
     /** 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等） */
     public readonly buildingType: number;
 
+    // ========================= 客户端维护数据（非readonly）=========================
+
+    /** 原始拥有者（用于无主建筑的prefab选择） */
+    public originalOwner: number = NO_OWNER;
+
     // ========================= 计算数据（客户端需要） =========================
 
     /** Block ID（用于渲染） */
@@ -106,6 +112,9 @@ export class GameBuilding {
         this.blockId = blockId;
         this.direction = direction;
         this.entranceTileIds = entranceTileIds;
+
+        // 初始化 originalOwner 为当前 owner
+        this.originalOwner = owner;
     }
 
     // ========================= 静态工厂方法 =========================
@@ -251,17 +260,25 @@ export class GameBuilding {
      * @returns Prefab 资源路径（用于 resources.load）
      */
     public getPrefabPath(): string {
+        // 确定使用的 owner index
+        let ownerIndex = this.owner;
+        if (ownerIndex === NO_OWNER) {
+            ownerIndex = this.originalOwner !== NO_OWNER ? this.originalOwner : 0;
+        }
+
         if (this.size === BuildingSize.SIZE_1X1) {
-            // 1x1 建筑：根据 owner 选择 prefab（0-3）
-            // 如果无主，返回空（不渲染prefab）
-            if (this.owner === NO_OWNER) {
-                return '';
-            }
-            return `prefabs/building/${this.owner}`;
+            // 1x1 建筑：始终使用 owner 对应的 prefab
+            return `prefabs/building/${ownerIndex}`;
         } else {
-            // 2x2 建筑：根据 buildingType 选择 prefab
-            const typeName = this.getBuildingTypePrefabName();
-            return `prefabs/building/${typeName}`;
+            // 2x2 建筑
+            if (this.level === 0 || this.buildingType === BuildingType.NONE) {
+                // Level 0 或无类型：使用 1x1 的 prefab（按owner颜色）
+                return `prefabs/building/${ownerIndex}`;
+            } else {
+                // Level 1+ 且有类型：使用类型对应的 prefab
+                const typeName = this.getBuildingTypePrefabName();
+                return `prefabs/building/${typeName}`;
+            }
         }
     }
 
@@ -296,10 +313,12 @@ export class GameBuilding {
     }
 
     /**
-     * 是否需要显示 prefab（有主人才显示）
+     * 是否需要显示 prefab
+     * - 有主人即显示（包括空地Lv0）
+     * - 无主但有originalOwner也显示（破产后的建筑）
      */
     public shouldShowPrefab(): boolean {
-        return this.isOwned();
+        return this.isOwned() || this.originalOwner !== NO_OWNER;
     }
 
     /**
@@ -307,7 +326,6 @@ export class GameBuilding {
      * @returns 世界坐标（Y=1.0）
      */
     public getActorPosition(): Vec3 {
-        const { Vec3 } = require('cc');
 
         if (this.size === BuildingSize.SIZE_1X1) {
             // 1x1: 中心在 (x+0.5, 1.0, y+0.5)

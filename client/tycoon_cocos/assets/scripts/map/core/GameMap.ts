@@ -895,8 +895,8 @@ export class GameMap extends Component {
             if (actor && gameBuilding) {
                 actor.updateBuildingRender(gameBuilding);
             }
-        } else if (owner !== NO_OWNER && gameBuilding) {
-            // 之前无主，现在有主，需要创建 Actor
+        } else if (gameBuilding) {
+            // Actor 不存在，创建（无论有主无主）
             const gridPos = new Vec2(x, y);
             this.createBuildingActor(gameBuilding, gridPos);
         }
@@ -917,11 +917,6 @@ export class GameMap extends Component {
      * @param gridPos 网格位置
      */
     private createBuildingActor(gameBuilding: any, gridPos: Vec2): void {
-        // 只有有主人的建筑才创建 Actor
-        if (!gameBuilding.shouldShowPrefab()) {
-            return;
-        }
-
         const key = `${gridPos.x}_${gridPos.y}`;
 
         // 清除已存在的 Actor

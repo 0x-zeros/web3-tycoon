@@ -791,8 +791,8 @@ export class GameSession {
         const oldOwner = building.owner;
         const oldLevel = building.level;
 
-        // 1. 更新逻辑数据（因为GameBuilding字段是readonly，需要创建新实例）
-        this._buildings[buildingId] = new GameBuilding(
+        // 1. 创建新的 GameBuilding（因为字段是 readonly）
+        const newBuilding = new GameBuilding(
             building.buildingId,
             building.x,
             building.y,
@@ -808,9 +808,23 @@ export class GameSession {
             building.entranceTileIds
         );
 
-        console.log(`[GameSession] 建筑数据更新: Building ${buildingId}, Owner: ${oldOwner}->${owner}, Level: ${oldLevel}->${level}`);
+        // 2. 维护 originalOwner（关键！）
+        if (oldOwner !== NO_OWNER) {
+            // 如果之前有主，记录为 originalOwner
+            newBuilding.originalOwner = oldOwner;
+        } else if (building.originalOwner !== NO_OWNER) {
+            // 如果之前无主但有 originalOwner，保持
+            newBuilding.originalOwner = building.originalOwner;
+        } else if (owner !== NO_OWNER) {
+            // 如果是首次有主，设置 originalOwner
+            newBuilding.originalOwner = owner;
+        }
 
-        // 2. 触发渲染更新（通过GameMap）
+        this._buildings[buildingId] = newBuilding;
+
+        console.log(`[GameSession] 建筑数据更新: Building ${buildingId}, Owner: ${oldOwner}->${owner}, Level: ${oldLevel}->${level}, OriginalOwner: ${newBuilding.originalOwner}`);
+
+        // 3. 触发渲染更新（通过GameMap）
         if (this._gameMap && this._gameMap.updateBuildingRender) {
             const updatedBuilding = this._buildings[buildingId];
             this._gameMap.updateBuildingRender(
@@ -822,7 +836,7 @@ export class GameSession {
             );
         }
 
-        // 3. 触发建筑更新事件
+        // 4. 触发建筑更新事件
         EventBus.emit(EventTypes.Game.BuildingChanged, {
             session: this,
             buildingId,

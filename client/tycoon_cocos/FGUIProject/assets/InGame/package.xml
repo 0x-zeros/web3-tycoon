@@ -20,8 +20,9 @@
     <component id="pd4wos" name="Debug.xml" path="/components/"/>
     <component id="pn5rou" name="Tile.xml" path="/components/"/>
     <component id="f49aov" name="PlaySetting.xml" path="/components/"/>
-    <component id="f49aow" name="DecisionBuilding.xml" path="/components/"/>
     <component id="f49aox" name="CardDraws.xml" path="/" exported="true"/>
+    <component id="n6n6oy" name="Building.xml" path="/components/"/>
+    <component id="n6n6oz" name="BuildingSelect.xml" path="/" exported="true"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

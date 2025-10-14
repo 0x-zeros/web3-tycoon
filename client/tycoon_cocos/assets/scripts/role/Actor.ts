@@ -730,13 +730,9 @@ export class Actor extends Component {
     /**
      * 创建建筑 Actor（静态工厂方法）
      * @param gameBuilding GameBuilding 实例
-     * @returns Actor 节点（如果无主则返回 null）
+     * @returns Actor 节点
      */
     public static createBuildingActor(gameBuilding: any): Node | null {
-        if (!gameBuilding.shouldShowPrefab()) {
-            return null; // 无主建筑不显示
-        }
-
         // 创建节点
         const node = new Node('BuildingActor');
         const actor = node.addComponent(Actor);
@@ -751,7 +747,7 @@ export class Actor extends Component {
         // 异步加载 prefab
         actor.loadBuildingPrefab();
 
-        console.log(`[Actor] Building Actor 创建: buildingId=${gameBuilding.buildingId}, owner=${gameBuilding.owner}, level=${gameBuilding.level}`);
+        console.log(`[Actor] Building Actor 创建: buildingId=${gameBuilding.buildingId}, owner=${gameBuilding.owner}, originalOwner=${gameBuilding.originalOwner}, level=${gameBuilding.level}`);
 
         return node;
     }
@@ -805,16 +801,7 @@ export class Actor extends Component {
         const oldPrefabPath = this.m_buildingConfig?.getPrefabPath();
         this.m_buildingConfig = gameBuilding;
 
-        if (!gameBuilding.shouldShowPrefab()) {
-            // 变成无主，移除 prefab
-            if (this.m_buildingPrefab) {
-                this.m_buildingPrefab.destroy();
-                this.m_buildingPrefab = null;
-            }
-            return;
-        }
-
-        // 检查 prefab 路径是否变化（owner 变化会导致路径变化）
+        // 检查 prefab 路径是否变化（owner/originalOwner 变化会导致路径变化）
         const newPrefabPath = gameBuilding.getPrefabPath();
 
         if (newPrefabPath !== oldPrefabPath) {

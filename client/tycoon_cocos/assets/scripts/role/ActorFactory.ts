@@ -20,7 +20,7 @@ export class ActorFactory {
     /**
      * 为建筑创建 Actor
      * @param gameBuilding GameBuilding 实例
-     * @returns Actor 节点（如果无主则返回 null）
+     * @returns Actor 节点
      */
     public static createForBuilding(gameBuilding: any): Node | null {
         return Actor.createBuildingActor(gameBuilding);

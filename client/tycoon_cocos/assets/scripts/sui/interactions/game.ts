@@ -258,15 +258,21 @@ export class GameInteraction {
     buildUpgradeBuildingTx(
         gameId: string,
         seatId: string,
-        mapTemplateId: string
+        mapTemplateId: string,
+        buildingType?: number  // 建筑类型（用于2x2建筑lv0->lv1时设置类型）
     ): Transaction {
         const tx = new Transaction();
+
+        // 默认值：暂时统一使用 BUILDING_TEMPLE (20)
+        // TODO: 后续添加UI让玩家选择具体类型
+        const finalBuildingType = buildingType ?? 20;
 
         tx.moveCall({
             target: `${this.packageId}::game::upgrade_building`,
             arguments: [
                 tx.object(gameId),
                 tx.object(seatId),
+                tx.pure.u8(finalBuildingType),  // 新增：建筑类型参数
                 tx.object(this.gameDataId),
                 tx.object(mapTemplateId),
                 tx.object(this.randomObjectId)  // random

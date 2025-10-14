@@ -102,13 +102,19 @@ export class BuildingDecisionHandler {
                 amount: event.amount.toString()
             });
 
-            // 5. 更新建筑（owner和level）- 会自动触发渲染更新
-            session.updateBuilding(event.building_id, player.getPlayerIndex(), event.new_level);
+            // 5. 更新建筑（owner、level和building_type）- 会自动触发渲染更新
+            session.updateBuilding(
+                event.building_id,
+                player.getPlayerIndex(),
+                event.new_level,
+                event.building_type  // 新增：传递建筑类型
+            );
 
             console.log('[BuildingDecisionHandler] 建筑已更新', {
                 buildingId: event.building_id,
                 owner: player.getPlayerIndex(),
-                level: event.new_level
+                level: event.new_level,
+                buildingType: event.building_type
             });
 
             // 6. 显示 notification

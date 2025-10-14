@@ -169,6 +169,8 @@ export interface BuildingDecisionEvent {
     amount: bigint;
     /** 新等级 */
     new_level: number;
+    /** 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等） */
+    building_type: number;
     /** 轮次 */
     round: number;
     /** 回合 */

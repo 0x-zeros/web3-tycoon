@@ -115,6 +115,7 @@ public struct BuildingDecisionEvent has copy, drop {
     tile_id: u16,
     amount: u64,
     new_level: u8,
+    building_type: u8,  // 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等）
     round: u16,
     turn: u8,
     auto_decision: bool  // true=自动决策，false=手动决策
@@ -631,6 +632,7 @@ public(package) fun emit_building_decision_event(
     tile_id: u16,
     amount: u64,
     new_level: u8,
+    building_type: u8,
     round: u16,
     turn: u8,
     auto_decision: bool
@@ -643,6 +645,7 @@ public(package) fun emit_building_decision_event(
         tile_id,
         amount,
         new_level,
+        building_type,
         round,
         turn,
         auto_decision

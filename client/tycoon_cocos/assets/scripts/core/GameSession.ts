@@ -775,12 +775,13 @@ export class GameSession {
     // ========================= Building管理 =========================
 
     /**
-     * 更新建筑数据（owner和level）并触发渲染更新
+     * 更新建筑数据（owner、level和可选的buildingType）并触发渲染更新
      * @param buildingId 建筑ID
      * @param owner 新的拥有者索引
      * @param level 新的等级
+     * @param buildingType 可选的建筑类型（用于2x2建筑lv0->lv1时设置类型）
      */
-    public updateBuilding(buildingId: number, owner: number, level: number): void {
+    public updateBuilding(buildingId: number, owner: number, level: number, buildingType?: number): void {
         const building = this._buildings[buildingId];
 
         if (!building) {
@@ -790,6 +791,7 @@ export class GameSession {
 
         const oldOwner = building.owner;
         const oldLevel = building.level;
+        const oldBuildingType = building.buildingType;
 
         // 1. 创建新的 GameBuilding（因为字段是 readonly）
         const newBuilding = new GameBuilding(
@@ -802,7 +804,7 @@ export class GameSession {
             building.chainNextId,
             owner,  // 新owner
             level,  // 新level
-            building.buildingType,
+            buildingType ?? building.buildingType,  // 新buildingType或保持原值
             building.blockId,
             building.direction,
             building.entranceTileIds
@@ -822,7 +824,7 @@ export class GameSession {
 
         this._buildings[buildingId] = newBuilding;
 
-        console.log(`[GameSession] 建筑数据更新: Building ${buildingId}, Owner: ${oldOwner}->${owner}, Level: ${oldLevel}->${level}, OriginalOwner: ${newBuilding.originalOwner}`);
+        console.log(`[GameSession] 建筑数据更新: Building ${buildingId}, Owner: ${oldOwner}->${owner}, Level: ${oldLevel}->${level}, BuildingType: ${oldBuildingType}->${newBuilding.buildingType}, OriginalOwner: ${newBuilding.originalOwner}`);
 
         // 3. 触发渲染更新（通过GameMap）
         if (this._gameMap && this._gameMap.updateBuildingRender) {

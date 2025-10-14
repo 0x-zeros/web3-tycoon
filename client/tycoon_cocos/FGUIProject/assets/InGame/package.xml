@@ -23,6 +23,7 @@
     <component id="f49aox" name="CardDraws.xml" path="/" exported="true"/>
     <component id="n6n6oy" name="Building.xml" path="/components/"/>
     <component id="n6n6oz" name="BuildingSelect.xml" path="/" exported="true"/>
+    <component id="n6n6p0" name="PlayerBuff.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

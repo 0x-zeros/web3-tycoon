@@ -10,7 +10,7 @@
     <image id="n3_ue83" name="n3" src="ue83d" fileName="images/rectangle.png" pkg="82r0pzop" xy="94,131" pivot="0.5,0.5" anchor="true" size="173,236" alpha="0.5">
       <gearDisplay controller="button" pages="1,2,3"/>
     </image>
-    <text id="n2_ue83" name="title" xy="42,123" size="104,39" fontSize="28" color="#8e8148" align="center" vAlign="middle" autoSize="none" text=""/>
+    <text id="n2_ue83" name="title" xy="30,102" size="125,78" fontSize="28" color="#ffffff" align="center" vAlign="middle" autoSize="none" strokeColor="#000000" autoClearText="true" text="遥控骰子"/>
   </displayList>
   <Button downEffect="scale" downEffectValue="0.8"/>
   <transition name="t0" autoPlay="true" autoPlayRepeat="-1">

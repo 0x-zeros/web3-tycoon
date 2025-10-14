@@ -148,7 +148,7 @@ export class UIInGameDice extends UIBase {
         // btn_skipTurn: 轮到自己 && 在监狱/医院
         if (this.m_btn_skipTurn) {
             this.m_btn_skipTurn.visible = isMyTurn && shouldSkip;
-            console.log('[UIInGameDice] SkipTurn 按钮:', shouldSkip ? '显示' : '隐藏');
+            console.log('[UIInGameDice] SkipTurn 按钮:', (isMyTurn && shouldSkip) ? '显示' : '隐藏');
         }
 
         // dice: 轮到自己 && 不在监狱/医院

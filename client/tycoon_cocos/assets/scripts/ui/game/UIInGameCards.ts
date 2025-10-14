@@ -16,6 +16,7 @@ import { EventTypes } from "../../events/EventTypes";
 import * as fgui from "fairygui-cc";
 import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
+import { getCardName } from "../../sui/types/cards";
 
 const { ccclass } = _decorator;
 
@@ -148,10 +149,10 @@ export class UIInGameCards extends UIBase {
             });
         }
 
-        // 设置标题（卡牌名称）
+        // 设置标题（卡牌名称 - 使用中文）
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
-            title.text = cardDef.name;
+            title.text = getCardName(cardEntry.kind);
         }
 
         // 设置数量

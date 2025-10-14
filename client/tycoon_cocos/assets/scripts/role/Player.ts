@@ -16,6 +16,8 @@ import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { IdFormatter } from '../ui/utils/IdFormatter';
 import { Card } from '../card/Card';
+import { Vec3 } from 'cc';
+import { Blackboard } from '../events/Blackboard';
 
 /**
  * Player 类
@@ -495,8 +497,105 @@ export class Player extends Role {
 
     public getTempleLevels(): number[] { return [...this._templeLevels]; }
 
-    // PaperActor 关联方法继承自 Role 基类
-    // setPaperActor(), getPaperActor()
+    // ========================= PaperActor 关联方法 =========================
+
+    /**
+     * 重写 setPaperActor，在设置 PaperActor 时自动更新朝向
+     */
+    public setPaperActor(actor: any | null): void {
+        super.setPaperActor(actor);
+
+        // PaperActor 创建完成后，立即更新朝向
+        if (actor) {
+            const session = Blackboard.instance.get<any>("currentGameSession");
+            if (session) {
+                this.updatePaperActorDirection(session);
+            } else {
+                console.warn('[Player] GameSession not found, skip direction update');
+            }
+        }
+    }
+
+    // getPaperActor() 继承自 Role 基类
+
+    // ========================= PaperActor 朝向管理 =========================
+
+    /**
+     * 更新PaperActor朝向
+     * 根据next_tile_id和last_tile_id计算并设置朝向
+     * @param session GameSession实例，用于获取tile位置
+     */
+    public updatePaperActorDirection(session: any): void {
+        const paperActor = this.getPaperActor();
+        if (!paperActor) {
+            return;
+        }
+
+        let fromTileId: number;
+        let toTileId: number;
+
+        // 判断使用哪个方向逻辑
+        if (this._nextTileId !== INVALID_TILE_ID) {
+            // 有强制目标，从当前tile朝向next_tile
+            fromTileId = this._pos;
+            toTileId = this._nextTileId;
+        } else if (this._lastTileId !== INVALID_TILE_ID) {
+            // 没有强制目标，从last_tile朝向当前tile
+            fromTileId = this._lastTileId;
+            toTileId = this._pos;
+        } else {
+            // 两者都无效，无法计算方向
+            return;
+        }
+
+        // 获取两个tile的世界坐标
+        const fromPos = session.getTileWorldCenter(fromTileId);
+        const toPos = session.getTileWorldCenter(toTileId);
+
+        if (!fromPos || !toPos) {
+            console.warn(`[Player] 无法获取tile位置: from=${fromTileId}, to=${toTileId}`);
+            return;
+        }
+
+        // 计算方向向量
+        const direction = this.calculateDirection(fromPos, toPos);
+
+        // 设置到PaperActor
+        paperActor.setDirection(direction);
+
+        console.log(`[Player] 更新朝向: from=${fromTileId} to=${toTileId}, direction=${direction}`);
+    }
+
+    /**
+     * 根据两个位置计算方向（0-3）
+     * @param from 起点位置
+     * @param to 终点位置
+     * @returns 方向值：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
+     */
+    private calculateDirection(from: Vec3, to: Vec3): number {
+        const dx = to.x - from.x;
+        const dz = to.z - from.z;
+
+        // 计算角度（atan2返回-π到π）
+        // 使用atan2(dx, dz)，其中dx对应偏移量（东西向），dz对应前进量（南北向）
+        const angle = Math.atan2(dx, dz);
+
+        // 将角度转换为度数（0-360）
+        let degrees = (angle * 180 / Math.PI);
+        if (degrees < 0) degrees += 360;
+
+        // 映射到4个方向
+        // atan2(dx, dz):
+        //   0° → +z方向（南） → direction 0
+        //   90° → +x方向（东） → direction 1
+        //   180° → -z方向（北） → direction 2
+        //   270° → -x方向（西） → direction 3
+        //
+        // 四舍五入到最近的90度倍数
+        const direction = Math.round(degrees / 90) % 4;
+
+        return direction;
+    }
 
     // ========================= 重写方法 =========================
 

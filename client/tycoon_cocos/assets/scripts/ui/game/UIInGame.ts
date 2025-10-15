@@ -344,7 +344,7 @@ export class UIInGame extends UIBase {
      */
     private _onExitGameClick(): void {
         console.log("[UIInGame] Exit game button clicked");
-        UIManager.getInstance()?.exitGame();
+        UIManager.instance?.exitGame();
     }
 
     /**

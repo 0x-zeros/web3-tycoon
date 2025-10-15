@@ -71,6 +71,7 @@
 
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
+import { Blackboard } from '../events/Blackboard';
 import type { Game, Player as MovePlayer, NpcInst, NpcInst as MoveNpcInst, Tile, Seat } from '../sui/types/game';
 import type { MapTemplate } from '../sui/types/map';
 import { GameStatus, PendingDecision, INVALID_TILE_ID, NO_OWNER } from '../sui/types/constants';

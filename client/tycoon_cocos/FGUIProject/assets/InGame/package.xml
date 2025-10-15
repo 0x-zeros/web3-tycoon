@@ -3,7 +3,7 @@
   <resources>
     <component id="mumq0" name="Main.xml" path="/" exported="true"/>
     <component id="mumq1" name="GameInfo.xml" path="/components/"/>
-    <component id="mumq2" name="DiceCorner.xml" path="/"/>
+    <component id="mumq2" name="DiceCorner.xml" path="/components/"/>
     <image id="mumq4" name="dice10.png" path="/images/"/>
     <component id="mumq5" name="Dice.xml" path="/components/"/>
     <component id="mumq6" name="CardList.xml" path="/components/"/>
@@ -25,6 +25,8 @@
     <component id="n6n6oz" name="BuildingSelect.xml" path="/" exported="true"/>
     <component id="n6n6p0" name="PlayerBuff.xml" path="/components/"/>
     <component id="n6n6p1" name="Cash.xml" path="/" exported="true"/>
+    <component id="b9csp2" name="Bankruptcy.xml" path="/" exported="true"/>
+    <component id="b9csp3" name="GameEnd.xml" path="/" exported="true"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

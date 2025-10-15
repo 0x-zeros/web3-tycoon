@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,600">
+  <displayList>
+    <image id="n1_b9cs" name="n1" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="800,600"/>
+    <text id="n0_n6n6" name="title" xy="58,77" size="680,430" fontSize="50" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="游戏结束">
+      <relation target="" sidePair="center-center,middle-middle"/>
+    </text>
+  </displayList>
+</component>

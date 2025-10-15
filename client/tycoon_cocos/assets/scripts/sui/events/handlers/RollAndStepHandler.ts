@@ -22,8 +22,6 @@ import { UINotification } from '../../../ui/utils/UINotification';
 import { DecisionType } from '../../types/constants';
 import type { Player } from '../../types/game';
 import { CashFlyAnimation } from '../../../ui/effects/CashFlyAnimation';
-import { DecisionDialogHelper } from '../../../ui/utils/DecisionDialogHelper';
-import type { PendingDecisionInfo } from '../../../core/GameSession';
 
 /**
  * RollAndStepHandler 类
@@ -574,33 +572,19 @@ export class RollAndStepHandler {
             return;
         }
 
-        // 显示决策 MessageBox
-        await this._showDecisionDialog(stopEffect, session);
-    }
+        // 更新 GameSession 状态（会自动发射 DecisionPending 事件）
+        // UIInGame 会监听该事件并显示决策对话框
+        session.setPendingDecision({
+            type: stopEffect.pending_decision,
+            tileId: stopEffect.decision_tile,  // 使用正确的 decision_tile 字段
+            amount: BigInt(stopEffect.decision_amount)
+        });
 
-    /**
-     * 显示决策对话框
-     */
-    private async _showDecisionDialog(
-        stopEffect: StopEffect,
-        session: any
-    ): Promise<void> {
-        const decisionType = stopEffect.pending_decision;
-
-        // 构建 PendingDecisionInfo 对象
-        const decision: PendingDecisionInfo = {
-            type: decisionType,
-            tileId: 0,  // stopEffect 中没有 tileId，使用 0
-            amount: BigInt(stopEffect.decision_amount || 0)
-        };
-
-        if (decisionType === DecisionType.BUY_PROPERTY) {
-            await DecisionDialogHelper.showBuyDialog(decision, session);
-        } else if (decisionType === DecisionType.UPGRADE_PROPERTY) {
-            await DecisionDialogHelper.showUpgradeDialog(decision, session, stopEffect.level);
-        } else if (decisionType === DecisionType.PAY_RENT) {
-            await DecisionDialogHelper.showRentDialog(decision, session, stopEffect.owner);
-        }
+        console.log('[RollAndStepHandler] 已设置待决策状态，UIInGame 将显示对话框', {
+            type: stopEffect.pending_decision,
+            tileId: stopEffect.decision_tile,
+            amount: stopEffect.decision_amount.toString()
+        });
     }
 
     // ==================== 辅助方法 ====================

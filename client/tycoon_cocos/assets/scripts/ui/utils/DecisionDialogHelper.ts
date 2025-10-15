@@ -54,11 +54,8 @@ export class DecisionDialogHelper {
             buttons: {
                 primary: {
                     text: canAfford ? "购买" : "购买 (现金不足)",
+                    disabled: !canAfford,  // 现金不足时禁用按钮
                     callback: async () => {
-                        if (!canAfford) {
-                            UINotification.warning('现金不足，无法购买');
-                            return;
-                        }
                         await DecisionDialogHelper._executeBuyBuilding(session);
                     }
                 },
@@ -111,11 +108,8 @@ export class DecisionDialogHelper {
             buttons: {
                 primary: {
                     text: canAfford ? "升级" : "升级 (现金不足)",
+                    disabled: !canAfford,  // 现金不足时禁用按钮
                     callback: async () => {
-                        if (!canAfford) {
-                            UINotification.warning('现金不足，无法升级');
-                            return;
-                        }
                         await DecisionDialogHelper._executeUpgradeBuilding(session);
                     }
                 },

@@ -72,7 +72,7 @@ fun init(ctx: &mut TxContext) {
         drop_config: cards::create_drop_config_internal(ctx),
 
         // 全局游戏数值配置
-        starting_cash: 10000,
+        starting_cash: DEFAULT_STARTING_CASH,  // 修正：使用 DEFAULT_STARTING_CASH 而不是硬编码的 10000
 
         // 新数值系统配置（×100存储）
         // 小地产租金倍率：L0-L5 对应 [0.5, 1, 2.5, 5, 10, 15]倍

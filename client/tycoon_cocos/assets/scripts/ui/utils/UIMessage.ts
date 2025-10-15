@@ -48,6 +48,8 @@ export interface MessageBoxButtonConfig {
     text?: string;
     /** 是否显示（默认true） */
     visible?: boolean;
+    /** 是否禁用（默认false） */
+    disabled?: boolean;
     /** 点击回调 */
     callback?: () => void | Promise<void>;
 }
@@ -477,6 +479,11 @@ export class UIMessage extends UIBase {
         // 设置文本
         if (config.text !== undefined) {
             button.title = config.text;
+        }
+
+        // 设置禁用状态
+        if (config.disabled !== undefined) {
+            button.enabled = !config.disabled;
         }
     }
 

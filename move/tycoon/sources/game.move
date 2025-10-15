@@ -2760,9 +2760,15 @@ fun advance_turn(
 ) {
     let player_count = game.players.length() as u8;
     let mut attempts = 0;  // 安全计数器
+    let mut will_wrap = false;  // 回绕标志
 
     // 步骤1: 寻找下一个非破产玩家
     loop {
+        // 在递增之前检测是否会回绕
+        if ((game.active_idx + 1) >= player_count) {
+            will_wrap = true;
+        };
+
         // 循环递增玩家索引（使用取模实现循环）
         game.active_idx = ((game.active_idx + 1) % player_count);
         attempts = attempts + 1;
@@ -2785,8 +2791,8 @@ fun advance_turn(
     // 步骤2: 更新turn（轮内回合）
     game.turn = game.active_idx;
 
-    // 步骤3: 如果回到第一个玩家（索引0），说明完成了一轮
-    if (game.active_idx == 0) {
+    // 步骤3: 如果检测到回绕，说明完成了一轮
+    if (will_wrap) {
         game.round = game.round + 1;  // 增加轮次
 
         // 轮次结束时的刷新操作

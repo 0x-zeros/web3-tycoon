@@ -340,22 +340,11 @@ export class UIInGame extends UIBase {
 
     /**
      * 退出游戏按钮点击
-     * 使用EventBus系统退出当前GameMap并返回地图选择界面
+     * 调用 UIManager.exitGame() 统一处理退出逻辑
      */
     private _onExitGameClick(): void {
         console.log("[UIInGame] Exit game button clicked");
-
-        // 发送请求切换地图事件（不指定目标地图toMapId: null表示卸载当前地图）
-        //fromMapId: string; toMapId: string, isEdit?: boolean }
-        EventBus.emit(EventTypes.Game.RequestMapChange, {
-            toMapId: null
-        });
-
-        // 发送请求显示地图选择界面事件
-        EventBus.emit(EventTypes.UI.ShowMapSelect);
-        this.hide();
-
-        console.log("[UIInGame] Sent events to exit to map selection");
+        UIManager.getInstance()?.exitGame();
     }
 
     /**

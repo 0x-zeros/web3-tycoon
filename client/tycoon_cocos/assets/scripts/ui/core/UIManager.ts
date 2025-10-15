@@ -1033,6 +1033,43 @@ export class UIManager {
     }
 
     /**
+     * 退出游戏（全局方法）
+     *
+     * 职责：
+     * - 调用 GameSession.exitGameCleanup() 清理游戏状态
+     * - 隐藏 UIInGame
+     * - 显示地图选择界面
+     *
+     * 被以下位置调用：
+     * - UIInGame._onExitGameClick() - 退出按钮
+     * - UIGameEnd._onEndClick() - 游戏结束确认
+     */
+    public exitGame(): void {
+        console.log('[UIManager] 退出游戏');
+
+        // 1. 调用 GameSession 清理游戏状态
+        const session = Blackboard.instance.get<any>('currentGameSession');
+        if (session && session.exitGameCleanup) {
+            session.exitGameCleanup();
+            console.log('[UIManager] GameSession 已清理');
+        } else {
+            console.warn('[UIManager] GameSession not found or exitGameCleanup not available');
+        }
+
+        // 2. 隐藏游戏内界面
+        if (this.isUIShowing("InGame")) {
+            this.hideUI("InGame");
+            console.log('[UIManager] UIInGame 已隐藏');
+        }
+
+        // 3. 显示地图选择界面
+        this.showUI("MapSelect");
+        console.log('[UIManager] 显示地图选择界面');
+
+        console.log('[UIManager] 游戏退出完成');
+    }
+
+    /**
      * 设置全局UI事件监听器
      */
     private _setupGlobalUIEventListeners(): void {

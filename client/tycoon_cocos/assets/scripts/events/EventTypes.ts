@@ -71,6 +71,8 @@ export const EventTypes = {
         GameEnd: "game_end",
         /** 游戏结束（新名称） */
         GameEnded: "game_ended",
+        /** 游戏退出 */
+        GameExit: "game_exit",
         /** 游戏暂停 */
         GamePause: "game_pause",
         /** 游戏恢复 */

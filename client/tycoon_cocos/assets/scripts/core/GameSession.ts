@@ -1008,6 +1008,44 @@ export class GameSession {
     }
 
     /**
+     * 退出游戏清理（由 UIManager.exitGame() 调用）
+     *
+     * 职责：
+     * - 卸载 GameMap（调用 MapManager）
+     * - 重置 GameSession 状态
+     * - 清理 Blackboard
+     * - 发射 GameExit 事件（仅通知，不控制 UI）
+     *
+     * 注意：不负责 UI 显示/隐藏，由 UIManager 统一处理
+     */
+    public exitGameCleanup(): void {
+        console.log('[GameSession] 开始清理游戏状态');
+
+        // 1. 卸载 GameMap（如果有）
+        if (this._gameMap) {
+            const mapManager = MapManager.getInstance();
+            if (mapManager) {
+                mapManager.unloadCurrentMap();
+                console.log('[GameSession] GameMap 已卸载');
+            }
+        }
+
+        // 2. 重置 GameSession 状态
+        this.reset();
+
+        // 3. 清理 Blackboard 中的 currentGameSession
+        Blackboard.instance.set('currentGameSession', null);
+        console.log('[GameSession] Blackboard 已清理');
+
+        // 4. 发射游戏退出事件（仅通知）
+        EventBus.emit(EventTypes.Game.GameExit, {
+            source: 'game_session'
+        });
+
+        console.log('[GameSession] 游戏状态清理完成');
+    }
+
+    /**
      * 重置游戏会话
      */
     public reset(): void {

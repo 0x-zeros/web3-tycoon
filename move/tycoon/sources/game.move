@@ -2290,13 +2290,13 @@ fun handle_bankruptcy(
     };
 
     // 步骤2: 释放玩家拥有的所有建筑
-    // 直接遍历所有建筑，重置该玩家拥有的建筑
+    // 只重置所有权，保留建筑等级（其他玩家可以购买高等级建筑）
     let mut i = 0;
     while (i < game.buildings.length()) {
         let building = &mut game.buildings[i];
         if (building.owner == player_index) {
             building.owner = NO_OWNER;
-            building.level = 0;
+            // 保留 building.level（不重置为0）
         };
         i = i + 1;
     };

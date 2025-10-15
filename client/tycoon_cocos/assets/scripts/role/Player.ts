@@ -432,6 +432,40 @@ export class Player extends Role {
         });
     }
 
+    /**
+     * 设置破产状态
+     * @param bankrupt 是否破产
+     */
+    public setBankrupt(bankrupt: boolean): void {
+        const oldBankrupt = this._bankrupt;
+        this._bankrupt = bankrupt;
+
+        // 同步到Role基类属性
+        this.setAttr(RoleAttribute.BANKRUPT, bankrupt ? 1 : 0);
+
+        // 更新状态
+        if (bankrupt) {
+            this.setState(RoleState.BANKRUPT);
+        } else if (this.isInPrison()) {
+            this.setState(RoleState.JAILED);
+        } else if (this.isInHospital()) {
+            this.setState(RoleState.IDLE);
+        } else {
+            this.setState(RoleState.IDLE);
+        }
+
+        console.log(`[Player] 破产状态变化: ${oldBankrupt} -> ${bankrupt}`);
+
+        // 触发状态变化事件
+        EventBus.emit(EventTypes.Player.StatusChange, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            statusType: 'bankrupt',
+            oldValue: oldBankrupt ? 1 : 0,
+            newValue: bankrupt ? 1 : 0
+        });
+    }
+
     public getInPrisonTurns(): number { return this._inPrisonTurns; }
     public getInHospitalTurns(): number { return this._inHospitalTurns; }
 

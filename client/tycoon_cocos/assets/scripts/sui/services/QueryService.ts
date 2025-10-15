@@ -143,24 +143,48 @@ export class QueryService {
     /**
      * 查询所有 Game 类型的共享对象（批量版本，使用 multiGetObjects）
      * 性能优化：减少网络请求次数（50个游戏：从50次降为1次）
+     * 支持完整分页：自动查询所有 GameCreatedEvent
      */
     async queryAllGamesBatch(options: GameQueryOptions = {}): Promise<GameListItem[]> {
         const games: GameListItem[] = [];
 
         try {
-            // 1. 查询所有 GameCreatedEvent
-            const response = await this.client.queryEvents({
-                query: {
-                    MoveEventType: `${this.packageId}::events::GameCreatedEvent`
-                },
-                limit: options.limit || 50,
-                order: options.order || 'descending'
-            });
+            // ✅ 1. 分页查询所有 GameCreatedEvent
+            const allEvents: any[] = [];
+            let cursor: string | null | undefined = undefined;
+            let hasNextPage = true;
+            let pageCount = 0;
+            const maxPages = 100;  // 防止无限循环
+            const pageLimit = 50;
 
-            console.log('[QueryService] queryAllGamesBatch num:', response.data.length);
+            console.log('[QueryService] Starting pagination for GameCreatedEvent...');
 
-            // 2. 提取所有 gameId 和 event 元数据
-            const eventDataList = response.data
+            while (hasNextPage && pageCount < maxPages) {
+                const response = await this.client.queryEvents({
+                    query: {
+                        MoveEventType: `${this.packageId}::events::GameCreatedEvent`
+                    },
+                    limit: pageLimit,
+                    order: options.order || 'descending',
+                    cursor
+                });
+
+                allEvents.push(...response.data);
+                hasNextPage = response.hasNextPage;
+                cursor = response.nextCursor ?? undefined;
+                pageCount++;
+
+                console.log(`[QueryService] Page ${pageCount}: ${response.data.length} events (total: ${allEvents.length})`);
+            }
+
+            if (pageCount >= maxPages) {
+                console.warn('[QueryService] Reached max pages limit:', maxPages);
+            }
+
+            console.log(`[QueryService] Pagination completed: ${allEvents.length} total events`);
+
+            // ✅ 2. 提取所有 gameId 和 event 元数据
+            const eventDataList = allEvents
                 .map(event => {
                     const eventData = event.parsedJson as any;
                     const gameId = eventData.game;
@@ -286,31 +310,53 @@ export class QueryService {
     /**
      * 获取地图模板列表（通过事件查询）
      * 返回 MapTemplatePublishedEvent 数据，不查询完整对象
+     * 支持完整分页：自动查询所有 MapTemplatePublishedEvent
      */
     async getMapTemplates(): Promise<MapTemplatePublishedEvent[]> {
         const templates: MapTemplatePublishedEvent[] = [];
 
         try {
-            // 通过 MapTemplatePublishedEvent 查询
-            const response = await this.client.queryEvents({
-                query: {
-                    MoveEventType: `${this.packageId}::events::MapTemplatePublishedEvent`
-                },
-                limit: 50,
-                order: 'descending'
-            });
+            // ✅ 分页查询所有 MapTemplatePublishedEvent
+            let cursor: string | null | undefined = undefined;
+            let hasNextPage = true;
+            let pageCount = 0;
+            const maxPages = 100;
+            const pageLimit = 50;
 
-            for (const event of response.data) {
-                const eventData = event.parsedJson as any;
-                templates.push({
-                    template_id: eventData.template_id || '',
-                    publisher: eventData.publisher || '',
-                    tile_count: eventData.tile_count || 0,
-                    building_count: eventData.building_count || 0
+            console.log('[QueryService] Starting pagination for MapTemplatePublishedEvent...');
+
+            while (hasNextPage && pageCount < maxPages) {
+                const response = await this.client.queryEvents({
+                    query: {
+                        MoveEventType: `${this.packageId}::events::MapTemplatePublishedEvent`
+                    },
+                    limit: pageLimit,
+                    order: 'descending',
+                    cursor
                 });
+
+                for (const event of response.data) {
+                    const eventData = event.parsedJson as any;
+                    templates.push({
+                        template_id: eventData.template_id || '',
+                        publisher: eventData.publisher || '',
+                        tile_count: eventData.tile_count || 0,
+                        building_count: eventData.building_count || 0
+                    });
+                }
+
+                hasNextPage = response.hasNextPage;
+                cursor = response.nextCursor ?? undefined;
+                pageCount++;
+
+                console.log(`[QueryService] Page ${pageCount}: ${response.data.length} templates (total: ${templates.length})`);
             }
 
-            console.log(`[QueryService] Found ${templates.length} map templates`);
+            if (pageCount >= maxPages) {
+                console.warn('[QueryService] Reached max pages limit:', maxPages);
+            }
+
+            console.log(`[QueryService] Found ${templates.length} map templates in ${pageCount} pages`);
         } catch (error) {
             console.error('[QueryService] Failed to query map templates:', error);
         }
@@ -320,26 +366,58 @@ export class QueryService {
 
     /**
      * 获取玩家拥有的所有 Seat
+     * 支持完整分页：自动查询所有 Seat 对象
      */
     async getPlayerSeats(playerAddress: string): Promise<any[]> {
         try {
-            const response = await this.client.getOwnedObjects({
-                owner: playerAddress,
-                filter: {
-                    StructType: `${this.packageId}::game::Seat`
-                },
-                options: {
-                    showContent: true,
-                    showType: true
-                }
-            });
+            const seats: any[] = [];
+            let cursor: string | null | undefined = undefined;
+            let hasNextPage = true;
+            let pageCount = 0;
+            const maxPages = 100;
+            const pageLimit = 50;
 
-            return response.data.map(obj => {
-                if (obj.data?.content?.dataType === 'moveObject') {
-                    return obj.data.content.fields;
-                }
-                return null;
-            }).filter(seat => seat !== null);
+            console.log('[QueryService] Starting pagination for player seats...');
+
+            while (hasNextPage && pageCount < maxPages) {
+                const response = await this.client.getOwnedObjects({
+                    owner: playerAddress,
+                    filter: {
+                        StructType: `${this.packageId}::game::Seat`
+                    },
+                    options: {
+                        showContent: true,
+                        showType: true
+                    },
+                    cursor,
+                    limit: pageLimit
+                });
+
+                const pageSeats = response.data
+                    .map(obj => {
+                        if (obj.data?.content?.dataType === 'moveObject') {
+                            return obj.data.content.fields;
+                        }
+                        return null;
+                    })
+                    .filter(seat => seat !== null);
+
+                seats.push(...pageSeats);
+
+                hasNextPage = response.hasNextPage;
+                cursor = response.nextCursor ?? undefined;
+                pageCount++;
+
+                console.log(`[QueryService] Page ${pageCount}: ${pageSeats.length} seats (total: ${seats.length})`);
+            }
+
+            if (pageCount >= maxPages) {
+                console.warn('[QueryService] Reached max pages limit:', maxPages);
+            }
+
+            console.log(`[QueryService] Found ${seats.length} seats for ${playerAddress} in ${pageCount} pages`);
+            return seats;
+
         } catch (error) {
             console.error('[QueryService] Failed to get player seats:', error);
             return [];
@@ -347,6 +425,55 @@ export class QueryService {
     }
 
     // ============ 私有辅助方法 ============
+
+    /**
+     * 通用事件分页查询辅助方法
+     * 自动处理分页，获取所有匹配的事件
+     *
+     * @param eventType 完整的事件类型（如 "${packageId}::events::GameCreatedEvent"）
+     * @param options 查询选项
+     * @returns 所有事件的 parsedJson 数据数组
+     */
+    private async queryAllEvents<T>(
+        eventType: string,
+        options?: {
+            order?: 'ascending' | 'descending';
+            limit?: number;
+            maxPages?: number;  // 防止无限循环
+        }
+    ): Promise<T[]> {
+        const events: T[] = [];
+        let cursor: string | null | undefined = undefined;
+        let hasNextPage = true;
+        let pageCount = 0;
+        const maxPages = options?.maxPages || 100;  // 默认最多 100 页
+        const pageLimit = options?.limit || 50;
+
+        while (hasNextPage && pageCount < maxPages) {
+            const response = await this.client.queryEvents({
+                query: { MoveEventType: eventType },
+                limit: pageLimit,
+                order: options?.order || 'descending',
+                cursor
+            });
+
+            events.push(...(response.data.map(e => e.parsedJson) as T[]));
+
+            hasNextPage = response.hasNextPage;
+            cursor = response.nextCursor ?? undefined;
+            pageCount++;
+
+            console.log(`[QueryService] Page ${pageCount}: ${response.data.length} events (total: ${events.length})`);
+        }
+
+        if (pageCount >= maxPages) {
+            console.warn('[QueryService] Reached max pages limit:', maxPages);
+        }
+
+        console.log(`[QueryService] Pagination completed: ${events.length} events in ${pageCount} pages`);
+
+        return events;
+    }
 
     /**
      * 解析 ID 类型（可能是字符串或对象 { bytes: "0x..." }）

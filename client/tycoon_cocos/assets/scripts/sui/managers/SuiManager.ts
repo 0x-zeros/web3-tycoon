@@ -34,7 +34,10 @@ import { buildingDecisionHandler } from '../events/handlers/BuildingDecisionHand
 import { rentDecisionHandler } from '../events/handlers/RentDecisionHandler';
 import { decisionSkippedHandler } from '../events/handlers/DecisionSkippedHandler';
 import { skipTurnHandler } from '../events/handlers/SkipTurnHandler';
-import type { BuildingDecisionEvent, RentDecisionEvent, DecisionSkippedEvent, SkipTurnEvent } from '../events/types';
+import { bankruptHandler } from '../events/handlers/BankruptHandler';
+import { gameEndedHandler } from '../events/handlers/GameEndedHandler';
+import type { BuildingDecisionEvent, RentDecisionEvent, DecisionSkippedEvent, SkipTurnEvent, BankruptEvent, GameEndedEvent } from '../events/types';
+import type { EventCallback } from '../events/indexer';
 
 /**
  * Sui Manager 配置选项
@@ -86,6 +89,9 @@ export class SuiManager {
 
     // 事件监听器
     private _eventIndexer: TycoonEventIndexer | null = null;
+
+    // 游戏流程事件 handlers（用于 off() 时引用）
+    private _gameEventHandlers: Map<EventType, EventCallback> = new Map();
 
     // 预加载状态
     private _preloadStarted: boolean = false;
@@ -444,24 +450,35 @@ export class SuiManager {
 
         this._log('[SuiManager] Starting game...', { gameId, mapTemplateId });
 
-        // 构建交易
-        const tx = this._gameClient!.game.buildStartGameTx(gameId, mapTemplateId);
+        // ✅ PTB call 前：注册游戏事件监听
+        this._registerGameEventListeners();
 
-        // 签名并执行
-        const result = await this.signAndExecuteTransaction(tx);
+        try {
+            // 构建交易
+            const tx = this._gameClient!.game.buildStartGameTx(gameId, mapTemplateId);
 
-        // 解析事件获取起始玩家
-        const startingPlayer = this._extractStartingPlayer(result);
+            // 签名并执行
+            const result = await this.signAndExecuteTransaction(tx);
 
-        const response = {
-            success: true,
-            startingPlayer,
-            txHash: result.digest
-        };
+            // 解析事件获取起始玩家
+            const startingPlayer = this._extractStartingPlayer(result);
 
-        this._log('[SuiManager] Game started', response);
+            const response = {
+                success: true,
+                startingPlayer,
+                txHash: result.digest
+            };
 
-        return response;
+            this._log('[SuiManager] Game started', response);
+
+            return response;
+
+        } catch (error) {
+            // ❌ PTB call 失败：取消游戏事件监听
+            console.error('[SuiManager] Failed to start game, unregistering game events');
+            this._unregisterGameEventListeners();
+            throw error;
+        }
     }
 
     /**
@@ -1166,45 +1183,108 @@ export class SuiManager {
             EventBus.emit(EventTypes.Move.MapTemplatePublished, event.data);
         });
 
-        // 监听掷骰移动事件
-        this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, async (event) => {
+        console.log('[SuiManager] Event listener started (global events only)');
+        console.log('[SuiManager] Game event listeners will be registered when game starts');
+    }
+
+    /**
+     * 注册游戏流程相关的事件监听（只在游戏进行时需要）
+     * 在 startGame() 或 loadGameScene() 调用前注册
+     */
+    private _registerGameEventListeners(): void {
+        if (!this._eventIndexer) {
+            console.warn('[SuiManager] EventIndexer not initialized, skip registering game events');
+            return;
+        }
+
+        console.log('[SuiManager] Registering game event listeners...');
+
+        // 1. RollAndStepAction 事件
+        const rollAndStepCallback: EventCallback<RollAndStepActionEvent> = async (event) => {
             console.log('[SuiManager] RollAndStepActionEvent from chain:', event.data);
-
-            // 分发给 RollAndStepHandler 处理
             await rollAndStepHandler.instance.handleEvent(event);
-        });
+        };
+        this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, rollAndStepCallback);
+        this._gameEventHandlers.set(EventType.ROLL_AND_STEP_ACTION, rollAndStepCallback);
 
-        // 监听建筑决策事件（购买/升级）
-        this._eventIndexer.on<BuildingDecisionEvent>(EventType.BUILDING_DECISION, async (event) => {
+        // 2. BuildingDecision 事件
+        const buildingDecisionCallback: EventCallback<BuildingDecisionEvent> = async (event) => {
             console.log('[SuiManager] BuildingDecisionEvent from chain:', event.data);
-
-            // 分发给 BuildingDecisionHandler 处理
             await buildingDecisionHandler.instance.handleEvent(event);
-        });
+        };
+        this._eventIndexer.on<BuildingDecisionEvent>(EventType.BUILDING_DECISION, buildingDecisionCallback);
+        this._gameEventHandlers.set(EventType.BUILDING_DECISION, buildingDecisionCallback);
 
-        // 监听租金决策事件
-        this._eventIndexer.on<RentDecisionEvent>(EventType.RENT_DECISION, async (event) => {
+        // 3. RentDecision 事件
+        const rentDecisionCallback: EventCallback<RentDecisionEvent> = async (event) => {
             console.log('[SuiManager] RentDecisionEvent from chain:', event.data);
-
-            // 分发给 RentDecisionHandler 处理
             await rentDecisionHandler.instance.handleEvent(event);
-        });
+        };
+        this._eventIndexer.on<RentDecisionEvent>(EventType.RENT_DECISION, rentDecisionCallback);
+        this._gameEventHandlers.set(EventType.RENT_DECISION, rentDecisionCallback);
 
-        // 监听跳过决策事件
-        this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, async (event) => {
+        // 4. DecisionSkipped 事件
+        const decisionSkippedCallback: EventCallback<DecisionSkippedEvent> = async (event) => {
             console.log('[SuiManager] DecisionSkippedEvent from chain:', event.data);
-
-            // 分发给 DecisionSkippedHandler 处理
             await decisionSkippedHandler.instance.handleEvent(event);
-        });
+        };
+        this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, decisionSkippedCallback);
+        this._gameEventHandlers.set(EventType.DECISION_SKIPPED, decisionSkippedCallback);
 
-        // 监听跳过回合事件
-        this._eventIndexer.on<SkipTurnEvent>(EventType.SKIP_TURN, async (event) => {
+        // 5. SkipTurn 事件
+        const skipTurnCallback: EventCallback<SkipTurnEvent> = async (event) => {
             console.log('[SuiManager] SkipTurnEvent from chain:', event.data);
             await skipTurnHandler.instance.handleEvent(event);
+        };
+        this._eventIndexer.on<SkipTurnEvent>(EventType.SKIP_TURN, skipTurnCallback);
+        this._gameEventHandlers.set(EventType.SKIP_TURN, skipTurnCallback);
+
+        // 6. Bankrupt 事件
+        const bankruptCallback: EventCallback<BankruptEvent> = async (event) => {
+            console.log('[SuiManager] BankruptEvent from chain:', event.data);
+            await bankruptHandler.instance.handleEvent(event);
+        };
+        this._eventIndexer.on<BankruptEvent>(EventType.BANKRUPT, bankruptCallback);
+        this._gameEventHandlers.set(EventType.BANKRUPT, bankruptCallback);
+
+        // 7. GameEnded 事件
+        const gameEndedCallback: EventCallback<GameEndedEvent> = async (event) => {
+            console.log('[SuiManager] GameEndedEvent from chain:', event.data);
+            await gameEndedHandler.instance.handleEvent(event);
+        };
+        this._eventIndexer.on<GameEndedEvent>(EventType.GAME_ENDED, gameEndedCallback);
+        this._gameEventHandlers.set(EventType.GAME_ENDED, gameEndedCallback);
+
+        console.log('[SuiManager] Game event listeners registered (7 events)');
+    }
+
+    /**
+     * 取消游戏流程事件监听
+     * 在游戏退出或加载失败时调用
+     */
+    private _unregisterGameEventListeners(): void {
+        if (!this._eventIndexer) {
+            return;
+        }
+
+        console.log('[SuiManager] Unregistering game event listeners...');
+
+        // 遍历所有游戏事件 handler，调用 off()
+        this._gameEventHandlers.forEach((callback, eventType) => {
+            this._eventIndexer!.off(eventType, callback);
         });
 
-        console.log('[SuiManager] Event listener started');
+        // 清空 Map
+        this._gameEventHandlers.clear();
+
+        console.log('[SuiManager] Game event listeners unregistered');
+    }
+
+    /**
+     * 取消游戏事件监听（公开方法，供 GameSession 调用）
+     */
+    public unregisterGameEvents(): void {
+        this._unregisterGameEventListeners();
     }
 
     // ============ 事件处理方法 ============
@@ -1365,10 +1445,13 @@ export class SuiManager {
      * @param templateMapId 地图模板 ID
      */
     public async loadGameScene(gameId: string, templateMapId: string): Promise<void> {
-        try {
-            console.log('[SuiManager] Loading game scene...');
-            UINotification.info("正在加载游戏场景...");
+        console.log('[SuiManager] Loading game scene...');
+        UINotification.info("正在加载游戏场景...");
 
+        // ✅ 加载数据前：注册游戏事件监听
+        this._registerGameEventListeners();
+
+        try {
             // 并行加载 Game + MapTemplate + GameData
             const [game, template, gameData] = await Promise.all([
                 this._queryService!.getGame(gameId),
@@ -1405,8 +1488,11 @@ export class SuiManager {
             UINotification.success("游戏场景加载完成");
 
         } catch (error) {
-            console.error('[SuiManager] Failed to load game scene:', error);
+            // ❌ 加载失败：取消游戏事件监听
+            console.error('[SuiManager] Failed to load game scene, unregistering game events:', error);
+            this._unregisterGameEventListeners();
             UINotification.error("游戏场景加载失败");
+            throw error;
         }
     }
 

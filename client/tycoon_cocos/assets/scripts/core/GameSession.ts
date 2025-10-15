@@ -1022,6 +1022,7 @@ export class GameSession {
      * 退出游戏清理（由 UIManager.exitGame() 调用）
      *
      * 职责：
+     * - 取消游戏事件监听
      * - 卸载 GameMap（调用 MapManager）
      * - 重置 GameSession 状态
      * - 清理 Blackboard
@@ -1031,6 +1032,10 @@ export class GameSession {
      */
     public exitGameCleanup(): void {
         console.log('[GameSession] 开始清理游戏状态');
+
+        // 0. 取消游戏事件监听（新增）
+        SuiManager.instance.unregisterGameEvents();
+        console.log('[GameSession] 游戏事件监听已取消');
 
         // 1. 卸载 GameMap（如果有）
         if (this._gameMap) {

@@ -134,10 +134,20 @@ export class UIGameDetail extends UIBase {
 
         // 按钮显示逻辑（根据游戏状态和玩家身份）
         const isActiveGame = game.status === GameStatus.ACTIVE;  // 进行中
+        const isEndedGame = game.status === GameStatus.ENDED;    // 已结束
         const canJoin = game.players.length < DEFAULT_MAX_PLAYERS;
         const canStart = game.players.length >= 2;
 
-        if (isActiveGame) {
+        if (isEndedGame) {
+            // === 已结束的游戏 ===
+            // 显示"回放(开发中)"（disabled）
+            this.m_btn_startGame.title = "回放(开发中)";
+            this.m_btn_startGame.visible = true;
+            this.m_btn_startGame.enabled = false;
+            this.m_btn_startGame.grayed = true;
+
+            this.m_btn_quitGame.visible = false;
+        } else if (isActiveGame) {
             // === 进行中的游戏 ===
             if (isPlayer) {
                 // 情况1：自己是玩家 → "继续游戏"、"退出游戏"、"确定"

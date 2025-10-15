@@ -24,6 +24,7 @@ import { HistoryStorage } from "../../sui/pathfinding/HistoryStorage";
 import { UIMessage } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
 import { GameInitializer } from "../../core/GameInitializer";
+import { handleSuiTransactionError } from "../../sui/utils/TransactionErrorHandler";
 
 const { ccclass } = _decorator;
 
@@ -335,23 +336,14 @@ export class UIInGameDice extends UIBase {
         } catch (error) {
             console.error("[UIInGameDice] 掷骰子失败:", error);
 
-            // 显示错误提示（根据错误类型选择提示方式）
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            // ===== 停止骰子动画 =====
+            DiceController.instance.stopRolling();
 
-            // 重要错误：需要用户确认（使用 UIMessage）
-            if (errorMessage.includes("GameSession") ||
-                errorMessage.includes("Seat not found") ||
-                errorMessage.includes("No current game") ||
-                errorMessage.includes("transaction") ||
-                errorMessage.includes("签名")) {
-                // 使用 MessageBox（需要用户点击确认）
-                UIMessage.error(errorMessage, "掷骰子失败").catch(e => {
-                    console.error('[UIInGameDice] UIMessage error:', e);
-                });
-            } else {
-                // 一般错误：自动消失（使用 Notification）
-                UINotification.error(errorMessage, "掷骰子失败");
-            }
+            // ===== 使用统一错误处理器 =====
+            handleSuiTransactionError(error, {
+                title: '掷骰子失败',
+                messagePrefix: ''  // 不添加前缀，直接显示翻译后的错误
+            });
 
         } finally {
             // 只在失败时恢复按钮状态
@@ -427,7 +419,11 @@ export class UIInGameDice extends UIBase {
 
         } catch (error) {
             console.error('[UIInGameDice] 跳过回合失败', error);
-            UINotification.error('跳过回合失败');
+
+            // 使用统一错误处理器
+            handleSuiTransactionError(error, {
+                title: '跳过回合失败'
+            });
 
             // 恢复按钮（如果仍然需要跳过）
             if (this.m_btn_skipTurn) {

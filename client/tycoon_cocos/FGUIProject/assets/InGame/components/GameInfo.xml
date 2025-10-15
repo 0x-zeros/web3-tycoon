@@ -4,6 +4,6 @@
     <text id="n3_eoos" name="gameid" xy="1,1" size="256,42" fontSize="25" color="#ffffff" vAlign="middle" autoSize="none" text="game id"/>
     <text id="n0_mumq" name="weekday" xy="59,81" size="139,44" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="星期一"/>
     <text id="n1_mumq" name="daysElapsed" xy="59,126" size="139,44" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="011天"/>
-    <text id="n2_mumq" name="priceIndex" xy="59,173" size="139,44" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="物价指数： 1"/>
+    <text id="n2_mumq" name="priceIndex" xy="24,173" size="208,44" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="物价指数： 1"/>
   </displayList>
 </component>

@@ -228,6 +228,15 @@ export class UINotification extends UIBase {
     // 通知间距（像素）——按需改为无间隔
     private static readonly SPACING = 0;
 
+    // 不同类型通知的默认显示时长（毫秒）
+    private static readonly DEFAULT_DURATIONS: Record<NotifyType, number> = {
+        [NotifyType.INFO]: 2000,      // 2秒
+        [NotifyType.SUCCESS]: 2000,   // 2秒
+        [NotifyType.WARNING]: 3000,   // 3秒
+        [NotifyType.ERROR]: 5000,     // 5秒
+        [NotifyType.DEFAULT]: 2000    // 2秒
+    };
+
     // 静态单例实例
     private static _instance: UINotification | null = null;
 
@@ -370,8 +379,9 @@ export class UINotification extends UIBase {
             this._relayout(true);  // animated = true
         }, 50);
 
-        // 调度自动消失
-        const durationMs = options.duration ?? 2000;
+        // 调度自动消失 - 根据通知类型获取默认时长
+        const defaultDuration = UINotification.DEFAULT_DURATIONS[options.type || NotifyType.DEFAULT];
+        const durationMs = options.duration ?? defaultDuration;
         const seconds = Math.max(0, durationMs) / 1000;
         const cb = () => {
             this._autoHideCancels.delete(toast);

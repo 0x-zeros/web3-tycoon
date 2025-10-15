@@ -72,22 +72,22 @@ export class UIInGameInfo extends UIBase {
             this.m_gameId.text = shortGameId;
         }
 
-        // 天数（轮次）
+        // 天数（轮次，+1 因为 round 是 0-based）
         if (this.m_daysElapsed) {
-            this.m_daysElapsed.text = round.toString();
+            this.m_daysElapsed.text = `${round + 1}天`;
         }
 
         // 星期几（1-7 循环，1=周一）
         if (this.m_weekday) {
-            const weekdayNum = ((round - 1) % 7) + 1;
+            const weekdayNum = ((round) % 7) + 1;
             const weekdayName = this.getWeekdayName(weekdayNum);
             this.m_weekday.text = weekdayName;
         }
 
         // 物价指数（每 priceRiseDays 天提升）
         if (this.m_priceIndex) {
-            const priceIndex = Math.floor(round / priceRiseDays) + 1;
-            this.m_priceIndex.text = `${priceIndex}x`;
+            const priceIndex = Math.floor((round + 1) / priceRiseDays) + 1;
+            this.m_priceIndex.text = `物价指数: ${priceIndex}`;
         }
     }
 

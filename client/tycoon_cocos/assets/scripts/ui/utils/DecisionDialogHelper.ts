@@ -16,6 +16,7 @@ import { SuiManager } from '../../sui/managers/SuiManager';
 import { DecisionType } from '../../sui/types/constants';
 import type { PendingDecisionInfo } from '../../core/GameSession';
 import type { Player } from '../../role/Player';
+import { handleSuiTransactionError } from '../../sui/utils/TransactionErrorHandler';
 
 /**
  * 决策对话框助手类
@@ -217,7 +218,9 @@ export class DecisionDialogHelper {
 
         } catch (error) {
             console.error('[DecisionDialogHelper] 购买建筑失败', error);
-            UINotification.error('购买失败');
+            handleSuiTransactionError(error, {
+                title: '购买建筑失败'
+            });
         }
     }
 
@@ -239,7 +242,9 @@ export class DecisionDialogHelper {
 
         } catch (error) {
             console.error('[DecisionDialogHelper] 升级建筑失败', error);
-            UINotification.error('升级失败');
+            handleSuiTransactionError(error, {
+                title: '升级建筑失败'
+            });
         }
     }
 
@@ -276,7 +281,9 @@ export class DecisionDialogHelper {
 
         } catch (error) {
             console.error('[DecisionDialogHelper] 支付租金失败', error);
-            UINotification.error('支付失败');
+            handleSuiTransactionError(error, {
+                title: '支付租金失败'
+            });
         }
     }
 
@@ -298,7 +305,9 @@ export class DecisionDialogHelper {
 
         } catch (error) {
             console.error('[DecisionDialogHelper] 跳过决策失败', error);
-            UINotification.error('操作失败');
+            handleSuiTransactionError(error, {
+                title: '跳过决策失败'
+            });
         }
     }
 }

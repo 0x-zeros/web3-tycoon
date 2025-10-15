@@ -454,6 +454,40 @@ export class DiceController {
     }
 
     /**
+     * 停止骰子循环动画（用于交易失败时）
+     * 与 cleanup() 不同，此方法只停止动画但保留骰子节点和预制体
+     */
+    public stopRolling(): void {
+        console.log('[DiceController] 停止骰子循环动画（交易失败）');
+
+        // 停止循环动画
+        if (this.loopTween) {
+            this.loopTween.stop();
+            this.loopTween = null;
+        }
+
+        // 取消事件监听
+        EventBus.off(EventTypes.Dice.RollResult, this._onRollResult, this);
+
+        // 停止所有补间动画
+        if (this.diceNode) {
+            Tween.stopAllByTarget(this.diceNode);
+        }
+
+        // 重置状态
+        this.isRolling = false;
+        this.isLooping = false;
+
+        // 清除待处理的回调
+        this.pendingCallback = null;
+
+        // 隐藏骰子
+        this.hide();
+
+        console.log('[DiceController] 骰子已停止');
+    }
+
+    /**
      * 清理资源
      */
     public cleanup(): void {

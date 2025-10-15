@@ -2705,6 +2705,39 @@ fun clean_turn_state(game: &mut Game, player_index: u8) {
     process_and_clear_expired_buffs(game, player_index);
 }
 
+/// 找出现金最多的玩家
+///
+/// 逻辑：
+/// - 遍历所有玩家
+/// - 过滤掉破产的玩家（bankrupt == true）
+/// - 找出 cash 最高的玩家
+/// - 如果有多个玩家现金相同，返回索引最小的（先加入的玩家）
+///
+/// @param game 游戏对象
+/// @return 最富有玩家的地址，如果所有玩家都破产则返回 None
+fun find_richest_player(game: &Game): Option<address> {
+    let mut max_cash: u64 = 0;
+    let mut richest_player: Option<address> = option::none();
+
+    let mut i = 0;
+    while (i < game.players.length()) {
+        let player = &game.players[i];
+
+        // 跳过破产玩家
+        if (!player.bankrupt) {
+            // 找出现金最多的玩家（>确保索引小的玩家优先）
+            if (player.cash > max_cash) {
+                max_cash = player.cash;
+                richest_player = option::some(player.owner);
+            }
+        };
+
+        i = i + 1;
+    };
+
+    richest_player
+}
+
 // 推进游戏到下一个玩家的回合
 //
 // 回合切换逻辑：
@@ -2765,9 +2798,14 @@ fun advance_turn(
             if (game.round >= (game.max_rounds as u16)) {
                 // 达到轮次上限，游戏结束
                 game.status = types::STATUS_ENDED();
+
+                // 找出现金最多的玩家作为赢家
+                let winner = find_richest_player(game);
+                game.winner = winner;  // 设置 game.winner 字段
+
                 events::emit_game_ended_event(
                     game.id.to_inner(),
-                    option::none(),  // TODO: 实现按资产确定赢家
+                    winner,  // 按现金确定的赢家
                     (game.round as u16),
                     (game.turn as u8),
                     1  // 结束原因：1表示达到最大轮数

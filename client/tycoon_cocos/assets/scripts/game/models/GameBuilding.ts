@@ -333,10 +333,10 @@ export class GameBuilding {
 
         if (this.size === BuildingSize.SIZE_1X1) {
             // 1x1: 中心在 (x+0.5, 1.0, y+0.5)
-            return new Vec3(this.x + 0.5, 1.0, this.y + 0.5);
+            return new Vec3(this.x + 0.5, 0.5, this.y + 0.5);
         } else {
             // 2x2: 中心在 (x+1, 1.0, y+1)
-            return new Vec3(this.x + 1, 1.0, this.y + 1);
+            return new Vec3(this.x + 1, 0.5, this.y + 1);
         }
     }
 

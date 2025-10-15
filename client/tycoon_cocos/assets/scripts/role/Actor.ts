@@ -11,6 +11,7 @@
 import { _decorator, Component, Node, Vec3, Animation, Prefab, resources, instantiate, Tween, tween, ParticleSystem, AudioSource, MeshRenderer, Material, Color, Label, Sprite } from 'cc';
 import { Role } from './Role';
 import { RoleMoveParams } from './RoleTypes';
+import { GameBuilding } from '../game/models';
 
 const { ccclass, property } = _decorator;
 
@@ -80,10 +81,10 @@ export class Actor extends Component {
     public moveSpeed: number = 3.0;
     
     @property({ displayName: "启用阴影", tooltip: "是否启用角色阴影效果" })
-    public enableShadow: boolean = true;
+    public enableShadow: boolean = false;
     
     @property({ displayName: "启用音效", tooltip: "是否播放角色相关音效" })
-    public enableAudio: boolean = true;
+    public enableAudio: boolean = false;
     
     // ========================= 组件引用 =========================
     
@@ -732,7 +733,7 @@ export class Actor extends Component {
      * @param gameBuilding GameBuilding 实例
      * @returns Actor 节点
      */
-    public static createBuildingActor(gameBuilding: any): Node | null {
+    public static createBuildingActor(gameBuilding: GameBuilding): Node | null {
         // 创建节点
         const node = new Node('BuildingActor');
         const actor = node.addComponent(Actor);

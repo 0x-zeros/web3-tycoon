@@ -1197,6 +1197,22 @@ export class SuiManager {
             return;
         }
 
+        // ✅ 获取当前游戏 ID
+        const session = Blackboard.instance.get<any>("currentGameSession");
+        if (session) {
+            const gameId = session.getGameId();
+
+            // ✅ 设置游戏 ID 用于测试
+            this._eventIndexer.setCurrentGameId(gameId);
+
+            // ✅ 启用链上过滤测试
+            this._eventIndexer.enableFilterTest(true);
+
+            console.log('[SuiManager] Filter test enabled for game:', gameId);
+        } else {
+            console.warn('[SuiManager] No GameSession found, filter test not enabled');
+        }
+
         console.log('[SuiManager] Registering game event listeners...');
 
         // 1. RollAndStepAction 事件
@@ -1268,6 +1284,13 @@ export class SuiManager {
         }
 
         console.log('[SuiManager] Unregistering game event listeners...');
+
+        // ✅ 打印测试总结
+        this._eventIndexer.printFilterTestSummary();
+
+        // ✅ 禁用测试
+        this._eventIndexer.enableFilterTest(false);
+        this._eventIndexer.setCurrentGameId(null);
 
         // 遍历所有游戏事件 handler，调用 off()
         this._gameEventHandlers.forEach((callback, eventType) => {

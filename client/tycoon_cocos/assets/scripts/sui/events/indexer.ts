@@ -62,6 +62,30 @@ export class TycoonEventIndexer {
     private bootstrapped: boolean = false;
     private eventHandlers: Map<EventType, EventCallback[]> = new Map();
     private globalHandlers: EventCallback[] = [];
+
+    // 当前游戏 ID（用于测试链上过滤）
+    private currentGameId: string | null = null;
+
+    // 需要按 game ID 过滤的事件类型
+    private readonly gameFlowEventTypes: string[] = [
+        'RollAndStepActionEvent',
+        'BuildingDecisionEvent',
+        'RentDecisionEvent',
+        'DecisionSkippedEvent',
+        'SkipTurnEvent',
+        'BankruptEvent',
+        'GameEndedEvent',
+    ];
+
+    // 测试：链上过滤统计
+    private filterTestStats = {
+        enabled: false,  // 是否启用测试
+        totalQueries: 0,
+        originalCount: 0,
+        filteredCount: 0,
+        matchedCount: 0,
+        mismatchedCount: 0
+    };
     
 
     constructor(config: IndexerConfig) {
@@ -135,6 +159,41 @@ export class TycoonEventIndexer {
         }
     }
 
+    /**
+     * 设置当前游戏 ID（用于链上过滤测试）
+     */
+    public setCurrentGameId(gameId: string | null): void {
+        this.currentGameId = gameId;
+        console.log('[EventIndexer] Test: Current game ID set:', gameId);
+    }
+
+    /**
+     * 启用/禁用链上过滤测试
+     */
+    public enableFilterTest(enabled: boolean): void {
+        this.filterTestStats.enabled = enabled;
+        console.log('[EventIndexer] Test: Filter test', enabled ? 'enabled' : 'disabled');
+
+        if (enabled) {
+            // 重置统计
+            this.filterTestStats = {
+                enabled: true,
+                totalQueries: 0,
+                originalCount: 0,
+                filteredCount: 0,
+                matchedCount: 0,
+                mismatchedCount: 0
+            };
+        }
+    }
+
+    /**
+     * 获取链上过滤测试统计
+     */
+    public getFilterTestStats() {
+        return { ...this.filterTestStats };
+    }
+
     // ===== 私有方法 =====
 
     /**
@@ -160,6 +219,14 @@ export class TycoonEventIndexer {
 
                 const count = (result.data?.length ?? 0);
                 if (count > 0) {
+                    // ✅ 新增：并行测试链上过滤（不影响现有逻辑）
+                    if (this.filterTestStats.enabled &&
+                        this.currentGameId &&
+                        this.gameFlowEventTypes.includes(typeName)) {
+                        await this.testChainFilter(typeName, fullType, result.data, cursor);
+                    }
+
+                    // ✅ 现有处理逻辑（保持不变）
                     for (const ev of result.data) {
                         const metadata = this.parseEvent(ev);
                         if (metadata) {
@@ -308,6 +375,13 @@ export class TycoonEventIndexer {
     private async handleEvent(metadata: EventMetadata): Promise<void> {
         // 调用特定类型的处理器
         const handlers = this.eventHandlers.get(metadata.type) || [];
+
+        // ✅ 没有注册的事件类型，输出 warn
+        if (handlers.length === 0) {
+            console.warn(`[EventIndexer] No handler registered for event type: ${metadata.type}`);
+            return;
+        }
+
         for (const handler of handlers) {
             try {
                 await handler(metadata);
@@ -326,7 +400,132 @@ export class TycoonEventIndexer {
         }
     }
 
-    
+    /**
+     * 测试链上过滤效果（并行查询，不影响现有逻辑）
+     */
+    private async testChainFilter(
+        typeName: string,
+        fullType: string,
+        originalEvents: any[],
+        cursor: any
+    ): Promise<void> {
+        try {
+            this.filterTestStats.totalQueries++;
+            this.filterTestStats.originalCount += originalEvents.length;
+
+            console.log(`\n========== [FilterTest] ${typeName} ==========`);
+            console.log(`[FilterTest] Original query returned: ${originalEvents.length} events`);
+            console.log(`[FilterTest] Current game ID: ${this.currentGameId}`);
+
+            // 方案 A: 尝试使用 MoveEventField 过滤
+            let filteredEvents: any[] = [];
+            let filterMethod = '';
+
+            try {
+                // 尝试 MoveEventField 单独过滤
+                const result = await this.client.queryEvents({
+                    query: {
+                        MoveEventField: {
+                            path: "/game",
+                            value: this.currentGameId!
+                        }
+                    },
+                    order: 'ascending',
+                    limit: this.batchSize,
+                    cursor,
+                });
+
+                filteredEvents = result.data || [];
+                filterMethod = 'MoveEventField';
+                console.log(`[FilterTest] ✅ MoveEventField query succeeded: ${filteredEvents.length} events`);
+
+            } catch (error: any) {
+                console.log(`[FilterTest] ❌ MoveEventField query failed:`, error.message);
+
+                // 方案 B: 如果 MoveEventField 不支持，用客户端过滤模拟
+                filteredEvents = originalEvents.filter(ev => {
+                    const gameId = ev.parsedJson?.game;
+                    return gameId === this.currentGameId;
+                });
+                filterMethod = 'Client-side filter';
+                console.log(`[FilterTest] Using client-side filter: ${filteredEvents.length} events`);
+            }
+
+            this.filterTestStats.filteredCount += filteredEvents.length;
+
+            // 对比分析
+            console.log(`[FilterTest] Method: ${filterMethod}`);
+            if (originalEvents.length > 0) {
+                const reduction = ((1 - filteredEvents.length / originalEvents.length) * 100).toFixed(1);
+                console.log(`[FilterTest] Reduction: ${originalEvents.length} -> ${filteredEvents.length} (${reduction}% filtered out)`);
+            }
+
+            // 详细对比
+            const originalGameIds = new Set(
+                originalEvents
+                    .map(ev => ev.parsedJson?.game)
+                    .filter(id => id)
+            );
+
+            const filteredGameIds = new Set(
+                filteredEvents
+                    .map(ev => ev.parsedJson?.game)
+                    .filter(id => id)
+            );
+
+            console.log(`[FilterTest] Original events cover ${originalGameIds.size} game(s):`, Array.from(originalGameIds));
+            console.log(`[FilterTest] Filtered events cover ${filteredGameIds.size} game(s):`, Array.from(filteredGameIds));
+
+            // 检查是否有遗漏或多余
+            const shouldInclude = originalEvents.filter(ev => ev.parsedJson?.game === this.currentGameId);
+            const shouldExclude = originalEvents.filter(ev => ev.parsedJson?.game !== this.currentGameId);
+
+            console.log(`[FilterTest] Should include: ${shouldInclude.length} events (game=${this.currentGameId})`);
+            console.log(`[FilterTest] Should exclude: ${shouldExclude.length} events (other games)`);
+
+            // 统计匹配/不匹配
+            this.filterTestStats.matchedCount += shouldInclude.length;
+            this.filterTestStats.mismatchedCount += shouldExclude.length;
+
+            // 验证结果
+            if (filteredEvents.length === shouldInclude.length) {
+                console.log(`[FilterTest] ✅ Result verified: Filter is working correctly`);
+            } else {
+                console.warn(`[FilterTest] ⚠️ Result mismatch: Expected ${shouldInclude.length}, got ${filteredEvents.length}`);
+            }
+
+            console.log(`========== [FilterTest] End ==========\n`);
+
+        } catch (error) {
+            console.error(`[FilterTest] Test failed for ${typeName}:`, error);
+        }
+    }
+
+    /**
+     * 打印链上过滤测试总结
+     */
+    public printFilterTestSummary(): void {
+        if (!this.filterTestStats.enabled) {
+            console.log('[FilterTest] Test is not enabled');
+            return;
+        }
+
+        const stats = this.filterTestStats;
+        const reductionRate = stats.originalCount > 0
+            ? ((1 - stats.filteredCount / stats.originalCount) * 100).toFixed(1)
+            : '0';
+
+        console.log('\n========== [FilterTest] Summary ==========');
+        console.log(`Total queries: ${stats.totalQueries}`);
+        console.log(`Original events: ${stats.originalCount}`);
+        console.log(`Filtered events: ${stats.filteredCount}`);
+        console.log(`Reduction rate: ${reductionRate}%`);
+        console.log(`Events matched (current game): ${stats.matchedCount}`);
+        console.log(`Events filtered out (other games): ${stats.mismatchedCount}`);
+        console.log('==========================================\n');
+    }
+
+
 }
 
 /**

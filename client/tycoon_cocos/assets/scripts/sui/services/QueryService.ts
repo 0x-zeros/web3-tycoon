@@ -35,6 +35,9 @@ export interface GameListItem {
  * 查询服务类
  */
 export class QueryService {
+    // multiGetObjects 每批最多 50 个对象 ID（RPC 限制）
+    private readonly MULTI_GET_BATCH_SIZE = 50;
+
     constructor(
         private client: SuiClient,
         private packageId: string,
@@ -206,19 +209,33 @@ export class QueryService {
                 return games;
             }
 
-            // 3. 批量获取 Game 对象（关键优化点）
+            // ✅ 3. 分批获取 Game 对象（每批最多 50 个，避免 RPC 限制）
             const gameIds = eventDataList.map(item => item.gameId);
-            console.log(`[QueryService] Fetching ${gameIds.length} games in batch...`);
+            console.log(`[QueryService] Fetching ${gameIds.length} games in batches...`);
 
-            const gameResponses = await this.client.multiGetObjects({
-                ids: gameIds,
-                options: {
-                    showContent: true,
-                    showType: true
-                }
-            });
+            const gameResponses: SuiObjectResponse[] = [];
+            let batchCount = 0;
 
-            // 4. 批量解析并组装结果
+            for (let i = 0; i < gameIds.length; i += this.MULTI_GET_BATCH_SIZE) {
+                const batchIds = gameIds.slice(i, i + this.MULTI_GET_BATCH_SIZE);
+                batchCount++;
+
+                console.log(`[QueryService] Batch ${batchCount}: Fetching ${batchIds.length} games (${i + 1}-${i + batchIds.length}/${gameIds.length})`);
+
+                const batchResponses = await this.client.multiGetObjects({
+                    ids: batchIds,
+                    options: {
+                        showContent: true,
+                        showType: true
+                    }
+                });
+
+                gameResponses.push(...batchResponses);
+            }
+
+            console.log(`[QueryService] Fetched ${gameResponses.length} games in ${batchCount} batches`);
+
+            // ✅ 4. 批量解析并组装结果
             for (let i = 0; i < gameResponses.length; i++) {
                 const response = gameResponses[i];
                 const eventData = eventDataList[i];

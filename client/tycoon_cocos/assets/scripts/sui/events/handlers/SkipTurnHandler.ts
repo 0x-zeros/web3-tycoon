@@ -25,7 +25,8 @@ export class SkipTurnHandler {
         // 更新 GameSession turn
         const session = Blackboard.instance.get<any>("currentGameSession");
         if (session) {
-            session.setTurn(event.turn + 1);  // ← 注意：+1
+            session.setRound(event.round);
+            session.advance_turn(event.turn);
 
             // 更新玩家的prison/hospital状态
             const player = session.getPlayerByAddress(event.player);

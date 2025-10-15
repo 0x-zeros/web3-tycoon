@@ -81,11 +81,11 @@ export class RentDecisionHandler {
 
             // 2. 更新 turn（注意 +1）
             session.setRound(event.round);
-            session.setTurn(event.turn + 1);
+            session.advance_turn(event.turn);
 
             console.log('[RentDecisionHandler] Turn 已更新', {
                 round: event.round,
-                turn: event.turn + 1
+                turn: event.turn
             });
 
             // 3. 获取玩家

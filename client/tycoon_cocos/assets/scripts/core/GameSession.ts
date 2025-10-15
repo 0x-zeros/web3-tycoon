@@ -50,7 +50,7 @@
  *   链上事件 → EventIndexer → Handler → session.setXxx()
  *
  * 例如：
- *   - RollAndStepActionEvent → session.setRound(), session.setTurn()
+ *   - RollAndStepActionEvent → session.setRound(), session.advance_turn()
  *   - UseCardActionEvent → session 更新 player buffs/cards
  *
  * ==================================================
@@ -532,25 +532,6 @@ export class GameSession {
     }
 
     /**
-     * 切换到下一个玩家（本地预测，实际以链上为准）
-     *
-     * @deprecated 不应该使用本地预测，容易导致状态不一致
-     *             应该通过事件同步 Move 端的状态，使用 setRound() 和 setTurn()
-     */
-    public nextPlayer(): void {
-        console.warn('[GameSession] nextPlayer() is deprecated, use setRound()/setTurn() with chain event data');
-
-        const playerCount = this._players.length;
-        if (playerCount === 0) return;
-
-        // 使用 setTurn() 统一处理 turn、round、activePlayerIndex 和 hasRolled
-        const nextTurn = this._turn + 1;
-        this.setTurn(nextTurn);
-
-        console.log(`[GameSession] 切换到下一个玩家: Player ${this._activePlayerIndex}`);
-    }
-
-    /**
      * 设置已掷骰状态
      */
     public setRolled(rolled: boolean): void {
@@ -580,52 +561,82 @@ export class GameSession {
     }
 
     /**
-     * 设置轮内回合（只在有变化时触发事件）
+     * 推进回合（完整模拟 Move 端 advance_turn 逻辑）
      *
-     * @param turn 新的轮内回合（0 到 player_count-1）
+     * 注意：eventTurn 是旧值（advance_turn 执行前的 active_idx）
+     * 需要完整模拟 Move 端的 loop 寻找下一个非破产玩家
+     *
+     * @param eventTurn 旧的轮内回合（等于旧的 active_idx）
      */
-    public setTurn(turn: number): void {
+    public advance_turn(eventTurn: number): void {
         const playerCount = this._players.length;
 
-        // 安全检查：如果没有玩家，直接返回
+        // 安全检查
         if (playerCount === 0) {
-            console.warn('[GameSession] Cannot set turn: no players in game');
+            console.warn('[GameSession] Cannot advance turn: no players in game');
             return;
         }
 
-        // 检测是否会发生轮次切换（turn >= playerCount 表示会进入下一轮）
-        const originalTurn = turn;
+        let activeIdx = eventTurn;  // 从旧值开始
+        let attempts = 0;
+        let will_wrap = false;
 
-        // 关键：对玩家数量取模，确保 turn 在 [0, playerCount) 范围内
-        // 匹配 Move 合约的 advance_turn 逻辑：game.active_idx = ((game.active_idx + 1) % player_count)
-        turn = turn % playerCount;
+        // 步骤1: 寻找下一个非破产玩家（完整模拟 Move 端 loop）
+        while (true) {
+            // 在递增之前检测是否会回绕
+            if ((activeIdx + 1) >= playerCount) {
+                will_wrap = true;
+            }
 
-        // 匹配 Move 合约逻辑：if (game.active_idx == 0) { game.round++; }
-        // 如果取模后回到0（且原值 >= playerCount），说明进入新一轮
-        if (turn === 0 && originalTurn >= playerCount) {
-            console.log(`[GameSession] 检测到轮次切换 (turn从${originalTurn}变为${turn})`);
-            this.setRound(this._round + 1);
+            // 循环递增玩家索引
+            activeIdx = (activeIdx + 1) % playerCount;
+            attempts++;
+
+            // 获取当前索引指向的玩家
+            const currentPlayer = this._players[activeIdx];
+
+            // 如果找到未破产的玩家，停止寻找
+            if (currentPlayer && !currentPlayer.isBankrupt()) {
+                break;
+            }
+
+            // 安全检查：如果检查了所有玩家
+            if (attempts >= playerCount) {
+                console.warn('[GameSession] All players bankrupt, this should not happen');
+                break;
+            }
         }
 
-        if (this._turn === turn && this._activePlayerIndex === turn) {
-            return;  // 无变化，直接返回
+        // 步骤2: 更新 turn（匹配 Move 端 game.turn = game.active_idx）
+        const newTurn = activeIdx;
+
+        // 检查是否有变化
+        if (this._turn === newTurn && this._activePlayerIndex === newTurn) {
+            return;  // 无变化
         }
 
         const oldTurn = this._turn;
         const oldActiveIdx = this._activePlayerIndex;
 
-        this._turn = turn;
-        this._activePlayerIndex = turn;  // activePlayerIndex 就是 turn
-        this._hasRolled = false;  // 新回合重置掷骰状态
+        this._turn = newTurn;
+        this._activePlayerIndex = newTurn;
+        this._hasRolled = false;
 
-        console.log(`[GameSession] 回合变化: Turn ${oldTurn} -> ${turn}, ActivePlayer: ${oldActiveIdx} -> ${turn}`);
+        console.log(`[GameSession] 回合推进: Turn ${oldTurn} -> ${newTurn}, ActivePlayer: ${oldActiveIdx} -> ${newTurn}, will_wrap=${will_wrap}, attempts=${attempts}`);
+
+        // 步骤3: 如果检测到回绕，增加轮次（匹配 Move 端）
+        if (will_wrap) {
+            console.log(`[GameSession] 检测到回绕，轮次递增: ${this._round} -> ${this._round + 1}`);
+            this.setRound(this._round + 1);
+        }
 
         const activePlayer = this.getActivePlayer();
 
+        // 触发回合变化事件
         EventBus.emit(EventTypes.Game.TurnChanged, {
             session: this,
             oldPlayerIndex: oldActiveIdx,
-            newPlayerIndex: turn,
+            newPlayerIndex: newTurn,
             activePlayer: activePlayer,
             isMyTurn: this.isMyTurn()
         });

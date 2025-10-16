@@ -23,7 +23,16 @@
       "@mysten/sui/zklogin": ["assets/scripts/shims/zklogin-shim.ts"],
       "@mysten/sui/zklogin/*": ["assets/scripts/shims/zklogin-shim.ts"],
       "@mysten/sui/dist/esm/zklogin/*": ["assets/scripts/shims/zklogin-shim.ts"],
-      "poseidon-lite": ["assets/scripts/shims/poseidon-lite-shim.ts"]
+      "poseidon-lite": ["assets/scripts/shims/poseidon-lite-shim.ts"],
+
+      /* @mysten Shim 配置 - 构建时使用占位，运行时通过 SystemJS Import Map 加载真实 ESM */
+      "@mysten/sui/client": ["assets/scripts/shims/mysten-shim.ts"],
+      "@mysten/sui/transactions": ["assets/scripts/shims/mysten-shim.ts"],
+      "@mysten/sui/bcs": ["assets/scripts/shims/mysten-shim.ts"],
+      "@mysten/sui/keypairs/ed25519": ["assets/scripts/shims/mysten-shim.ts"],
+      "@mysten/sui/utils": ["assets/scripts/shims/mysten-shim.ts"],
+      "@mysten/wallet-standard": ["assets/scripts/shims/mysten-shim.ts"],
+      "@mysten/bcs": ["assets/scripts/shims/mysten-shim.ts"]
     },
 
     /* 增强模块兼容性 */

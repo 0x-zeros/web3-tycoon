@@ -27,10 +27,11 @@ function ensureDir(p: string) {
 async function retargetToES2020(outDir: string): Promise<void> {
     log('开始以 ES2020 重新压缩输出 JS...');
 
-    // 只处理 Web 平台产物的 JS（避免处理原生/DTS 等）
+    // 匹配所有 JS 文件（包括 src/chunks/）
     const patterns = [
-        'src/**/*.js',
-        'assets/**/*.js'
+        '**/*.js',          // 所有 JS 文件
+        '!node_modules/**', // 排除 node_modules
+        '!libs/**'          // 排除我们复制的 libs（已经是 ES2020+）
     ];
 
     const files = await fg(patterns, {
@@ -42,9 +43,21 @@ async function retargetToES2020(outDir: string): Promise<void> {
     log(`找到 ${files.length} 个 JS 文件需要处理`);
 
     let processedCount = 0;
+    let fixedBigIntCount = 0;
+
     for (const file of files) {
         try {
-            const code = fs.readFileSync(file, 'utf8');
+            let code = fs.readFileSync(file, 'utf8');
+
+            // ⚠️ 关键修复：将 Math.pow(bigint, bigint) 回写为 ** 运算符
+            // 匹配: Math.pow(2n, 64n) 或 Math.pow(e, t) 其中 e、t 可能是 BigInt
+            const originalCode = code;
+            code = code.replace(/Math\.pow\(([^,)]+n),\s*([^)]+n)\)/g, '($1 ** $2)');
+
+            if (code !== originalCode) {
+                fixedBigIntCount++;
+                log(`  修复 BigInt Math.pow: ${path.basename(file)}`);
+            }
 
             // 关键：使用 ecma >= 2020，避免把 ** / BigInt 降级为 Math.pow
             const result = await minify(code, {
@@ -64,11 +77,14 @@ async function retargetToES2020(outDir: string): Promise<void> {
                 processedCount++;
             }
         } catch (error: any) {
-            log(`处理失败 ${file}:`, error.message);
+            log(`处理失败 ${path.basename(file)}:`, error.message);
         }
     }
 
     log(`✓ 重新压缩完成，处理了 ${processedCount} 个文件`);
+    if (fixedBigIntCount > 0) {
+        log(`✓ 修复了 ${fixedBigIntCount} 个文件的 BigInt Math.pow 问题`);
+    }
 }
 
 /**
@@ -140,6 +156,81 @@ function copyMystenESM(projectRoot: string, outDir: string): void {
 }
 
 /**
+ * 修改 SystemJS Import Map（src/import-map.*.json）
+ * 添加 @mysten/* 到真实 ESM 文件的映射
+ */
+function injectSystemJSImportMap(outDir: string): void {
+    log('修改 SystemJS Import Map...');
+
+    // 1. 查找 src/import-map.*.json
+    const srcDir = path.join(outDir, 'src');
+    if (!fs.existsSync(srcDir)) {
+        log('WARN: src 目录不存在');
+        return;
+    }
+
+    const srcFiles = fs.readdirSync(srcDir);
+    let importMapFile: string | null = null;
+
+    for (const file of srcFiles) {
+        if (file.match(/^import-map\.[a-f0-9]+\.json$/)) {
+            importMapFile = file;
+            break;
+        }
+    }
+
+    if (!importMapFile) {
+        log('WARN: 未找到 SystemJS import-map 文件');
+        return;
+    }
+
+    const importMapPath = path.join(srcDir, importMapFile);
+    log(`  找到文件: src/${importMapFile}`);
+
+    // 2. 读取现有的 import-map
+    let importMapData: any;
+    try {
+        const content = fs.readFileSync(importMapPath, 'utf-8');
+        importMapData = JSON.parse(content);
+    } catch (error: any) {
+        log('ERROR: 读取 import-map 失败:', error.message);
+        return;
+    }
+
+    log('  原始内容:', JSON.stringify(importMapData));
+
+    // 3. 添加 @mysten/* 映射
+    if (!importMapData.imports) {
+        importMapData.imports = {};
+    }
+
+    // 映射到 libs/ 目录（相对于 src/import-map.json 的路径）
+    const mystenMappings = {
+        '@mysten/sui/client': './../libs/_mysten_sui_client.js',
+        '@mysten/sui/transactions': './../libs/_mysten_sui_transactions.js',
+        '@mysten/sui/bcs': './../libs/_mysten_sui_bcs.js',
+        '@mysten/sui/keypairs/ed25519': './../libs/_mysten_sui_keypairs_ed25519.js',
+        '@mysten/sui/utils': './../libs/_mysten_sui_utils.js',
+        '@mysten/wallet-standard': './../libs/_mysten_wallet-standard.js',
+        '@mysten/bcs': './../libs/_mysten_bcs.js'
+    };
+
+    let addedCount = 0;
+    for (const [spec, target] of Object.entries(mystenMappings)) {
+        importMapData.imports[spec] = target;
+        addedCount++;
+    }
+
+    log(`  添加了 ${addedCount} 个映射`);
+
+    // 4. 写回文件
+    fs.writeFileSync(importMapPath, JSON.stringify(importMapData, null, 2), 'utf-8');
+
+    log('✓ SystemJS Import Map 已更新');
+    log('  新内容:', JSON.stringify(importMapData, null, 2));
+}
+
+/**
  * 构建完成后执行（关键钩子）
  */
 export async function onAfterBuild(options: any, result: any): Promise<void> {
@@ -148,7 +239,8 @@ export async function onAfterBuild(options: any, result: any): Promise<void> {
 
     try {
         const outDir = result.dest;
-        const projectRoot = options?.project || options?.projectRoot || process.cwd();
+        // 从 outDir 反推 projectRoot（outDir = <project>/build/<platform>）
+        const projectRoot = path.resolve(outDir, '../..');
         const platform = options?.platform || result?.platform || 'unknown';
 
         log('Platform:', platform);
@@ -178,6 +270,9 @@ export async function onAfterBuild(options: any, result: any): Promise<void> {
         // 2. 外部化 @mysten/*
         if (externalizeMysten) {
             copyMystenESM(projectRoot, outDir);
+
+            // 修改 SystemJS Import Map（src/import-map.*.json）
+            injectSystemJSImportMap(outDir);
         }
 
         log('✓ 后处理完成');

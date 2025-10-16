@@ -8,7 +8,7 @@
     }
   },
   "dependencies": {
-    "@mysten/sui": "^1.38.0",
+    "@mysten/sui": "^1.42.0",
     "@mysten/wallet-standard": "^0.17.0",
     "@tweenjs/tween.js": "^25.0.0",
     "fairygui-cc": "latest",

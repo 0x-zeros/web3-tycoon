@@ -60,6 +60,36 @@ check_environment() {
     log_success "环境检查通过"
 }
 
+# 安装 npm 依赖
+install_dependencies() {
+    log_info "安装 npm 依赖..."
+    
+    # 进入项目目录
+    cd "$PROJECT_PATH"
+    
+    # 检查 node_modules 是否存在
+    if [ ! -d "node_modules" ]; then
+        log_info "node_modules 不存在，开始安装依赖..."
+        npm install
+    else
+        log_info "检查依赖是否需要更新..."
+        # 检查 package-lock.json 是否比 node_modules 新
+        if [ "package-lock.json" -nt "node_modules" ]; then
+            log_info "package-lock.json 已更新，重新安装依赖..."
+            npm install
+        else
+            log_info "依赖已是最新，跳过安装"
+        fi
+    fi
+    
+    if [ $? -eq 0 ]; then
+        log_success "npm 依赖安装完成"
+    else
+        log_error "npm 依赖安装失败"
+        exit 1
+    fi
+}
+
 # 清理构建目录
 clean_build_directory() {
     log_info "清理构建目录..."
@@ -134,6 +164,9 @@ main() {
     
     # 检查环境
     check_environment
+    
+    # 安装 npm 依赖
+    install_dependencies
     
     # 清理构建目录
     clean_build_directory

@@ -4,7 +4,6 @@ import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
-import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIEditor } from "./UIEditor";
 import { UIInGameDebug } from "./UIInGameDebug";
@@ -14,10 +13,13 @@ import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { MapManager } from "../../map/MapManager";
-import { GameInitializer } from "../../core/GameInitializer";
 import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
+
+// 通过类型断言访问（避免导入造成循环依赖）
+declare const UIManager: any;
+declare const GameInitializer: any;
 
 const { ccclass } = _decorator;
 
@@ -344,7 +346,8 @@ export class UIInGame extends UIBase {
      */
     private _onExitGameClick(): void {
         console.log("[UIInGame] Exit game button clicked");
-        UIManager.instance?.exitGame();
+        // 使用类型断言访问 UIManager（避免循环依赖）
+        (UIManager as any).instance?.exitGame();
     }
 
     /**
@@ -466,7 +469,8 @@ export class UIInGame extends UIBase {
      * 检查并显示决策窗口（如果需要）
      */
     private _showDecisionDialogIfNeeded(): void {
-        const session = GameInitializer.getInstance()?.getGameSession();
+        // 使用类型断言访问 GameInitializer（避免循环依赖）
+        const session = (GameInitializer as any).getInstance()?.getGameSession();
         if (!session) {
             console.log('[UIInGame] GameSession 未找到');
             return;

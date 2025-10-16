@@ -10,7 +10,7 @@
  */
 
 import { Vec2 } from 'cc';
-import { ActorType } from './PaperActor';
+import { ActorType } from './ActorTypes';
 
 /**
  * Actor配置接口

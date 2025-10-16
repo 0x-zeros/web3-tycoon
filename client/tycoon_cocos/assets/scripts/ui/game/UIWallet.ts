@@ -6,9 +6,10 @@ import * as fgui from "fairygui-cc";
 import { _decorator, SpriteFrame, Rect, Size, assetManager, Sprite, Texture2D, ImageAsset } from 'cc';
 import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
-import { UIManager, UILayer } from "../core/UIManager";
+import { UILayer } from "../core/UITypes";  // 从 UITypes 导入（避免循环依赖）
 
-
+// UIManager 通过类型断言访问（避免导入造成循环依赖）
+declare const UIManager: any;
 
 import { bcs } from '@mysten/sui/bcs';
 import {fromHex, toHex} from '@mysten/bcs';
@@ -326,7 +327,8 @@ export class UIWallet extends UIBase {
         }
 
         // 添加到POPUP层并居中显示
-        const popupLayer = UIManager.instance.getLayer(UILayer.POPUP);
+        // 使用类型断言访问 UIManager（避免循环依赖）
+        const popupLayer = (UIManager as any).instance.getLayer(UILayer.POPUP);
         if (!popupLayer) {
             console.error("[UIWallet] POPUP layer not found");
             return;

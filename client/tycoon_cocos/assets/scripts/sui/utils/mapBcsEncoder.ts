@@ -103,7 +103,7 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
             y: tile.y,
             kind: tile.kind,
             building_id: tile.building_id,
-            special: BigInt(tile.special),  // u64 需要 bigint
+            special: typeof tile.special === 'bigint' ? tile.special : BigInt(tile.special || 0),  // u64 需要 bigint
             w: tile.w,
             n: tile.n,
             e: tile.e,
@@ -137,7 +137,7 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
                 x: building.x,
                 y: building.y,
                 size: building.size,
-                price: BigInt(building.price),
+                price: typeof building.price === 'bigint' ? building.price : BigInt(building.price || 0),
                 chain_prev_id: building.chain_prev_id,
                 chain_next_id: building.chain_next_id
             });

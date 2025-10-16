@@ -18,7 +18,8 @@
       "graphql/*": ["assets/scripts/shims/graphql.ts"],
       "gql.tada": ["assets/scripts/shims/graphql.ts"],
       "gql.tada/*": ["assets/scripts/shims/graphql.ts"],
-      "@graphql-typed-document-node/core": ["assets/scripts/shims/graphql.ts"]
+      "@graphql-typed-document-node/core": ["assets/scripts/shims/graphql.ts"],
+      "@mysten/sui/dist/esm/graphql/*": ["assets/scripts/shims/graphql.ts"]
     },
 
     /* 增强模块兼容性 */

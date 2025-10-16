@@ -14,12 +14,6 @@
     "fairygui-cc": "latest",
     "lodash-es": "^4.17.21"
   },
-  "browser": {
-    "graphql": "assets/scripts/shims/graphql.ts",
-    "graphql/*": "assets/scripts/shims/graphql.ts",
-    "@graphql-typed-document-node/core": "assets/scripts/shims/graphql.ts",
-    "gql.tada": "assets/scripts/shims/graphql.ts"
-  },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12"
   }

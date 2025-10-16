@@ -6,25 +6,78 @@ import { Blackboard } from "../../events/Blackboard";
 import { UI3DInteractionManager } from "../../events/UI3DInteractionManager";
 import * as fgui from "fairygui-cc";
 
-// 从 UITypes 导入共享类型（避免循环依赖）
-import { UILayer, UIConfig, UIConstructor, UIManagerConfig } from "./UITypes";
-
-// 重新导出类型，保持向后兼容
-export { UILayer, UIConfig, UIConstructor, UIManagerConfig };
-
-// 正常导入 UI 组件（运行时需要，Cocos Creator 需要注册这些组件类）
-// UI 组件不会反向导入 UIManager（使用 declare 声明），所以不会有循环依赖
+// 导入UI类以便在静态方法中使用
 import { UIModeSelect } from "../game/UIModeSelect";
 import { UIInGame } from "../game/UIInGame";
 import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
 import { UIWallet } from "../game/UIWallet";
-
-// 工具类和效果类
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
 import { CashFlyAnimation } from "../effects/CashFlyAnimation";
+
+/**
+ * UI层级枚举
+ * 定义UI的渲染层级，数值越大越靠前
+ */
+export enum UILayer {
+    /** 背景层：全屏背景、装饰元素 */
+    BACKGROUND = 0,
+    /** 场景层：全屏场景UI（ModeSelect/MapSelect/InGame） */
+    SCENE = 100,
+    /** 普通层：常规UI面板（Editor/普通窗口） */
+    NORMAL = 200,
+    /** 钱包层：持久化钱包UI（位于NORMAL和POPUP之间） */
+    WALLET = 250,
+    /** 弹窗层：非模态弹窗 */
+    POPUP = 300,
+    /** 模态层：MessageBox、确认框（阻挡背景） */
+    MODAL = 400,
+    /** 通知层：Toast通知、飘字（不阻挡） */
+    NOTIFICATION = 500,
+    /** 系统层：Loading、FPS、调试信息 */
+    SYSTEM = 1000,
+    /** 顶层：GM工具、强制最高层 */
+    TOP = 10000
+}
+
+/**
+ * UI构造函数接口 - Component类构造函数
+ */
+export interface UIConstructor<T extends UIBase = UIBase> {
+    new (): T;
+}
+
+/**
+ * UI配置接口
+ */
+export interface UIConfig {
+    /** 包名 */
+    packageName: string;
+    /** 组件名 */
+    componentName: string;
+    /** 是否缓存 */
+    cache?: boolean;
+    /** 是否作为弹窗显示 */
+    isWindow?: boolean;
+    /** 弹窗是否模态 */
+    modal?: boolean;
+    /** UI所在层级（默认NORMAL） */
+    layer?: UILayer;
+}
+
+/**
+ * UI管理器配置
+ */
+export interface UIManagerConfig {
+    /** 是否启用调试模式 */
+    debug?: boolean;
+    /** 是否启用UI缓存 */
+    enableCache?: boolean;
+    /** 设计分辨率 */
+    designResolution?: { width: number; height: number };
+}
 
 /**
  * UI管理器 - FairyGUI版本
@@ -381,12 +434,11 @@ export class UIManager {
 
     /**
      * 注册UI配置
-     * @param uiClass UI组件类或组件类名字符串（避免循环依赖时使用字符串）
      */
     public registerUI<T extends UIBase>(
-        uiName: string,
-        config: UIConfig,
-        uiClass: UIConstructor<T> | string
+        uiName: string, 
+        config: UIConfig, 
+        uiClass: UIConstructor<T>
     ): void {
         if (this._uiConfigs.has(uiName)) {
             warn(`[UIManager] UI ${uiName} already registered!`);
@@ -394,7 +446,7 @@ export class UIManager {
         }
 
         this._uiConfigs.set(uiName, config);
-        this._uiConstructors.set(uiName, uiClass as any);
+        this._uiConstructors.set(uiName, uiClass);
 
         if (this._config.debug) {
             console.log(`[UIManager] Registered UI: ${uiName}`, config);
@@ -826,37 +878,37 @@ export class UIManager {
      * 便捷注册方法 - 注册模式选择UI
      */
     public registerModeSelectUI(packageName: string, componentName: string = "Main"): void {
-        this.registerUI("ModeSelect", {
+        this.registerUI<UIModeSelect>("ModeSelect", {
             packageName,
             componentName,
             cache: true,
             isWindow: false,
             layer: UILayer.SCENE
-        }, UIModeSelect);  // 恢复类引用
+        }, UIModeSelect);
     }
 
     /**
      * 便捷注册方法 - 注册游戏内UI
      */
     public registerInGameUI(packageName: string, componentName: string = "Main"): void {
-        this.registerUI("InGame", {
+        this.registerUI<UIInGame>("InGame", {
             packageName,
             componentName,
             cache: true,
             isWindow: false,
             layer: UILayer.SCENE
-        }, UIInGame);  // 恢复类引用
+        }, UIInGame);
     }
 
 
     public registerMapSelectUI(packageName: string, componentName: string = "Main"): void {
-        this.registerUI("MapSelect", {
+        this.registerUI<UIMapSelect>("MapSelect", {
             packageName,
             componentName,
             cache: true,
             isWindow: false,
             layer: UILayer.SCENE
-        }, UIMapSelect);  // 恢复类引用
+        }, UIMapSelect);
     }
 
     /**
@@ -930,7 +982,6 @@ export class UIManager {
             }
 
             const walletCom = walletComponent.asCom;
-            // 直接使用类引用（UIWallet 不会反向导入 UIManager）
             this._walletUI = walletCom.node.addComponent(UIWallet);
             this._walletUI.setUIName("Wallet");
             this._walletUI.setPanel(walletCom);
@@ -1067,14 +1118,14 @@ export class UIManager {
      * 创建UI实例
      */
     private async _createUIInstance<T extends UIBase>(
-        uiName: string,
-        config: UIConfig,
-        constructor: UIConstructor | string
+        uiName: string, 
+        config: UIConfig, 
+        constructor: UIConstructor
     ): Promise<T | null> {
         try {
             // 使用FairyGUI创建组件
             const fguiComponent = fgui.UIPackage.createObject(
-                config.packageName,
+                config.packageName, 
                 config.componentName
             );
 
@@ -1087,9 +1138,8 @@ export class UIManager {
             fguiComponent.node.name = uiName;
 
             // 创建UI逻辑实例，添加到FairyGUI节点上
-            // 支持字符串组件名（避免循环依赖）或构造函数
-            const uiInstance = fguiComponent.node.addComponent(constructor as any) as unknown as T;
-
+            const uiInstance = fguiComponent.node.addComponent(constructor) as unknown as T;
+            
             // 设置UI名称和面板引用
             uiInstance.setUIName(uiName);
             uiInstance.setPanel(fguiComponent.asCom);
@@ -1101,7 +1151,7 @@ export class UIManager {
             //     //true表示不可穿透，false表示可穿透。
             //     panel.opaque = false;
             // }
-
+            
             return uiInstance;
 
         } catch (e) {

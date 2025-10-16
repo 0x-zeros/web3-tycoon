@@ -2,7 +2,7 @@ import { UIBase } from "../core/UIBase";
 import { MapManager } from "../../map/MapManager";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
-import { Blackboard } from "../../events/Blackboard";
+import { GameInitializer } from "../../core/GameInitializer";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
@@ -168,8 +168,7 @@ export class UIInGameDebug extends UIBase {
     private _refreshRoundTurnDisplay(): void {
         if (!this.m_label_roundTurn) return;
 
-        // 从 Blackboard 获取 GameSession（避免循环依赖）
-        const session = Blackboard.instance.get<any>("currentGameSession");
+        const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             this.m_label_roundTurn.text = 'round: -\nturn: -';
             return;

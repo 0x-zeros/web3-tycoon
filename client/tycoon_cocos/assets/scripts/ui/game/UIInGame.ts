@@ -4,6 +4,7 @@ import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
+import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIEditor } from "./UIEditor";
 import { UIInGameDebug } from "./UIInGameDebug";
@@ -13,12 +14,10 @@ import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { MapManager } from "../../map/MapManager";
+import { GameInitializer } from "../../core/GameInitializer";
 import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
-
-// 通过单例访问 UIManager（避免循环依赖）
-declare const UIManager: any;
 
 const { ccclass } = _decorator;
 
@@ -467,8 +466,7 @@ export class UIInGame extends UIBase {
      * 检查并显示决策窗口（如果需要）
      */
     private _showDecisionDialogIfNeeded(): void {
-        // 从 Blackboard 获取 GameSession（避免循环依赖）
-        const session = Blackboard.instance.get<any>("currentGameSession");
+        const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.log('[UIInGame] GameSession 未找到');
             return;

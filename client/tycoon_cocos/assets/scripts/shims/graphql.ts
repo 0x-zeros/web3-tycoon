@@ -14,10 +14,10 @@
 export type DocumentNode = unknown;
 export type GraphQLSchema = unknown;
 export type GraphQLType = unknown;
-// 注意：避免与下方类同名的类型别名，防止重复声明错误
+export type GraphQLObjectType = unknown;
 export type GraphQLFieldConfig<TSource, TContext, TArgs = any> = unknown;
 export type GraphQLResolveInfo = unknown;
-// 注意：避免与下方类同名的类型别名，防止重复声明错误
+export type GraphQLScalarType = unknown;
 
 // ============ 常用函数（抛出错误） ============
 

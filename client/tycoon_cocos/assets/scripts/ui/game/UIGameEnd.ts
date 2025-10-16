@@ -16,9 +16,7 @@
 import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
-
-// 通过单例访问 UIManager（避免循环依赖）
-declare const UIManager: any;
+import { UIManager } from "../core/UIManager";
 
 const { ccclass } = _decorator;
 
@@ -139,7 +137,7 @@ export class UIGameEnd extends UIBase {
         this.hide();
 
         // 调用 UIManager 统一退出方法
-        const uiManager = UIManager.instance;
+        const uiManager = UIManager.getInstance();
         if (uiManager) {
             uiManager.exitGame();
         } else {

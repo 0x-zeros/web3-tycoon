@@ -13,9 +13,9 @@
 import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
-import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
+import { GameInitializer } from "../../core/GameInitializer";
 import { getCardName } from "../../sui/types/cards";
 
 const { ccclass } = _decorator;
@@ -86,8 +86,7 @@ export class UIInGameCards extends UIBase {
      * 刷新卡牌列表
      */
     public refresh(): void {
-        // 从 Blackboard 获取 GameSession（避免循环依赖）
-        const session = Blackboard.instance.get<any>("currentGameSession");
+        const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.warn('[UIInGameCards] GameSession not found');
             this.m_cardList.numItems = 0;
@@ -113,8 +112,7 @@ export class UIInGameCards extends UIBase {
     private renderCardItem(index: number, obj: fgui.GObject): void {
         const item = obj.asCom;
 
-        // 从 Blackboard 获取 GameSession（避免循环依赖）
-        const session = Blackboard.instance.get<any>("currentGameSession");
+        const session = GameInitializer.getInstance()?.getGameSession();
         const player = session?.getMyPlayer();
         const gameData = session?.getGameData();
 

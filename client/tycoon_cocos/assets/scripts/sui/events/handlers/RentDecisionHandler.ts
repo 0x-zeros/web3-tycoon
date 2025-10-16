@@ -79,7 +79,21 @@ export class RentDecisionHandler {
                 return;
             }
 
-            // 2. 更新 turn（注意 +1）
+            // ✅ 2. 忽略自动决策事件（已在 RollAndStepHandler 中完整处理）
+            if (event.auto_decision) {
+                console.log('[RentDecisionHandler] Auto-decision event ignored (handled by RollAndStepHandler)', {
+                    payer: event.decision.payer,
+                    owner: event.decision.owner,
+                    rentAmount: event.decision.rent_amount.toString(),
+                    usedRentFree: event.decision.used_rent_free
+                });
+                return;
+            }
+
+            // ✅ 3. 手动决策：获取决策详情
+            const decision = event.decision;
+
+            // 4. 手动决策：更新 turn
             session.setRound(event.round);
             session.advance_turn(event.turn);
 
@@ -88,22 +102,20 @@ export class RentDecisionHandler {
                 turn: event.turn
             });
 
-            // 3. 获取玩家
-            const payer = session.getPlayerByAddress(event.payer);
-            const owner = session.getPlayerByAddress(event.owner);
+            // 5. 获取玩家
+            const payer = session.getPlayerByAddress(decision.payer);
+            const owner = session.getPlayerByAddress(decision.owner);
 
             if (!payer || !owner) {
                 console.warn('[RentDecisionHandler] Player not found', {
-                    payer: event.payer,
-                    owner: event.owner
+                    payer: decision.payer,
+                    owner: decision.owner
                 });
                 return;
             }
 
-            // 4. 自动决策标识
-            const autoTag = event.auto_decision ? '（自动）' : '';
-
-            if (event.used_rent_free) {
+            // 6. 处理租金支付
+            if (decision.used_rent_free) {
                 // 使用免租卡
                 const success = payer.removeCard(CardKind.RENT_FREE, 1);
 
@@ -113,7 +125,7 @@ export class RentDecisionHandler {
                     });
 
                     UINotification.info(
-                        `玩家${payer.getPlayerIndex() + 1}${autoTag}使用了免租卡`
+                        `玩家${payer.getPlayerIndex() + 1}使用了免租卡`
                     );
 
                     // 如果是当前玩家，触发卡牌飞出动画
@@ -130,7 +142,7 @@ export class RentDecisionHandler {
                 }
             } else {
                 // 支付现金
-                const rentAmount = BigInt(event.rent_amount);
+                const rentAmount = BigInt(decision.rent_amount);
                 const newPayerCash = payer.getCash() - rentAmount;
                 const newOwnerCash = owner.getCash() + rentAmount;
 
@@ -148,7 +160,7 @@ export class RentDecisionHandler {
                 console.log('[RentDecisionHandler] 触发转账动画');
 
                 UINotification.info(
-                    `玩家${payer.getPlayerIndex() + 1}${autoTag}支付${rentAmount.toString()}租金给玩家${owner.getPlayerIndex() + 1}`
+                    `玩家${payer.getPlayerIndex() + 1}支付${rentAmount.toString()}租金给玩家${owner.getPlayerIndex() + 1}`
                 );
             }
 

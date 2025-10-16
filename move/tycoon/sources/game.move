@@ -770,17 +770,24 @@ entry fun decide_rent_payment(
 
     // 发射租金决策事件（使用执行前的值）
     let owner_addr = game.players[owner_index as u64].owner;
-    events::emit_rent_decision_event(
-        game.id.to_inner(),
+
+    // ✅ 构造租金决策信息
+    let rent_info = events::make_rent_decision_info(
         player_addr,
         owner_addr,
         building_id,
         tile_id,
         toll,
-        use_rent_free,
+        use_rent_free
+    );
+
+    // ✅ 发射租金决策事件（使用新签名）
+    events::emit_rent_decision_event(
+        game.id.to_inner(),
         event_round,
         event_turn,
-        false  // auto_decision: 手动决策
+        false,  // auto_decision: 手动决策
+        rent_info
     );
 
     // 推进回合
@@ -1123,18 +1130,24 @@ entry fun buy_building(
     let event_turn = game.turn;
 
     // 发射建筑决策事件（使用执行前的值）
-    events::emit_building_decision_event(
-        game.id.to_inner(),
-        player_addr,
+    // ✅ 构造建筑决策信息
+    let decision_info = events::make_building_decision_info(
         types::DECISION_BUY_PROPERTY(),
         building_id,
         tile_id,
         price,
         1,  // new_level
-        building_type,  // 购买后的建筑类型
+        building_type  // 购买后的建筑类型
+    );
+
+    // ✅ 发射建筑决策事件（使用新签名）
+    events::emit_building_decision_event(
+        game.id.to_inner(),
+        player_addr,
         event_round,
         event_turn,
-        false  // auto_decision: 手动决策
+        false,  // auto_decision: 手动决策
+        decision_info
     );
 
     // 推进回合
@@ -1233,18 +1246,24 @@ entry fun upgrade_building(
     let event_turn = game.turn;
 
     // 发射建筑决策事件（使用执行前的值）
-    events::emit_building_decision_event(
-        game.id.to_inner(),
-        player_addr,
+    // ✅ 构造建筑决策信息
+    let decision_info = events::make_building_decision_info(
         types::DECISION_UPGRADE_PROPERTY(),
         building_id,
         tile_id,
         upgrade_cost,
         new_level,
-        final_building_type,  // 升级后的建筑类型
+        final_building_type  // 升级后的建筑类型
+    );
+
+    // ✅ 发射建筑决策事件（使用新签名）
+    events::emit_building_decision_event(
+        game.id.to_inner(),
+        player_addr,
         event_round,
         event_turn,
-        false  // auto_decision: 手动决策
+        false,  // auto_decision: 手动决策
+        decision_info
     );
 
     // 推进回合
@@ -1775,6 +1794,8 @@ fun handle_tile_stop_with_collector(
     let mut level_opt = option::none<u8>();
     let mut turns_opt = option::none<u8>();
     let mut card_gains = vector<events::CardDrawItem>[];
+    let mut building_decision_opt = option::none<events::BuildingDecisionInfo>();  // ✅ 新增
+    let mut rent_decision_opt = option::none<events::RentDecisionInfo>();          // ✅ 新增
 
     // 检查是否有建筑（不基于tile_kind，而是基于building_id）
     let building_id = map::tile_building_id(tile);
@@ -1801,21 +1822,29 @@ fun handle_tile_stop_with_collector(
                             cash_changes.push_back(cash_delta_opt.destroy_some());
                         };
 
-                        // 发射建筑决策事件
+                        // ✅ 构造建筑决策信息
                         let purchased_building = &game.buildings[building_id as u64];
-                        events::emit_building_decision_event(
-                            game.id.to_inner(),
-                            player_addr,
+                        let decision_info = events::make_building_decision_info(
                             types::DECISION_BUY_PROPERTY(),
                             building_id,
                             tile_id,
                             price,
                             1,  // new_level
-                            purchased_building.building_type,  // 购买后的建筑类型
+                            purchased_building.building_type
+                        );
+
+                        // ✅ 发射建筑决策事件（使用新签名）
+                        events::emit_building_decision_event(
+                            game.id.to_inner(),
+                            player_addr,
                             game.round,
                             game.turn,
-                            true  // auto_decision: 自动决策
+                            true,  // auto_decision
+                            decision_info
                         );
+
+                        // ✅ 保存决策信息到 StopEffect
+                        building_decision_opt = option::some(decision_info);
 
                         // 不设置 pending_decision
                     } else {
@@ -1863,18 +1892,28 @@ fun handle_tile_stop_with_collector(
                                 stop_type = events::stop_building_no_rent();
                                 // 发射租金决策事件（使用卡牌）
                                 let owner_addr = game.players[owner_index as u64].owner;
-                                events::emit_rent_decision_event(
-                                    game.id.to_inner(),
+
+                                // ✅ 构造租金决策信息
+                                let rent_info = events::make_rent_decision_info(
                                     player_addr,
                                     owner_addr,
                                     building_id,
                                     tile_id,
                                     toll,
-                                    true,  // use_rent_free
+                                    true  // use_rent_free
+                                );
+
+                                // ✅ 发射租金决策事件（使用新签名）
+                                events::emit_rent_decision_event(
+                                    game.id.to_inner(),
                                     game.round,
                                     game.turn,
-                                    true  // auto_decision: 自动决策
+                                    true,  // auto_decision: 自动决策
+                                    rent_info
                                 );
+
+                                // ✅ 保存决策信息到 StopEffect
+                                rent_decision_opt = option::some(rent_info);
                             } else {
                                 stop_type = events::stop_building_toll();
                                 // 添加现金变动记录
@@ -1887,18 +1926,28 @@ fun handle_tile_stop_with_collector(
 
                                 // 发射租金决策事件（使用现金）
                                 let owner_addr = game.players[owner_index as u64].owner;
-                                events::emit_rent_decision_event(
-                                    game.id.to_inner(),
+
+                                // ✅ 构造租金决策信息
+                                let rent_info = events::make_rent_decision_info(
                                     player_addr,
                                     owner_addr,
                                     building_id,
                                     tile_id,
                                     toll,
-                                    false,  // use_rent_free
+                                    false  // use_rent_free
+                                );
+
+                                // ✅ 发射租金决策事件（使用新签名）
+                                events::emit_rent_decision_event(
+                                    game.id.to_inner(),
                                     game.round,
                                     game.turn,
-                                    true  // auto_decision: 自动决策
+                                    true,  // auto_decision: 自动决策
+                                    rent_info
                                 );
+
+                                // ✅ 保存决策信息到 StopEffect
+                                rent_decision_opt = option::some(rent_info);
                             };
 
                             let owner_addr = (&game.players[owner_index as u64]).owner;
@@ -2000,21 +2049,29 @@ fun handle_tile_stop_with_collector(
                                 cash_changes.push_back(cash_delta_opt.destroy_some());
                             };
 
-                            // 发射建筑决策事件
+                            // ✅ 构造建筑决策信息
                             let upgraded_building = &game.buildings[building_id as u64];
-                            events::emit_building_decision_event(
-                                game.id.to_inner(),
-                                player_addr,
+                            let decision_info = events::make_building_decision_info(
                                 types::DECISION_UPGRADE_PROPERTY(),
                                 building_id,
                                 tile_id,
                                 upgrade_cost,
                                 new_level,
-                                upgraded_building.building_type,  // 升级后的类型
+                                upgraded_building.building_type
+                            );
+
+                            // ✅ 发射建筑决策事件（使用新签名）
+                            events::emit_building_decision_event(
+                                game.id.to_inner(),
+                                player_addr,
                                 game.round,
                                 game.turn,
-                                true  // auto_decision: 自动决策
+                                true,  // auto_decision
+                                decision_info
                             );
+
+                            // ✅ 保存决策信息到 StopEffect
+                            building_decision_opt = option::some(decision_info);
 
                             // 不设置 pending_decision
                         } else {
@@ -2149,7 +2206,8 @@ fun handle_tile_stop_with_collector(
         game.pending_decision,
         game.decision_tile,
         game.decision_amount,
-        building_id  // 传递建筑ID（可能是有效ID或NO_BUILDING）
+        building_decision_opt,  // ✅ 建筑决策信息
+        rent_decision_opt       // ✅ 租金决策信息
     )
 }
 

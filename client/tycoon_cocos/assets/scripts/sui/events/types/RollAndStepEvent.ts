@@ -22,6 +22,26 @@ export interface CardDrawItem {
     is_pass: boolean;
 }
 
+// 建筑决策信息
+export interface BuildingDecisionInfo {
+    decision_type: number;  // 1=购买, 2=升级
+    building_id: number;
+    tile_id: number;
+    amount: bigint;
+    new_level: number;
+    building_type: number;
+}
+
+// 租金决策信息
+export interface RentDecisionInfo {
+    payer: string;
+    owner: string;
+    building_id: number;
+    tile_id: number;
+    rent_amount: bigint;
+    used_rent_free: boolean;
+}
+
 // NPC步骤事件
 export interface NpcStepEvent {
     tile_id: number;
@@ -44,7 +64,8 @@ export interface StopEffect {
     pending_decision: number;
     decision_tile: number;
     decision_amount: bigint;
-    building_id: number;  // 建筑ID（65535=NO_BUILDING表示无建筑）
+    building_decision: BuildingDecisionInfo | null;  // 建筑决策信息（自动决策时）
+    rent_decision: RentDecisionInfo | null;          // 租金决策信息（自动决策时）
 }
 
 // 步骤效果（核心）

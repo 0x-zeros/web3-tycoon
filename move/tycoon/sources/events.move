@@ -110,29 +110,19 @@ public struct BankruptEvent has copy, drop {
 public struct BuildingDecisionEvent has copy, drop {
     game: ID,
     player: address,
-    decision_type: u8,  // BUY_PROPERTY or UPGRADE_PROPERTY
-    building_id: u16,
-    tile_id: u16,
-    amount: u64,
-    new_level: u8,
-    building_type: u8,  // 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等）
     round: u16,
     turn: u8,
-    auto_decision: bool  // true=自动决策，false=手动决策
+    auto_decision: bool,       // true=自动决策，false=手动决策
+    decision: BuildingDecisionInfo  // ✅ 决策详情
 }
 
 // 租金决策事件
 public struct RentDecisionEvent has copy, drop {
     game: ID,
-    payer: address,
-    owner: address,
-    building_id: u16,
-    tile_id: u16,
-    rent_amount: u64,
-    used_rent_free: bool,
     round: u16,
     turn: u8,
-    auto_decision: bool  // true=自动决策，false=手动决策
+    auto_decision: bool,       // true=自动决策，false=手动决策
+    decision: RentDecisionInfo      // ✅ 决策详情
 }
 
 // 跳过决策事件
@@ -212,6 +202,26 @@ public struct NpcStepEvent has copy, drop, store {
     result_tile: option::Option<u16>  // 结果地块（如送医院的目标地块）
 }
 
+// 建筑决策信息（用于事件和StopEffect）
+public struct BuildingDecisionInfo has copy, drop, store {
+    decision_type: u8,    // 1=购买, 2=升级
+    building_id: u16,
+    tile_id: u16,
+    amount: u64,
+    new_level: u8,
+    building_type: u8
+}
+
+// 租金决策信息（用于事件和StopEffect）
+public struct RentDecisionInfo has copy, drop, store {
+    payer: address,       // 支付者
+    owner: address,       // 所有者
+    building_id: u16,
+    tile_id: u16,
+    rent_amount: u64,
+    used_rent_free: bool
+}
+
 // 停留效果
 public struct StopEffect has copy, drop, store {
     tile_id: u16,
@@ -225,7 +235,8 @@ public struct StopEffect has copy, drop, store {
     pending_decision: u8,      // 待决策类型
     decision_tile: u16,         // 相关的地块ID
     decision_amount: u64,       // 相关金额
-    building_id: u16            // 建筑ID（65535=NO_BUILDING表示无建筑）
+    building_decision: option::Option<BuildingDecisionInfo>,  // 建筑决策信息（自动决策时）
+    rent_decision: option::Option<RentDecisionInfo>           // 租金决策信息（自动决策时）
 }
 
 // 步骤效果
@@ -462,6 +473,44 @@ public(package) fun make_npc_step_event(
     }
 }
 
+// 构造建筑决策信息
+public(package) fun make_building_decision_info(
+    decision_type: u8,
+    building_id: u16,
+    tile_id: u16,
+    amount: u64,
+    new_level: u8,
+    building_type: u8
+): BuildingDecisionInfo {
+    BuildingDecisionInfo {
+        decision_type,
+        building_id,
+        tile_id,
+        amount,
+        new_level,
+        building_type
+    }
+}
+
+// 构造租金决策信息
+public(package) fun make_rent_decision_info(
+    payer: address,
+    owner: address,
+    building_id: u16,
+    tile_id: u16,
+    rent_amount: u64,
+    used_rent_free: bool
+): RentDecisionInfo {
+    RentDecisionInfo {
+        payer,
+        owner,
+        building_id,
+        tile_id,
+        rent_amount,
+        used_rent_free
+    }
+}
+
 // 构造停留效果
 public(package) fun make_stop_effect(
     tile_id: u16,
@@ -475,7 +524,8 @@ public(package) fun make_stop_effect(
     pending_decision: u8,
     decision_tile: u16,
     decision_amount: u64,
-    building_id: u16  // 建筑ID（65535=NO_BUILDING表示无建筑）
+    building_decision: option::Option<BuildingDecisionInfo>,
+    rent_decision: option::Option<RentDecisionInfo>
 ): StopEffect {
     StopEffect {
         tile_id,
@@ -489,7 +539,8 @@ public(package) fun make_stop_effect(
         pending_decision,
         decision_tile,
         decision_amount,
-        building_id
+        building_decision,
+        rent_decision
     }
 }
 
@@ -630,55 +681,35 @@ public fun emit_game_data_created_event(data_id: ID) {
 public(package) fun emit_building_decision_event(
     game_id: ID,
     player: address,
-    decision_type: u8,
-    building_id: u16,
-    tile_id: u16,
-    amount: u64,
-    new_level: u8,
-    building_type: u8,
     round: u16,
     turn: u8,
-    auto_decision: bool
+    auto_decision: bool,
+    decision: BuildingDecisionInfo
 ) {
     event::emit(BuildingDecisionEvent {
         game: game_id,
         player,
-        decision_type,
-        building_id,
-        tile_id,
-        amount,
-        new_level,
-        building_type,
         round,
         turn,
-        auto_decision
+        auto_decision,
+        decision
     });
 }
 
 /// 发射租金决策事件
 public(package) fun emit_rent_decision_event(
     game_id: ID,
-    payer: address,
-    owner: address,
-    building_id: u16,
-    tile_id: u16,
-    rent_amount: u64,
-    used_rent_free: bool,
     round: u16,
     turn: u8,
-    auto_decision: bool
+    auto_decision: bool,
+    decision: RentDecisionInfo
 ) {
     event::emit(RentDecisionEvent {
         game: game_id,
-        payer,
-        owner,
-        building_id,
-        tile_id,
-        rent_amount,
-        used_rent_free,
         round,
         turn,
-        auto_decision
+        auto_decision,
+        decision
     });
 }
 

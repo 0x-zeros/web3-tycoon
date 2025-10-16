@@ -79,16 +79,19 @@ export class BuildingDecisionHandler {
             // ✅ 2. 忽略自动决策事件（已在 RollAndStepHandler 中完整处理）
             if (event.auto_decision) {
                 console.log('[BuildingDecisionHandler] Auto-decision event ignored (handled by RollAndStepHandler)', {
-                    buildingId: event.building_id,
+                    buildingId: event.decision.building_id,
                     player: event.player,
-                    amount: event.amount.toString(),
-                    decisionType: event.decision_type,
-                    newLevel: event.new_level
+                    amount: event.decision.amount.toString(),
+                    decisionType: event.decision.decision_type,
+                    newLevel: event.decision.new_level
                 });
                 return;
             }
 
-            // 3. 手动决策：更新 turn
+            // ✅ 3. 手动决策：获取决策详情
+            const decision = event.decision;
+
+            // 4. 手动决策：更新 turn
             session.setRound(event.round);
             session.advance_turn(event.turn);
 
@@ -97,51 +100,51 @@ export class BuildingDecisionHandler {
                 turn: event.turn
             });
 
-            // 3. 获取玩家
+            // 5. 获取玩家
             const player = session.getPlayerByAddress(event.player);
             if (!player) {
                 console.warn('[BuildingDecisionHandler] Player not found', event.player);
                 return;
             }
 
-            // 4. 扣除玩家现金
-            const newCash = player.getCash() - BigInt(event.amount);
+            // 6. 扣除玩家现金
+            const amount = BigInt(decision.amount);
+            const newCash = player.getCash() - amount;
             player.setCash(newCash);
 
             // 播放减钱动画
-            CashFlyAnimation.getInstance().playCashDecrease(player, BigInt(event.amount));
+            CashFlyAnimation.getInstance().playCashDecrease(player, amount);
             console.log('[BuildingDecisionHandler] 触发减钱动画');
 
             console.log('[BuildingDecisionHandler] 玩家现金已更新', {
                 player: player.getPlayerIndex(),
                 oldCash: player.getCash().toString(),
                 newCash: newCash.toString(),
-                amount: event.amount.toString()
+                amount: amount.toString()
             });
 
-            // 5. 更新建筑（owner、level和building_type）- 会自动触发渲染更新
+            // 7. 更新建筑（owner、level和building_type）- 会自动触发渲染更新
             session.updateBuilding(
-                event.building_id,
+                decision.building_id,
                 player.getPlayerIndex(),
-                event.new_level,
-                event.building_type  // 新增：传递建筑类型
+                decision.new_level,
+                decision.building_type
             );
 
             console.log('[BuildingDecisionHandler] 建筑已更新', {
-                buildingId: event.building_id,
+                buildingId: decision.building_id,
                 owner: player.getPlayerIndex(),
-                level: event.new_level,
-                buildingType: event.building_type
+                level: decision.new_level,
+                buildingType: decision.building_type
             });
 
-            // 6. 显示 notification
-            const decisionTypeStr = event.decision_type === 1 ? '购买' : '升级';
-            const autoTag = event.auto_decision ? '（自动）' : '';
-            const building = session.getBuildingByIndex(event.building_id);
-            const buildingName = building?.getBuildingTypeName() || `建筑${event.building_id}`;
+            // 8. 显示 notification
+            const decisionTypeStr = decision.decision_type === 1 ? '购买' : '升级';
+            const building = session.getBuildingByIndex(decision.building_id);
+            const buildingName = building?.getBuildingTypeName() || `建筑${decision.building_id}`;
 
             UINotification.success(
-                `玩家${player.getPlayerIndex() + 1}${autoTag}${decisionTypeStr}了${buildingName}，花费${BigInt(event.amount).toString()}`
+                `玩家${player.getPlayerIndex() + 1}${decisionTypeStr}了${buildingName}，花费${amount.toString()}`
             );
 
             console.log('[BuildingDecisionHandler] BuildingDecisionEvent 处理完成');

@@ -12,14 +12,15 @@ import { UILayer, UIConfig, UIConstructor, UIManagerConfig } from "./UITypes";
 // 重新导出类型，保持向后兼容
 export { UILayer, UIConfig, UIConstructor, UIManagerConfig };
 
-// 使用 import type 导入 UI 组件（避免循环依赖）
-import type { UIModeSelect } from "../game/UIModeSelect";
-import type { UIInGame } from "../game/UIInGame";
-import type { UIMapElement } from "../game/UIMapElement";
-import type { UIMapSelect } from "../game/UIMapSelect";
-import type { UIWallet } from "../game/UIWallet";
+// 正常导入 UI 组件（运行时需要，Cocos Creator 需要注册这些组件类）
+// UI 组件不会反向导入 UIManager（使用 declare 声明），所以不会有循环依赖
+import { UIModeSelect } from "../game/UIModeSelect";
+import { UIInGame } from "../game/UIInGame";
+import { UIMapElement } from "../game/UIMapElement";
+import { UIMapSelect } from "../game/UIMapSelect";
+import { UIWallet } from "../game/UIWallet";
 
-// 工具类和效果类可以正常导入（不会产生循环依赖）
+// 工具类和效果类
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
@@ -831,7 +832,7 @@ export class UIManager {
             cache: true,
             isWindow: false,
             layer: UILayer.SCENE
-        }, "UIModeSelect");  // 使用字符串避免循环依赖
+        }, UIModeSelect);  // 恢复类引用
     }
 
     /**
@@ -844,7 +845,7 @@ export class UIManager {
             cache: true,
             isWindow: false,
             layer: UILayer.SCENE
-        }, "UIInGame");  // 使用字符串避免循环依赖
+        }, UIInGame);  // 恢复类引用
     }
 
 
@@ -855,7 +856,7 @@ export class UIManager {
             cache: true,
             isWindow: false,
             layer: UILayer.SCENE
-        }, "UIMapSelect");  // 使用字符串避免循环依赖
+        }, UIMapSelect);  // 恢复类引用
     }
 
     /**
@@ -929,8 +930,8 @@ export class UIManager {
             }
 
             const walletCom = walletComponent.asCom;
-            // 使用字符串方式添加组件（避免循环依赖）
-            this._walletUI = walletCom.node.addComponent("UIWallet") as UIWallet;
+            // 直接使用类引用（UIWallet 不会反向导入 UIManager）
+            this._walletUI = walletCom.node.addComponent(UIWallet);
             this._walletUI.setUIName("Wallet");
             this._walletUI.setPanel(walletCom);
             this._walletUI.init();

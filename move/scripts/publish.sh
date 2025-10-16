@@ -48,12 +48,17 @@ ENV="$1"; shift
 # 切换到指定的Sui网络环境
 $SUI client switch --env "$ENV"
 
-# If on testnet or local/localnet, request gas from faucet
-if [[ "$ENV" == "testnet" || "$ENV" == "localnet" || "$ENV" == "local" ]]; then
+# If on devnet or local/localnet, request gas from faucet
+# Note: testnet requires manual faucet request from Discord or web interface
+if [[ "$ENV" == "devnet" || "$ENV" == "localnet" || "$ENV" == "local" ]]; then
   echo "Requesting gas from faucet for $ENV..."
   $SUI client faucet
   sleep 2 #wait for faucet to be ready， 2s
   $SUI client addresses
+  $SUI client balance
+elif [[ "$ENV" == "testnet" ]]; then
+  echo "Note: For testnet, please request tokens from https://discord.gg/sui or https://faucet.testnet.sui.io"
+  echo "Current balance:"
   $SUI client balance
 fi
 

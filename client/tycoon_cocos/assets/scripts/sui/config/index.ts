@@ -4,7 +4,7 @@
  */
 
 import { SuiConfig, fromEnvConfig } from './SuiConfig';
-import { SuiEnvConfig } from '../../config/env.localnet';
+import { SuiEnvConfig } from '../../config/env.testnet';
 
 /**
  * 当前使用的 Sui 配置

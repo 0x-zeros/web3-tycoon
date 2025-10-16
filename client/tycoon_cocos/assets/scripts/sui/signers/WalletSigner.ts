@@ -15,7 +15,8 @@ import { SignerProvider } from './SignerProvider';
 export class WalletSigner implements SignerProvider {
     constructor(
         private wallet: Wallet,
-        private account: WalletAccount
+        private account: WalletAccount,
+        private network: string
     ) {}
 
     /**
@@ -46,6 +47,7 @@ export class WalletSigner implements SignerProvider {
             const result = await signFeature.signAndExecuteTransaction({
                 transaction: tx,
                 account: this.account,
+                chain: `sui:${this.network}`,  // 添加 chain 参数（Wallet Standard 规范要求）
                 // options 可根据需要添加
                 options: {
                     showEffects: true,

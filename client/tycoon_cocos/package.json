@@ -9,13 +9,16 @@
   },
   "dependencies": {
     "@mysten/sui": "^1.42.0",
-    "@mysten/wallet-standard": "^0.17.0",
+    "@mysten/wallet-standard": "^0.19.2",
     "@tweenjs/tween.js": "^25.0.0",
     "fairygui-cc": "latest",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12"
+  },
+  "scripts": {
+    "postinstall": "node scripts/fix-sui-modules.js"
   },
   "browserslist": [
     "Chrome >= 90",

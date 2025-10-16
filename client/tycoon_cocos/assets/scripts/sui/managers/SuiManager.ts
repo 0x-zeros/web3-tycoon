@@ -271,7 +271,7 @@ export class SuiManager {
      * @param account 账户信息
      */
     public setWalletSigner(wallet: Wallet, account: WalletAccount): void {
-        this._signer = new WalletSigner(wallet, account);
+        this._signer = new WalletSigner(wallet, account, this._config!.network);
         this._currentAddress = account.address;
 
         this._log('[SuiManager] Wallet signer set', {

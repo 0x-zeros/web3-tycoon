@@ -445,7 +445,7 @@ export class UIWallet extends UIBase {
 
     private _filterSuiWallets(wallets: readonly Wallet[]): Wallet[] {
         return wallets.filter((wallet) => {
-            return typeof wallet.features['sui:signTransaction']?.['signTransaction'] === 'function';
+            return wallet?.features && typeof wallet.features['sui:signTransaction']?.['signTransaction'] === 'function';
         });
     }
 

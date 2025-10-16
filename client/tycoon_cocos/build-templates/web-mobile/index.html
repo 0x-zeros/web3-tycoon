@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Web3 Tycoon</title>
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1,minimal-ui=true">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="full-screen" content="yes">
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-fullscreen" content="true">
+    <meta name="360-fullscreen" content="true">
+
+    <!-- Import Map: 让浏览器以原生 ESM 方式加载 @mysten/* 包 -->
+    <!-- 由 rollup-guard 扩展在构建时自动生成 importmap.json -->
+    <script type="importmap" src="./importmap.json"></script>
+
+    <style>
+        body, canvas, div {
+            display: block;
+            outline: none;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -khtml-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        html {
+            -ms-touch-action: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #GameDiv {
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            background-color: rgba(0, 0, 0, 0);
+        }
+
+        .cocosLoading {
+            position: absolute;
+            margin: -30px -50px;
+            width: 100px;
+            height: 100px;
+            left: 50%;
+            top: 50%;
+        }
+
+        .cocosLoading>div {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid #ccc;
+            border-top-color: #000;
+            animation: cocosLoading 1s infinite linear;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes cocosLoading {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="GameDiv">
+        <div class="cocosLoading"><div></div></div>
+    </div>
+
+    <!-- Cocos Creator 引擎脚本 -->
+    <script src="src/settings.js" charset="utf-8"></script>
+    <script src="src/cocos-js/cc.js" charset="utf-8"></script>
+    <script src="main.js" charset="utf-8"></script>
+</body>
+</html>

@@ -23,7 +23,7 @@ import { WalkingPreference } from "../../sui/pathfinding/WalkingPreference";
 import { HistoryStorage } from "../../sui/pathfinding/HistoryStorage";
 import { UIMessage } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
-import { GameInitializer } from "../../core/GameInitializer";
+
 import { handleSuiTransactionError } from "../../sui/utils/TransactionErrorHandler";
 
 const { ccclass } = _decorator;
@@ -128,7 +128,7 @@ export class UIInGameDice extends UIBase {
      * 更新按钮状态（根据当前回合）
      */
     private _updateButtonState(): void {
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) {
             this.m_btn_roll.enabled = false;
             if (this.m_btn_skipTurn) {
@@ -235,7 +235,7 @@ export class UIInGameDice extends UIBase {
 
         try {
             // ===== 1. 获取游戏数据 =====
-            const session = GameInitializer.getInstance()?.getGameSession();
+            const session = Blackboard.instance.get<any>("currentGameSession");
             if (!session) {
                 throw new Error("GameSession 未找到");
             }
@@ -349,7 +349,7 @@ export class UIInGameDice extends UIBase {
             // 只在失败时恢复按钮状态
             if (!transactionSuccess && this.m_btn_roll) {
                 // 恢复为当前回合状态（而不是无条件 true）
-                const session = GameInitializer.getInstance()?.getGameSession();
+                const session = Blackboard.instance.get<any>("currentGameSession");
                 const isMyTurn = session?.isMyTurn() || false;
                 this.m_btn_roll.enabled = isMyTurn;
 
@@ -407,7 +407,7 @@ export class UIInGameDice extends UIBase {
         }
 
         try {
-            const session = GameInitializer.getInstance()?.getGameSession();
+            const session = Blackboard.instance.get<any>("currentGameSession");
             if (!session) {
                 throw new Error('GameSession 未找到');
             }

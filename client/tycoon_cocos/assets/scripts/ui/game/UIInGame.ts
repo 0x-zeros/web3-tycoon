@@ -14,7 +14,6 @@ import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { MapManager } from "../../map/MapManager";
-import { GameInitializer } from "../../core/GameInitializer";
 import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
@@ -466,7 +465,8 @@ export class UIInGame extends UIBase {
      * 检查并显示决策窗口（如果需要）
      */
     private _showDecisionDialogIfNeeded(): void {
-        const session = GameInitializer.getInstance()?.getGameSession();
+        // 从 Blackboard 获取 GameSession（避免循环依赖）
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) {
             console.log('[UIInGame] GameSession 未找到');
             return;

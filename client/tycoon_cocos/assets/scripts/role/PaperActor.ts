@@ -25,13 +25,8 @@ import { ActorConfigManager } from './ActorConfig';
 
 const { ccclass, property } = _decorator;
 
-// Actor类型枚举
-export enum ActorType {
-    NPC = 0,
-    PLAYER = 1,
-    BUILDING = 2,
-    OBJECT = 3
-}
+// 从 ActorTypes 导入并重新导出（保持向后兼容性，避免循环依赖）
+export { ActorType } from './ActorTypes';
 
 @ccclass('PaperActor')
 export class PaperActor extends Component {

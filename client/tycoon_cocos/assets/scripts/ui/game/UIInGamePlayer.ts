@@ -13,9 +13,10 @@
 import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
+import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
-import { GameInitializer } from "../../core/GameInitializer";
+
 
 const { ccclass } = _decorator;
 
@@ -82,7 +83,7 @@ export class UIInGamePlayer extends UIBase {
     }
 
     public refresh(): void {
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) return;
 
         this.refreshMyPlayer(session);
@@ -115,7 +116,7 @@ export class UIInGamePlayer extends UIBase {
 
     private renderPlayerItem(index: number, obj: fgui.GObject): void {
         const item = obj.asCom;
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = Blackboard.instance.get<any>("currentGameSession");
         const player = session?.getPlayerByIndex(index);
 
         if (!player) return;

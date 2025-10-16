@@ -12,9 +12,11 @@
 
 import type { EventMetadata, BankruptEvent } from '../types';
 import { Blackboard } from '../../../events/Blackboard';
-import { UIManager } from '../../../ui/core/UIManager';
 import { IdFormatter } from '../../../ui/utils/IdFormatter';
 import type { GameSession } from '../../../core/GameSession';
+
+// 通过单例访问 UIManager（避免循环依赖）
+declare const UIManager: any;
 
 /**
  * BankruptHandler 类
@@ -94,7 +96,7 @@ export class BankruptHandler {
                 ? `玩家 ${session.getPlayerByAddress(event.creditor)?.getPlayerIndex() ?? '?'}`
                 : '银行';
 
-            const uiManager = UIManager.getInstance();
+            const uiManager = UIManager.instance;
             if (uiManager) {
                 await uiManager.showUI("Bankruptcy", {
                     playerName,

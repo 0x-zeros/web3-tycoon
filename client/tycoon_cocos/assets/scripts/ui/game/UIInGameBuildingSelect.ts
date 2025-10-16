@@ -14,9 +14,10 @@
 import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
+import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
-import { GameInitializer } from "../../core/GameInitializer";
+
 import { SuiManager } from "../../sui/managers/SuiManager";
 import { UINotification } from "../utils/UINotification";
 import { UIMessage } from "../utils/UIMessage";
@@ -204,7 +205,7 @@ export class UIInGameBuildingSelect extends UIBase {
     private _onBuildingDecision(data: any): void {
         console.log('[UIInGameBuildingSelect] BuildingDecision event received', data);
 
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) {
             console.warn('[UIInGameBuildingSelect] GameSession not found');
             return;
@@ -250,7 +251,7 @@ export class UIInGameBuildingSelect extends UIBase {
     private async onUpgradeClicked(): Promise<void> {
         console.log('[UIInGameBuildingSelect] Upgrade button clicked');
 
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) {
             UINotification.error("游戏会话未找到");
             return;
@@ -313,7 +314,7 @@ export class UIInGameBuildingSelect extends UIBase {
     private async onSkipClicked(): Promise<void> {
         console.log('[UIInGameBuildingSelect] Skip button clicked');
 
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) {
             UINotification.error("游戏会话未找到");
             return;

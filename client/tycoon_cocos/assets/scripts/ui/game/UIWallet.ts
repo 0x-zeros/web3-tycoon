@@ -6,9 +6,7 @@ import * as fgui from "fairygui-cc";
 import { _decorator, SpriteFrame, Rect, Size, assetManager, Sprite, Texture2D, ImageAsset } from 'cc';
 import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
-import { UIManager, UILayer } from "../core/UIManager";
-
-
+import { UILayer } from "../core/UITypes";  // 从 UITypes 导入（避免循环依赖）
 
 import { bcs } from '@mysten/sui/bcs';
 import {fromHex, toHex} from '@mysten/bcs';
@@ -17,6 +15,8 @@ import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } 
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
 
+// 通过单例访问 UIManager（避免循环依赖）
+declare const UIManager: any;
 
 const { ccclass } = _decorator;
 

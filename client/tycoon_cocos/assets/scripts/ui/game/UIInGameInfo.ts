@@ -13,9 +13,9 @@
 import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
+import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
-import { GameInitializer } from "../../core/GameInitializer";
 import { IdFormatter } from "../utils/IdFormatter";
 
 const { ccclass } = _decorator;
@@ -59,7 +59,8 @@ export class UIInGameInfo extends UIBase {
     }
 
     public refresh(): void {
-        const session = GameInitializer.getInstance()?.getGameSession();
+        // 从 Blackboard 获取 GameSession（避免循环依赖）
+        const session = Blackboard.instance.get<any>("currentGameSession");
         if (!session) return;
 
         const round = session.getRound();

@@ -16,5 +16,11 @@
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12"
-  }
+  },
+  "browserslist": [
+    "Chrome >= 90",
+    "Safari >= 14",
+    "iOS >= 14",
+    "Firefox >= 88"
+  ]
 }

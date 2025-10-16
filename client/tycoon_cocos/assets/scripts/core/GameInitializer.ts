@@ -8,6 +8,19 @@
  * @version 1.0.0
  */
 
+// ===== Fix: Rollup 转译 BigInt ** 为 Math.pow 导致的错误 =====
+// Rollup 会将 @mysten/bcs 中的 2n ** 64n 转译成 Math.pow(2n, 64n)
+// Math.pow 不支持 BigInt，因此需要 polyfill
+(function() {
+    const originalPow = Math.pow;
+    (Math as any).pow = function(base: any, exponent: any) {
+        if (typeof base === 'bigint' || typeof exponent === 'bigint') {
+            return BigInt(base) ** BigInt(exponent);
+        }
+        return originalPow.call(Math, base, exponent);
+    };
+})();
+
 import { _decorator, Component, director, Node, game, resources, Prefab, instantiate } from 'cc';
 import { ConfigLoader, ConfigType } from '../config/ConfigLoader';
 import { RoleManager } from '../role/RoleManager';

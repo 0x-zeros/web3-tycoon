@@ -23,8 +23,7 @@
       "@mysten/sui/zklogin": ["assets/scripts/shims/zklogin-shim.ts"],
       "@mysten/sui/zklogin/*": ["assets/scripts/shims/zklogin-shim.ts"],
       "@mysten/sui/dist/esm/zklogin/*": ["assets/scripts/shims/zklogin-shim.ts"],
-      "poseidon-lite": ["assets/scripts/shims/poseidon-lite-shim.ts"],
-      "@mysten/bcs": ["assets/scripts/shims/mysten-bcs-shim.ts"]
+      "poseidon-lite": ["assets/scripts/shims/poseidon-lite-shim.ts"]
     },
 
     /* 增强模块兼容性 */

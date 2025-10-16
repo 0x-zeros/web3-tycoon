@@ -160,7 +160,8 @@ local/
 temp/
 build/
 profiles/
-settings/
+# Cocos Creator settings - 只忽略个人默认配置
+client/tycoon_cocos/settings/v2/default-profiles/
 project.json.meta
 
 # Move build artifacts

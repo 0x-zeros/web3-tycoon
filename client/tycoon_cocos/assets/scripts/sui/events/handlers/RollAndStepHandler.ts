@@ -418,15 +418,14 @@ export class RollAndStepHandler {
             }
         }
 
-        // ✅ 处理建筑更新（从最后一个step的StopEffect获取building_id）
+        // ✅ 处理建筑更新（从最后一个step的StopEffect获取building_decision）
         const lastStep = event.steps[event.steps.length - 1];
         if (lastStep && lastStep.stop_effect) {
             const stopEffect = lastStep.stop_effect;
 
-            // 检查是否有建筑更新（building_id != NO_BUILDING）
-            const NO_BUILDING = 65535;
-            if (stopEffect.building_id !== undefined && stopEffect.building_id !== NO_BUILDING) {
-                await this._handleBuildingUpdate(stopEffect, event.player, session);
+            // 检查是否有建筑决策信息
+            if (stopEffect.building_decision) {
+                await this._handleBuildingUpdate(stopEffect.building_decision, event.player, session);
             }
         }
 
@@ -610,11 +609,11 @@ export class RollAndStepHandler {
     // ==================== 辅助方法 ====================
 
     /**
-     * 处理建筑更新（从 StopEffect）
+     * 处理建筑更新（从 building_decision）
      * 在玩家移动动画完成后调用，确保视觉协调
      */
     private async _handleBuildingUpdate(
-        stopEffect: any,
+        buildingDecision: any,
         playerAddress: string,
         session: any
     ): Promise<void> {
@@ -624,21 +623,24 @@ export class RollAndStepHandler {
             return;
         }
 
-        // 从 StopEffect 获取建筑信息
-        const buildingId = stopEffect.building_id;
+        // ✅ 从 BuildingDecisionInfo 获取完整信息
+        const buildingId = buildingDecision.building_id;
         const newOwner = player.getPlayerIndex();
-        const newLevel = stopEffect.level ?? 1;  // 从 stop_effect.level 获取
+        const newLevel = buildingDecision.new_level;
+        const buildingType = buildingDecision.building_type;
 
-        console.log('[RollAndStepHandler] 更新建筑状态（from stop_effect）', {
+        console.log('[RollAndStepHandler] 更新建筑状态（from building_decision）', {
             buildingId,
             owner: newOwner,
             level: newLevel,
-            stopType: stopEffect.stop_type,
-            tileId: stopEffect.tile_id
+            buildingType,
+            decisionType: buildingDecision.decision_type,
+            amount: buildingDecision.amount.toString(),
+            tileId: buildingDecision.tile_id
         });
 
         // 更新建筑（会自动触发渲染）
-        session.updateBuilding(buildingId, newOwner, newLevel);
+        session.updateBuilding(buildingId, newOwner, newLevel, buildingType);
 
         console.log('[RollAndStepHandler] 建筑状态已更新');
     }

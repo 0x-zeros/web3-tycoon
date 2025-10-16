@@ -5,6 +5,8 @@
  * Move源文件: move/tycoon/sources/events.move
  */
 
+import type { BuildingDecisionInfo, RentDecisionInfo } from './RollAndStepEvent';
+
 // ===== Game Events 游戏事件 =====
 
 /**
@@ -159,24 +161,14 @@ export interface BuildingDecisionEvent {
     game: string;
     /** 玩家地址 */
     player: string;
-    /** 决策类型（1=购买, 2=升级） */
-    decision_type: number;
-    /** 建筑ID */
-    building_id: number;
-    /** 地块ID */
-    tile_id: number;
-    /** 金额（购买价格或升级费用） */
-    amount: bigint;
-    /** 新等级 */
-    new_level: number;
-    /** 建筑类型（BUILDING_NONE/TEMPLE/RESEARCH等） */
-    building_type: number;
     /** 轮次 */
     round: number;
     /** 回合 */
     turn: number;
     /** 是否为自动决策 */
     auto_decision: boolean;
+    /** 决策详情 */
+    decision: BuildingDecisionInfo;
 }
 
 /**
@@ -186,24 +178,14 @@ export interface BuildingDecisionEvent {
 export interface RentDecisionEvent {
     /** 游戏ID */
     game: string;
-    /** 支付者地址 */
-    payer: string;
-    /** 所有者地址 */
-    owner: string;
-    /** 建筑ID */
-    building_id: number;
-    /** 地块ID */
-    tile_id: number;
-    /** 租金金额 */
-    rent_amount: bigint;
-    /** 是否使用了免租卡 */
-    used_rent_free: boolean;
     /** 轮次 */
     round: number;
     /** 回合 */
     turn: number;
     /** 是否为自动决策 */
     auto_decision: boolean;
+    /** 决策详情 */
+    decision: RentDecisionInfo;
 }
 
 /**

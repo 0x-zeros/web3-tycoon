@@ -1,5 +1,5 @@
 import { _decorator, Component, Node, Vec3, Camera, input, Input, EventMouse, MeshRenderer, Material, utils } from "cc";
-import { VoxelRayCaster, VoxelHitResult, RaycastAlgorithm } from "./VoxelRayCaster";
+import { VoxelRayCaster, RaycastAlgorithm } from "./VoxelRayCaster";
 import { VoxelCollisionSystem } from "./VoxelCollisionSystem";
 import { VoxelWorld } from "../world/VoxelWorld";
 import { MinecraftBlockId } from "../core/VoxelBlockRegistry";
@@ -10,7 +10,8 @@ import { EventTypes } from "../../events/EventTypes";
 const { ccclass, property } = _decorator;
 
 // 现代射线检测结果接口
-export interface VoxelHitResult {
+// UI层的射线命中结果（与 VoxelRayCaster 的结果解耦，避免重名冲突）
+export interface VoxelUIHitResult {
     position: Vec3;           // 击中的方块位置
     normal: Vec3;             // 面法向量
     blockId: string;          // 方块ID（字符串格式）
@@ -27,8 +28,8 @@ export enum VoxelCameraMode {
 }
 
 export interface VoxelInteractionEvents {
-    onBlockClick?: (hitResult: VoxelHitResult) => void;
-    onBlockHover?: (hitResult: VoxelHitResult | null) => void;
+    onBlockClick?: (hitResult: VoxelUIHitResult) => void;
+    onBlockHover?: (hitResult: VoxelUIHitResult | null) => void;
     onBlockPlace?: (position: Vec3, blockId: MinecraftBlockId) => void;
     onBlockBreak?: (position: Vec3) => void;
     onModeChange?: (mode: VoxelCameraMode) => void;
@@ -70,7 +71,7 @@ export class VoxelInteractionManager extends Component {
     private world: VoxelWorld = null;
     private events: VoxelInteractionEvents = {};
     private _currentCameraMode: VoxelCameraMode = VoxelCameraMode.WALKING;
-    private lastHoverResult: VoxelHitResult | null = null;
+    private lastHoverResult: VoxelUIHitResult | null = null;
 
     // 调试可视化相关
     private debugRayNodes: Node[] = [];
@@ -195,7 +196,7 @@ export class VoxelInteractionManager extends Component {
         }
     }
 
-    private performRaycastFromEvent(event: EventMouse): VoxelHitResult | null {
+    private performRaycastFromEvent(event: EventMouse): VoxelUIHitResult | null {
         if (!this.camera || !this.world) {
             return null;
         }
@@ -223,7 +224,7 @@ export class VoxelInteractionManager extends Component {
     }
 
     // 对外暴露：根据屏幕坐标进行射线检测（供渲染器/调试器调用）
-    public performRaycast(mouseX?: number, mouseY?: number): VoxelHitResult | null {
+    public performRaycast(mouseX?: number, mouseY?: number): VoxelUIHitResult | null {
         if (!this.camera || !this.world) return null;
         if (mouseX === undefined || mouseY === undefined) return null;
 
@@ -233,7 +234,7 @@ export class VoxelInteractionManager extends Component {
     /**
      * 使用新VoxelWorld接口的射线检测
      */
-    private performWorldRaycast(mouseX: number, mouseY: number): VoxelHitResult | null {
+    private performWorldRaycast(mouseX: number, mouseY: number): VoxelUIHitResult | null {
         if (!this.camera || !this.world) return null;
 
         // 从屏幕坐标生成射线
@@ -257,7 +258,7 @@ export class VoxelInteractionManager extends Component {
         return null;
     }
 
-    private visualizeRaycast(hitResult: VoxelHitResult | null): void {
+    private visualizeRaycast(hitResult: VoxelUIHitResult | null): void {
         // 清理之前的调试节点
         this.clearDebugNodes();
 
@@ -416,7 +417,7 @@ export class VoxelInteractionManager extends Component {
         return ok;
     }
 
-    public getLastHoverResult(): VoxelHitResult | null {
+    public getLastHoverResult(): VoxelUIHitResult | null {
         return this.lastHoverResult;
     }
 

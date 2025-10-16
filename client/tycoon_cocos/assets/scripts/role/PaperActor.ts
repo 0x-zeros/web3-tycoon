@@ -22,10 +22,12 @@ import {
 } from 'cc';
 import type { Role } from './Role';
 import { ActorConfigManager } from './ActorConfig';
+// 作为值导入以供装饰器使用，避免编译错误
+import { ActorType } from './ActorTypes';
 
 const { ccclass, property } = _decorator;
 
-// 从 ActorTypes 导入并重新导出（保持向后兼容性，避免循环依赖）
+// 从 ActorTypes 重新导出（保持向后兼容性）
 export { ActorType } from './ActorTypes';
 
 @ccclass('PaperActor')

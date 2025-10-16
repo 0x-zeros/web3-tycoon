@@ -16,7 +16,8 @@ export * from './interactions';
 // ===== 导出路径查找 =====
 export { MapGraph } from './pathfinding/MapGraph';
 export { BFSPathfinder } from './pathfinding/BFSPathfinder';
-export { PathChoiceGenerator, PathChoiceResult } from './pathfinding/PathChoiceGenerator';
+export { PathChoiceGenerator } from './pathfinding/PathChoiceGenerator';
+export type { PathChoiceResult } from './pathfinding/PathChoiceGenerator';
 
 // ===== 配置类型 =====
 export interface TycoonConfig {

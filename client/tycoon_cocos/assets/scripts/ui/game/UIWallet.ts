@@ -8,9 +8,6 @@ import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
 import { UILayer } from "../core/UITypes";  // 从 UITypes 导入（避免循环依赖）
 
-// UIManager 通过类型断言访问（避免导入造成循环依赖）
-declare const UIManager: any;
-
 import { bcs } from '@mysten/sui/bcs';
 import {fromHex, toHex} from '@mysten/bcs';
 import { SuiClient } from '@mysten/sui/client';
@@ -163,8 +160,10 @@ export class UIWallet extends UIBase {
 
         const suiWallets = this.getSuiWallets();
 
-        // 创建并显示WalletList
-        this._showWalletList(suiWallets);
+        // 创建并显示WalletList（异步）
+        this._showWalletList(suiWallets).catch(error => {
+            console.error("[UIWallet] Failed to show wallet list:", error);
+        });
     }
 
     /**
@@ -282,7 +281,7 @@ export class UIWallet extends UIBase {
     /**
      * 显示钱包列表
      */
-    private _showWalletList(suiWallets: Wallet[]): void {
+    private async _showWalletList(suiWallets: Wallet[]): Promise<void> {
         // 如果已经有WalletList在显示，先关闭
         if (this.m_walletListComponent) {
             this._closeWalletList();
@@ -327,8 +326,9 @@ export class UIWallet extends UIBase {
         }
 
         // 添加到POPUP层并居中显示
-        // 使用类型断言访问 UIManager（避免循环依赖）
-        const popupLayer = (UIManager as any).instance.getLayer(UILayer.POPUP);
+        // 动态导入 UIManager（避免循环依赖）
+        const { UIManager } = await import("../core/UIManager");
+        const popupLayer = UIManager.instance.getLayer(UILayer.POPUP);
         if (!popupLayer) {
             console.error("[UIWallet] POPUP layer not found");
             return;

@@ -17,10 +17,6 @@ import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
 
-// 通过类型断言访问（避免导入造成循环依赖）
-declare const UIManager: any;
-declare const GameInitializer: any;
-
 const { ccclass } = _decorator;
 
 /**
@@ -266,8 +262,10 @@ export class UIInGame extends UIBase {
         // 标记已初始化
         this._isInitialized = true;
 
-        // 主动检查是否有待决策需要显示
-        this._showDecisionDialogIfNeeded();
+        // 主动检查是否有待决策需要显示（异步，不阻塞）
+        this._showDecisionDialogIfNeeded().catch(error => {
+            console.error('[UIInGame] Failed to show decision dialog:', error);
+        });
 
         console.log('[UIInGame] 界面初始化完成，已检查待决策状态');
     }
@@ -344,10 +342,11 @@ export class UIInGame extends UIBase {
      * 退出游戏按钮点击
      * 调用 UIManager.exitGame() 统一处理退出逻辑
      */
-    private _onExitGameClick(): void {
+    private async _onExitGameClick(): Promise<void> {
         console.log("[UIInGame] Exit game button clicked");
-        // 使用类型断言访问 UIManager（避免循环依赖）
-        (UIManager as any).instance?.exitGame();
+        // 动态导入 UIManager（避免循环依赖）
+        const { UIManager } = await import("../core/UIManager");
+        UIManager.instance?.exitGame();
     }
 
     /**
@@ -458,9 +457,11 @@ export class UIInGame extends UIBase {
     private _onDecisionPending(data: any): void {
         console.log('[UIInGame] 收到待决策事件', data);
 
-        // 如果 UI 已经初始化完成，显示决策窗口
+        // 如果 UI 已经初始化完成，显示决策窗口（异步，不阻塞）
         if (this._isInitialized) {
-            this._showDecisionDialogIfNeeded();
+            this._showDecisionDialogIfNeeded().catch(error => {
+                console.error('[UIInGame] Failed to show decision dialog:', error);
+            });
         }
         // 如果还没初始化完成，什么都不做（等待 onShow 中的主动查询）
     }
@@ -468,9 +469,10 @@ export class UIInGame extends UIBase {
     /**
      * 检查并显示决策窗口（如果需要）
      */
-    private _showDecisionDialogIfNeeded(): void {
-        // 使用类型断言访问 GameInitializer（避免循环依赖）
-        const session = (GameInitializer as any).getInstance()?.getGameSession();
+    private async _showDecisionDialogIfNeeded(): Promise<void> {
+        // 动态导入 GameInitializer（避免循环依赖）
+        const { GameInitializer } = await import("../../core/GameInitializer");
+        const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.log('[UIInGame] GameSession 未找到');
             return;

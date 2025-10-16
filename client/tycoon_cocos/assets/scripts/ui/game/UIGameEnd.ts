@@ -17,9 +17,6 @@ import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 
-// UIManager 通过类型断言访问（避免导入造成循环依赖）
-declare const UIManager: any;
-
 const { ccclass } = _decorator;
 
 /**
@@ -132,17 +129,16 @@ export class UIGameEnd extends UIBase {
      * btn_end 点击事件
      * 调用 UIManager.exitGame() 退出游戏
      */
-    private _onEndClick(): void {
+    private async _onEndClick(): Promise<void> {
         console.log('[UIGameEnd] btn_end clicked, exiting game');
 
         // 隐藏自己
         this.hide();
 
-        // 调用 UIManager 统一退出方法
-        // 使用类型断言访问 UIManager（避免循环依赖）
-        const uiManager = (UIManager as any).getInstance();
-        if (uiManager) {
-            uiManager.exitGame();
+        // 动态导入 UIManager（避免循环依赖）
+        const { UIManager } = await import("../core/UIManager");
+        if (UIManager && UIManager.instance) {
+            UIManager.instance.exitGame();
         } else {
             console.error('[UIGameEnd] UIManager not found');
         }

@@ -16,9 +16,6 @@ import { GameStatus } from '../../types/constants';
 import { IdFormatter } from '../../../ui/utils/IdFormatter';
 import type { GameSession } from '../../../core/GameSession';
 
-// UIManager 通过类型断言访问（避免导入造成循环依赖）
-declare const UIManager: any;
-
 /**
  * GameEndedHandler 类
  */
@@ -96,8 +93,9 @@ export class GameEndedHandler {
             const reasonText = this._getReasonText(event.reason);
 
             // 4. 显示游戏结束界面
-            // 使用类型断言访问 UIManager（避免循环依赖）
-            const uiManager = (UIManager as any).getInstance();
+            // 动态导入 UIManager（避免循环依赖）
+            const { UIManager } = await import('../../../ui/core/UIManager');
+            const uiManager = UIManager?.instance;
             if (uiManager) {
                 await uiManager.showUI("GameEnd", {
                     winner: event.winner,

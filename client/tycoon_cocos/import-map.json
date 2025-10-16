@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "graphql": "./assets/scripts/shims/graphql.ts",
+    "@mysten/sui": "./node_modules/@mysten/sui/dist/esm/index.js",
+    "@mysten/sui/": "./node_modules/@mysten/sui/dist/esm/",
+    "@mysten/bcs": "./node_modules/@mysten/bcs/dist/index.js",
+    "@mysten/wallet-standard": "./node_modules/@mysten/wallet-standard/dist/index.js"
+  }
+}
+

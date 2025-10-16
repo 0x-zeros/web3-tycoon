@@ -224,7 +224,8 @@ public struct StopEffect has copy, drop, store {
     card_gains: vector<CardDrawItem>,
     pending_decision: u8,      // 待决策类型
     decision_tile: u16,         // 相关的地块ID
-    decision_amount: u64        // 相关金额
+    decision_amount: u64,       // 相关金额
+    building_id: u16            // 建筑ID（65535=NO_BUILDING表示无建筑）
 }
 
 // 步骤效果
@@ -473,7 +474,8 @@ public(package) fun make_stop_effect(
     card_gains: vector<CardDrawItem>,
     pending_decision: u8,
     decision_tile: u16,
-    decision_amount: u64
+    decision_amount: u64,
+    building_id: u16  // 建筑ID（65535=NO_BUILDING表示无建筑）
 ): StopEffect {
     StopEffect {
         tile_id,
@@ -486,7 +488,8 @@ public(package) fun make_stop_effect(
         card_gains,
         pending_decision,
         decision_tile,
-        decision_amount
+        decision_amount,
+        building_id
     }
 }
 

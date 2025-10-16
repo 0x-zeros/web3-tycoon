@@ -389,12 +389,21 @@ export class RollAndStepHandler {
                     // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
                     player.setCash(newCash);
 
-                    // 播放飞字动画
+                    // ✅ 播放飞字动画（添加详细日志）
+                    console.log('[RollAndStepHandler] 准备播放现金动画', {
+                        isDebit: change.is_debit,
+                        amount: amount.toString(),
+                        player: player.getPlayerIndex(),
+                        hasPaperActor: !!player.getPaperActor()
+                    });
+
                     if (change.is_debit) {
                         // 减钱动画（向上飘，红色）
+                        console.log('[RollAndStepHandler] 调用 playCashDecrease');
                         CashFlyAnimation.getInstance().playCashDecrease(player, amount);
                     } else {
                         // 加钱动画（向下飘，绿色）
+                        console.log('[RollAndStepHandler] 调用 playCashIncrease');
                         CashFlyAnimation.getInstance().playCashIncrease(player, amount);
                     }
 
@@ -409,8 +418,19 @@ export class RollAndStepHandler {
             }
         }
 
-        // 处理Prison/Hospital状态（从最后一个step的StopEffect获取）
+        // ✅ 处理建筑更新（从最后一个step的StopEffect获取building_id）
         const lastStep = event.steps[event.steps.length - 1];
+        if (lastStep && lastStep.stop_effect) {
+            const stopEffect = lastStep.stop_effect;
+
+            // 检查是否有建筑更新（building_id != NO_BUILDING）
+            const NO_BUILDING = 65535;
+            if (stopEffect.building_id !== undefined && stopEffect.building_id !== NO_BUILDING) {
+                await this._handleBuildingUpdate(stopEffect, event.player, session);
+            }
+        }
+
+        // 处理Prison/Hospital状态（从最后一个step的StopEffect获取）
         if (lastStep && lastStep.stop_effect) {
             const stopEffect = lastStep.stop_effect;
             const player = session.getPlayerByAddress(event.player);
@@ -588,6 +608,40 @@ export class RollAndStepHandler {
     }
 
     // ==================== 辅助方法 ====================
+
+    /**
+     * 处理建筑更新（从 StopEffect）
+     * 在玩家移动动画完成后调用，确保视觉协调
+     */
+    private async _handleBuildingUpdate(
+        stopEffect: any,
+        playerAddress: string,
+        session: any
+    ): Promise<void> {
+        const player = session.getPlayerByAddress(playerAddress);
+        if (!player) {
+            console.warn('[RollAndStepHandler] Player not found for building update');
+            return;
+        }
+
+        // 从 StopEffect 获取建筑信息
+        const buildingId = stopEffect.building_id;
+        const newOwner = player.getPlayerIndex();
+        const newLevel = stopEffect.level ?? 1;  // 从 stop_effect.level 获取
+
+        console.log('[RollAndStepHandler] 更新建筑状态（from stop_effect）', {
+            buildingId,
+            owner: newOwner,
+            level: newLevel,
+            stopType: stopEffect.stop_type,
+            tileId: stopEffect.tile_id
+        });
+
+        // 更新建筑（会自动触发渲染）
+        session.updateBuilding(buildingId, newOwner, newLevel);
+
+        console.log('[RollAndStepHandler] 建筑状态已更新');
+    }
 
     /**
      * 获取 NPC 事件的中文描述

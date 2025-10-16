@@ -2148,7 +2148,8 @@ fun handle_tile_stop_with_collector(
         card_gains,
         game.pending_decision,
         game.decision_tile,
-        game.decision_amount
+        game.decision_amount,
+        building_id  // 传递建筑ID（可能是有效ID或NO_BUILDING）
     )
 }
 

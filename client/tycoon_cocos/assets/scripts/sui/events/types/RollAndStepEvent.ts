@@ -44,6 +44,7 @@ export interface StopEffect {
     pending_decision: number;
     decision_tile: number;
     decision_amount: bigint;
+    building_id: number;  // 建筑ID（65535=NO_BUILDING表示无建筑）
 }
 
 // 步骤效果（核心）

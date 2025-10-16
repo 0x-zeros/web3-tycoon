@@ -76,7 +76,19 @@ export class BuildingDecisionHandler {
                 return;
             }
 
-            // 2. 更新 turn（注意 +1）
+            // ✅ 2. 忽略自动决策事件（已在 RollAndStepHandler 中完整处理）
+            if (event.auto_decision) {
+                console.log('[BuildingDecisionHandler] Auto-decision event ignored (handled by RollAndStepHandler)', {
+                    buildingId: event.building_id,
+                    player: event.player,
+                    amount: event.amount.toString(),
+                    decisionType: event.decision_type,
+                    newLevel: event.new_level
+                });
+                return;
+            }
+
+            // 3. 手动决策：更新 turn
             session.setRound(event.round);
             session.advance_turn(event.turn);
 

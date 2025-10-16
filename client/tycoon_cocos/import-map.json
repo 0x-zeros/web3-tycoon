@@ -1,10 +1,7 @@
 {
   "imports": {
     "graphql": "./assets/scripts/shims/graphql.ts",
-    "@mysten/sui/dist/esm/graphql/": "./assets/scripts/shims/graphql.ts",
     "@mysten/sui/zklogin": "./assets/scripts/shims/zklogin-shim.ts",
-    "@mysten/sui/dist/esm/zklogin/": "./assets/scripts/shims/zklogin-shim.ts",
     "poseidon-lite": "./assets/scripts/shims/poseidon-lite-shim.ts"
   }
 }
-

@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import fg from 'fast-glob';
 import { minify } from 'terser';
+import * as esbuild from 'esbuild';
 
 const PKG = 'rollup-guard';
 
@@ -88,58 +89,91 @@ async function retargetToES2020(outDir: string): Promise<void> {
 }
 
 /**
- * 复制 @mysten/* 的 ESM 文件到构建目录，并生成 Import Map
- *
- * 注意：需要根据实际 node_modules 中的包结构调整 ESM 入口路径
+ * 递归复制目录
  */
-function copyMystenESM(projectRoot: string, outDir: string): void {
-    log('开始复制 @mysten/* ESM 文件...');
+function copyDirRecursive(src: string, dest: string): void {
+    ensureDir(dest);
+    const entries = fs.readdirSync(src, { withFileTypes: true });
 
-    // ESM 入口映射（根据实际 package.json 的 exports 字段调整）
-    const mapping: Record<string, string> = {
-        '@mysten/sui/client': 'node_modules/@mysten/sui/dist/esm/client/index.js',
-        '@mysten/sui/transactions': 'node_modules/@mysten/sui/dist/esm/transactions/index.js',
-        '@mysten/sui/bcs': 'node_modules/@mysten/sui/dist/esm/bcs/index.js',
-        '@mysten/sui/keypairs/ed25519': 'node_modules/@mysten/sui/dist/esm/keypairs/ed25519/index.js',
-        '@mysten/sui/utils': 'node_modules/@mysten/sui/dist/esm/utils/index.js',
-        '@mysten/wallet-standard': 'node_modules/@mysten/wallet-standard/dist/esm/index.js',
-        '@mysten/bcs': 'node_modules/@mysten/bcs/dist/esm/index.js'
-    };
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            copyDirRecursive(srcPath, destPath);
+        } else {
+            fs.copyFileSync(srcPath, destPath);
+        }
+    }
+}
+
+/**
+ * 复制整个 @mysten/* ESM 目录树，并生成 Import Map
+ * 保持原始目录结构，相对依赖不会失效
+ */
+function copyMystenESMTree(projectRoot: string, outDir: string): void {
+    log('开始复制 @mysten/* ESM 目录树...');
 
     const libsDir = path.join(outDir, 'libs');
     ensureDir(libsDir);
 
+    // 要复制的包及其 ESM 目录
+    const packages = [
+        {
+            name: '@mysten/sui',
+            esmDir: 'node_modules/@mysten/sui/dist/esm',
+            submodules: [
+                'client',
+                'transactions',
+                'bcs',
+                'keypairs/ed25519',
+                'utils',
+                'faucet'
+            ]
+        },
+        {
+            name: '@mysten/wallet-standard',
+            esmDir: 'node_modules/@mysten/wallet-standard/dist/esm',
+            submodules: ['.']  // 根目录
+        },
+        {
+            name: '@mysten/bcs',
+            esmDir: 'node_modules/@mysten/bcs/dist/esm',
+            submodules: ['.']
+        }
+    ];
+
     const importMap: Record<string, string> = {};
-    let copiedCount = 0;
 
-    for (const [spec, rel] of Object.entries(mapping)) {
-        const abs = path.join(projectRoot, rel);
+    for (const pkg of packages) {
+        const srcDir = path.join(projectRoot, pkg.esmDir);
 
-        if (!fs.existsSync(abs)) {
-            log(`WARN: 未找到 ${abs}`);
-            log(`      请检查该包的 ESM 入口路径`);
+        if (!fs.existsSync(srcDir)) {
+            log(`WARN: 未找到 ${srcDir}`);
             continue;
         }
 
-        // 生成文件名（替换特殊字符）
-        const fileName = spec.replace(/[@/]/g, '_') + '.js';
-        const dest = path.join(libsDir, fileName);
+        // 复制整个目录到 libs/@mysten/xxx/
+        const destDir = path.join(libsDir, pkg.name);
+        copyDirRecursive(srcDir, destDir);
 
-        try {
-            // 复制文件
-            fs.copyFileSync(abs, dest);
+        log(`  ✓ 复制目录树: ${pkg.name}/dist/esm/ -> libs/${pkg.name}/`);
 
-            // 添加到 Import Map
-            importMap[spec] = `./libs/${fileName}`;
-            copiedCount++;
+        // 为每个子模块添加 Import Map 映射
+        for (const submodule of pkg.submodules) {
+            const spec = submodule === '.'
+                ? pkg.name
+                : `${pkg.name}/${submodule}`;
 
-            log(`  ✓ ${spec} -> libs/${fileName}`);
-        } catch (error: any) {
-            log(`  ✗ 复制失败 ${spec}:`, error.message);
+            const target = submodule === '.'
+                ? `./libs/${pkg.name}/index.js`
+                : `./libs/${pkg.name}/${submodule}/index.js`;
+
+            importMap[spec] = target;
         }
     }
 
-    // 写入 importmap.json
+    // 写入 importmap.json（原生 Import Map）
     if (Object.keys(importMap).length > 0) {
         const importMapData = {
             imports: importMap
@@ -149,10 +183,52 @@ function copyMystenESM(projectRoot: string, outDir: string): void {
         fs.writeFileSync(importMapPath, JSON.stringify(importMapData, null, 2), 'utf-8');
 
         log(`✓ Import Map 已写入: ${importMapPath}`);
-        log(`  共 ${copiedCount} 个模块被外部化`);
+        log(`  共 ${Object.keys(importMap).length} 个模块映射`);
     } else {
-        log('WARN: 没有找到可用的 ESM 文件，Import Map 未生成');
+        log('WARN: Import Map 未生成');
     }
+}
+
+/**
+ * 在 index.html 中注入原生 Import Map
+ * 必须在 SystemJS 之前加载
+ */
+function injectNativeImportMap(outDir: string): void {
+    const indexPath = path.join(outDir, 'index.html');
+
+    if (!fs.existsSync(indexPath)) {
+        log('WARN: index.html 不存在');
+        return;
+    }
+
+    // 检查 importmap.json 是否存在
+    const importMapJsonPath = path.join(outDir, 'importmap.json');
+    if (!fs.existsSync(importMapJsonPath)) {
+        log('importmap.json 不存在，跳过原生 Import Map 注入');
+        return;
+    }
+
+    log('在 index.html 中注入原生 Import Map...');
+
+    let html = fs.readFileSync(indexPath, 'utf-8');
+
+    // 检查是否已注入
+    if (html.includes('type="importmap"')) {
+        log('  原生 Import Map 已存在，跳过');
+        return;
+    }
+
+    // 在 </head> 前注入（必须在其他脚本之前）
+    const importMapScript = `  <!-- 原生 Import Map: 让浏览器解析 @mysten/* 裸说明符 -->
+  <script type="importmap" src="./importmap.json"></script>
+
+`;
+
+    html = html.replace('</head>', `${importMapScript}</head>`);
+
+    fs.writeFileSync(indexPath, html, 'utf-8');
+
+    log('✓ 原生 Import Map 已注入到 index.html');
 }
 
 /**
@@ -173,7 +249,8 @@ function injectSystemJSImportMap(outDir: string): void {
     let importMapFile: string | null = null;
 
     for (const file of srcFiles) {
-        if (file.match(/^import-map\.[a-f0-9]+\.json$/)) {
+        // 支持带 md5 和不带 md5 的文件名
+        if (file.match(/^import-map(\.[a-f0-9]+)?\.json$/)) {
             importMapFile = file;
             break;
         }
@@ -181,6 +258,7 @@ function injectSystemJSImportMap(outDir: string): void {
 
     if (!importMapFile) {
         log('WARN: 未找到 SystemJS import-map 文件');
+        log('  src 目录内容:', srcFiles.filter(f => f.endsWith('.json')));
         return;
     }
 
@@ -269,9 +347,13 @@ export async function onAfterBuild(options: any, result: any): Promise<void> {
 
         // 2. 外部化 @mysten/*
         if (externalizeMysten) {
-            copyMystenESM(projectRoot, outDir);
+            // 递归复制整个 ESM 目录树（保持相对依赖）
+            copyMystenESMTree(projectRoot, outDir);
 
-            // 修改 SystemJS Import Map（src/import-map.*.json）
+            // 注入原生 Import Map（必须在其他脚本之前）
+            injectNativeImportMap(outDir);
+
+            // 同时修改 SystemJS Import Map（双保险）
             injectSystemJSImportMap(outDir);
         }
 

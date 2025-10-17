@@ -3,7 +3,8 @@
  * 封装玩家资产查询逻辑（Coins、NFTs、DeFi 资产等）
  */
 
-import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
+// 使用 import type 避免打包（SuiClient 由调用者提供）
+import type { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
 import type { Seat } from '../types/game';
 import type { MapTemplateNFT, DeFiAssets, CoinInfo } from '../types/assets';
 

@@ -16,7 +16,8 @@ export { MaterialFactory, getGlobalMaterialFactory, initializeGlobalMaterialFact
 export { MeshBuilder } from './resource/MeshBuilder';
 
 // Block system (new)
-export { BlockRegistry, BlockDefinition, BlockRenderType } from './core/VoxelBlock';
+export { BlockRegistry, BlockRenderType } from './core/VoxelBlock';
+export type { BlockDefinition } from './core/VoxelBlock';
 
 // Examples and testing
 export { VoxelSystemExample, VoxelSystemTest } from './examples/VoxelSystemExample';
@@ -31,7 +32,7 @@ export * from './core/VoxelTypes';
 // World modules
 export { VoxelChunkManager } from './world/VoxelChunk';
 export { VoxelTerrain } from './world/VoxelTerrain';
-export { VoxelWorldManager } from './world/VoxelWorld';
+export { VoxelWorld } from './world/VoxelWorld';
 
 // Math modules
 export { VoxelNoise } from './math/VoxelNoise';
@@ -42,8 +43,10 @@ export { VoxelRenderer } from './render/VoxelRenderer';
 export { VoxelCuller } from './render/VoxelCuller';
 
 // Interaction modules
-export { VoxelInteractionManager, VoxelCameraMode, VoxelInteractionEvents } from './interaction/VoxelInteractionManager';
+export { VoxelInteractionManager, VoxelCameraMode } from './interaction/VoxelInteractionManager';
+export type { VoxelInteractionEvents } from './interaction/VoxelInteractionManager';
 export { VoxelRayCaster, RaycastAlgorithm } from './interaction/VoxelRayCaster';
+export type { VoxelHitResult } from './interaction/VoxelRayCaster';
 
 // 使用示例 (新系统)：
 // import { VoxelSystem, VoxelSystemExample } from 'assets/scripts/voxel';

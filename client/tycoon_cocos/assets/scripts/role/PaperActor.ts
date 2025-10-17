@@ -22,16 +22,12 @@ import {
 } from 'cc';
 import type { Role } from './Role';
 import { ActorConfigManager } from './ActorConfig';
+import { ActorType } from './ActorTypes';
 
 const { ccclass, property } = _decorator;
 
-// Actor类型枚举
-export enum ActorType {
-    NPC = 0,
-    PLAYER = 1,
-    BUILDING = 2,
-    OBJECT = 3
-}
+// 重新导出 ActorType（保持向后兼容）
+export { ActorType };
 
 @ccclass('PaperActor')
 export class PaperActor extends Component {

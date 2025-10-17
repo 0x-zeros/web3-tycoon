@@ -6,7 +6,7 @@
  * 文档: https://docs.sui.io/guides/developer/getting-started/local-network
  */
 
-import { getFaucetHost, requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
+import { loadSuiFaucet } from '../loader';
 
 /**
  * 从 Sui Faucet 请求测试币
@@ -22,7 +22,8 @@ export async function requestSuiFromFaucet(
     console.log(`  Recipient: ${address}`);
 
     try {
-        // 使用官方 SDK 的 requestSuiFromFaucetV2
+        // 动态加载并使用官方 SDK 的 requestSuiFromFaucetV2
+        const { getFaucetHost, requestSuiFromFaucetV2 } = await loadSuiFaucet();
         const host = getFaucetHost(network);
         console.log(`  Faucet host: ${host}`);
 

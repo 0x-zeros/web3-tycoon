@@ -16,7 +16,8 @@ export * from './interactions';
 // ===== 导出路径查找 =====
 export { MapGraph } from './pathfinding/MapGraph';
 export { BFSPathfinder } from './pathfinding/BFSPathfinder';
-export { PathChoiceGenerator, PathChoiceResult } from './pathfinding/PathChoiceGenerator';
+export { PathChoiceGenerator } from './pathfinding/PathChoiceGenerator';
+export type { PathChoiceResult } from './pathfinding/PathChoiceGenerator';
 
 // ===== 配置类型 =====
 export interface TycoonConfig {
@@ -39,8 +40,8 @@ import { TycoonGameClient } from './interactions';
  * @param config 配置选项
  * @returns 游戏客户端实例
  */
-export function createTycoonClient(config: TycoonConfig): TycoonGameClient {
-    return TycoonGameClient.create({
+export async function createTycoonClient(config: TycoonConfig): Promise<TycoonGameClient> {
+    return await TycoonGameClient.create({
         network: config.network,
         packageId: config.packageId,
         gameDataId: config.gameDataId

@@ -48,12 +48,17 @@ ENV="$1"; shift
 # 切换到指定的Sui网络环境
 $SUI client switch --env "$ENV"
 
-# If on testnet or local/localnet, request gas from faucet
-if [[ "$ENV" == "testnet" || "$ENV" == "localnet" || "$ENV" == "local" ]]; then
+# If on devnet or local/localnet, request gas from faucet
+# Note: testnet requires manual faucet request from Discord or web interface
+if [[ "$ENV" == "devnet" || "$ENV" == "localnet" || "$ENV" == "local" ]]; then
   echo "Requesting gas from faucet for $ENV..."
   $SUI client faucet
   sleep 2 #wait for faucet to be ready， 2s
   $SUI client addresses
+  $SUI client balance
+elif [[ "$ENV" == "testnet" ]]; then
+  echo "Note: For testnet, please request tokens from https://discord.gg/sui or https://faucet.testnet.sui.io"
+  echo "Current balance:"
   $SUI client balance
 fi
 
@@ -131,21 +136,6 @@ else
     CONFIG_ENV="$ENV"
 fi
 
-# CLI配置文件
-CLI_CONFIG_DIR="../cli/src/config"
-mkdir -p "$CLI_CONFIG_DIR"
-CLI_CONFIG="$CLI_CONFIG_DIR/env.$CONFIG_ENV.ts"
-cat > "$CLI_CONFIG" <<EOF
-const env = {
-    packageId: '$PACKAGE_ID',
-    upgradeCap: '$UPGRADE_CAP',
-    adminCap: '$ADMIN_CAP',
-    gameData: '$GAME_DATA',
-};
-
-export default env;
-EOF
-
 # Cocos工程配置文件
 COCOS_CONFIG_DIR="../../client/tycoon_cocos/assets/scripts/config"
 mkdir -p "$COCOS_CONFIG_DIR"
@@ -203,5 +193,4 @@ echo "Admin Cap: $ADMIN_CAP"
 echo "Game Data: $GAME_DATA"
 echo "================================================================================================"
 echo "Tycoon Game Contract Deployment finished!"
-echo "CLI config written to: $CLI_CONFIG"
 echo "Cocos config written to: $COCOS_CONFIG"

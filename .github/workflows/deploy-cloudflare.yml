@@ -1,0 +1,37 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - 'client/tycoon_cocos/build/web-mobile/**'
+  workflow_dispatch:  # 允许手动触发部署
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy client/tycoon_cocos/build/web-mobile --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }} --branch=${{ github.ref_name }}
+
+      - name: Output deployment info
+        run: |
+          echo "✅ Deployment completed!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Project: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}"
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "🌐 Production URL: https://${{ secrets.CLOUDFLARE_PROJECT_NAME }}.pages.dev"
+          else
+            echo "🌐 Preview URL: https://${{ github.sha }}.pages.dev"
+          fi

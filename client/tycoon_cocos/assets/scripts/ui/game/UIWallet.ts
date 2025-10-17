@@ -6,14 +6,11 @@ import * as fgui from "fairygui-cc";
 import { _decorator, SpriteFrame, Rect, Size, assetManager, Sprite, Texture2D, ImageAsset } from 'cc';
 import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
-import { UIManager, UILayer } from "../core/UIManager";
+import { UILayer } from "../core/UITypes";  // 从 UITypes 导入（避免循环依赖）
 
-
-
-import { bcs } from '@mysten/sui/bcs';
-import {fromHex, toHex} from '@mysten/bcs';
-import { SuiClient } from '@mysten/sui/client';
-import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
+// 使用 import type 避免打包
+import type { IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
+import { loadWalletStandard, loadSuiClient } from '../../sui/loader';
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
 
@@ -157,13 +154,15 @@ export class UIWallet extends UIBase {
         super.unbindEvents();
     }
 
-    private _onConnectClick(): void {
+    private async _onConnectClick(): Promise<void> {
         console.log("[UIWallet] Connect clicked");
 
-        const suiWallets = this.getSuiWallets();
+        const suiWallets = await this.getSuiWallets();
 
-        // 创建并显示WalletList
-        this._showWalletList(suiWallets);
+        // 创建并显示WalletList（异步）
+        this._showWalletList(suiWallets).catch(error => {
+            console.error("[UIWallet] Failed to show wallet list:", error);
+        });
     }
 
     /**
@@ -249,6 +248,7 @@ export class UIWallet extends UIBase {
     private async testSuiClient(): Promise<void> {
 
         const DEV_NET_URL = 'https://fullnode.testnet.sui.io:443';
+        const { SuiClient } = await loadSuiClient();
         const client = new SuiClient({ url: DEV_NET_URL });
 
         const {data, error} = await client.getObject({
@@ -265,7 +265,8 @@ export class UIWallet extends UIBase {
         // this.m_data.text = JSON.stringify(data);
     }
 
-    private getSuiWallets(): Wallet[] {
+    private async getSuiWallets(): Promise<Wallet[]> {
+        const { getWallets } = await loadWalletStandard();
         const wallets = getWallets().get();
         console.log("wallets length: ", wallets.length);
         console.log("getWallets: ", wallets);
@@ -281,7 +282,7 @@ export class UIWallet extends UIBase {
     /**
      * 显示钱包列表
      */
-    private _showWalletList(suiWallets: Wallet[]): void {
+    private async _showWalletList(suiWallets: Wallet[]): Promise<void> {
         // 如果已经有WalletList在显示，先关闭
         if (this.m_walletListComponent) {
             this._closeWalletList();
@@ -326,6 +327,8 @@ export class UIWallet extends UIBase {
         }
 
         // 添加到POPUP层并居中显示
+        // 动态导入 UIManager（避免循环依赖）
+        const { UIManager } = await import("../core/UIManager");
         const popupLayer = UIManager.instance.getLayer(UILayer.POPUP);
         if (!popupLayer) {
             console.error("[UIWallet] POPUP layer not found");
@@ -443,7 +446,7 @@ export class UIWallet extends UIBase {
 
     private _filterSuiWallets(wallets: readonly Wallet[]): Wallet[] {
         return wallets.filter((wallet) => {
-            return typeof wallet.features['sui:signTransaction']?.['signTransaction'] === 'function';
+            return wallet?.features && typeof wallet.features['sui:signTransaction']?.['signTransaction'] === 'function';
         });
     }
 
@@ -465,7 +468,8 @@ export class UIWallet extends UIBase {
         }
 
         try {
-            // 获取所有Sui钱包
+            // 获取所有Sui钱包（动态加载）
+            const { getWallets } = await loadWalletStandard();
             const wallets = getWallets().get();
             const suiWallets = this._filterSuiWallets(wallets);
 

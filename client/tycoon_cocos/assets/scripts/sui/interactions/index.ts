@@ -4,11 +4,26 @@
 
 export * from './game';
 
-import { SuiClient } from '@mysten/sui/client';
-import { Transaction } from '@mysten/sui/transactions';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+// 使用 import type 避免打包
+import type { SuiClient } from '@mysten/sui/client';
+import type { Transaction } from '@mysten/sui/transactions';
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { MapTemplate } from '../types/map';
 import { GameInteraction } from './game';
+import { loadSuiClient, loadSuiTransactions } from '../loader';
+
+// 模块级缓存（由 initInteractions 初始化）
+let Transaction_: typeof Transaction | null = null;
+
+/**
+ * 初始化交互模块（必须在使用前调用）
+ */
+export async function initInteractions(): Promise<void> {
+    if (!Transaction_) {
+        const { Transaction } = await loadSuiTransactions();
+        Transaction_ = Transaction;
+    }
+}
 
 // ===== Property Interactions 地产交互 =====
 
@@ -32,7 +47,7 @@ export class PropertyInteraction {
         mapTemplateId: string,
         keypair: Ed25519Keypair
     ): Promise<{ success: boolean; txHash: string }> {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::decide_property_purchase`,
@@ -62,7 +77,7 @@ export class PropertyInteraction {
         mapTemplateId: string,
         keypair: Ed25519Keypair
     ): Promise<{ success: boolean; txHash: string }> {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::decide_property_upgrade`,
@@ -108,7 +123,7 @@ export class CardInteraction {
         params: number[],
         keypair: Ed25519Keypair
     ): Promise<{ success: boolean; txHash: string }> {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::use_card`,
@@ -175,7 +190,7 @@ export class AdminInteraction {
         },
         keypair: Ed25519Keypair
     ): Promise<{ templateId: string; txHash: string }> {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         // 构建tiles向量
         const tileStructs = template.tiles.map(tile => {
@@ -264,17 +279,19 @@ export class TycoonGameClient {
     /**
      * 创建默认客户端
      */
-    static create(config: {
+    static async create(config: {
         network: 'testnet' | 'mainnet' | 'devnet' | string;
         packageId: string;
         gameDataId: string;
         randomObjectId?: string;
         clockObjectId?: string;
-    }): TycoonGameClient {
+    }): Promise<TycoonGameClient> {
         const rpcUrl = typeof config.network === 'string' && config.network.startsWith('http')
             ? config.network
             : `https://fullnode.${config.network}.sui.io`;
 
+        // 动态加载并创建 SuiClient
+        const { SuiClient } = await loadSuiClient();
         const client = new SuiClient({ url: rpcUrl });
         return new TycoonGameClient(
             client,

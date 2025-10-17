@@ -12,7 +12,6 @@
 
 import type { EventMetadata, GameEndedEvent } from '../types';
 import { Blackboard } from '../../../events/Blackboard';
-import { UIManager } from '../../../ui/core/UIManager';
 import { GameStatus } from '../../types/constants';
 import { IdFormatter } from '../../../ui/utils/IdFormatter';
 import type { GameSession } from '../../../core/GameSession';
@@ -94,7 +93,9 @@ export class GameEndedHandler {
             const reasonText = this._getReasonText(event.reason);
 
             // 4. 显示游戏结束界面
-            const uiManager = UIManager.getInstance();
+            // 动态导入 UIManager（避免循环依赖）
+            const { UIManager } = await import('../../../ui/core/UIManager');
+            const uiManager = UIManager?.instance;
             if (uiManager) {
                 await uiManager.showUI("GameEnd", {
                     winner: event.winner,

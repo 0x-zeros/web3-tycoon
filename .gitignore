@@ -158,7 +158,11 @@ $RECYCLE.BIN/
 library/
 local/
 temp/
-build/
+# 忽略所有 build 目录，但保留 web-mobile 部署产物
+build/*
+!build/web-mobile/
+client/tycoon_cocos/build/*
+!client/tycoon_cocos/build/web-mobile/
 profiles/
 # Cocos Creator settings - 只忽略个人默认配置
 client/tycoon_cocos/settings/v2/default-profiles/
@@ -232,3 +236,6 @@ metrics/
 
 # Claude Code configuration
 .claude
+
+# Walrus tools - ignore large binary files only
+client/tools/walrus/site-builder

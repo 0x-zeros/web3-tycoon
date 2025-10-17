@@ -4,7 +4,6 @@ import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
-import { UIManager } from "../core/UIManager";
 import { UIMapElement } from "./UIMapElement";
 import { UIEditor } from "./UIEditor";
 import { UIInGameDebug } from "./UIInGameDebug";
@@ -14,7 +13,6 @@ import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { MapManager } from "../../map/MapManager";
-import { GameInitializer } from "../../core/GameInitializer";
 import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
@@ -264,8 +262,10 @@ export class UIInGame extends UIBase {
         // 标记已初始化
         this._isInitialized = true;
 
-        // 主动检查是否有待决策需要显示
-        this._showDecisionDialogIfNeeded();
+        // 主动检查是否有待决策需要显示（异步，不阻塞）
+        this._showDecisionDialogIfNeeded().catch(error => {
+            console.error('[UIInGame] Failed to show decision dialog:', error);
+        });
 
         console.log('[UIInGame] 界面初始化完成，已检查待决策状态');
     }
@@ -342,8 +342,10 @@ export class UIInGame extends UIBase {
      * 退出游戏按钮点击
      * 调用 UIManager.exitGame() 统一处理退出逻辑
      */
-    private _onExitGameClick(): void {
+    private async _onExitGameClick(): Promise<void> {
         console.log("[UIInGame] Exit game button clicked");
+        // 动态导入 UIManager（避免循环依赖）
+        const { UIManager } = await import("../core/UIManager");
         UIManager.instance?.exitGame();
     }
 
@@ -455,9 +457,11 @@ export class UIInGame extends UIBase {
     private _onDecisionPending(data: any): void {
         console.log('[UIInGame] 收到待决策事件', data);
 
-        // 如果 UI 已经初始化完成，显示决策窗口
+        // 如果 UI 已经初始化完成，显示决策窗口（异步，不阻塞）
         if (this._isInitialized) {
-            this._showDecisionDialogIfNeeded();
+            this._showDecisionDialogIfNeeded().catch(error => {
+                console.error('[UIInGame] Failed to show decision dialog:', error);
+            });
         }
         // 如果还没初始化完成，什么都不做（等待 onShow 中的主动查询）
     }
@@ -465,7 +469,9 @@ export class UIInGame extends UIBase {
     /**
      * 检查并显示决策窗口（如果需要）
      */
-    private _showDecisionDialogIfNeeded(): void {
+    private async _showDecisionDialogIfNeeded(): Promise<void> {
+        // 动态导入 GameInitializer（避免循环依赖）
+        const { GameInitializer } = await import("../../core/GameInitializer");
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.log('[UIInGame] GameSession 未找到');

@@ -3,8 +3,10 @@
  * 用于监听和索引Sui链上的游戏事件
  */
 
-import { SuiClient } from '@mysten/sui/client';
+// 使用 import type 避免打包（SuiClient 由调用者提供）
+import type { SuiClient } from '@mysten/sui/client';
 import { EventType, EventMetadata, GameEvent } from './types';
+import { loadSuiClient } from '../loader';
 
 /**
  * 事件索引器配置
@@ -531,15 +533,17 @@ export class TycoonEventIndexer {
 /**
  * 创建默认索引器实例
  */
-export function createEventIndexer(config: {
+export async function createEventIndexer(config: {
     network: string;
     packageId: string;
     autoStart?: boolean;
-}): TycoonEventIndexer {
+}): Promise<TycoonEventIndexer> {
     const rpcUrl = typeof config.network === 'string' && config.network.startsWith('http')
         ? config.network
         : `https://fullnode.${config.network}.sui.io`;
 
+    // 动态加载并创建 SuiClient
+    const { SuiClient } = await loadSuiClient();
     const client = new SuiClient({ url: rpcUrl });
 
     return new TycoonEventIndexer({

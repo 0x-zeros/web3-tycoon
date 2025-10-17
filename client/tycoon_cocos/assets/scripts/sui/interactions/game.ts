@@ -5,10 +5,25 @@
  * Move源文件: move/tycoon/sources/game.move
  */
 
-import { SuiClient } from '@mysten/sui/client';
-import { Transaction } from '@mysten/sui/transactions';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+// 使用 import type 避免打包
+import type { SuiClient } from '@mysten/sui/client';
+import type { Transaction } from '@mysten/sui/transactions';
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { Game, Player, Building, Tile, GameCreateConfig, Seat, NpcInst } from '../types/game';
+import { loadSuiTransactions } from '../loader';
+
+// 模块级缓存（由 initGameInteraction 初始化）
+let Transaction_: typeof Transaction | null = null;
+
+/**
+ * 初始化游戏交互模块（必须在使用前调用）
+ */
+export async function initGameInteraction(): Promise<void> {
+    if (!Transaction_) {
+        const { Transaction } = await loadSuiTransactions();
+        Transaction_ = Transaction;
+    }
+}
 
 /**
  * 游戏交互类
@@ -31,7 +46,7 @@ export class GameInteraction {
      * @returns Transaction 对象
      */
     buildCreateGameTx(config: GameCreateConfig, senderAddress: string): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         // 构建 params 向量（根据 Move 端的 parse_game_params）
         // params[0] = starting_cash
@@ -72,7 +87,7 @@ export class GameInteraction {
      * @returns Transaction 对象
      */
     buildJoinGameTx(gameId: string): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         // 调用 join 函数（entry fun，不返回值）
         // 合约内部已处理 transfer::transfer(seat, player_addr)
@@ -98,7 +113,7 @@ export class GameInteraction {
      * @returns Transaction 对象
      */
     buildStartGameTx(gameId: string, mapTemplateId: string): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         // 调用start函数
         tx.moveCall({
@@ -128,7 +143,7 @@ export class GameInteraction {
         autoUpgrade: boolean = true,
         preferRentCard: boolean = true
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::roll_and_step`,
@@ -158,7 +173,7 @@ export class GameInteraction {
         seatId: string,
         mapTemplateId: string
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::end_turn`,
@@ -183,7 +198,7 @@ export class GameInteraction {
         seatId: string,
         mapTemplateId: string
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::skip_building_decision`,
@@ -209,7 +224,7 @@ export class GameInteraction {
         mapTemplateId: string,
         useRentFree: boolean
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::decide_rent_payment`,
@@ -235,7 +250,7 @@ export class GameInteraction {
         seatId: string,
         mapTemplateId: string
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::buy_building`,
@@ -261,7 +276,7 @@ export class GameInteraction {
         mapTemplateId: string,
         buildingType?: number  // 建筑类型（用于2x2建筑lv0->lv1时设置类型）
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         // 默认值：暂时统一使用 BUILDING_TEMPLE (20)
         // TODO: 后续添加UI让玩家选择具体类型
@@ -293,7 +308,7 @@ export class GameInteraction {
         cardKind: number,
         params: number[]
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::use_card`,
@@ -320,7 +335,7 @@ export class GameInteraction {
         seatId: string,
         mapTemplateId: string
     ): Transaction {
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::game::skip_turn`,

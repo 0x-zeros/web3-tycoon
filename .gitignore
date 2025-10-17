@@ -158,11 +158,13 @@ $RECYCLE.BIN/
 library/
 local/
 temp/
-# 忽略所有 build 目录，但保留 web-mobile 部署产物
+# 忽略所有 build 目录，但 web-mobile 完全保留（部署需要所有文件）
 build/*
 !build/web-mobile/
+!build/web-mobile/**
 client/tycoon_cocos/build/*
 !client/tycoon_cocos/build/web-mobile/
+!client/tycoon_cocos/build/web-mobile/**
 profiles/
 # Cocos Creator settings - 只忽略个人默认配置
 client/tycoon_cocos/settings/v2/default-profiles/

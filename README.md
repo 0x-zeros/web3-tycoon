@@ -7,6 +7,8 @@
 [![Cocos Creator](https://img.shields.io/badge/Engine-Cocos%20Creator%203.8.7-orange)](https://www.cocos.com/creator)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue)](https://www.typescriptlang.org/)
 
+🌐 **在线体验**: [www.web3tycoon.com](https://www.web3tycoon.com) | [Walrus 去中心化版本](https://web3tycoon.wal.app/)
+
 ## 🎯 项目概述
 
 Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游玩法与 Sui 区块链技术深度融合。所有游戏逻辑运行在 Move 智能合约中，确保公平透明。玩家在 Web3 主题的虚拟世界中投资地产、收集卡牌、体验 DeFi 机制，在游戏中学习区块链知识。
@@ -419,7 +421,7 @@ cd client/tools/walrus
 
 ## 📄 许可证
 
-MIT License
+Apache-2.0 License
 
 ---
 
@@ -427,8 +429,12 @@ MIT License
 
 **🎲 Web3 Tycoon - 在游戏中学习 Web3，在 DeFi 中获得乐趣！🎲**
 
-[开始游戏](https://web3-tycoon.pages.dev) • [查看文档](docs/) • [智能合约](move/tycoon/)
+[开始游戏](https://www.web3tycoon.com) • [Walrus 去中心化版本](https://web3tycoon.wal.app/) • [查看文档](docs/) • [智能合约](move/tycoon/)
 
 Made with ❤️ by Web3 Tycoon Team
 
 </div>
+
+---
+
+**License**: Apache-2.0

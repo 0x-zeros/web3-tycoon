@@ -41,22 +41,26 @@ function injectSuiSystemLoader(outDir: string): void {
     }
 
     // 2. 查找并修改 System.import() 调用
-    const systemImportRegex = /System\.import\(['"]([^'"]+)['"]\)(\.catch\([^)]+\))?/g;
-    const match = systemImportRegex.exec(html);
+    // 匹配整个 <script> 块，包含 System.import() 调用
+    // 使用 .*? 非贪婪匹配 .catch() 中的任意内容（包括 function 和大括号）
+    const scriptBlockRegex = /<script>\s*System\.import\(['"]([^'"]+)['"]\)\.catch\(.*?\)\s*<\/script>/gs;
+    const match = scriptBlockRegex.exec(html);
 
     if (match) {
         const entryFile = match[1]; // 如 './index.b5968.js'
-        const originalCall = match[0];
+        const originalBlock = match[0];
 
         // 检查是否已经是链式调用
         if (!html.includes("System.import('./libs/sui.system.js')")) {
-            // 构造新的链式调用（添加注释说明）
-            const newCall = `// Sui SDK (System.register 格式，必须在应用入口 index.js 之前加载)
+            // 构造新的完整 script 块（添加注释说明）
+            const newBlock = `<script>
+    // Sui SDK (System.register 格式，必须在应用入口 index.js 之前加载)
     System.import('./libs/sui.system.js')
       .then(() => System.import('${entryFile}'))
-      .catch(console.error)`;
+      .catch(console.error)
+</script>`;
 
-            html = html.replace(originalCall, newCall);
+            html = html.replace(originalBlock, newBlock);
             log(`  ✓ 已修改为链式调用: sui.system.js -> ${entryFile}`);
             modified = true;
         } else {

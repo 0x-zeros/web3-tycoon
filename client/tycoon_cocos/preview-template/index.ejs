@@ -19,8 +19,8 @@
 
         <link rel="stylesheet" type="text/css" href="./index.css" />
 
-        <!-- Import Map: 让 SystemJS 解析 @mysten/* 等裸说明符 -->
-        <script type="importmap" src="./import-map.json"></script>
+        <!-- Sui SDK (System.register 格式，必须在 main.js 之前加载) -->
+        <script src="/libs/sui.system.js"></script>
     </head>
     <body style="overflow: hidden;">
         <%- include(cocosToolBar, {config: config}) %>

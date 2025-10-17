@@ -1,6 +1,6 @@
 /**
- * @mysten/* 动态加载器
- * 通过 SystemJS 运行时加载，避免被 Rollup 打包
+ * Sui SDK 动态加载器
+ * 从预打包的 sui.system.js 加载（System.register 格式）
  */
 
 // ============ 类型导入（不会被打包） ============
@@ -13,14 +13,39 @@ import type * as WalletStandardTypes from '@mysten/wallet-standard';
 import type * as SuiUtilsTypes from '@mysten/sui/utils';
 import type * as SuiFaucetTypes from '@mysten/sui/faucet';
 
-// ============ 运行时加载函数 ============
+// ============ 模块缓存 ============
+
+let suiModule: any = null;
+
+/**
+ * 加载 sui.system.js 模块（单例）
+ * @returns 完整的 Sui SDK 导出对象
+ */
+async function loadSuiModule(): Promise<any> {
+    if (suiModule) {
+        return suiModule;
+    }
+
+    // 根据环境选择路径
+    // Preview 模式：/libs/sui.system.js（绝对路径）
+    // Build 模式：./libs/sui.system.js（相对路径，由 build-templates 提供）
+    const modulePath = '/libs/sui.system.js';
+
+    console.log('[SuiLoader] Loading sui.system.js from:', modulePath);
+    suiModule = await (window as any).System.import(modulePath);
+    console.log('[SuiLoader] Sui SDK loaded successfully');
+
+    return suiModule;
+}
+
+// ============ 运行时加载函数（简化为返回同一模块） ============
 
 /**
  * 加载 @mysten/sui/client 模块
  * @returns 模块导出对象
  */
 export async function loadSuiClient(): Promise<typeof SuiClientTypes> {
-    return await (window as any).System.import('@mysten/sui/client');
+    return await loadSuiModule();
 }
 
 /**
@@ -28,7 +53,7 @@ export async function loadSuiClient(): Promise<typeof SuiClientTypes> {
  * @returns 模块导出对象
  */
 export async function loadSuiTransactions(): Promise<typeof SuiTransactionsTypes> {
-    return await (window as any).System.import('@mysten/sui/transactions');
+    return await loadSuiModule();
 }
 
 /**
@@ -36,7 +61,7 @@ export async function loadSuiTransactions(): Promise<typeof SuiTransactionsTypes
  * @returns 模块导出对象
  */
 export async function loadSuiBcs(): Promise<typeof SuiBcsTypes> {
-    return await (window as any).System.import('@mysten/sui/bcs');
+    return await loadSuiModule();
 }
 
 /**
@@ -44,7 +69,7 @@ export async function loadSuiBcs(): Promise<typeof SuiBcsTypes> {
  * @returns 模块导出对象
  */
 export async function loadEd25519(): Promise<typeof Ed25519Types> {
-    return await (window as any).System.import('@mysten/sui/keypairs/ed25519');
+    return await loadSuiModule();
 }
 
 /**
@@ -52,7 +77,7 @@ export async function loadEd25519(): Promise<typeof Ed25519Types> {
  * @returns 模块导出对象
  */
 export async function loadWalletStandard(): Promise<typeof WalletStandardTypes> {
-    return await (window as any).System.import('@mysten/wallet-standard');
+    return await loadSuiModule();
 }
 
 /**
@@ -60,7 +85,7 @@ export async function loadWalletStandard(): Promise<typeof WalletStandardTypes> 
  * @returns 模块导出对象
  */
 export async function loadSuiUtils(): Promise<typeof SuiUtilsTypes> {
-    return await (window as any).System.import('@mysten/sui/utils');
+    return await loadSuiModule();
 }
 
 /**
@@ -68,27 +93,17 @@ export async function loadSuiUtils(): Promise<typeof SuiUtilsTypes> {
  * @returns 模块导出对象
  */
 export async function loadSuiFaucet(): Promise<typeof SuiFaucetTypes> {
-    return await (window as any).System.import('@mysten/sui/faucet');
+    return await loadSuiModule();
 }
 
-// ============ 批量加载函数（可选优化） ============
+// ============ 预加载函数 ============
 
 /**
- * 预加载所有常用模块（可选）
- * 在应用启动时调用，提前加载所有模块
+ * 预加载 Sui SDK（可选优化）
+ * 在应用启动时调用，提前加载模块
  */
 export async function preloadAll(): Promise<void> {
-    console.log('[SuiLoader] Preloading all @mysten/* modules...');
-
-    await Promise.all([
-        loadSuiClient(),
-        loadSuiTransactions(),
-        loadSuiBcs(),
-        loadEd25519(),
-        loadWalletStandard(),
-        loadSuiUtils(),
-        loadSuiFaucet()
-    ]);
-
-    console.log('[SuiLoader] All modules preloaded');
+    console.log('[SuiLoader] Preloading Sui SDK...');
+    await loadSuiModule();
+    console.log('[SuiLoader] Sui SDK preloaded');
 }

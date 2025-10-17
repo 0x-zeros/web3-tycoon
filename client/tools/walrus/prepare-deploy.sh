@@ -2,7 +2,7 @@
 
 # Walrus 部署准备脚本
 # 功能：将 Cocos Creator 构建的 web-mobile 文件复制到 walrus/web-mobile 目录
-#      排除 assets 文件夹以减少 Walrus 存储成本
+#      排除 remote 文件夹（远程资源），保留本地 assets 以实现自包含部署
 
 set -e  # 遇到错误立即退出
 
@@ -50,19 +50,19 @@ fi
 echo -e "${YELLOW}清理目标目录...${NC}"
 find "$TARGET_DIR" -mindepth 1 -not -name '.gitignore' -not -name 'ws-resources.json' -delete
 
-# 复制文件（排除顶层 assets 目录）
-echo -e "${GREEN}复制文件（排除顶层 assets 目录）...${NC}"
+# 复制文件（排除顶层 remote 目录）
+echo -e "${GREEN}复制文件（排除顶层 remote 目录）...${NC}"
 
-# 使用 rsync 或 cp 复制，只排除顶层 assets
+# 使用 rsync 或 cp 复制，只排除顶层 remote
 if command -v rsync &> /dev/null; then
     # 使用 rsync（更高效）
-    # 注意：--exclude='/assets' 中的 / 表示只匹配根目录的 assets
-    rsync -av --exclude='/assets' "$SOURCE_DIR/" "$TARGET_DIR/"
+    # 注意：--exclude='/remote' 中的 / 表示只匹配根目录的 remote
+    rsync -av --exclude='/remote' "$SOURCE_DIR/" "$TARGET_DIR/"
 else
     # 使用 cp（兼容性更好）
     cd "$SOURCE_DIR"
     for item in *; do
-        if [ "$item" != "assets" ]; then
+        if [ "$item" != "remote" ]; then
             echo "  复制: $item"
             cp -r "$item" "$TARGET_DIR/"
         fi
@@ -82,17 +82,17 @@ echo -e "${GREEN}=== 复制完成 ===${NC}"
 echo "目标目录内容:"
 ls -lh "$TARGET_DIR" | grep -v "^total" | awk '{print "  " $9 " (" $5 ")"}'
 
-# 检查是否正确排除了顶层 assets
-if [ -d "$TARGET_DIR/assets" ]; then
-    echo -e "${RED}警告: 顶层 assets 目录未被排除！${NC}"
+# 检查是否正确排除了顶层 remote
+if [ -d "$TARGET_DIR/remote" ]; then
+    echo -e "${RED}警告: 顶层 remote 目录未被排除！${NC}"
     exit 1
 else
-    echo -e "${GREEN}✓ 顶层 assets 目录已成功排除${NC}"
+    echo -e "${GREEN}✓ 顶层 remote 目录已成功排除${NC}"
 fi
 
-# 检查子目录的 assets 是否保留
-if [ -d "$TARGET_DIR/cocos-js/assets" ]; then
-    echo -e "${GREEN}✓ 子目录 cocos-js/assets 已保留${NC}"
+# 检查 assets 是否保留
+if [ -d "$TARGET_DIR/assets" ]; then
+    echo -e "${GREEN}✓ assets 目录已保留（本地资源）${NC}"
 fi
 
 # 检查 ws-resources.json 是否存在
@@ -106,4 +106,31 @@ echo ""
 echo -e "${GREEN}准备完成！现在可以执行部署命令：${NC}"
 echo "  cd $SCRIPT_DIR"
 echo "  ./site-builder deploy web-mobile --epochs 5"
+echo ""
+
+# 统计信息
+echo -e "${GREEN}=== 统计信息 ===${NC}"
+
+# 统计文件和目录数量
+FILE_COUNT=$(find "$TARGET_DIR" -type f | wc -l | xargs)
+DIR_COUNT=$(find "$TARGET_DIR" -type d | wc -l | xargs)
+
+echo "文件数量: $FILE_COUNT 个"
+echo "目录数量: $DIR_COUNT 个"
+
+# 统计总大小
+TOTAL_SIZE=$(du -sh "$TARGET_DIR" | awk '{print $1}')
+echo "总大小: $TOTAL_SIZE"
+
+# 分类统计主要目录
+echo ""
+echo "主要目录大小:"
+for dir in assets cocos-js libs src; do
+    if [ -d "$TARGET_DIR/$dir" ]; then
+        SIZE=$(du -sh "$TARGET_DIR/$dir" 2>/dev/null | awk '{print $1}')
+        FILES=$(find "$TARGET_DIR/$dir" -type f | wc -l | xargs)
+        echo "  $dir/: $SIZE ($FILES 文件)"
+    fi
+done
+
 echo ""

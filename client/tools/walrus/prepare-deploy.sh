@@ -50,13 +50,14 @@ fi
 echo -e "${YELLOW}清理目标目录...${NC}"
 find "$TARGET_DIR" -mindepth 1 -not -name '.gitignore' -not -name 'ws-resources.json' -delete
 
-# 复制文件（排除 assets 目录）
-echo -e "${GREEN}复制文件（排除 assets 目录）...${NC}"
+# 复制文件（排除顶层 assets 目录）
+echo -e "${GREEN}复制文件（排除顶层 assets 目录）...${NC}"
 
-# 使用 rsync 或 cp 复制，排除 assets
+# 使用 rsync 或 cp 复制，只排除顶层 assets
 if command -v rsync &> /dev/null; then
     # 使用 rsync（更高效）
-    rsync -av --exclude='assets' "$SOURCE_DIR/" "$TARGET_DIR/"
+    # 注意：--exclude='/assets' 中的 / 表示只匹配根目录的 assets
+    rsync -av --exclude='/assets' "$SOURCE_DIR/" "$TARGET_DIR/"
 else
     # 使用 cp（兼容性更好）
     cd "$SOURCE_DIR"
@@ -81,12 +82,17 @@ echo -e "${GREEN}=== 复制完成 ===${NC}"
 echo "目标目录内容:"
 ls -lh "$TARGET_DIR" | grep -v "^total" | awk '{print "  " $9 " (" $5 ")"}'
 
-# 检查是否排除了 assets
+# 检查是否正确排除了顶层 assets
 if [ -d "$TARGET_DIR/assets" ]; then
-    echo -e "${RED}警告: assets 目录未被排除！${NC}"
+    echo -e "${RED}警告: 顶层 assets 目录未被排除！${NC}"
     exit 1
 else
-    echo -e "${GREEN}✓ assets 目录已成功排除${NC}"
+    echo -e "${GREEN}✓ 顶层 assets 目录已成功排除${NC}"
+fi
+
+# 检查子目录的 assets 是否保留
+if [ -d "$TARGET_DIR/cocos-js/assets" ]; then
+    echo -e "${GREEN}✓ 子目录 cocos-js/assets 已保留${NC}"
 fi
 
 # 检查 ws-resources.json 是否存在

@@ -136,21 +136,6 @@ else
     CONFIG_ENV="$ENV"
 fi
 
-# CLI配置文件
-CLI_CONFIG_DIR="../cli/src/config"
-mkdir -p "$CLI_CONFIG_DIR"
-CLI_CONFIG="$CLI_CONFIG_DIR/env.$CONFIG_ENV.ts"
-cat > "$CLI_CONFIG" <<EOF
-const env = {
-    packageId: '$PACKAGE_ID',
-    upgradeCap: '$UPGRADE_CAP',
-    adminCap: '$ADMIN_CAP',
-    gameData: '$GAME_DATA',
-};
-
-export default env;
-EOF
-
 # Cocos工程配置文件
 COCOS_CONFIG_DIR="../../client/tycoon_cocos/assets/scripts/config"
 mkdir -p "$COCOS_CONFIG_DIR"
@@ -208,5 +193,4 @@ echo "Admin Cap: $ADMIN_CAP"
 echo "Game Data: $GAME_DATA"
 echo "================================================================================================"
 echo "Tycoon Game Contract Deployment finished!"
-echo "CLI config written to: $CLI_CONFIG"
 echo "Cocos config written to: $COCOS_CONFIG"

@@ -1,3 +1,13 @@
+[安装walrus]
+https://docs.wal.app/usage/setup.html?utm_source=chatgpt.com
+
+# Run a first-time install using the latest Mainnet version.
+curl -sSf https://install.wal.app | sh
+
+[下载config文件]
+curl https://docs.wal.app/setup/client_config.yaml -o ~/.config/walrus/client_config.yaml
+
+
 
 
 [安装site-builder]
@@ -13,17 +23,32 @@ chmod +x site-builder
 ./site-builder --version
 
 [下载config文件]
-curl https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainnet/sites-config.yaml -o .sites-config.yaml
+# mkdir -p ~/.config/walrus
+curl https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainnet/sites-config.yaml -o ~/.config/walrus/sites-config.yaml
+# curl https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainnet/sites-config.yaml -o .sites-config.yaml
+
+
+
+[预估费用]
+# walrus store ./your-file --epochs 5 --dry-run //不能用于文件夹
 
 
 [发布/更新]
 
-# 第一次部署
-./site-builder deploy ../tycoon_cocos/build/web-mobile --epochs 5 --config .sites-config.yaml
+# # 第一次部署
+./site-builder deploy ../../tycoon_cocos/build/web-mobile --epochs 5 
 
-# 全量更新（推荐）
-./site-builder deploy ../tycoon_cocos/build/web-mobile --config .sites-config.yaml
+./site-builder publish ../../tycoon_cocos/build/web-mobile --epochs 5 
 
+
+# # 全量更新（推荐）
+./site-builder deploy ../../tycoon_cocos/build/web-mobile
+
+# # # 第一次部署
+# ./site-builder --config ~/.config/walrus/sites-config.yaml deploy ../../tycoon_cocos/build/web-mobile --epochs 5 
+
+# # # 全量更新（推荐）
+# ./site-builder --config ~/.config/walrus/sites-config.yaml deploy ../../tycoon_cocos/build/web-mobile
 
 
 没测过

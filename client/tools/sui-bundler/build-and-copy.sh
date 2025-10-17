@@ -33,22 +33,18 @@ cp dist/sui.system.js "$PREVIEW_LIBS/"
 echo "✓ 复制到: $PREVIEW_LIBS/sui.system.js"
 echo ""
 
-# 3. 复制到 build-templates (如果存在)
+# 3. 复制到 build-templates（自动创建目录）
 echo "[Step 3] 复制到 build-templates..."
 
-if [ -d "$BUILD_MOBILE_LIBS" ]; then
-    cp dist/sui.system.js "$BUILD_MOBILE_LIBS/"
-    echo "✓ 复制到: $BUILD_MOBILE_LIBS/sui.system.js"
-else
-    echo "WARN: $BUILD_MOBILE_LIBS 不存在，跳过"
-fi
+# web-mobile
+mkdir -p "$BUILD_MOBILE_LIBS"
+cp dist/sui.system.js "$BUILD_MOBILE_LIBS/"
+echo "✓ 复制到: $BUILD_MOBILE_LIBS/sui.system.js"
 
-if [ -d "$BUILD_DESKTOP_LIBS" ]; then
-    cp dist/sui.system.js "$BUILD_DESKTOP_LIBS/"
-    echo "✓ 复制到: $BUILD_DESKTOP_LIBS/sui.system.js"
-else
-    echo "WARN: $BUILD_DESKTOP_LIBS 不存在，跳过"
-fi
+# web-desktop
+mkdir -p "$BUILD_DESKTOP_LIBS"
+cp dist/sui.system.js "$BUILD_DESKTOP_LIBS/"
+echo "✓ 复制到: $BUILD_DESKTOP_LIBS/sui.system.js"
 
 echo ""
 echo "=========================================="

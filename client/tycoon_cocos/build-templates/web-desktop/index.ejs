@@ -19,6 +19,10 @@
 
     <link rel="stylesheet" type="text/css" href="<%= cssUrl %>"/>
     <link rel="icon" href="favicon.ico"/>
+
+    <!-- Sui SDK (System.register 格式，必须在 main.js 之前加载) -->
+    <script src="./libs/sui.system.js"></script>
+
   </head>
   <body>
     <h1 class="header"><%= projectName %></h1>

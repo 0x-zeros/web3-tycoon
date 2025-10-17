@@ -26,10 +26,8 @@ async function loadSuiModule(): Promise<any> {
         return suiModule;
     }
 
-    // 根据环境选择路径
-    // Preview 模式：/libs/sui.system.js（绝对路径）
-    // Build 模式：./libs/sui.system.js（相对路径，由 build-templates 提供）
-    const modulePath = '/libs/sui.system.js';
+    // 统一使用相对路径（Preview 和 Build 都适用，避免子路径部署问题）
+    const modulePath = './libs/sui.system.js';
 
     console.log('[SuiLoader] Loading sui.system.js from:', modulePath);
     suiModule = await (window as any).System.import(modulePath);

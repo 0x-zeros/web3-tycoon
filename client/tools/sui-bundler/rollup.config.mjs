@@ -55,25 +55,24 @@ export default {
                 skipLibCheck: true,
                 declaration: false
             }
-        }),
-
-        // 压缩（保持 ES2020）
-        terser({
-            ecma: 2020,  // ← 关键：不降级 BigInt/**
-            compress: {
-                ecma: 2020,
-                passes: 1
-            },
-            format: {
-                ecma: 2020,
-                comments: false
-            },
-            mangle: {
-                // 保留类名和函数名（便于调试）
-                keep_classnames: true,
-                keep_fnames: true
-            }
         })
+
+        // 压缩（暂时禁用以调试方法丢失问题）
+        // terser({
+        //     ecma: 2020,
+        //     compress: {
+        //         ecma: 2020,
+        //         passes: 1
+        //     },
+        //     format: {
+        //         ecma: 2020,
+        //         comments: false
+        //     },
+        //     mangle: {
+        //         keep_classnames: true,
+        //         keep_fnames: true
+        //     }
+        // })
     ],
 
     // 外部化（如果有需要）

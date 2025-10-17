@@ -53,9 +53,9 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
             console.log('  Decryption successful');
             console.log('  Decrypted data length:', privateKeyBase64.length);
 
-            // Step 3: 解析
+            // Step 3: 解析（async）
             console.log('[KeystoreLoader] Step 3: Parsing keypair');
-            const keypair = parseKeypairFromBase64(privateKeyBase64);
+            const keypair = await parseKeypairFromBase64(privateKeyBase64);
             const address = keypair.toSuiAddress();
             console.log('  Address:', address);
 

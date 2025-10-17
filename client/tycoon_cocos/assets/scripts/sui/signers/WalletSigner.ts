@@ -3,9 +3,10 @@
  * 使用浏览器钱包扩展进行签名（推荐方式）
  */
 
-import { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
-import { Transaction } from '@mysten/sui/transactions';
-import { Wallet, WalletAccount } from '@mysten/wallet-standard';
+// 使用 import type 避免打包（运行时由调用者提供实例）
+import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
+import type { Transaction } from '@mysten/sui/transactions';
+import type { Wallet, WalletAccount } from '@mysten/wallet-standard';
 import { SignerProvider } from './SignerProvider';
 
 /**

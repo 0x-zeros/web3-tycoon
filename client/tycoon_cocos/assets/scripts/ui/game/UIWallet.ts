@@ -8,10 +8,9 @@ import { GButton, GObject } from "fairygui-cc";
 import { VoxelSystem } from "../../voxel/VoxelSystem";
 import { UILayer } from "../core/UITypes";  // 从 UITypes 导入（避免循环依赖）
 
-import { bcs } from '@mysten/sui/bcs';
-import {fromHex, toHex} from '@mysten/bcs';
-import { SuiClient } from '@mysten/sui/client';
-import { getWallets, IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
+// 使用 import type 避免打包
+import type { IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
+import { loadWalletStandard, loadSuiClient } from '../../sui/loader';
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
 
@@ -155,10 +154,10 @@ export class UIWallet extends UIBase {
         super.unbindEvents();
     }
 
-    private _onConnectClick(): void {
+    private async _onConnectClick(): Promise<void> {
         console.log("[UIWallet] Connect clicked");
 
-        const suiWallets = this.getSuiWallets();
+        const suiWallets = await this.getSuiWallets();
 
         // 创建并显示WalletList（异步）
         this._showWalletList(suiWallets).catch(error => {
@@ -249,6 +248,7 @@ export class UIWallet extends UIBase {
     private async testSuiClient(): Promise<void> {
 
         const DEV_NET_URL = 'https://fullnode.testnet.sui.io:443';
+        const { SuiClient } = await loadSuiClient();
         const client = new SuiClient({ url: DEV_NET_URL });
 
         const {data, error} = await client.getObject({
@@ -265,7 +265,8 @@ export class UIWallet extends UIBase {
         // this.m_data.text = JSON.stringify(data);
     }
 
-    private getSuiWallets(): Wallet[] {
+    private async getSuiWallets(): Promise<Wallet[]> {
+        const { getWallets } = await loadWalletStandard();
         const wallets = getWallets().get();
         console.log("wallets length: ", wallets.length);
         console.log("getWallets: ", wallets);
@@ -467,7 +468,8 @@ export class UIWallet extends UIBase {
         }
 
         try {
-            // 获取所有Sui钱包
+            // 获取所有Sui钱包（动态加载）
+            const { getWallets } = await loadWalletStandard();
             const wallets = getWallets().get();
             const suiWallets = this._filterSuiWallets(wallets);
 

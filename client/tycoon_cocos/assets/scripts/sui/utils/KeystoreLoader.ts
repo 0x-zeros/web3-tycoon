@@ -5,7 +5,9 @@
  * 前端适配：由于浏览器无法直接访问文件系统，改为从 localStorage 加载
  */
 
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+// 使用 import type 避免打包
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { loadEd25519 } from '../loader';
 import { encryptWithPassword, decryptWithPassword } from './CryptoUtils';
 import { requestSuiFromFaucet } from './FaucetUtils';
 import { UINotification } from '../../ui/utils/UINotification';
@@ -69,9 +71,10 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
         console.log('[KeystoreLoader] No saved keypair found');
         UINotification.info("生成新开发密钥");
 
-        // Step 4: 生成
+        // Step 4: 生成（动态加载）
         console.log('[KeystoreLoader] Step 4: Generating new keypair');
-        const newKeypair = Ed25519Keypair.generate();
+        const { Ed25519Keypair: Ed25519Keypair_ } = await loadEd25519();
+        const newKeypair = Ed25519Keypair_.generate();
         const address = newKeypair.toSuiAddress();
         console.log('  Generated address:', address);
 
@@ -144,15 +147,18 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
  * @param data 解密后的私钥数据（Bech32 字符串或 Base64）
  * @returns Ed25519Keypair
  */
-function parseKeypairFromBase64(data: string): Ed25519Keypair {
+async function parseKeypairFromBase64(data: string): Promise<Ed25519Keypair> {
     console.log('[KeystoreLoader] parseKeypairFromBase64: START');
     console.log('  Data length:', data.length);
     console.log('  Data sample:', data.substring(0, 20) + '...');
 
+    // 动态加载 Ed25519Keypair
+    const { Ed25519Keypair: Ed25519Keypair_ } = await loadEd25519();
+
     try {
         // 方法1: 尝试直接作为 Bech32 或原始数据传给 fromSecretKey
         console.log('[KeystoreLoader] Attempting method 1: Direct fromSecretKey');
-        const keypair = Ed25519Keypair.fromSecretKey(data);
+        const keypair = Ed25519Keypair_.fromSecretKey(data);
         const address = keypair.toSuiAddress();
         console.log('  Method 1 SUCCESS, address:', address);
         return keypair;
@@ -172,7 +178,7 @@ function parseKeypairFromBase64(data: string): Ed25519Keypair {
             const privateKeyBytes = bytes.subarray(1);
             console.log('  Decoded bytes length:', privateKeyBytes.length);
 
-            const keypair = Ed25519Keypair.fromSecretKey(privateKeyBytes);
+            const keypair = Ed25519Keypair_.fromSecretKey(privateKeyBytes);
             const address = keypair.toSuiAddress();
             console.log('  Method 2 SUCCESS, address:', address);
             return keypair;
@@ -235,8 +241,9 @@ async function checkBalanceAndRequestFaucet(address: string): Promise<void> {
     console.log('[KeystoreLoader] Step 4: Checking balance');
 
     try {
-        // 创建临时 client 查询余额
-        const { SuiClient } = await import('@mysten/sui/client');
+        // 动态加载并创建临时 client 查询余额
+        const { loadSuiClient } = await import('../loader');
+        const { SuiClient } = await loadSuiClient();
         const client = new SuiClient({ url: 'http://127.0.0.1:9000' });
 
         const balanceResult = await client.getBalance({

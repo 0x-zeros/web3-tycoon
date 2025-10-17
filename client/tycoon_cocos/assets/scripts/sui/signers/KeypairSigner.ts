@@ -3,9 +3,10 @@
  * 使用本地密钥对进行签名（用于测试或后端）
  */
 
-import { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
-import { Transaction } from '@mysten/sui/transactions';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+// 使用 import type 避免打包（运行时由调用者提供实例）
+import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
+import type { Transaction } from '@mysten/sui/transactions';
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { SignerProvider } from './SignerProvider';
 
 /**

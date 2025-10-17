@@ -5,11 +5,26 @@
  * Move源文件: move/tycoon/sources/tycoon.move
  */
 
-import { SuiClient } from '@mysten/sui/client';
-import { Transaction } from '@mysten/sui/transactions';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+// 使用 import type 避免打包
+import type { SuiClient } from '@mysten/sui/client';
+import type { Transaction } from '@mysten/sui/transactions';
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { MapTemplate } from '../types/map';
 import { encodeMapTemplateToBCS } from '../utils/mapBcsEncoder';
+import { loadSuiTransactions } from '../loader';
+
+// 模块级缓存
+let Transaction_: typeof Transaction | null = null;
+
+/**
+ * 初始化模块
+ */
+export async function initMapAdminInteraction(): Promise<void> {
+    if (!Transaction_) {
+        const { Transaction } = await loadSuiTransactions();
+        Transaction_ = Transaction;
+    }
+}
 
 /**
  * 地图管理交互类
@@ -29,7 +44,7 @@ export class MapAdminInteraction {
      * @param schemaVersion schema 版本（从 GameData 获取）
      * @returns Transaction 对象
      */
-    buildUploadMapTemplateTx(mapTemplate: MapTemplate, schemaVersion: number): Transaction {
+    async buildUploadMapTemplateTx(mapTemplate: MapTemplate, schemaVersion: number): Promise<Transaction> {
         console.log('[MapAdmin] Building upload map template transaction...');
         console.log(`Template ID: ${mapTemplate.id}`);
         console.log(`Schema version: ${schemaVersion}`);
@@ -37,16 +52,16 @@ export class MapAdminInteraction {
         console.log(`Buildings: ${mapTemplate.buildings_static.size}`);
         console.log(`Hospital IDs: ${mapTemplate.hospital_ids.length}`);
 
-        // 1. BCS 序列化
+        // 1. BCS 序列化（async）
         console.log('[MapAdmin] Encoding map template to BCS...');
-        const encoded = encodeMapTemplateToBCS(mapTemplate);
+        const encoded = await encodeMapTemplateToBCS(mapTemplate);
 
         console.log(`Encoded tiles: ${encoded.tilesBytes.length} bytes`);
         console.log(`Encoded buildings: ${encoded.buildingsBytes.length} bytes`);
         console.log(`Encoded hospital_ids: ${encoded.hospitalIdsBytes.length} bytes`);
 
         // 2. 构建交易
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::tycoon::publish_map_from_bcs`,
@@ -88,16 +103,16 @@ export class MapAdminInteraction {
         console.log(`Buildings: ${mapTemplate.buildings_static.size}`);
         console.log(`Hospital IDs: ${mapTemplate.hospital_ids.length}`);
 
-        // 1. BCS 序列化
+        // 1. BCS 序列化（async）
         console.log('[MapAdmin] Encoding map template to BCS...');
-        const encoded = encodeMapTemplateToBCS(mapTemplate);
+        const encoded = await encodeMapTemplateToBCS(mapTemplate);
 
         console.log(`Encoded tiles: ${encoded.tilesBytes.length} bytes`);
         console.log(`Encoded buildings: ${encoded.buildingsBytes.length} bytes`);
         console.log(`Encoded hospital_ids: ${encoded.hospitalIdsBytes.length} bytes`);
 
         // 2. 构建交易
-        const tx = new Transaction();
+        const tx = new Transaction_!();
 
         tx.moveCall({
             target: `${this.packageId}::tycoon::publish_map_from_bcs`,

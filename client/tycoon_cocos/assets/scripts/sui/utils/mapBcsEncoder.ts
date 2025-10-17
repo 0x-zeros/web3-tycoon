@@ -5,61 +5,75 @@
  * Move 源文件: move/tycoon/sources/map.move
  */
 
-import { bcs } from '@mysten/sui/bcs';
 import type { MapTemplate, TileStatic, BuildingStatic } from '../types/map';
+import { loadSuiBcs } from '../loader';
 
-// ===== BCS Schema 定义 =====
+// ===== BCS Schema 缓存（Lazy 初始化）=====
 
-/**
- * TileStatic BCS Schema
- * 必须严格按 Move struct 字段顺序定义
- *
- * Move定义：
- * public struct TileStatic has store, copy, drop {
- *     x: u8,
- *     y: u8,
- *     kind: u8,
- *     building_id: u16,
- *     special: u64,
- *     w: u16,
- *     n: u16,
- *     e: u16,
- *     s: u16
- * }
- */
-const TileStaticBCS = bcs.struct('TileStatic', {
-    x: bcs.u8(),
-    y: bcs.u8(),
-    kind: bcs.u8(),
-    building_id: bcs.u16(),
-    special: bcs.u64(),
-    w: bcs.u16(),
-    n: bcs.u16(),
-    e: bcs.u16(),
-    s: bcs.u16()
-});
+let TileStaticBCS: any = null;
+let BuildingStaticBCS: any = null;
 
 /**
- * BuildingStatic BCS Schema
- *
- * Move定义：
- * public struct BuildingStatic has store, copy, drop {
- *     x: u8,
- *     y: u8,
- *     size: u8,
- *     price: u64,
- *     chain_prev_id: u16,
- *     chain_next_id: u16
- * }
+ * 初始化 BCS Schema（必须在使用前调用）
  */
-const BuildingStaticBCS = bcs.struct('BuildingStatic', {
-    x: bcs.u8(),
-    y: bcs.u8(),
-    size: bcs.u8(),
-    price: bcs.u64(),
-    chain_prev_id: bcs.u16(),
-    chain_next_id: bcs.u16()
-});
+async function initBcsSchemas(): Promise<void> {
+    if (TileStaticBCS && BuildingStaticBCS) {
+        return; // 已初始化
+    }
+
+    const { bcs } = await loadSuiBcs();
+
+    /**
+     * TileStatic BCS Schema
+     * 必须严格按 Move struct 字段顺序定义
+     *
+     * Move定义：
+     * public struct TileStatic has store, copy, drop {
+     *     x: u8,
+     *     y: u8,
+     *     kind: u8,
+     *     building_id: u16,
+     *     special: u64,
+     *     w: u16,
+     *     n: u16,
+     *     e: u16,
+     *     s: u16
+     * }
+     */
+    TileStaticBCS = bcs.struct('TileStatic', {
+        x: bcs.u8(),
+        y: bcs.u8(),
+        kind: bcs.u8(),
+        building_id: bcs.u16(),
+        special: bcs.u64(),
+        w: bcs.u16(),
+        n: bcs.u16(),
+        e: bcs.u16(),
+        s: bcs.u16()
+    });
+
+    /**
+     * BuildingStatic BCS Schema
+     *
+     * Move定义：
+     * public struct BuildingStatic has store, copy, drop {
+     *     x: u8,
+     *     y: u8,
+     *     size: u8,
+     *     price: u64,
+     *     chain_prev_id: u16,
+     *     chain_next_id: u16
+     * }
+     */
+    BuildingStaticBCS = bcs.struct('BuildingStatic', {
+        x: bcs.u8(),
+        y: bcs.u8(),
+        size: bcs.u8(),
+        price: bcs.u64(),
+        chain_prev_id: bcs.u16(),
+        chain_next_id: bcs.u16()
+    });
+}
 
 // ===== 序列化函数 =====
 
@@ -68,11 +82,14 @@ const BuildingStaticBCS = bcs.struct('BuildingStatic', {
  * @param mapTemplate 编辑器生成的地图数据
  * @returns 三个 BCS 序列化的字节数组
  */
-export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
+export async function encodeMapTemplateToBCS(mapTemplate: MapTemplate): Promise<{
     tilesBytes: number[];
     buildingsBytes: number[];
     hospitalIdsBytes: number[];
-} {
+}> {
+    // 确保 BCS Schema 已初始化
+    await initBcsSchemas();
+    const { bcs } = await loadSuiBcs();
     // 1. 准备 tiles 数组（必须按 tile_id 顺序，从 0 开始连续）
     const tiles: Array<{
         x: number;
@@ -164,15 +181,18 @@ export function encodeMapTemplateToBCS(mapTemplate: MapTemplate): {
 /**
  * 反序列化（用于验证或调试）
  */
-export function decodeMapTemplateFromBCS(
+export async function decodeMapTemplateFromBCS(
     tilesBytes: Uint8Array,
     buildingsBytes: Uint8Array,
     hospitalIdsBytes: Uint8Array
-): {
+): Promise<{
     tiles: TileStatic[];
     buildings: BuildingStatic[];
     hospital_ids: number[];
-} {
+}> {
+    // 确保 BCS Schema 已初始化
+    await initBcsSchemas();
+    const { bcs } = await loadSuiBcs();
     const tilesDeserializer = bcs.vector(TileStaticBCS);
     const buildingsDeserializer = bcs.vector(BuildingStaticBCS);
     const hospitalIdsDeserializer = bcs.vector(bcs.u16());

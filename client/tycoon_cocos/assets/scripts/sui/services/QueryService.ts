@@ -3,7 +3,8 @@
  * 封装链上数据查询逻辑
  */
 
-import { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
+// 使用 import type 避免打包（SuiClient 由调用者提供）
+import type { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
 import type { Game, Player, Building, Tile, NpcInst, CardEntry } from '../types/game';
 import type { MapTemplatePublishedEvent } from '../types/admin';
 import { GameStatus } from '../types/constants';

@@ -3,15 +3,19 @@
  * 统一管理所有 Sui 链上交互，包括签名、查询、交易执行等
  */
 
-import { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
-import { Transaction } from '@mysten/sui/transactions';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { Wallet, WalletAccount } from '@mysten/wallet-standard';
+// 使用 import type 避免打包（运行时通过 loader 动态加载）
+import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
+import type { Transaction } from '@mysten/sui/transactions';
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import type { Wallet, WalletAccount } from '@mysten/wallet-standard';
+
+// 动态加载器
+import { loadSuiClient, loadEd25519, loadWalletStandard } from '../loader';
 
 import { SuiConfig, getNetworkRpcUrl, getExplorerUrl, getNetworkDisplayName, ExplorerItemType } from '../config';
 import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
-import { TycoonGameClient } from '../interactions';
-import { MapAdminInteraction } from '../interactions/mapAdmin';
+import { TycoonGameClient, initInteractions, initGameInteraction } from '../interactions';
+import { MapAdminInteraction, initMapAdminInteraction } from '../interactions/mapAdmin';
 import { QueryService, GameListItem, AssetService, DataPollingService } from '../services';
 import { TycoonEventIndexer } from '../events/indexer';
 import { EventType, type GameCreatedEvent } from '../events/types';
@@ -128,8 +132,14 @@ export class SuiManager {
         this._config = config;
         this._options = { ...options };
 
-        // 创建 Sui Client
+        // 初始化交互模块（必须在使用 Transaction 前调用）
+        await initInteractions();
+        await initGameInteraction();
+        await initMapAdminInteraction();
+
+        // 动态加载并创建 Sui Client
         const rpcUrl = getNetworkRpcUrl(config.network, config.rpcUrl);
+        const { SuiClient } = await loadSuiClient();
         this._client = new SuiClient({ url: rpcUrl });
 
         // 创建 TycoonGameClient
@@ -622,8 +632,8 @@ export class SuiManager {
 
         console.log('[SuiManager] Using schema_version from GameData:', schemaVersion);
 
-        // 构建交易（传入 schema_version）
-        const tx = this._mapAdmin!.buildUploadMapTemplateTx(mapTemplate, schemaVersion);
+        // 构建交易（传入 schema_version，现在是 async）
+        const tx = await this._mapAdmin!.buildUploadMapTemplateTx(mapTemplate, schemaVersion);
 
         // 签名并执行
         const result = await this.signAndExecuteTransaction(tx);

@@ -1,0 +1,27 @@
+{
+  "imports": {
+    "graphql": "./assets/scripts/shims/graphql.ts",
+    "@mysten/sui/zklogin": "./assets/scripts/shims/zklogin-shim.ts",
+    "poseidon-lite": "./assets/scripts/shims/poseidon-lite-shim.ts",
+    "@mysten/sui": "./libs/@mysten/sui/index.js",
+    "@mysten/sui/": "./libs/@mysten/sui/",
+    "@mysten/sui/client": "./libs/@mysten/sui/client/index.js",
+    "@mysten/sui/transactions": "./libs/@mysten/sui/transactions/index.js",
+    "@mysten/sui/bcs": "./libs/@mysten/sui/bcs/index.js",
+    "@mysten/sui/keypairs/ed25519": "./libs/@mysten/sui/keypairs/ed25519/index.js",
+    "@mysten/sui/utils": "./libs/@mysten/sui/utils/index.js",
+    "@mysten/sui/faucet": "./libs/@mysten/sui/faucet/index.js",
+    "@mysten/wallet-standard": "./libs/@mysten/wallet-standard/index.js",
+    "@mysten/wallet-standard/": "./libs/@mysten/wallet-standard/",
+    "@mysten/bcs": "./libs/@mysten/bcs/index.js",
+    "@mysten/bcs/": "./libs/@mysten/bcs/",
+    "@noble/curves": "./libs/@noble/curves/index.js",
+    "@noble/curves/": "./libs/@noble/curves/",
+    "@noble/hashes": "./libs/@noble/hashes/index.js",
+    "@noble/hashes/": "./libs/@noble/hashes/",
+    "@scure/base": "./libs/@scure/base/index.js",
+    "@scure/base/": "./libs/@scure/base/",
+    "@scure/bip32": "./libs/@scure/bip32/index.js",
+    "@scure/bip32/": "./libs/@scure/bip32/"
+  }
+}

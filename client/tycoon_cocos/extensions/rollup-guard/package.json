@@ -1,7 +1,7 @@
 {
   "name": "rollup-guard",
-  "version": "1.0.0",
-  "description": "Cocos Creator build extension: Force ES2020+, preserve BigInt/**, and externalize @mysten/* via Import Maps",
+  "version": "2.0.0",
+  "description": "Cocos Creator 构建扩展：优化 Sui SDK 加载顺序，使用 System.import() 链式调用",
   "main": "./dist/builder.js",
   "scripts": {
     "build": "tsc",
@@ -13,11 +13,6 @@
   "devDependencies": {
     "@types/node": "^16.0.0",
     "typescript": "^4.9.0"
-  },
-  "dependencies": {
-    "esbuild": "^0.23.0",
-    "fast-glob": "^3.3.2",
-    "terser": "^5.31.0"
   },
   "author": "",
   "license": "MIT"

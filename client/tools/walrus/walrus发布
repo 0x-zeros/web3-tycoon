@@ -33,16 +33,27 @@ curl https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainne
 # walrus store ./your-file --epochs 5 --dry-run //不能用于文件夹
 
 
+[准备部署文件]
+
+# 使用自动化脚本复制文件（排除 assets 以节省存储成本）
+./prepare-deploy.sh
+
+# 或手动复制
+# cd ../../tycoon_cocos && cocos build web-mobile
+# cd -
+# rsync -av --exclude='assets' ../../tycoon_cocos/build/web-mobile/ ./web-mobile/
+
+
 [发布/更新]
 
-# # 第一次部署
-./site-builder deploy ../../tycoon_cocos/build/web-mobile --epochs 5 
+# # 第一次部署（准备好文件后执行） # walrus主网一个epoch 14天， testnet 一个epoch 1天
+./site-builder deploy web-mobile --epochs 5
 
-./site-builder publish ../../tycoon_cocos/build/web-mobile --epochs 5 
+# ./site-builder publish ../../tycoon_cocos/build/web-mobile --epochs 5
 
 
 # # 全量更新（推荐）
-./site-builder deploy ../../tycoon_cocos/build/web-mobile
+./site-builder deploy web-mobile
 
 # # # 第一次部署
 # ./site-builder --config ~/.config/walrus/sites-config.yaml deploy ../../tycoon_cocos/build/web-mobile --epochs 5 

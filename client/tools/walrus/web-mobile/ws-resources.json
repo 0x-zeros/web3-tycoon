@@ -1,14 +1,20 @@
 {
-    "headers": {
-      "/index.html": {
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Embedder-Policy": "require-corp"
-      }
-    },
-    "routes": {
-      "/*": "/index.html"
-    },
-    "metadata": {
-      "description": "web3-tycoon on Walrus"
+  "headers": {
+    "/index.html": {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin"
     }
-  }
+  },
+  "routes": {
+    "/*": "/index.html"
+  },
+  "metadata": {
+    "link": null,
+    "image_url": null,
+    "description": "web3-tycoon on Walrus",
+    "project_url": null,
+    "creator": null
+  },
+  "site_name": "My Walrus Site",
+  "object_id": "0x56828518ba909a3147fa8bcf85a0255078edee19290421ad98de8d21665e8e7d"
+}

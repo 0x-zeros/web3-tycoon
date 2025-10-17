@@ -1,0 +1,37 @@
+
+
+[安装site-builder]
+https://docs.wal.app/walrus-sites/tutorial-install.html
+
+在该目录安装site-builder
+
+主网：
+SYSTEM=macos-arm64
+curl https://storage.googleapis.com/mysten-walrus-binaries/site-builder-mainnet-latest-$SYSTEM -o site-builder
+chmod +x site-builder
+
+./site-builder --version
+
+[下载config文件]
+curl https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainnet/sites-config.yaml -o .sites-config.yaml
+
+
+[发布/更新]
+
+# 第一次部署
+./site-builder deploy ../tycoon_cocos/build/web-mobile --epochs 5 --config .sites-config.yaml
+
+# 全量更新（推荐）
+./site-builder deploy ../tycoon_cocos/build/web-mobile --config .sites-config.yaml
+
+
+
+没测过
+# # 或手动指定更新（等价但不自动创建）
+# site-builder update ./build/web-desktop --object-id 0xabc123...
+
+# # 或仅更新某个文件
+# site-builder update-resource --object-id 0xabc123... --path index.html
+
+# 想做一次完全重置、生成新 object
+# site-builder publish ./build/web-desktop

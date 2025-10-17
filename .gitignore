@@ -237,5 +237,5 @@ metrics/
 # Claude Code configuration
 .claude
 
-# Walrus tools (large binary files and local files)
-client/tools/walrus/
+# Walrus tools - ignore large binary files only
+client/tools/walrus/site-builder

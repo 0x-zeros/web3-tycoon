@@ -24,33 +24,65 @@
 在 Cocos Creator 3.8+ 中直接使用 `@mysten/sui` SDK 会遇到：
 
 ```javascript
-// 运行时错误
-Error: Cannot convert a BigInt value to a number
-    at Math.pow
+// 主要问题：模块和类型丢失
+Error: SuiClient is not defined
+Error: Transaction is not a constructor
+Error: keypair.toSuiAddress is not a function
+Error: Cannot read properties of undefined (reading 'plugin')
 
-// 代码被错误转译
-// 源代码
-const value = 2n ** 64n;
-
-// 被 Babel 转译为（错误）
-const value = Math.pow(2n, 64n);  // Math.pow 不支持 BigInt
+// 次要问题：BigInt 运算符降级（可通过 polyfill 解决）
+Error: Cannot convert a BigInt value to a number at Math.pow
 ```
+
+**关键发现**: BigInt 问题只是表象，**真正的核心问题是 Sui SDK 的大量函数、类、结构在打包后丢失或损坏**。
 
 ### 1.2 根本原因
 
-Cocos Creator 的 Web 构建管线：
+Cocos Creator 的 Web 构建管线会对 **node_modules** 进行深度处理：
 
 ```
 TypeScript → Rollup 打包 → Babel 转译 → Terser 压缩
-                            ↑
-                  @babel/plugin-transform-exponentiation-operator
-                  错误地将 BigInt ** 转为 Math.pow()
+             ↓              ↓              ↓
+          依赖解析        ES 降级       代码压缩
+          tree-shaking    polyfill      混淆变量
 ```
 
-问题：
-1. **Babel 插件问题**: `@babel/plugin-transform-exponentiation-operator` 会将 `**` 转为 `Math.pow()`，但不检查操作数类型
-2. **node_modules 被打包**: 所有依赖都会经过 Rollup + Babel 处理
-3. **无法直接配置**: Cocos Creator 的构建管线不开放 Babel 配置
+**核心问题**：
+
+1. **复杂依赖树被破坏**: @mysten/sui 依赖 @noble/curves, @noble/hashes 等多个包，打包时依赖关系丢失或错位
+2. **类继承链断裂**: Ed25519Keypair 继承自 Keypair 基类，打包后原型链丢失，方法（如 toSuiAddress）不存在
+3. **内部结构损坏**: BCS 编解码器、Transaction builder 等复杂对象结构被破坏，出现 `Cannot read properties of undefined (reading 'plugin')` 等错误
+4. **动态特性失效**: Proxy、Reflect、私有字段等现代 JS 特性被错误转译
+5. **类型信息丢失**: TypeScript 类型和运行时对象不匹配，运行时获取到的对象缺少方法和属性
+
+**次要问题**：
+
+5. **BigInt 降级**: Babel 将 `**` 转为 `Math.pow()`（但这可以通过 BigInt polyfill 解决）
+6. **ES2020+ 语法降级**: 可选链、空值合并等被转译
+
+**为什么简单的修复不够？**
+
+| 方法 | 能解决 | 不能解决 | 结论 |
+|------|--------|----------|------|
+| BigInt polyfill | `2n ** 64n` 语法 | 类和方法丢失 | ❌ 不够 |
+| Babel 配置调整 | 部分降级问题 | 无法修改 Creator 内部配置 | ❌ 不可行 |
+| 排除 node_modules | 理论可行 | Creator 不支持排除配置 | ❌ 不可行 |
+
+**真实案例**:
+
+```javascript
+// 即使 BigInt polyfill 正常工作：
+const value = 2n ** 64n;  // ✅ 可以运行
+
+// 但 Sui SDK 的核心功能仍然损坏：
+const client = new SuiClient({ url: '...' });     // ❌ SuiClient 类结构损坏
+const tx = new Transaction();                     // ❌ Transaction 内部 plugin 系统丢失
+const keypair = Ed25519Keypair.generate();        // ❌ 静态方法不存在
+const pubkey = keypair.toSuiAddress();            // ❌ 实例方法丢失
+const bcs = new BCS(schema);                      // ❌ BCS 编解码器损坏
+```
+
+**结论**: 必须让 Sui SDK **完全不经过** Cocos Creator 的打包处理，保持原始代码完整性。
 
 ---
 

@@ -1,9 +1,0 @@
-# Walrus web-mobile 目录 Git 忽略规则
-# 策略：使用排除法，只保留配置文件被 Git 管理
-
-# 忽略所有文件和目录
-*
-
-# 但保留以下文件（需要版本管理）
-!.gitignore
-!ws-resources.json

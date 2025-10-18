@@ -13,6 +13,7 @@ import type { Wallet, WalletAccount } from '@mysten/wallet-standard';
 import { loadSuiClient, loadEd25519, loadWalletStandard } from '../loader';
 
 import { SuiConfig, getNetworkRpcUrl, getExplorerUrl, getNetworkDisplayName, ExplorerItemType } from '../config';
+import { RpcConfigManager } from '../config/RpcConfigManager';
 import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
 import { TycoonGameClient, initInteractions, initGameInteraction } from '../interactions';
 import { MapAdminInteraction, initMapAdminInteraction } from '../interactions/mapAdmin';
@@ -132,13 +133,18 @@ export class SuiManager {
         this._config = config;
         this._options = { ...options };
 
+        // 加载 RPC 配置（从 localStorage）
+        RpcConfigManager.load();
+
         // 初始化交互模块（必须在使用 Transaction 前调用）
         await initInteractions();
         await initGameInteraction();
         await initMapAdminInteraction();
 
         // 动态加载并创建 Sui Client
-        const rpcUrl = getNetworkRpcUrl(config.network, config.rpcUrl);
+        // 优先使用：自定义 RPC > config.rpcUrl > 默认网络 RPC
+        const customRpc = RpcConfigManager.getCustomRpcUrl();
+        const rpcUrl = customRpc || getNetworkRpcUrl(config.network, config.rpcUrl);
         const { SuiClient } = await loadSuiClient();
         this._client = new SuiClient({ url: rpcUrl });
 
@@ -1128,11 +1134,15 @@ export class SuiManager {
 
         console.log('[SuiManager] Starting event listener...');
 
+        // 从配置获取轮询间隔（default: 1秒, ratelimit: 5秒）
+        const pollInterval = RpcConfigManager.getEventIndexerInterval();
+        console.log('[SuiManager] Using event indexer interval:', pollInterval, 'ms');
+
         this._eventIndexer = new TycoonEventIndexer({
             client: this._client!,
             packageId: this._config!.packageId,
             autoStart: true,
-            pollInterval: 1000  // 每 1 秒轮询一次
+            pollInterval: pollInterval
         });
 
         // 监听游戏创建事件
@@ -1768,14 +1778,18 @@ export class SuiManager {
 
         console.log('[SuiManager] Starting asset polling...');
 
-        // 注册余额轮询（2 秒一次）
+        // 从配置获取轮询间隔（default: 2秒, ratelimit: 10秒）
+        const pollingInterval = RpcConfigManager.getDataPollingInterval();
+        console.log('[SuiManager] Using data polling interval:', pollingInterval, 'ms');
+
+        // 注册余额轮询
         this._pollingService.registerSimple(
             'sui_balance',
             async () => {
                 const balance = await this._assetService!.getSuiBalance(this._currentAddress!);
                 return balance;
             },
-            2000,  // 2 秒
+            pollingInterval,
             'sui_balance'  // 自动更新 Blackboard
         );
 

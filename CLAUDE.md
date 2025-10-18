@@ -455,3 +455,4 @@ web3-tycoon/
 - Tile: `(1, 0.1, 1)` - 扁平
 - NPC/Decoration: `(1, 0.1, 1)` - 扁平，用于点击
 - Object: `(1, 1, 1)` - 立体
+- 修改完以后不需要帮我stage，我会check以后自己操作

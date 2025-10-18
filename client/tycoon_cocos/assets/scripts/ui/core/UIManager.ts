@@ -18,6 +18,8 @@ import { UIInGame } from "../game/UIInGame";
 import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
 import { UIWallet } from "../game/UIWallet";
+import { UIGameConfig } from "../game/UIGameConfig";
+import { UICommonSetting } from "../game/UICommonSetting";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
@@ -85,6 +87,8 @@ export class UIManager {
     private _activeUIs: Map<string, UIBase> = new Map();
     /** 全局持久化的 Wallet UI 实例 */
     private _walletUI: UIWallet | null = null;
+    /** 全局持久化的 CommonSetting UI 实例 */
+    private _commonSettingUI: UICommonSetting | null = null;
     /** UI缓存池 */
     private _uiCache: Map<string, UIBase> = new Map();
     /** 已加载的包 */
@@ -576,9 +580,20 @@ export class UIManager {
     }
 
     /**
+     * 切换UI显示/隐藏
+     */
+    public async toggle(layer: UILayer, uiName: string, data?: any): Promise<void> {
+        if (this.isUIShowing(uiName)) {
+            this.hideUI(uiName);
+        } else {
+            await this.showUI(uiName, data);
+        }
+    }
+
+    /**
      * 获取UI实例
      */
-    public getUI<T extends UIBase>(uiName: string): T | null {
+    public getUI<T extends UIBase>(layer: UILayer, uiName: string): T | null {
         return (this._activeUIs.get(uiName) as T) || null;
     }
 
@@ -831,6 +846,7 @@ export class UIManager {
             UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[3]);
             UIManager.instance.registerMessageBoxUI(); // 注册MessageBox
             UIManager.instance.registerNotificationUI(); // 注册Notification
+            UIManager.instance.registerGameConfigUI(); // 注册GameConfig
 
             // 4. 显示Notification（全局通知中心，始终显示）
             await UIManager.instance.showUI("Notification");
@@ -838,7 +854,10 @@ export class UIManager {
             // 4.5. 初始化全局 Wallet UI（持久化显示）
             await UIManager.instance.initWalletUI();
 
-            // 4.6. 初始化现金飞字动画系统
+            // 4.6. 初始化全局 CommonSetting UI（持久化显示，在 Wallet 右侧）
+            await UIManager.instance.initCommonSettingUI();
+
+            // 4.7. 初始化现金飞字动画系统
             CashFlyAnimation.getInstance().initialize('InGame', 'Cash');
             console.log("[UISystem] CashFlyAnimation system initialized");
 
@@ -990,6 +1009,86 @@ export class UIManager {
         } catch (error) {
             console.error("[UIManager] Failed to initialize Wallet UI:", error);
         }
+    }
+
+    /**
+     * 初始化全局 CommonSetting UI（持久化显示，在 Wallet 右侧）
+     */
+    public async initCommonSettingUI(packageName: string = "Common", componentName: string = "CommonSetting"): Promise<void> {
+        if (this._commonSettingUI) {
+            console.warn("[UIManager] CommonSetting UI already initialized");
+            return;
+        }
+
+        try {
+            // 加载 Common package（如果未加载）
+            const loaded = await this.loadPackage(packageName);
+            if (!loaded) {
+                console.error(`[UIManager] Failed to load package: ${packageName}`);
+                return;
+            }
+
+            // 创建 CommonSetting UI
+            const settingComponent = fgui.UIPackage.createObject(packageName, componentName);
+            if (!settingComponent) {
+                console.error(`[UIManager] Failed to create ${packageName}.${componentName}`);
+                return;
+            }
+
+            const settingCom = settingComponent.asCom;
+            this._commonSettingUI = settingCom.node.addComponent(UICommonSetting);
+            this._commonSettingUI.setUIName("CommonSetting");
+            this._commonSettingUI.setPanel(settingCom);
+            this._commonSettingUI.init();
+
+            // 添加到 WALLET Layer（与 Wallet 同层）
+            const walletLayer = this.getLayer(UILayer.WALLET);
+            if (!walletLayer) {
+                console.error("[UIManager] Wallet layer not found");
+                return;
+            }
+
+            walletLayer.addChild(settingCom);
+
+            // 直接设置位置（在 Wallet 右侧）
+            if (this._groot && this._walletUI) {
+                const walletCom = walletLayer.getChild('Wallet');
+                if (walletCom) {
+                    // 设置在 Wallet 右侧
+                    const margin = 10;
+                    settingCom.setPosition(
+                        walletCom.x + walletCom.width + margin,
+                        walletCom.y
+                    );
+                    console.log("[UIManager] CommonSetting positioned next to Wallet");
+                } else {
+                    // Wallet 不存在，使用默认位置（右上角，预留空间）
+                    settingCom.setPosition(
+                        this._groot.width - settingCom.width - 300,  // 预留 Wallet 的空间
+                        20
+                    );
+                    console.log("[UIManager] CommonSetting positioned at default location");
+                }
+            }
+
+            console.log("[UIManager] CommonSetting UI initialized successfully");
+
+        } catch (error) {
+            console.error("[UIManager] Failed to initialize CommonSetting UI:", error);
+        }
+    }
+
+    /**
+     * 注册 GameConfig UI
+     */
+    public registerGameConfigUI(packageName: string = "Common", componentName: string = "GameConfig"): void {
+        this.registerUI<UIGameConfig>("GameConfig", {
+            packageName,
+            componentName,
+            cache: true,
+            isWindow: false,
+            layer: UILayer.POPUP
+        }, UIGameConfig);
     }
 
     /**

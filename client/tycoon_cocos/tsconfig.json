@@ -11,21 +11,6 @@
     "lib": ["ES2020", "DOM"],
     "skipLibCheck": true,
 
-    /* GraphQL Shim 配置 - 使用空壳模块替换 graphql 依赖 */
-    "baseUrl": ".",
-    "paths": {
-      "graphql": ["assets/scripts/shims/graphql.ts"],
-      "graphql/*": ["assets/scripts/shims/graphql.ts"],
-      "gql.tada": ["assets/scripts/shims/graphql.ts"],
-      "gql.tada/*": ["assets/scripts/shims/graphql.ts"],
-      "@graphql-typed-document-node/core": ["assets/scripts/shims/graphql.ts"],
-      "@mysten/sui/dist/esm/graphql/*": ["assets/scripts/shims/graphql.ts"],
-      "@mysten/sui/zklogin": ["assets/scripts/shims/zklogin-shim.ts"],
-      "@mysten/sui/zklogin/*": ["assets/scripts/shims/zklogin-shim.ts"],
-      "@mysten/sui/dist/esm/zklogin/*": ["assets/scripts/shims/zklogin-shim.ts"],
-      "poseidon-lite": ["assets/scripts/shims/poseidon-lite-shim.ts"]
-    },
-
     /* 增强模块兼容性 */
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true

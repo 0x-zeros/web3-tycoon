@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1920,1080">
+<component size="1920,1080" opaque="false">
   <displayList>
     <component id="n0_mrxi" name="wallet" src="lambos" fileName="Wallet.xml" xy="1294,21">
       <relation target="" sidePair="right-right,top-top"/>

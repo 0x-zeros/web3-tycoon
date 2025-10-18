@@ -10,9 +10,9 @@ export enum UILayer {
     SCENE = 100,
     /** 普通层：常规UI面板（Editor/普通窗口） */
     NORMAL = 200,
-    /** 钱包层：持久化钱包UI（位于NORMAL和POPUP之间） */
-    WALLET = 250,
-    /** 弹窗层：非模态弹窗 */
+    /** 持久化层：始终显示的UI（Wallet、CommonSetting 等，原 WALLET 层） */
+    PERSISTENT = 250,
+    /** 弹窗层：非模态弹窗（GameConfig 等） */
     POPUP = 300,
     /** 模态层：MessageBox、确认框（阻挡背景） */
     MODAL = 400,

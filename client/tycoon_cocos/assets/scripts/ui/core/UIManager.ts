@@ -20,6 +20,7 @@ import { UIMapSelect } from "../game/UIMapSelect";
 import { UIWallet } from "../game/UIWallet";
 import { UIGameConfig } from "../game/UIGameConfig";
 import { UICommonSetting } from "../game/UICommonSetting";
+import { UICommonLayout } from "../game/UICommonLayout";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
@@ -85,10 +86,8 @@ export class UIManager {
     private _uiConstructors: Map<string, UIConstructor> = new Map();
     /** 当前显示的UI实例 */
     private _activeUIs: Map<string, UIBase> = new Map();
-    /** 全局持久化的 Wallet UI 实例 */
-    private _walletUI: UIWallet | null = null;
-    /** 全局持久化的 CommonSetting UI 实例 */
-    private _commonSettingUI: UICommonSetting | null = null;
+    /** 全局持久化的 CommonLayout UI 实例（包含 Wallet 和 CommonSetting） */
+    private _commonLayoutUI: UICommonLayout | null = null;
     /** UI缓存池 */
     private _uiCache: Map<string, UIBase> = new Map();
     /** 已加载的包 */
@@ -236,7 +235,7 @@ export class UIManager {
             { name: "BackgroundLayer", layer: UILayer.BACKGROUND, touchable: false },
             { name: "SceneLayer", layer: UILayer.SCENE, touchable: true },
             { name: "NormalLayer", layer: UILayer.NORMAL, touchable: true },
-            { name: "WalletLayer", layer: UILayer.WALLET, touchable: true },
+            { name: "PersistentLayer", layer: UILayer.PERSISTENT, touchable: true },
             { name: "PopupLayer", layer: UILayer.POPUP, touchable: true },
             { name: "ModalLayer", layer: UILayer.MODAL, touchable: true },  // 改为 true，让 MessageBox 可以接收点击
             { name: "NotificationLayer", layer: UILayer.NOTIFICATION, touchable: false },
@@ -851,13 +850,10 @@ export class UIManager {
             // 4. 显示Notification（全局通知中心，始终显示）
             await UIManager.instance.showUI("Notification");
 
-            // 4.5. 初始化全局 Wallet UI（持久化显示）
-            await UIManager.instance.initWalletUI();
+            // 4.5. 初始化全局 CommonLayout UI（持久化显示，包含 Wallet 和 CommonSetting）
+            await UIManager.instance.initCommonLayoutUI();
 
-            // 4.6. 初始化全局 CommonSetting UI（持久化显示，在 Wallet 右侧）
-            await UIManager.instance.initCommonSettingUI();
-
-            // 4.7. 初始化现金飞字动画系统
+            // 4.6. 初始化现金飞字动画系统
             CashFlyAnimation.getInstance().initialize('InGame', 'Cash');
             console.log("[UISystem] CashFlyAnimation system initialized");
 
@@ -958,11 +954,11 @@ export class UIManager {
     }
 
     /**
-     * 初始化全局 Wallet UI（持久化显示）
+     * 初始化全局 CommonLayout UI（持久化显示，包含 Wallet 和 CommonSetting）
      */
-    public async initWalletUI(packageName: string = "Common", componentName: string = "Wallet"): Promise<void> {
-        if (this._walletUI) {
-            console.warn("[UIManager] Wallet UI already initialized");
+    public async initCommonLayoutUI(packageName: string = "Common", componentName: string = "CommonLayout"): Promise<void> {
+        if (this._commonLayoutUI) {
+            console.warn("[UIManager] CommonLayout UI already initialized");
             return;
         }
 
@@ -974,107 +970,32 @@ export class UIManager {
                 return;
             }
 
-            // 创建 Wallet UI
-            const walletComponent = fgui.UIPackage.createObject(packageName, componentName);
-            if (!walletComponent) {
+            // 创建 CommonLayout UI
+            const layoutComponent = fgui.UIPackage.createObject(packageName, componentName);
+            if (!layoutComponent) {
                 console.error(`[UIManager] Failed to create ${packageName}.${componentName}`);
                 return;
             }
 
-            const walletCom = walletComponent.asCom;
-            this._walletUI = walletCom.node.addComponent(UIWallet);
-            this._walletUI.setUIName("Wallet");
-            this._walletUI.setPanel(walletCom);
-            this._walletUI.init();
+            const layoutCom = layoutComponent.asCom;
+            this._commonLayoutUI = layoutCom.node.addComponent(UICommonLayout);
+            this._commonLayoutUI.setUIName("CommonLayout");
+            this._commonLayoutUI.setPanel(layoutCom);
+            this._commonLayoutUI.init();
 
-            // 添加到 WALLET Layer
-            const walletLayer = this.getLayer(UILayer.WALLET);
-            if (!walletLayer) {
-                console.error("[UIManager] Wallet layer not found");
+            // 添加到 PERSISTENT Layer
+            const persistentLayer = this.getLayer(UILayer.PERSISTENT);
+            if (!persistentLayer) {
+                console.error("[UIManager] PERSISTENT layer not found");
                 return;
             }
 
-            walletLayer.addChild(walletCom);
+            persistentLayer.addChild(layoutCom);
 
-            // 设置位置（右上角）
-            if (this._groot) {
-                walletCom.setPosition(
-                    this._groot.width - walletCom.width - 20,
-                    20
-                );
-            }
-
-            console.log("[UIManager] Wallet UI initialized successfully");
+            console.log("[UIManager] CommonLayout UI initialized successfully");
 
         } catch (error) {
-            console.error("[UIManager] Failed to initialize Wallet UI:", error);
-        }
-    }
-
-    /**
-     * 初始化全局 CommonSetting UI（持久化显示，在 Wallet 右侧）
-     */
-    public async initCommonSettingUI(packageName: string = "Common", componentName: string = "CommonSetting"): Promise<void> {
-        if (this._commonSettingUI) {
-            console.warn("[UIManager] CommonSetting UI already initialized");
-            return;
-        }
-
-        try {
-            // 加载 Common package（如果未加载）
-            const loaded = await this.loadPackage(packageName);
-            if (!loaded) {
-                console.error(`[UIManager] Failed to load package: ${packageName}`);
-                return;
-            }
-
-            // 创建 CommonSetting UI
-            const settingComponent = fgui.UIPackage.createObject(packageName, componentName);
-            if (!settingComponent) {
-                console.error(`[UIManager] Failed to create ${packageName}.${componentName}`);
-                return;
-            }
-
-            const settingCom = settingComponent.asCom;
-            this._commonSettingUI = settingCom.node.addComponent(UICommonSetting);
-            this._commonSettingUI.setUIName("CommonSetting");
-            this._commonSettingUI.setPanel(settingCom);
-            this._commonSettingUI.init();
-
-            // 添加到 WALLET Layer（与 Wallet 同层）
-            const walletLayer = this.getLayer(UILayer.WALLET);
-            if (!walletLayer) {
-                console.error("[UIManager] Wallet layer not found");
-                return;
-            }
-
-            walletLayer.addChild(settingCom);
-
-            // 直接设置位置（在 Wallet 右侧）
-            if (this._groot && this._walletUI) {
-                const walletCom = walletLayer.getChild('Wallet');
-                if (walletCom) {
-                    // 设置在 Wallet 右侧
-                    const margin = 10;
-                    settingCom.setPosition(
-                        walletCom.x + walletCom.width + margin,
-                        walletCom.y
-                    );
-                    console.log("[UIManager] CommonSetting positioned next to Wallet");
-                } else {
-                    // Wallet 不存在，使用默认位置（右上角，预留空间）
-                    settingCom.setPosition(
-                        this._groot.width - settingCom.width - 300,  // 预留 Wallet 的空间
-                        20
-                    );
-                    console.log("[UIManager] CommonSetting positioned at default location");
-                }
-            }
-
-            console.log("[UIManager] CommonSetting UI initialized successfully");
-
-        } catch (error) {
-            console.error("[UIManager] Failed to initialize CommonSetting UI:", error);
+            console.error("[UIManager] Failed to initialize CommonLayout UI:", error);
         }
     }
 

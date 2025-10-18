@@ -15,7 +15,7 @@
     <component id="bk5ioll" name="NotifyToast.xml" path="/" exported="true"/>
     <component id="nev8olm" name="WalletItem.xml" path="/components/"/>
     <component id="nev8oln" name="WalletList.xml" path="/" exported="true"/>
-    <component id="lambos" name="Wallet.xml" path="/" exported="true"/>
+    <component id="lambos" name="Wallet.xml" path="/"/>
     <component id="nev8olo" name="Button11.xml" path="/components/" exported="true"/>
     <component id="pseuolp" name="Button12.xml" path="/components/" exported="true"/>
     <misc id="pseuolq" name="License.txt" path="/kenney_ui-pack/"/>
@@ -394,8 +394,9 @@
     <component id="mrxip4" name="GameConfig.xml" path="/" exported="true"/>
     <component id="mrxiow3" name="Button31.xml" path="/components/" exported="true"/>
     <component id="mrxiow4" name="Button32.xml" path="/components/" exported="true"/>
-    <component id="mrxiow5" name="CommonSetting.xml" path="/" exported="true"/>
+    <component id="mrxiow5" name="CommonSetting.xml" path="/"/>
     <component id="mrxiow6" name="Button33.xml" path="/components/" exported="true"/>
+    <component id="mrxiow7" name="CommonLayout.xml" path="/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

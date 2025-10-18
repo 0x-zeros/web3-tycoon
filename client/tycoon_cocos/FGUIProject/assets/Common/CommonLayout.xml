@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1920,1080">
+  <displayList>
+    <component id="n0_mrxi" name="wallet" src="lambos" fileName="Wallet.xml" xy="1294,21">
+      <relation target="" sidePair="right-right,top-top"/>
+    </component>
+    <component id="n1_mrxi" name="commonSetting" src="mrxiow5" fileName="CommonSetting.xml" xy="1652,68">
+      <relation target="" sidePair="right-right,top-top"/>
+    </component>
+  </displayList>
+</component>

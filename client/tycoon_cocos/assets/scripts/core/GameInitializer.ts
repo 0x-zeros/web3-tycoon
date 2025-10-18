@@ -281,8 +281,11 @@ export class GameInitializer extends Component {
             // 初始化事件系统
             this.initializeEventSystem();
 
-            // 初始化 SuiManager
-            await this.initializeSuiManager();
+            // ✅ 异步初始化 SuiManager（不阻塞 UI 显示）
+            // 在后台完成 Sui 网络连接和数据预加载
+            this.initializeSuiManager().catch(error => {
+                console.error('[GameInitializer] SuiManager initialization failed:', error);
+            });
 
             // 设置全局访问器
             this.setupGlobalAccessors();

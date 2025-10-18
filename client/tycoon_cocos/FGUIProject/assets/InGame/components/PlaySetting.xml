@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="800,600">
   <displayList>
-    <component id="n0_f49a" name="n0" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="86,73" size="30,30"/>
-    <component id="n6_f49a" name="n6" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="86,231" size="30,30"/>
-    <component id="n7_f49a" name="n7" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="86,401" size="30,30"/>
-    <text id="n1_f49a" name="n1" xy="197,62" size="539,60" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动BUY_PROPERTY"/>
-    <text id="n2_f49a" name="n2" xy="13,472" size="701,68" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo： 设置寻路偏好"/>
-    <text id="n3_f49a" name="n3" xy="199,335" size="539,60" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动BUY_PROPERTY"/>
-    <text id="n4_f49a" name="n4" xy="200,212" size="539,60" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动BUY_PROPERTY"/>
+    <image id="n18_mrxi" name="n18" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="800,600">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n20_mrxi" name="n20" xy="8,4" size="701,68" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo： 设置自动偏好（默认为true）"/>
+    <text id="n2_f49a" name="n2" xy="25,299" size="701,68" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo： 设置寻路偏好"/>
+    <text id="n9_mrxi" name="n9" xy="89,78" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动购买建筑"/>
+    <component id="n10_mrxi" name="btn_1" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="23,76"/>
+    <text id="n11_mrxi" name="n11" xy="89,146" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否自动升级建筑"/>
+    <component id="n12_mrxi" name="btn_2" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="23,144"/>
+    <text id="n13_mrxi" name="n13" xy="89,217" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="是否使用免租卡"/>
+    <component id="n14_mrxi" name="btn_3" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="23,215"/>
+    <component id="n17_mrxi" name="btn_exitGame" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="23,503" size="240,74">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="退出游戏"/>
+    </component>
+    <component id="n19_mrxi" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="705,11" size="82,52">
+      <relation target="" sidePair="center-center,middle-middle"/>
+      <Button title="关闭"/>
+    </component>
   </displayList>
 </component>

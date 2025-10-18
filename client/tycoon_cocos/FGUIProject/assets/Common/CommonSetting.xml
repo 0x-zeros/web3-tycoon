@@ -7,10 +7,10 @@
     <component id="n22_mrxi" name="btn_gameConfig" src="mrxiow6" fileName="components/Button33.xml" xy="40,18" size="178,44">
       <Button title="设置"/>
     </component>
-    <component id="n23_mrxi" name="btn_playSetting" src="mrxiow6" fileName="components/Button33.xml" xy="40,78" size="176,40">
+    <component id="n23_mrxi" name="btn_playSetting" src="mrxiow6" fileName="components/Button33.xml" xy="40,78" size="176,40" visible="false">
       <Button title="play设置"/>
     </component>
-    <component id="n24_mrxi" name="btn_debug" src="mrxiow6" fileName="components/Button33.xml" xy="40,137" size="176,40">
+    <component id="n24_mrxi" name="btn_debug" src="mrxiow6" fileName="components/Button33.xml" xy="40,137" size="176,40" visible="false">
       <Button title="调试"/>
     </component>
   </displayList>

@@ -590,9 +590,18 @@ export class UIManager {
     }
 
     /**
-     * 获取UI实例
+     * 获取UI实例（需要 layer 参数）
      */
     public getUI<T extends UIBase>(layer: UILayer, uiName: string): T | null {
+        return (this._activeUIs.get(uiName) as T) || null;
+    }
+
+    /**
+     * 获取活动的 UI 实例（不需要 layer 参数）
+     * @param uiName UI 名称
+     * @returns UI 实例或 null
+     */
+    public getActiveUI<T extends UIBase = UIBase>(uiName: string): T | null {
         return (this._activeUIs.get(uiName) as T) || null;
     }
 
@@ -1015,6 +1024,30 @@ export class UIManager {
      */
     public isGameConfigVisible(): boolean {
         return this._commonLayoutUI?.isGameConfigVisible() || false;
+    }
+
+    /**
+     * 显示游戏内按钮（btn_playSetting, btn_debug）
+     * 由 UIInGame.onShow() 调用
+     */
+    public showInGameButtons(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.showInGameButtons();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
+    }
+
+    /**
+     * 隐藏游戏内按钮（btn_playSetting, btn_debug）
+     * 由 UIInGame.onHide() 调用
+     */
+    public hideInGameButtons(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.hideInGameButtons();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
     }
 
     /**

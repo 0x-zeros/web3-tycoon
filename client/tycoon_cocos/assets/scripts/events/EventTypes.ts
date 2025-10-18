@@ -40,7 +40,9 @@ export const EventTypes = {
         /** 屏幕尺寸变化 */
         ScreenSizeChanged: "ui_screen_size_changed",
         /** 卡牌飞出动画 */
-        CardFlyOut: "ui_card_fly_out"
+        CardFlyOut: "ui_card_fly_out",
+        /** PlaySetting 面板关闭 */
+        PlaySettingClosed: "ui_play_setting_closed"
     },
 
     /** 地图相关事件 */

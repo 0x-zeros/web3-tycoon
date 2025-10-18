@@ -397,6 +397,7 @@
     <component id="mrxiow5" name="CommonSetting.xml" path="/"/>
     <component id="mrxiow6" name="Button33.xml" path="/components/" exported="true"/>
     <component id="mrxiow7" name="CommonLayout.xml" path="/" exported="true"/>
+    <component id="mrxiow8" name="SuiConfig.xml" path="/"/>
   </resources>
   <publish name=""/>
 </packageDescription>

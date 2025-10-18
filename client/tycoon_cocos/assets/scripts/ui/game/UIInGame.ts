@@ -12,6 +12,7 @@ import { UIInGameDice } from "./UIInGameDice";
 import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
+import { UIInGamePlaySetting } from "./UIInGamePlaySetting";
 import { MapManager } from "../../map/MapManager";
 import { DecisionType } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
@@ -34,6 +35,7 @@ export class UIInGame extends UIBase {
     private m_playerPanelUI: UIInGamePlayer | null = null;
     private m_infoUI: UIInGameInfo | null = null;
     private m_buildingSelectUI: UIInGameBuildingSelect | null = null;
+    private m_playSettingUI: UIInGamePlaySetting | null = null;
 
     // ================ 控制器 ================
     private m_modeController: fgui.Controller;
@@ -42,7 +44,6 @@ export class UIInGame extends UIBase {
     private _pauseBtn: fgui.GButton | null = null;
     private _settingsBtn: fgui.GButton | null = null;
     private _bagBtn: fgui.GButton | null = null;
-    private _exitGameBtn: fgui.GButton | null = null;
 
     // ================ 其他 ================
     private _gameTimerID: number | null = null;
@@ -151,11 +152,20 @@ export class UIInGame extends UIBase {
             console.log('[UIInGame] BuildingSelect UI component created');
         }
 
+        // m_playSettingUI
+        const playSettingComponent = this.getChild('playSetting')?.asCom;
+        if (playSettingComponent) {
+            this.m_playSettingUI = playSettingComponent.node.addComponent(UIInGamePlaySetting);
+            this.m_playSettingUI.setUIName("InGamePlaySetting");
+            this.m_playSettingUI.setPanel(playSettingComponent);
+            this.m_playSettingUI.init();
+            console.log('[UIInGame] PlaySetting UI component created');
+        }
+
         // 功能按钮
         this._pauseBtn = this.getButton("btnPause");
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
-        this._exitGameBtn = this.getButton("btn_exitGame");
 
         // 初始化时主动设置一次 mode 控制器（防止错过 EditModeChanged 事件）
         this.updateModeController();
@@ -197,10 +207,6 @@ export class UIInGame extends UIBase {
             this._bagBtn.onClick(this._onBagClick, this);
         }
 
-        if (this._exitGameBtn) {
-            this._exitGameBtn.onClick(this._onExitGameClick, this);
-        }
-
         // 监听游戏事件
         EventBus.on(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
@@ -228,10 +234,6 @@ export class UIInGame extends UIBase {
             this._bagBtn.offClick(this._onBagClick, this);
         }
 
-        if (this._exitGameBtn) {
-            this._exitGameBtn.offClick(this._onExitGameClick, this);
-        }
-
         EventBus.off(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.off(EventTypes.Game.GameResume, this._onGameResume, this);
         EventBus.off(EventTypes.Map.EditModeChanged, this._onEditModeChanged, this);
@@ -247,7 +249,7 @@ export class UIInGame extends UIBase {
     /**
      * 显示回调
      */
-    protected onShow(data?: any): void {
+    protected async onShow(data?: any): Promise<void> {
         console.log("[UIInGame] Showing in-game UI");
 
         // 开始游戏计时器
@@ -262,6 +264,10 @@ export class UIInGame extends UIBase {
         // 标记已初始化
         this._isInitialized = true;
 
+        // 通知 CommonLayout 显示游戏内按钮
+        const { UIManager } = await import("../core/UIManager");
+        UIManager.instance?.showInGameButtons();
+
         // 主动检查是否有待决策需要显示（异步，不阻塞）
         this._showDecisionDialogIfNeeded().catch(error => {
             console.error('[UIInGame] Failed to show decision dialog:', error);
@@ -273,11 +279,15 @@ export class UIInGame extends UIBase {
     /**
      * 隐藏回调
      */
-    protected onHide(): void {
+    protected async onHide(): Promise<void> {
         console.log("[UIInGame] Hiding in-game UI");
 
         // 停止游戏计时器
         this._stopGameTimer();
+
+        // 通知 CommonLayout 隐藏游戏内按钮
+        const { UIManager } = await import("../core/UIManager");
+        UIManager.instance?.hideInGameButtons();
     }
 
     /**
@@ -336,17 +346,6 @@ export class UIInGame extends UIBase {
         EventBus.emit(EventTypes.UI.OpenBag, {
             source: "in_game_ui"
         });
-    }
-
-    /**
-     * 退出游戏按钮点击
-     * 调用 UIManager.exitGame() 统一处理退出逻辑
-     */
-    private async _onExitGameClick(): Promise<void> {
-        console.log("[UIInGame] Exit game button clicked");
-        // 动态导入 UIManager（避免循环依赖）
-        const { UIManager } = await import("../core/UIManager");
-        UIManager.instance?.exitGame();
     }
 
     /**
@@ -523,6 +522,62 @@ export class UIInGame extends UIBase {
             default:
                 console.warn('[UIInGame] 未知的决策类型', decision.type);
         }
+    }
+
+    // ================== 子组件控制方法 ==================
+
+    /**
+     * 切换 PlaySetting 面板显示/隐藏
+     * 由 CommonSetting.btn_playSetting 调用
+     */
+    public togglePlaySetting(): boolean {
+        if (!this.m_playSettingUI || !this.m_playSettingUI.panel) {
+            console.warn('[UIInGame] PlaySetting UI not initialized');
+            return false;
+        }
+
+        const newVisible = !this.m_playSettingUI.panel.visible;
+        this.m_playSettingUI.panel.visible = newVisible;
+
+        console.log('[UIInGame] PlaySetting toggled:', newVisible);
+
+        // 关闭时发送事件，同步按钮状态
+        if (!newVisible) {
+            EventBus.emit(EventTypes.UI.PlaySettingClosed);
+        }
+
+        return newVisible;
+    }
+
+    /**
+     * 切换 Debug 面板显示/隐藏
+     * 由 CommonSetting.btn_debug 调用
+     */
+    public toggleDebug(): boolean {
+        if (!this.m_debugUI || !this.m_debugUI.panel) {
+            console.warn('[UIInGame] Debug UI not initialized');
+            return false;
+        }
+
+        const newVisible = !this.m_debugUI.panel.visible;
+        this.m_debugUI.panel.visible = newVisible;
+
+        console.log('[UIInGame] Debug toggled:', newVisible);
+        return newVisible;
+    }
+
+    /**
+     * 获取 PlaySetting 可见性状态
+     */
+    public isPlaySettingVisible(): boolean {
+        return this.m_playSettingUI?.panel?.visible || false;
+    }
+
+    /**
+     * 获取 Debug 可见性状态
+     */
+    public isDebugVisible(): boolean {
+        return this.m_debugUI?.panel?.visible || false;
     }
 
     /**

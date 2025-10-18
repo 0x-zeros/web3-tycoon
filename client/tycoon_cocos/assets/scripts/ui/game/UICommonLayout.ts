@@ -121,4 +121,30 @@ export class UICommonLayout extends UIBase {
     public isGameConfigVisible(): boolean {
         return this.gameConfig?.visible || false;
     }
+
+    // ================== 游戏内按钮控制（转发到 CommonSetting） ==================
+
+    /**
+     * 显示游戏内按钮（在 UIInGame 显示时调用）
+     */
+    public showInGameButtons(): void {
+        if (!this.settingUI) {
+            console.warn('[UICommonLayout] settingUI not initialized');
+            return;
+        }
+
+        this.settingUI.showInGameButtons();
+    }
+
+    /**
+     * 隐藏游戏内按钮（在 UIInGame 隐藏时调用）
+     */
+    public hideInGameButtons(): void {
+        if (!this.settingUI) {
+            console.warn('[UICommonLayout] settingUI not initialized');
+            return;
+        }
+
+        this.settingUI.hideInGameButtons();
+    }
 }

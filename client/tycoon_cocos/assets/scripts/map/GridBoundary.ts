@@ -49,8 +49,8 @@ export class GridBoundary extends Component {
     @property({ tooltip: '原点标记颜色（红色）' })
     public originColor: Color = new Color(255, 0, 0, 255);
 
-    @property({ tooltip: '是否启用' })
-    public enabled: boolean = true;
+    @property({ tooltip: '是否显示边界' })
+    public visible: boolean = true;
 
     private _isInitialized: boolean = false;
     private _useGeometryRenderer: boolean = true;
@@ -64,7 +64,7 @@ export class GridBoundary extends Component {
     }
 
     protected update(): void {
-        if (!this.enabled) return;
+        if (!this.visible) return;
         this.drawBoundary();
     }
 
@@ -260,7 +260,7 @@ export class GridBoundary extends Component {
     /**
      * 启用/禁用边界显示
      */
-    public setEnabled(enabled: boolean): void {
-        this.enabled = enabled;
+    public setVisible(visible: boolean): void {
+        this.visible = visible;
     }
 }

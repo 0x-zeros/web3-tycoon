@@ -18,7 +18,7 @@ import {
     _decorator, Component, Camera, Node, Vec3, MeshRenderer,
     Material, Mesh, Texture2D, SpriteFrame, utils, primitives,
     Quat, tween, Tween, resources, ImageAsset, UITransform,
-    Size, Sprite, find, EffectAsset, Prefab, instantiate
+    Size, Sprite, find, EffectAsset, Prefab, instantiate, CCInteger
 } from 'cc';
 import type { Role } from './Role';
 import { ActorConfigManager } from './ActorConfig';
@@ -39,7 +39,7 @@ export class PaperActor extends Component {
     @property
     level: number = 1;  // 等级（主要用于建筑）
 
-    @property({ type: ActorType })
+    @property({ type: CCInteger, tooltip: 'Actor类型 (0=NPC, 1=PLAYER, 2=BUILDING, 3=OBJECT)' })
     actorType: ActorType = ActorType.NPC;
 
     @property(Camera)

@@ -4,11 +4,11 @@
     <graph id="n11_mumq" name="n11" xy="0,0" size="1920,1080" type="rect" lineSize="0" fillColor="#ffa4ceda">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <image id="n10_mumq" name="n10" src="mumq5" fileName="images/bg.png" xy="746,26" visible="false"/>
-    <image id="n12_mumq" name="n12" src="mumq7" fileName="images/logo.png" xy="-105,-232" size="993,993"/>
     <component id="n16_azob" name="keyPairInfo" src="azobb" fileName="components/Keypair.xml" xy="146,557"/>
-    <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="206,867" size="364,130">
+    <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="801,778" size="364,130">
       <Button title="开始游戏"/>
     </component>
+    <image id="n17_mrxi" name="n17" src="mrxid" fileName="images/logo_deco.png" xy="86,42"/>
+    <image id="n20_mrxi" name="n20" src="mrxic" fileName="images/logo512.png" xy="1344,28" rotation="17"/>
   </displayList>
 </component>

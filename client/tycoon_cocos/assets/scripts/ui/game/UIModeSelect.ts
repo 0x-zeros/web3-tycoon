@@ -86,6 +86,11 @@ export class UIModeSelect extends UIBase {
     protected onShow(data?: any): void {
         console.log("[UIModeSelect] Showing mode select UI");
 
+        // 隐藏 Boot Splash（页面加载时的启动画面）
+        if (typeof window !== 'undefined' && (window as any).hideBootSplash) {
+            (window as any).hideBootSplash();
+        }
+
         // 根据 signerType 控制 keyPairInfo 显示
         this._updateKeypairInfoVisibility();
 

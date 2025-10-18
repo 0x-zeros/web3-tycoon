@@ -2,11 +2,13 @@
 <packageDescription id="84ilx2yx">
   <resources>
     <component id="b7yg0" name="Main.xml" path="/" exported="true"/>
-    <image id="mumq5" name="bg.png" path="/images/"/>
-    <image id="mumq7" name="logo.png" path="/images/"/>
+    <image id="mumq5" name="bg.png" path="/images/" scale9grid="146,170,797,521"/>
     <component id="pseu8" name="Loading.xml" path="/" exported="true"/>
     <component id="pseu9" name="LoadingProgressBar.xml" path="/components/"/>
     <component id="azobb" name="Keypair.xml" path="/components/"/>
+    <image id="mrxic" name="logo512.png" path="/images/"/>
+    <image id="mrxid" name="logo_deco.png" path="/images/"/>
+    <image id="mrxie" name="logo_deco_a.png" path="/images/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

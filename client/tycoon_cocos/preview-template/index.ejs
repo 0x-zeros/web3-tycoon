@@ -19,6 +19,9 @@
 
         <link rel="stylesheet" type="text/css" href="./index.css" />
 
+        <!-- 预加载 Boot Splash logo（最高优先级） -->
+        <link rel="preload" href="./logo.png" as="image">
+
         <!-- Sui SDK (System.register 格式，必须在 main.js 之前加载) -->
         <script src="./libs/sui.system.js"></script>
     </head>
@@ -26,6 +29,18 @@
         <%- include(cocosToolBar, {config: config}) %>
         <div id="content" class="content" style="overflow: hidden;">
             <div class="contentWrap">
+                <!-- ============================================ -->
+                <!-- Boot Splash - 预览时也显示 -->
+                <!-- logo.png 为外部文件，通过 preload 提示浏览器优先加载 -->
+                <!-- ============================================ -->
+                <div id="boot-splash" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#a8c5d1;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity 0.8s ease-out;">
+                  <img src="./logo.png" alt="Web3 Tycoon" style="max-width:60%;max-height:60%;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.3));">
+                </div>
+                <script>
+                  window.hideBootSplash=function(){var s=document.getElementById('boot-splash');if(s){console.log('[BootSplash] Hiding...');s.style.opacity='0';setTimeout(function(){s.style.display='none';s.remove();console.log('[BootSplash] Removed');},800);}};
+                </script>
+                <!-- ============================================ -->
+
                 <div id="GameDiv" class="wrapper">
                     <div id="Cocos3dGameContainer">
                         <canvas id="GameCanvas" tabindex="-1" style="background-color: '';"></canvas>

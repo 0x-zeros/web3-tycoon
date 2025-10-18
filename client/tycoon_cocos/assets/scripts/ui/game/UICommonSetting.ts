@@ -42,20 +42,23 @@ export class UICommonSetting extends UIBase {
         this.btn_debug = this.getButton('btn_debug')!;
 
         // 绑定事件
-        this.btn_gameConfig.onClick(this, this.onGameConfigClick);
-        this.btn_debug.onClick(this, this.onDebugClick);
+        this.btn_gameConfig.onClick(this.onGameConfigClick, this);
+        this.btn_debug.onClick(this.onDebugClick, this);
 
         console.log('[UICommonSetting] Initialized');
     }
 
     /**
-     * 游戏配置按钮点击
+     * 游戏配置按钮点击（Toggle 按钮）
      */
     private onGameConfigClick(): void {
         console.log('[UICommonSetting] Game Config button clicked');
 
-        // 切换 GameConfig 界面显示/隐藏
-        UIManager.instance.toggle(UILayer.POPUP, 'GameConfig');
+        // 切换 GameConfig 显示/隐藏
+        UIManager.instance.toggleGameConfig();
+
+        // 同步按钮状态
+        this.btn_gameConfig.selected = UIManager.instance.isGameConfigVisible();
     }
 
     /**

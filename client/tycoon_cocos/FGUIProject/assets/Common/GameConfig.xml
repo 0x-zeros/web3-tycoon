@@ -6,7 +6,7 @@
     <text id="n11_mrxi" name="n11" xy="8,269" size="364,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="使用自定义RPC"/>
     <component id="n12_mrxi" name="btn_rateLimitRPC" src="mrxiow4" fileName="components/Button32.xml" xy="11,133"/>
     <component id="n10_mrxi" name="btn_useCustomPRC" src="mrxiow4" fileName="components/Button32.xml" xy="79,329"/>
-    <text id="n1_f49a" name="rpcUrl" xy="145,331" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="https://fullnode.mainnet.sui.io:443" input="true"/>
+    <text id="n1_f49a" name="rpcUrl" xy="144,334" size="640,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="https://fullnode.mainnet.sui.io:443" input="true" prompt="输入自定义 RPC URL..."/>
     <component id="n14_mrxi" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" xy="710,8" size="82,52">
       <relation target="" sidePair="center-center,middle-middle"/>
       <Button title="关闭"/>

@@ -845,7 +845,7 @@ export class UIManager {
             UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[3]);
             UIManager.instance.registerMessageBoxUI(); // 注册MessageBox
             UIManager.instance.registerNotificationUI(); // 注册Notification
-            UIManager.instance.registerGameConfigUI(); // 注册GameConfig
+            // GameConfig 不再单独注册，作为 CommonLayout 的子组件管理
 
             // 4. 显示Notification（全局通知中心，始终显示）
             await UIManager.instance.showUI("Notification");
@@ -1000,16 +1000,21 @@ export class UIManager {
     }
 
     /**
-     * 注册 GameConfig UI
+     * 切换 GameConfig 显示/隐藏
      */
-    public registerGameConfigUI(packageName: string = "Common", componentName: string = "GameConfig"): void {
-        this.registerUI<UIGameConfig>("GameConfig", {
-            packageName,
-            componentName,
-            cache: true,
-            isWindow: false,
-            layer: UILayer.POPUP
-        }, UIGameConfig);
+    public toggleGameConfig(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.toggleGameConfig();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
+    }
+
+    /**
+     * 获取 GameConfig 可见性
+     */
+    public isGameConfigVisible(): boolean {
+        return this._commonLayoutUI?.isGameConfigVisible() || false;
     }
 
     /**

@@ -391,7 +391,7 @@
     <image id="pseuow0" name="crosshair_color_d.png" path="/kenney_ui-pack/Yellow/"/>
     <component id="lrk2ow1" name="Button13.xml" path="/components/" exported="true"/>
     <component id="f49aow2" name="MessageBox1.xml" path="/" exported="true"/>
-    <component id="mrxip4" name="GameConfig.xml" path="/" exported="true"/>
+    <component id="mrxip4" name="GameConfig.xml" path="/"/>
     <component id="mrxiow3" name="Button31.xml" path="/components/" exported="true"/>
     <component id="mrxiow4" name="Button32.xml" path="/components/" exported="true"/>
     <component id="mrxiow5" name="CommonSetting.xml" path="/"/>

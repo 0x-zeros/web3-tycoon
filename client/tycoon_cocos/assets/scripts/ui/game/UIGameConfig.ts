@@ -12,6 +12,8 @@ import { UILayer } from '../core/UITypes';
 import { UINotification } from '../utils/UINotification';
 import { UIMessage } from '../utils/UIMessage';
 import { RpcConfigManager } from '../../sui/config/RpcConfigManager';
+import { SuiManager } from '../../sui/managers/SuiManager';
+import { getNetworkRpcUrl } from '../../sui/config/SuiConfig';
 
 const { ccclass } = _decorator;
 
@@ -45,9 +47,9 @@ export class UIGameConfig extends UIBase {
         this.btn_close = this.getButton('btn_close')!;
 
         // 绑定事件
-        this.btn_rateLimitRPC.onClick(this, this.onToggleRateLimit);
-        this.btn_useCustomPRC.onClick(this, this.onApplyCustomRpc);
-        this.btn_close.onClick(this, this.onClose);
+        this.btn_rateLimitRPC.onClick(this.onToggleRateLimit, this);
+        this.btn_useCustomPRC.onClick(this.onApplyCustomRpc, this);
+        this.btn_close.onClick(this.onClose, this);
 
         console.log('[UIGameConfig] Initialized');
     }
@@ -67,7 +69,7 @@ export class UIGameConfig extends UIBase {
         const mode = RpcConfigManager.getMode();
         this.btn_rateLimitRPC.selected = (mode === 'ratelimit');
 
-        // 加载自定义 RPC
+        // 只显示自定义 RPC，没有则留空
         const customRpc = RpcConfigManager.getCustomRpcUrl();
         this.rpcUrl.text = customRpc || '';
 
@@ -129,13 +131,10 @@ export class UIGameConfig extends UIBase {
      * 关闭界面
      */
     private onClose(): void {
-        this.hide();
-    }
-
-    /**
-     * 隐藏时的清理
-     */
-    protected onHide(): void {
-        // 无需特殊清理
+        // 通过 parent 的 visible 控制（因为现在是 CommonLayout 的子组件）
+        if (this.panel) {
+            this.panel.visible = false;
+            console.log('[UIGameConfig] Closed (set visible = false)');
+        }
     }
 }

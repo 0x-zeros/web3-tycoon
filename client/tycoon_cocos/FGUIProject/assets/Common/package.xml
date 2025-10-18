@@ -398,6 +398,8 @@
     <component id="mrxiow6" name="Button33.xml" path="/components/" exported="true"/>
     <component id="mrxiow7" name="CommonLayout.xml" path="/" exported="true"/>
     <component id="mrxiow8" name="SuiConfig.xml" path="/"/>
+    <component id="mrxiow9" name="Button23.xml" path="/components/" exported="true"/>
+    <component id="mrxiowa" name="Keypair.xml" path="/components/"/>
   </resources>
   <publish name=""/>
 </packageDescription>

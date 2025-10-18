@@ -4,13 +4,16 @@
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="256,256">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <component id="n22_mrxi" name="btn_gameConfig" src="mrxiow6" fileName="components/Button33.xml" xy="40,18" size="178,44">
+    <component id="n22_mrxi" name="btn_gameConfig" src="mrxiow6" fileName="components/Button33.xml" xy="33,14" size="190,52">
       <Button title="设置"/>
     </component>
-    <component id="n23_mrxi" name="btn_playSetting" src="mrxiow6" fileName="components/Button33.xml" xy="40,78" size="176,40" visible="false">
+    <component id="n25_mrxi" name="btn_env" src="mrxiow6" fileName="components/Button33.xml" xy="34,74" size="190,52">
+      <Button title="切换网络"/>
+    </component>
+    <component id="n23_mrxi" name="btn_playSetting" src="mrxiow6" fileName="components/Button33.xml" xy="33,134" size="190,52" visible="false">
       <Button title="play设置"/>
     </component>
-    <component id="n24_mrxi" name="btn_debug" src="mrxiow6" fileName="components/Button33.xml" xy="40,137" size="176,40" visible="false">
+    <component id="n24_mrxi" name="btn_debug" src="mrxiow6" fileName="components/Button33.xml" xy="33,195" size="190,52" visible="false">
       <Button title="调试"/>
     </component>
   </displayList>

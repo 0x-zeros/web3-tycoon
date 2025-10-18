@@ -1,15 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="800,600">
+  <controller name="env" pages="0,mainnet,1,testnet,2,devnet,3,local" selected="3"/>
+  <controller name="useKeypair" pages="0,yes,1,no" selected="0"/>
   <displayList>
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="800,600"/>
-    <text id="n13_mrxi" name="n1" xy="37,22" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="4个网络，和keypair todo"/>
-    <text id="n11_mrxi" name="n11" xy="8,269" size="364,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="使用自定义RPC"/>
-    <component id="n12_mrxi" name="btn_rateLimitRPC" src="mrxiow4" fileName="components/Button32.xml" xy="11,133"/>
-    <component id="n10_mrxi" name="btn_useCustomPRC" src="mrxiow4" fileName="components/Button32.xml" xy="79,329"/>
-    <text id="n1_f49a" name="rpcUrl" xy="144,334" size="640,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="https://fullnode.mainnet.sui.io:443" input="true" prompt="输入自定义 RPC URL..."/>
-    <component id="n14_mrxi" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" xy="710,8" size="82,52">
+    <component id="n15_mrxi" name="n15" src="mrxiow9" fileName="components/Button23.xml" xy="595,5" size="194,84">
+      <Button checked="true" title="local" controller="env" page="3"/>
+    </component>
+    <component id="n16_mrxi" name="n16" src="mrxiow9" fileName="components/Button23.xml" xy="11,5" size="194,84">
+      <Button title="mainnet" controller="env" page="0"/>
+    </component>
+    <component id="n17_mrxi" name="n17" src="mrxiow9" fileName="components/Button23.xml" xy="206,5" size="194,84">
+      <Button title="testnet" controller="env" page="1"/>
+    </component>
+    <component id="n18_mrxi" name="n18" src="mrxiow9" fileName="components/Button23.xml" xy="401,5" size="194,84">
+      <Button title="devnet" controller="env" page="2"/>
+    </component>
+    <text id="n13_mrxi" name="desc_mainnet" xy="11,112" size="780,95" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到mainet，只能使用浏览器钱包，比如slush，suiet等。">
+      <gearDisplay controller="env" pages="0"/>
+    </text>
+    <text id="n1_f49a" name="n1" xy="136,250" size="647,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="使用keypair">
+      <gearDisplay controller="env" pages="2,3"/>
+    </text>
+    <text id="n20_mrxi" name="desc_testnet" xy="9,107" size="780,95" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到testnet，只能使用浏览器钱包，比如slush，suiet等。(现在自动faucet无法获取到测试sui代币)">
+      <gearDisplay controller="env" pages="1"/>
+    </text>
+    <text id="n21_mrxi" name="desc_devnet" xy="10,94" size="780,140" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到devnet，默认使用自动生成的keypair，保存在本地(localStorage)。也可以切换使用浏览器钱包，比如slush，suiet等。">
+      <gearDisplay controller="env" pages="2"/>
+    </text>
+    <text id="n22_mrxi" name="desc_local" xy="11,92" size="780,140" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到local，使用自动生成的keypair，保存在本地(localStorage)。 该选项一般只是测试用，需要本地机器部署move端。">
+      <gearDisplay controller="env" pages="3"/>
+    </text>
+    <component id="n10_mrxi" name="btn_toggleKeypair" src="mrxiow4" fileName="components/Button32.xml" xy="66,242">
+      <gearDisplay controller="env" pages="2,3"/>
+      <Button checked="true" controller="useKeypair" page="0"/>
+    </component>
+    <component id="n14_mrxi" name="btn_ok" src="lrk2ow1" fileName="components/Button13.xml" xy="592,507" size="194,84">
       <relation target="" sidePair="center-center,middle-middle"/>
-      <Button title="关闭"/>
+      <Button title="切换"/>
+    </component>
+    <component id="n23_mrxi" name="btn_cancel" src="lrk2ow1" fileName="components/Button13.xml" xy="15,507" size="194,84">
+      <relation target="" sidePair="center-center,middle-middle"/>
+      <Button title="取消"/>
+    </component>
+    <component id="n24_mrxi" name="keypair" src="mrxiowa" fileName="components/Keypair.xml" xy="64,367">
+      <gearDisplay controller="env" pages="2,3"/>
+      <gearDisplay2 controller="useKeypair" pages="0" condition="0"/>
     </component>
   </displayList>
 </component>

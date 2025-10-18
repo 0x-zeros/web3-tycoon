@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="512,128">
+  <displayList>
+    <image id="n0_azob" name="n0" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="512,128">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n1_azob" name="n1" xy="12,10" size="149,45" fontSize="30" color="#ffffff" autoSize="none" text="用户"/>
+    <text id="n2_azob" name="n2" xy="12,74" size="158,45" fontSize="30" color="#ffffff" autoSize="none" text="密码"/>
+    <text id="n5_azob" name="storageKey" xy="198,10" size="301,42" fontSize="30" color="#ffffff" autoSize="none" text="dev0" input="true"/>
+    <text id="n6_azob" name="password" xy="198,74" size="301,42" fontSize="30" color="#ffffff" autoSize="none" text="password0" input="true"/>
+    <text id="n10_mrxi" name="n10" xy="4,-57" size="647,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="(修改用户名可以切换新的keypair)"/>
+  </displayList>
+</component>

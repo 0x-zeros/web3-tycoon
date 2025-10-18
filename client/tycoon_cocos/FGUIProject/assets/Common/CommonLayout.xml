@@ -7,6 +7,7 @@
     <component id="n1_mrxi" name="commonSetting" src="mrxiow5" fileName="CommonSetting.xml" xy="1652,68">
       <relation target="" sidePair="right-right,top-top"/>
     </component>
-    <component id="n2_mrxi" name="gameConfig" src="mrxip4" fileName="GameConfig.xml" xy="942,245"/>
+    <component id="n2_mrxi" name="gameConfig" src="mrxip4" fileName="GameConfig.xml" xy="504,349" visible="false"/>
+    <component id="n3_mrxi" name="suiConfig" src="mrxiow8" fileName="SuiConfig.xml" xy="505,346" visible="false"/>
   </displayList>
 </component>

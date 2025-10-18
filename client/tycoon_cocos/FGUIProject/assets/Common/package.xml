@@ -386,11 +386,14 @@
     <image id="pseuovv" name="panel_glass_notch_tl.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuovw" name="panel_glass_notch_br.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuovx" name="panel_glass_notch_bl.png" path="/kenney_ui-pack/Extra/"/>
-    <image id="pseuovy" name="panel_glass.png" path="/kenney_ui-pack/Extra/"/>
+    <image id="pseuovy" name="panel_glass.png" path="/kenney_ui-pack/Extra/" exported="true"/>
     <image id="pseuovz" name="panel_glass_tab_blade.png" path="/kenney_ui-pack/Extra/"/>
     <image id="pseuow0" name="crosshair_color_d.png" path="/kenney_ui-pack/Yellow/"/>
     <component id="lrk2ow1" name="Button13.xml" path="/components/" exported="true"/>
     <component id="f49aow2" name="MessageBox1.xml" path="/" exported="true"/>
+    <component id="mrxip4" name="GameConfig.xml" path="/"/>
+    <component id="mrxiow3" name="Button31.xml" path="/components/" exported="true"/>
+    <component id="mrxiow4" name="Button32.xml" path="/components/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

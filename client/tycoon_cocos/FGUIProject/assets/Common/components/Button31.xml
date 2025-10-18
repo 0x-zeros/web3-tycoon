@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="56,56" extention="Button">
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
+  <displayList>
+    <image id="n7_mrxi" name="n7" src="pseuouy" fileName="kenney_ui-pack/Extra/crosshair_b.png" xy="0,0">
+      <gearDisplay controller="button" pages="0,1,2,3"/>
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <image id="n9_mrxi" name="n9" src="pseuovb" fileName="kenney_ui-pack/Extra/cursor_e.png" xy="22,22" size="12,12">
+      <gearDisplay controller="button" pages="1,3"/>
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+  </displayList>
+  <Button mode="Check"/>
+</component>

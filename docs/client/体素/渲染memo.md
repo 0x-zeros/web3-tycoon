@@ -1,1 +1,0 @@
-![](../../../assets/images_md/image-2025-09-06T15-11-50-136Z.png)

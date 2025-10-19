@@ -9,15 +9,14 @@
  */
 
 import { _decorator, Camera, Node, Vec3, Quat, director, find, EventKeyboard, KeyCode, EventMouse, input, Input, tween, Tween, v3, TweenEasing } from 'cc';
-import { 
-    CameraMode, 
-    CameraConfig, 
-    CameraState, 
-    DEFAULT_CAMERA_CONFIG, 
+import {
+    CameraMode,
+    CameraConfig,
+    CameraState,
+    DEFAULT_CAMERA_CONFIG,
     TransitionConfig,
     IsometricConfig,
     TopDownConfig,
-    FollowConfig,
     CameraBounds
 } from './CameraConfig';
 import { BaseCameraController } from './BaseCameraController';
@@ -39,9 +38,6 @@ export class CameraController extends BaseCameraController {
     @property({ type: TopDownConfig, displayName: "俯视视角配置" })
     public topDownConfig: TopDownConfig = new TopDownConfig();
 
-    @property({ type: FollowConfig, displayName: "跟随模式配置" })
-    public followConfig: FollowConfig = new FollowConfig();
-
     @property({ type: TransitionConfig, displayName: "过渡动画配置" })
     public transitionConfig: TransitionConfig = new TransitionConfig();
 
@@ -54,9 +50,6 @@ export class CameraController extends BaseCameraController {
     @property({ displayName: "自动查找相机", tooltip: "是否自动查找Main Camera节点" })
     public autoFindCamera: boolean = true;
 
-    @property({ displayName: "跟随目标", type: Node, tooltip: "第三人称模式的跟随目标" })
-    public followTarget: Node | null = null;
-
     @property({ displayName: "启用右键拖拽旋转", tooltip: "是否允许右键拖拽旋转相机（默认关闭）" })
     public enableRightDragRotate: boolean = false;
 
@@ -66,7 +59,6 @@ export class CameraController extends BaseCameraController {
             this._config = new CameraConfig();
             this._config.isometric = this.isometricConfig;
             this._config.topDown = this.topDownConfig;
-            this._config.follow = this.followConfig;
             this._config.bounds = this.boundsConfig;
             this._config.transition = this.transitionConfig;
             this._config.debugMode = this.debugMode;
@@ -169,9 +161,6 @@ export class CameraController extends BaseCameraController {
     protected onCameraUpdate(deltaTime: number): void {
         if (!this.camera) return;
 
-        // 处理相机跟随逻辑
-        this._updateCameraFollow(deltaTime);
-        
         // 处理输入控制
         if (this.enableInputControl) {
             this._handleInput(deltaTime);
@@ -243,23 +232,6 @@ export class CameraController extends BaseCameraController {
         });
     }
 
-    /**
-     * 设置跟随目标
-     */
-    public setTarget(target: Node | null): void {
-        this.followTarget = target;
-
-        if (target) {
-            this.debugLog(`设置跟随目标: ${target.name}`);
-
-            // 如果当前是跟随模式，立即更新位置
-            if (this._currentMode === CameraMode.THIRD_PERSON_FOLLOW) {
-                this._updateFollowPosition();
-            }
-        } else {
-            this.debugLog('清除跟随目标');
-        }
-    }
 
     /**
      * 设置相机注视目标点（用于等距/俯视模式）
@@ -338,27 +310,6 @@ export class CameraController extends BaseCameraController {
         };
     }
 
-    /**
-     * 创建默认跟随目标（测试用胶囊体）
-     */
-    public createDefaultTarget(): Node {
-        const targetNode = new Node('CameraTarget');
-        
-        // 设置初始位置
-        targetNode.setPosition(0, 1, 0);
-        
-        // 添加到场景
-        const scene = director.getScene();
-        if (scene) {
-            scene.addChild(targetNode);
-        }
-
-        // 设置为跟随目标
-        this.setTarget(targetNode);
-        
-        this.debugLog('创建默认跟随目标');
-        return targetNode;
-    }
 
     // ========================= 私有方法 =========================
 
@@ -409,9 +360,6 @@ export class CameraController extends BaseCameraController {
                 break;
             case CameraMode.TOP_DOWN:
                 this._applyTopDownMode(immediate);
-                break;
-            case CameraMode.THIRD_PERSON_FOLLOW:
-                this._applyFollowMode(immediate);
                 break;
         }
     }
@@ -521,59 +469,6 @@ export class CameraController extends BaseCameraController {
         }
     }
 
-    /**
-     * 应用第三人称跟随模式
-     */
-    private _applyFollowMode(immediate: boolean): void {
-        if (!this.followTarget) {
-            console.warn('[CameraController] 跟随模式需要设置跟随目标');
-            return;
-        }
-
-        this._updateFollowPosition(immediate);
-    }
-
-    /**
-     * 更新跟随位置
-     */
-    private _updateFollowPosition(immediate: boolean = false): void {
-        if (!this.followTarget) return;
-
-        const config = this.config.follow;
-        const targetPos = this.followTarget.getWorldPosition();
-        
-        // 计算相机位置（在目标后方和上方）
-        const targetForward = this.followTarget.forward;
-        const offset = Vec3.multiplyScalar(new Vec3(), targetForward, -config.distance);
-        offset.y += config.height;
-        
-        const cameraPos = Vec3.add(new Vec3(), targetPos, offset);
-        
-        // 计算前瞻点
-        const lookAhead = Vec3.multiplyScalar(new Vec3(), targetForward, config.lookAheadDistance);
-        const lookAtPoint = Vec3.add(new Vec3(), targetPos, lookAhead);
-        
-        // 应用位置和旋转
-        if (immediate) {
-            this.node.setPosition(cameraPos);
-            // this.node.lookAt(lookAtPoint); // 直接lookAt前瞻点
-        } else {
-            // 平滑跟随
-            const currentPos = this.node.getPosition();
-            const lerpedPos = Vec3.lerp(new Vec3(), currentPos, cameraPos, config.smoothSpeed * 0.016);
-            this.node.setPosition(lerpedPos);
-            // this.node.lookAt(lookAtPoint); // lookAt前瞻点
-        }
-    }
-
-    /**
-     * 更新相机跟随逻辑
-     */
-    private _updateCameraFollow(deltaTime: number): void {
-        if (this._currentMode === CameraMode.THIRD_PERSON_FOLLOW && this.followTarget) {
-            this._updateFollowPosition();
-        }
-    }
 
     /**
      * 过渡到指定位置和旋转
@@ -789,15 +684,6 @@ export class CameraController extends BaseCameraController {
                 break;
             case KeyCode.F2:
                 this.setMode(CameraMode.TOP_DOWN);
-                break;
-            case KeyCode.F3:
-                this.setMode(CameraMode.THIRD_PERSON_FOLLOW);
-                break;
-            case KeyCode.F4:
-                // 创建默认目标用于测试
-                if (!this.followTarget) {
-                    this.createDefaultTarget();
-                }
                 break;
         }
     }

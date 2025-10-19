@@ -369,9 +369,6 @@ export class CameraDebugger extends Component {
             case KeyCode.DIGIT_2:
                 this.switchToMainGameCamera(CameraMode.TOP_DOWN);
                 break;
-            case KeyCode.DIGIT_3:
-                this.switchToMainGameCamera(CameraMode.THIRD_PERSON_FOLLOW);
-                break;
             case KeyCode.DIGIT_4:
                 this.switchToVoxelCamera(VoxelCameraMode.WALKING);
                 break;
@@ -419,8 +416,6 @@ export class CameraDebugger extends Component {
                 return '等距视角';
             case CameraMode.TOP_DOWN:
                 return '俯视视角';
-            case CameraMode.THIRD_PERSON_FOLLOW:
-                return '第三人称跟随';
             default:
                 return '未知模式';
         }

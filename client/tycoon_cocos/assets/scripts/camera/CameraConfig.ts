@@ -18,12 +18,10 @@ const { ccclass, property } = _decorator;
 export enum CameraMode {
     /** 未初始化 */
     NONE = 'none',
-    /** 等距视角 - 45度俯视角，适合棋盘游戏 */
+    /** 等距视角 - 45度俯视角，适合棋盘游戏（默认模式）*/
     ISOMETRIC = 'isometric',
     /** 俯视视角 - 90度垂直俯视，清晰查看整个地图 */
-    TOP_DOWN = 'top_down',
-    /** 第三人称跟随 - 跟随目标，动态视角 */
-    THIRD_PERSON_FOLLOW = 'third_person_follow'
+    TOP_DOWN = 'top_down'
 }
 
 /**
@@ -77,35 +75,6 @@ export class TopDownConfig {
     public zoomSpeed: number = 5.0;
 }
 
-/**
- * 第三人称跟随配置
- */
-@ccclass('FollowConfig')
-export class FollowConfig {
-    @property({ displayName: "跟随距离", tooltip: "相机跟随目标的距离" })
-    public distance: number = 10;
-
-    @property({ displayName: "相机高度", tooltip: "相机高度偏移" })
-    public height: number = 8;
-
-    @property({ displayName: "平滑速度", tooltip: "平滑跟随速度" })
-    public smoothSpeed: number = 5.0;
-
-    @property({ displayName: "前瞻距离", tooltip: "相机会稍微看向目标前方的距离" })
-    public lookAheadDistance: number = 3.0;
-
-    @property({ displayName: "垂直角度偏移", tooltip: "垂直角度偏移" })
-    public pitchOffset: number = -15;
-
-    @property({ displayName: "自动调整高度", tooltip: "是否自动调整高度" })
-    public autoAdjustHeight: boolean = true;
-
-    @property({ displayName: "最小距离", tooltip: "最小跟随距离" })
-    public minDistance: number = 5;
-
-    @property({ displayName: "最大距离", tooltip: "最大跟随距离" })
-    public maxDistance: number = 20;
-}
 
 /**
  * 相机边界限制配置
@@ -148,9 +117,6 @@ export class CameraConfig {
     @property({ type: TopDownConfig, displayName: "俯视视角配置", tooltip: "俯视视角模式的相关参数" })
     public topDown: TopDownConfig = new TopDownConfig();
 
-    @property({ type: FollowConfig, displayName: "跟随模式配置", tooltip: "第三人称跟随模式的相关参数" })
-    public follow: FollowConfig = new FollowConfig();
-
     @property({ type: CameraBounds, displayName: "边界限制配置", tooltip: "相机移动边界限制的相关参数" })
     public bounds: CameraBounds = new CameraBounds();
 
@@ -183,17 +149,7 @@ export const DEFAULT_CAMERA_CONFIG: CameraConfig = (() => {
     config.topDown.minHeight = 15;
     config.topDown.maxHeight = 50;
     config.topDown.zoomSpeed = 5.0;
-    
-    // 跟随模式配置
-    config.follow.distance = 10;
-    config.follow.height = 8;
-    config.follow.smoothSpeed = 5.0;
-    config.follow.lookAheadDistance = 3.0;
-    config.follow.pitchOffset = -15;
-    config.follow.autoAdjustHeight = true;
-    config.follow.minDistance = 5;
-    config.follow.maxDistance = 20;
-    
+
     // 边界配置
     config.bounds.min = new Vec3(-50, 0, -50);
     config.bounds.max = new Vec3(50, 100, 50);

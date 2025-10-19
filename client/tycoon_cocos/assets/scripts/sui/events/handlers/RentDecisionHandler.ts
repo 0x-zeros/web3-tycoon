@@ -165,15 +165,15 @@ export class RentDecisionHandler {
                     amount: rentAmount.toString()
                 });
 
-                // 只有myplayer才显示现金变动Notification
+                // 只有myplayer才显示现金变动Notification（显示在屏幕中央）
                 const myPlayer = session.getMyPlayer();
                 if (myPlayer) {
                     if (payer === myPlayer) {
                         // 我是付款者，显示减钱
-                        UINotification.info(`-${rentAmount}`, undefined, 2000);
+                        UINotification.info(`-${rentAmount}`, undefined, 2000, 'center');
                     } else if (owner === myPlayer) {
                         // 我是收款者，显示加钱
-                        UINotification.info(`+${rentAmount}`, undefined, 2000);
+                        UINotification.info(`+${rentAmount}`, undefined, 2000, 'center');
                     }
                 }
             }

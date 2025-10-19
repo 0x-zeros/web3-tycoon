@@ -122,10 +122,10 @@ export class BuildingDecisionHandler {
             const newCash = player.getCash() - amount;
             player.setCash(newCash);
 
-            // 只有myplayer才显示现金变动Notification
+            // 只有myplayer才显示现金变动Notification（显示在屏幕中央）
             const myPlayer = session.getMyPlayer();
             if (myPlayer && player === myPlayer) {
-                UINotification.info(`-${amount}`, undefined, 2000);
+                UINotification.info(`-${amount}`, undefined, 2000, 'center');
                 console.log('[BuildingDecisionHandler] 显示现金变动: -', amount.toString());
             }
 

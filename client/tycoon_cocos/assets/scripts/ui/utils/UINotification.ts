@@ -7,6 +7,11 @@ const { ccclass } = _decorator;
 // ==================== 类型定义 ====================
 
 /**
+ * Anchor位置类型
+ */
+export type AnchorPosition = "lefttop" | "righttop" | "center" | "leftbottom" | "rightbottom";
+
+/**
  * 通知图标类型
  */
 export enum NotifyIcon {
@@ -216,64 +221,196 @@ class NotificationToast {
     }
 }
 
+// ==================== NotificationQueue类（单个位置的队列）====================
+
+/**
+ * 单个位置的通知队列
+ * 封装Toast的添加、布局、自动消失等逻辑
+ */
+class NotificationQueue {
+    private _toasts: NotificationToast[] = [];
+    private _autoHideCancels: Map<NotificationToast, () => void> = new Map();
+    private _anchor: fgui.GObject;
+    private _anchorName: string;
+    private _container: fgui.GComponent;
+    private _scheduler: UIBase; // 用于scheduleOnce
+
+    private static readonly MAX_NOTIFICATIONS = 3;
+    private static readonly SPACING = 0;
+
+    constructor(anchor: fgui.GObject, anchorName: string, container: fgui.GComponent, scheduler: UIBase) {
+        this._anchor = anchor;
+        this._anchorName = anchorName;
+        this._container = container;
+        this._scheduler = scheduler;
+    }
+
+    /**
+     * 添加新通知
+     */
+    public addNotification(options: NotificationOptions): void {
+        // 检查数量限制，移除最旧的
+        if (this._toasts.length >= NotificationQueue.MAX_NOTIFICATIONS) {
+            const oldest = this._toasts.shift();
+            if (oldest) {
+                this._cancelAutoHide(oldest);
+                oldest.destroy();
+            }
+        }
+
+        // 创建Toast实例
+        const toast = new NotificationToast(options, this._isBottomToTop(), () => {
+            const index = this._toasts.indexOf(toast);
+            if (index !== -1) {
+                this._toasts.splice(index, 1);
+                this._relayout(true);
+            }
+        });
+
+        // 添加到容器
+        this._container.addChild(toast.gObject);
+        this._toasts.push(toast);
+
+        // 设置初始位置
+        if (this._isBottomToTop()) {
+            toast.gObject.x = this._anchor.x;
+            toast.gObject.y = this._anchor.y - toast.gObject.height;
+        } else {
+            toast.gObject.x = this._anchor.x;
+            toast.gObject.y = this._anchor.y;
+        }
+
+        // 播放淡入动画
+        toast.playEnterAnimation();
+
+        // 延迟触发布局动画
+        setTimeout(() => {
+            this._relayout(true);
+        }, 50);
+
+        // 调度自动消失
+        const defaultDuration = UINotification.DEFAULT_DURATIONS[options.type || NotifyType.DEFAULT];
+        const durationMs = options.duration ?? defaultDuration;
+        const seconds = Math.max(0, durationMs) / 1000;
+        const cb = () => {
+            this._autoHideCancels.delete(toast);
+            toast.destroy();
+        };
+        this._scheduler.scheduleOnce(cb, seconds);
+        this._autoHideCancels.set(toast, () => this._scheduler.unschedule(cb));
+    }
+
+    /**
+     * 判断当前anchor是否需要从下往上堆叠
+     */
+    private _isBottomToTop(): boolean {
+        return this._anchorName.includes("bottom") || this._anchorName === "center";
+    }
+
+    /**
+     * 重新布局所有通知
+     */
+    private _relayout(animated: boolean = false): void {
+        const isBottomToTop = this._isBottomToTop();
+
+        if (isBottomToTop) {
+            let offsetY = 0;
+            for (let i = this._toasts.length - 1; i >= 0; i--) {
+                const toast = this._toasts[i];
+                const targetX = this._anchor.x;
+                const targetY = this._anchor.y - offsetY - toast.gObject.height;
+
+                if (animated) {
+                    this._tweenToPosition(toast.gObject, targetX, targetY, 0.2);
+                } else {
+                    toast.gObject.x = targetX;
+                    toast.gObject.y = targetY;
+                }
+
+                offsetY += toast.gObject.height + NotificationQueue.SPACING;
+            }
+        } else {
+            let offsetY = 0;
+            this._toasts.forEach(toast => {
+                const targetX = this._anchor.x;
+                const targetY = this._anchor.y + offsetY;
+
+                if (animated) {
+                    this._tweenToPosition(toast.gObject, targetX, targetY, 0.2);
+                } else {
+                    toast.gObject.x = targetX;
+                    toast.gObject.y = targetY;
+                }
+
+                offsetY += toast.gObject.height + NotificationQueue.SPACING;
+            });
+        }
+    }
+
+    private _tweenToPosition(obj: fgui.GObject, targetX: number, targetY: number, duration: number): void {
+        fgui.GTween.to2(obj.x, obj.y, targetX, targetY, duration)
+            .setTarget(obj)
+            .setEase(fgui.EaseType.QuadOut)
+            .onUpdate((tweener: fgui.GTweener) => {
+                obj.x = tweener.value.x;
+                obj.y = tweener.value.y;
+            });
+    }
+
+    private _cancelAutoHide(toast: NotificationToast): void {
+        const cancel = this._autoHideCancels.get(toast);
+        if (cancel) {
+            try { cancel(); } catch {}
+            this._autoHideCancels.delete(toast);
+        }
+    }
+
+    /**
+     * 清除所有通知
+     */
+    public clearAll(): void {
+        this._toasts.forEach(toast => {
+            this._cancelAutoHide(toast);
+            toast.destroy();
+        });
+        this._toasts = [];
+    }
+}
+
 // ==================== UINotification主类 ====================
 
 /**
  * 通知组件
- * 管理Toast通知的容器和布局
+ * 管理多个位置的NotificationQueue
  */
 @ccclass('UINotification')
 export class UINotification extends UIBase {
-    // Toast实例数组
-    private _toasts: NotificationToast[] = [];
-    // 自动消失取消器
-    private _autoHideCancels: Map<NotificationToast, () => void> = new Map();
+    // 多个位置的队列
+    private _queues: Map<AnchorPosition, NotificationQueue> = new Map();
 
-    // 容器组件（使用NotifyCenter的messages容器）
+    // 容器组件
     private _container: fgui.GComponent | null = null;
-
-    // 最大同时显示数量
-    private static readonly MAX_NOTIFICATIONS = 3;
-
-    // 通知间距（像素）——按需改为无间隔
-    private static readonly SPACING = 0;
 
     // 不同类型通知的默认显示时长（毫秒）
     private static readonly DEFAULT_DURATIONS: Record<NotifyType, number> = {
-        [NotifyType.INFO]: 2000,      // 2秒
-        [NotifyType.SUCCESS]: 2000,   // 2秒
-        [NotifyType.WARNING]: 3000,   // 3秒
-        [NotifyType.ERROR]: 5000,     // 5秒
-        [NotifyType.DEFAULT]: 2000    // 2秒
+        [NotifyType.INFO]: 2000,
+        [NotifyType.SUCCESS]: 2000,
+        [NotifyType.WARNING]: 3000,
+        [NotifyType.ERROR]: 5000,
+        [NotifyType.DEFAULT]: 2000
     };
 
     // 静态单例实例
     private static _instance: UINotification | null = null;
 
     // 消息缓存队列（UI 未 ready 时缓存）
-    private static _pendingMessages: NotificationOptions[] = [];
+    private static _pendingMessages: Array<{ options: NotificationOptions; anchor: AnchorPosition }> = [];
     private static _isReady: boolean = false;
-
-    // 默认使用的anchor名称
-    private static readonly DEFAULT_ANCHOR = "rightbottom";
-    private _currentAnchor = UINotification.DEFAULT_ANCHOR;
 
     // ==================== 生命周期 ====================
 
     protected onInit(): void {
-        // 所有anchor名称
-        const anchorNames = ["lefttop", "righttop", "center", "leftbottom", "rightbottom"];
-
-        // 设置所有anchor为不拦截点击
-        anchorNames.forEach(name => {
-            const anchor = this.panel?.getChild(name);
-            if (anchor) {
-                anchor.touchable = false;
-                anchor.opaque = false;
-            }
-        });
-
-        // 使用panel作为容器（anchor只是位置标记）
+        // 使用panel作为容器
         this._container = this.panel;
 
         if (!this._container) {
@@ -285,13 +422,30 @@ export class UINotification extends UIBase {
         this._container.touchable = false;
         this._container.opaque = false;
 
-        console.log("[UINotification] Initialized with anchor:", this._currentAnchor);
+        // 为每个anchor位置创建队列
+        const anchorNames: AnchorPosition[] = ["lefttop", "righttop", "center", "leftbottom", "rightbottom"];
+
+        anchorNames.forEach(name => {
+            const anchor = this.panel?.getChild(name);
+            if (anchor) {
+                // 设置anchor不拦截点击
+                anchor.touchable = false;
+                anchor.opaque = false;
+
+                // 创建该位置的队列
+                const queue = new NotificationQueue(anchor, name, this._container!, this);
+                this._queues.set(name, queue);
+                console.log(`[UINotification] 创建队列: ${name}`);
+            }
+        });
 
         // 设置静态实例
         UINotification._instance = this;
 
         // 标记为 ready
         UINotification._isReady = true;
+
+        console.log(`[UINotification] 初始化完成，创建了 ${this._queues.size} 个队列`);
 
         // 播放缓存的消息
         this._playPendingMessages();
@@ -309,8 +463,8 @@ export class UINotification extends UIBase {
 
         // 延迟一点播放，确保 UI 完全 ready
         setTimeout(() => {
-            UINotification._pendingMessages.forEach(options => {
-                this.addNotification(options);
+            UINotification._pendingMessages.forEach(({ options, anchor }) => {
+                this.addNotification(options, anchor);
             });
             UINotification._pendingMessages = [];
         }, 100);
@@ -333,166 +487,24 @@ export class UINotification extends UIBase {
     // ==================== 通知管理 ====================
 
     /**
-     * 添加新通知
+     * 添加新通知到指定位置
      */
-    public addNotification(options: NotificationOptions): void {
-        if (!this._container) {
-            console.error("[UINotification] Container not available");
+    public addNotification(options: NotificationOptions, anchor: AnchorPosition = 'rightbottom'): void {
+        const queue = this._queues.get(anchor);
+        if (!queue) {
+            console.error(`[UINotification] Queue not found for anchor: ${anchor}`);
             return;
         }
 
-        // 检查数量限制，移除最旧的
-        if (this._toasts.length >= UINotification.MAX_NOTIFICATIONS) {
-            const oldest = this._toasts.shift();
-            if (oldest) {
-                this._cancelAutoHide(oldest);
-                oldest.destroy();
-            }
-        }
-
-        // 创建Toast实例（传入堆叠方向，决定退出动画方向）
-        const toast = new NotificationToast(options, this._isBottomToTop(), () => {
-            // Toast自己销毁时，从数组移除
-            const index = this._toasts.indexOf(toast);
-            if (index !== -1) {
-                this._toasts.splice(index, 1);
-                // 重新布局剩余的通知（带动画）
-                this._relayout(true);
-            }
-        });
-
-        // 添加到容器
-        this._container.addChild(toast.gObject);
-
-        // 记录到数组
-        this._toasts.push(toast);
-
-        // 设置初始位置（在第一条消息的位置）
-        const anchor = this.panel?.getChild(this._currentAnchor);
-        if (anchor) {
-            if (this._isBottomToTop()) {
-                // 从下往上：初始位置在anchor底部（最新消息的最终位置）
-                toast.gObject.x = anchor.x;
-                toast.gObject.y = anchor.y - toast.gObject.height;
-            } else {
-                // 从上往下：初始位置在anchor顶部
-                toast.gObject.x = anchor.x;
-                toast.gObject.y = anchor.y;
-            }
-        }
-
-        // 播放淡入动画
-        toast.playEnterAnimation();
-
-        // 延迟触发布局动画（让所有toast滑动到新位置，产生挤入效果）
-        setTimeout(() => {
-            this._relayout(true);  // animated = true
-        }, 50);
-
-        // 调度自动消失 - 根据通知类型获取默认时长
-        const defaultDuration = UINotification.DEFAULT_DURATIONS[options.type || NotifyType.DEFAULT];
-        const durationMs = options.duration ?? defaultDuration;
-        const seconds = Math.max(0, durationMs) / 1000;
-        const cb = () => {
-            this._autoHideCancels.delete(toast);
-            toast.destroy();
-        };
-        this.scheduleOnce(cb, seconds);
-        this._autoHideCancels.set(toast, () => this.unschedule(cb));
-
-        console.log(`[UINotification] Added notification: ${options.message}`);
-    }
-
-    /**
-     * 判断当前anchor是否需要从下往上堆叠
-     */
-    private _isBottomToTop(): boolean {
-        return this._currentAnchor.includes("bottom") || this._currentAnchor === "center";
-    }
-
-    /**
-     * Tween移动到目标位置
-     */
-    private _tweenToPosition(obj: fgui.GObject, targetX: number, targetY: number, duration: number): void {
-        fgui.GTween.to2(obj.x, obj.y, targetX, targetY, duration)
-            .setTarget(obj)
-            .setEase(fgui.EaseType.QuadOut)
-            .onUpdate((tweener: fgui.GTweener) => {
-                obj.x = tweener.value.x;
-                obj.y = tweener.value.y;
-            });
-    }
-
-    /**
-     * 重新布局所有通知（垂直堆叠）
-     * @param animated 是否使用动画过渡
-     */
-    private _relayout(animated: boolean = false): void {
-        // 获取当前anchor的位置作为起点
-        const anchor = this.panel?.getChild(this._currentAnchor);
-        if (!anchor) {
-            console.warn("[UINotification] Anchor not found:", this._currentAnchor);
-            return;
-        }
-
-        const isBottomToTop = this._isBottomToTop();
-
-        if (isBottomToTop) {
-            // 从下往上堆叠：最新的在底部（anchor位置），旧的向上
-            let offsetY = 0;
-            // 从最新到最旧遍历（倒序）
-            for (let i = this._toasts.length - 1; i >= 0; i--) {
-                const toast = this._toasts[i];
-                const targetX = anchor.x;
-                const targetY = anchor.y - offsetY - toast.gObject.height;
-
-                if (animated) {
-                    this._tweenToPosition(toast.gObject, targetX, targetY, 0.2);
-                } else {
-                    toast.gObject.x = targetX;
-                    toast.gObject.y = targetY;
-                }
-
-                offsetY += toast.gObject.height + UINotification.SPACING;
-            }
-        } else {
-            // 从上往下堆叠：最新的在顶部（anchor位置），旧的向下
-            let offsetY = 0;
-            this._toasts.forEach(toast => {
-                const targetX = anchor.x;
-                const targetY = anchor.y + offsetY;
-
-                if (animated) {
-                    this._tweenToPosition(toast.gObject, targetX, targetY, 0.2);
-                } else {
-                    toast.gObject.x = targetX;
-                    toast.gObject.y = targetY;
-                }
-
-                offsetY += toast.gObject.height + UINotification.SPACING;
-            });
-        }
+        queue.addNotification(options);
+        console.log(`[UINotification] Added notification to ${anchor}: ${options.message}`);
     }
 
     /**
      * 清除所有通知
      */
     public clearAll(): void {
-        // 销毁所有Toast
-        this._toasts.forEach(toast => {
-            this._cancelAutoHide(toast);
-            toast.destroy();
-        });
-        this._toasts = [];
-    }
-
-    /** 取消某个 toast 的自动隐藏调度 */
-    private _cancelAutoHide(toast: NotificationToast): void {
-        const cancel = this._autoHideCancels.get(toast);
-        if (cancel) {
-            try { cancel(); } catch {}
-            this._autoHideCancels.delete(toast);
-        }
+        this._queues.forEach(queue => queue.clearAll());
     }
 
     // ==================== 静态便捷方法 ====================
@@ -507,15 +519,15 @@ export class UINotification extends UIBase {
     /**
      * 添加消息（支持缓存和降级）
      */
-    private static _addMessage(options: NotificationOptions): void {
+    private static _addMessage(options: NotificationOptions, anchor: AnchorPosition = 'rightbottom'): void {
         const instance = this._getInstance();
 
         if (instance && this._isReady) {
             // UI 已 ready，直接显示
-            instance.addNotification(options);
+            instance.addNotification(options, anchor);
         } else {
             // UI 未 ready，缓存消息
-            this._pendingMessages.push(options);
+            this._pendingMessages.push({ options, anchor });
 
             // 降级到 console（开发阶段可见）
             const prefix = options.type?.toUpperCase() || 'INFO';
@@ -527,56 +539,56 @@ export class UINotification extends UIBase {
     /**
      * 信息通知（蓝色）
      */
-    public static info(message: string, title?: string, duration?: number): void {
+    public static info(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.INFO,
             duration
-        });
+        }, anchor || 'rightbottom');
     }
 
     /**
      * 成功通知（绿色）
      */
-    public static success(message: string, title?: string, duration?: number): void {
+    public static success(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.SUCCESS,
             duration
-        });
+        }, anchor || 'rightbottom');
     }
 
     /**
      * 警告通知（黄色）
      */
-    public static warning(message: string, title?: string, duration?: number): void {
+    public static warning(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.WARNING,
             duration
-        });
+        }, anchor || 'rightbottom');
     }
 
     /**
      * 错误通知（红色）
      */
-    public static error(message: string, title?: string, duration?: number): void {
+    public static error(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.ERROR,
             duration
-        });
+        }, anchor || 'rightbottom');
     }
 
     /**
      * 自定义通知
      */
-    public static show(options: NotificationOptions): void {
-        this._addMessage(options);
+    public static show(options: NotificationOptions, anchor?: AnchorPosition): void {
+        this._addMessage(options, anchor || 'rightbottom');
     }
 
     /**
@@ -589,27 +601,6 @@ export class UINotification extends UIBase {
         }
     }
 
-    /**
-     * 设置通知显示位置
-     * @param anchorName anchor节点名称
-     */
-    public static setAnchor(anchorName: "lefttop" | "righttop" | "center" | "leftbottom" | "rightbottom"): void {
-        const instance = this._getInstance();
-        if (instance && instance.panel) {
-            const anchor = instance.panel.getChild(anchorName);
-            if (anchor) {
-                // 切换anchor
-                instance._currentAnchor = anchorName;
-
-                // 重新布局现有通知（移动到新位置）
-                instance._relayout();
-
-                console.log("[UINotification] Switched to anchor:", anchorName);
-            } else {
-                console.error("[UINotification] Anchor not found:", anchorName);
-            }
-        }
-    }
 
     /**
      * 交易通知工具方法

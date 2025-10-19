@@ -392,11 +392,11 @@ export class RollAndStepHandler {
                     // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
                     player.setCash(newCash);
 
-                    // ✅ 只有myplayer才显示现金变动Notification
+                    // ✅ 只有myplayer才显示现金变动Notification（显示在屏幕中央）
                     const myPlayer = this.currentSession?.getMyPlayer();
                     if (myPlayer && player === myPlayer) {
                         const text = change.is_debit ? `-${amount}` : `+${amount}`;
-                        UINotification.info(text, undefined, 2000);
+                        UINotification.info(text, undefined, 2000, 'center');
                         console.log('[RollAndStepHandler] 显示现金变动:', text);
                     }
 

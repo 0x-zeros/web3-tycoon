@@ -1527,6 +1527,26 @@ export class GameMap extends Component {
     }
 
     /**
+     * 删除指定 tile 上的 NPC PaperActor
+     * @param tileId NPC 所在的 tile ID
+     */
+    public removeNPCActor(tileId: number): void {
+        const npcNode = this._npcActors.get(tileId);
+
+        if (npcNode && npcNode.isValid) {
+            // 销毁节点
+            npcNode.destroy();
+
+            // 从映射中删除
+            this._npcActors.delete(tileId);
+
+            console.log(`[GameMap] Removed NPC PaperActor at tile ${tileId}`);
+        } else {
+            console.warn(`[GameMap] NPC PaperActor not found at tile ${tileId}`);
+        }
+    }
+
+    /**
      * NPC Kind → Actor ID 映射
      */
     private getNPCActorId(npcKind: number): string {

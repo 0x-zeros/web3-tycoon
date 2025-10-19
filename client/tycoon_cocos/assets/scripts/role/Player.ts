@@ -406,6 +406,42 @@ export class Player extends Role {
     public getPlayerIndex(): number { return this._playerIndex; }
 
     public getPos(): number { return this._pos; }
+
+    /**
+     * 设置玩家位置（带事件触发和属性同步）
+     * @param tileId 新的位置（tile_id）
+     * @param updateLastTile 是否更新 last_tile_id（默认 true）
+     *        - true: 正常移动，更新 lastTile 为移动前的位置
+     *        - false: 瞬移（如遇到炸弹），不更新 lastTile
+     */
+    public setPos(tileId: number, updateLastTile: boolean = true): void {
+        const oldPos = this._pos;
+
+        // ✅ 更新 last_tile_id 为移动前的位置（模拟 Move 合约逻辑）
+        if (updateLastTile) {
+            this._lastTileId = oldPos;
+        }
+
+        // 更新当前位置
+        this._pos = tileId;
+
+        // 同步到 Role 基类属性
+        this.setAttr(RoleAttribute.POSITION, tileId);
+
+        // 更新当前地块ID
+        this.setCurrentTileId(tileId);
+
+        console.log(`[Player] 位置变化: ${oldPos} -> ${tileId}${updateLastTile ? `, lastTile: ${this._lastTileId}` : ' (瞬移，lastTile不变)'}`);
+
+        // 触发位置变化事件
+        EventBus.emit(EventTypes.Player.PositionChanged, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            oldPos,
+            newPos: tileId
+        });
+    }
+
     public getCash(): bigint { return this._cash; }
     public getBankrupt(): boolean { return this._bankrupt; }
 

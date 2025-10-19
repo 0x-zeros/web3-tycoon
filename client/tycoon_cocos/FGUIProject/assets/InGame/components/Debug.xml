@@ -5,6 +5,6 @@
     <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="25,180" size="230,50">
       <Button title="显示编号"/>
     </component>
-    <text id="n10_f49a" name="roundTurn" xy="5,101" size="261,68" visible="false" alpha="0.8" fontSize="25" color="#ffffff" vAlign="middle" autoSize="none" text="round: 0&#xA;turn: 0"/>
+    <text id="n10_f49a" name="roundTurn" xy="5,101" size="261,68" alpha="0.8" fontSize="25" color="#ffffff" vAlign="middle" autoSize="none" text="round: 0&#xA;turn: 0"/>
   </displayList>
 </component>

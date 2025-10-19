@@ -239,6 +239,16 @@ export class RollAndStepHandler {
         index: number,
         event: RollAndStepActionEvent
     ): Promise<void> {
+        // 使用缓存的 GameSession
+        const session = this.currentSession;
+        const player = session.getPlayerByAddress(event.player);
+
+        // ✅ 更新玩家位置到最新的 tile（修复掷骰子使用过时位置的问题）
+        if (player) {
+            player.setPos(step.to_tile);
+            console.log(`[RollAndStepHandler] 玩家位置已更新: ${step.from_tile} -> ${step.to_tile}`);
+        }
+
         // 处理停留效果（如收租、奖金等）
         if (step.stop_effect) {
             console.log('[RollAndStepHandler] 处理停留效果', step.stop_effect);
@@ -321,9 +331,6 @@ export class RollAndStepHandler {
         // 处理路过获得的卡牌
         if (step.pass_draws && step.pass_draws.length > 0) {
             console.log('[RollAndStepHandler] 处理路过卡牌', step.pass_draws);
-
-            const session = this.currentSession;
-            const player = session.getPlayerByAddress(event.player);
 
             if (player) {
                 // 1. 添加卡牌到玩家数据
@@ -494,6 +501,10 @@ export class RollAndStepHandler {
         const player = session.getPlayerByAddress(event.player);
 
         if (player) {
+            // ✅ 更新玩家逻辑位置（修复瞬移后位置不同步）
+            // 传入 false 表示瞬移，不更新 lastTile（保持为正常移动的最后位置）
+            player.setPos(event.end_pos, false);
+
             const targetCenter = session.getTileWorldCenter(event.end_pos);
 
             // 使用 teleport 参数瞬移（无动画）

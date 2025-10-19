@@ -52,7 +52,9 @@ export class UIInGameCards extends UIBase {
      * 绑定事件
      */
     protected bindEvents(): void {
-        // 监听卡牌变化事件（如果有）
+        // 监听卡牌变化事件
+        EventBus.on(EventTypes.Player.CardChange, this._onCardChange, this);  // ✅ 监听 Player.addCard() 触发的事件
+        EventBus.on(EventTypes.Player.CardRemoved, this._onCardChange, this);  // ✅ 监听 Player.removeCard() 触发的事件
         EventBus.on(EventTypes.Card.GetNewCard, this._onCardChange, this);
         EventBus.on(EventTypes.Card.UseCard, this._onCardChange, this);
     }
@@ -61,6 +63,8 @@ export class UIInGameCards extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
+        EventBus.off(EventTypes.Player.CardChange, this._onCardChange, this);
+        EventBus.off(EventTypes.Player.CardRemoved, this._onCardChange, this);
         EventBus.off(EventTypes.Card.GetNewCard, this._onCardChange, this);
         EventBus.off(EventTypes.Card.UseCard, this._onCardChange, this);
 

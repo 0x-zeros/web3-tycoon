@@ -1,4 +1,4 @@
-import { _decorator, Color, Component, EventTouch, sys } from 'cc';
+import { _decorator, Color } from 'cc';
 import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
 
@@ -51,8 +51,7 @@ export interface NotificationOptions {
  * 单个Toast通知的封装类
  * 管理单个通知的完整生命周期：创建、显示、动画、自动消失、销毁
  */
-@ccclass('NotificationToast')
-class NotificationToast extends Component {
+class NotificationToast {
     private _gObject: fgui.GComponent;
     private _onDestroy?: () => void;
     private _isBottomToTop: boolean;
@@ -67,47 +66,23 @@ class NotificationToast extends Component {
     };
 
     /**
-     * 初始化方法（替代构造函数）
+     * 构造函数
      * @param options 通知配置
      * @param isBottomToTop 是否从下往上堆叠（决定退出动画方向）
      * @param onDestroy 销毁回调
      */
-    public init(options: NotificationOptions, isBottomToTop: boolean, onDestroy?: () => void): void {
+    constructor(options: NotificationOptions, isBottomToTop: boolean, onDestroy?: () => void) {
         this._isBottomToTop = isBottomToTop;
         this._onDestroy = onDestroy;
 
         // 创建GObject（不使用对象池，每次创建新对象）
         this._gObject = fgui.UIPackage.createObject("Common", "NotifyToast").asCom;
 
-        // 将组件添加到节点（确保 onOpenTx 方法能被调用）
-        const node = this._gObject.node;
-        if (node) {
-            const comp = node.getComponent(NotificationToast) || node.addComponent(NotificationToast);
-            // 复制当前实例的属性到节点组件
-            comp._gObject = this._gObject;
-            comp._onDestroy = this._onDestroy;
-            comp._isBottomToTop = this._isBottomToTop;
-        }
-
-        // 设置为可点击（允许富文本链接接收点击）
-        this._gObject.touchable = true;
-
         // 设置内容
         this._setupContent(options);
 
         // 定时由 UINotification 统一调度（scheduleOnce），此处不再启动计时
     }
-
-    /**
-     * 打开交易链接（BBCode 点击事件）
-     * 此方法会被 RichText 的 <on click="onOpenTx" param="url"> 调用
-     * @param e 点击事件
-     * @param url 交易链接
-     */
-    public onOpenTx = (e: EventTouch, url: string) => {
-        console.log('[NotificationToast] Opening transaction:', url);
-        sys.openURL(url);
-    };
 
     /**
      * 设置Toast内容
@@ -203,9 +178,7 @@ class NotificationToast extends Component {
     /**
      * 销毁Toast（快速滑动淡出）
      */
-    public destroyToast(): void {
-        // BBCode 链接无需手动解绑，节点销毁时会自动清理
-
+    public destroy(): void {
         // 根据堆叠方向决定滑动方向
         const targetY = this._isBottomToTop
             ? this._gObject.y + 50   // 从下往上堆叠：向下滑出
@@ -232,7 +205,7 @@ class NotificationToast extends Component {
 
     /** 主动关闭 */
     public close(): void {
-        this.destroyToast();
+        this.destroy();
     }
 
     /**
@@ -373,13 +346,12 @@ export class UINotification extends UIBase {
             const oldest = this._toasts.shift();
             if (oldest) {
                 this._cancelAutoHide(oldest);
-                oldest.destroyToast();
+                oldest.destroy();
             }
         }
 
-        // 创建Toast实例（使用 init 方法初始化）
-        const toast = new NotificationToast();
-        toast.init(options, this._isBottomToTop(), () => {
+        // 创建Toast实例（传入堆叠方向，决定退出动画方向）
+        const toast = new NotificationToast(options, this._isBottomToTop(), () => {
             // Toast自己销毁时，从数组移除
             const index = this._toasts.indexOf(toast);
             if (index !== -1) {
@@ -509,7 +481,7 @@ export class UINotification extends UIBase {
         // 销毁所有Toast
         this._toasts.forEach(toast => {
             this._cancelAutoHide(toast);
-            toast.destroyToast();
+            toast.destroy();
         });
         this._toasts = [];
     }
@@ -656,9 +628,13 @@ export class UINotification extends UIBase {
     ): void {
         const shortHash = txHash.slice(0, 8) + '...' + txHash.slice(-6);
         const gasText = gasInfo ? `\nGas: ${gasInfo.gasSui}` : '';
-        const linkText = explorerUrl
-            ? `\n<on click="onOpenTx" param="${explorerUrl}"><color=#2e7aff><u>[查看交易]</u></color></on>`
-            : `\nTX: ${shortHash}`;
+
+        // TODO: 链接点击功能暂时不可用（Cocos Creator RichText 不支持 <a> 标签点击）
+        // 等以后有时间再实现链接点击功能（可能需要使用 BBCode <on click> 或自定义按钮）
+        // const linkText = explorerUrl
+        //     ? `\n<a href='${explorerUrl}'>[查看交易]</a>`
+        //     : `\nTX: ${shortHash}`;
+        const linkText = ''; // 暂时不显示链接
 
         const richMessage = message + gasText + linkText;
 

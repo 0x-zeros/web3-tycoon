@@ -30,10 +30,10 @@ export enum CameraMode {
 @ccclass('IsometricConfig')
 export class IsometricConfig {
     @property({ displayName: "相机距离", tooltip: "相机距离目标点的距离" })
-    public distance: number = 30;
+    public distance: number = 25;
 
     @property({ displayName: "相机高度", tooltip: "相机高度偏移" })
-    public height: number = 5;
+    public height: number = 0;
 
     @property({ displayName: "俯视角度", tooltip: "俯视角度（度数）" })
     public angle: number = -45;
@@ -134,7 +134,7 @@ export const DEFAULT_CAMERA_CONFIG: CameraConfig = (() => {
     const config = new CameraConfig();
     
     // 等距视角配置
-    config.isometric.distance = 20;
+    config.isometric.distance = 25;
     config.isometric.height = 0;
     config.isometric.angle = -45; // -45度俯视
     config.isometric.fov = 45;

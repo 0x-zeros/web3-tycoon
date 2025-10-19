@@ -87,7 +87,7 @@ export class UIGameConfig extends UIBase {
 
         const modeText = isRateLimit ? '限速模式' : '默认模式';
         const desc = isRateLimit
-            ? '已启用限速（间隔 5 秒），避免触发 429 错误'
+            ? '已启用限速（间隔 2 秒），避免触发 429 错误'
             : '已切换到默认模式（间隔 1 秒），响应更快';
 
         console.log('[UIGameConfig] Mode changed to:', newMode);
@@ -97,8 +97,8 @@ export class UIGameConfig extends UIBase {
         if (isRateLimit) {
             UIMessage.info(
                 '限速模式已启用\n\n' +
-                '事件轮询间隔：1秒 → 5秒\n' +
-                '余额轮询间隔：2秒 → 10秒\n\n' +
+                '事件轮询间隔：1秒 → 2秒\n' +
+                '余额轮询间隔：2秒 → 5秒\n\n' +
                 '刷新页面后生效',
                 '配置已保存'
             );

@@ -22,8 +22,8 @@ const INTERVALS = {
         dataPolling: 2000,    // 2 秒
     },
     ratelimit: {
-        eventIndexer: 5000,   // 5 秒（降低 80%，避免 429）
-        dataPolling: 10000,   // 10 秒
+        eventIndexer: 2000,   // 2 秒（避免 429）
+        dataPolling: 5000,   // 5 秒
     }
 };
 

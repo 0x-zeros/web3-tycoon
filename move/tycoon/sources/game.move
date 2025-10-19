@@ -2557,7 +2557,7 @@ fun apply_card_effect_with_collectors(
                 game,
                 tile_id,
                 npc_kind,
-                /* consumable = */ true,
+                is_npc_consumable(npc_kind),  // 使用统一的判断函数
                 npc_changes
             );
         };
@@ -3019,8 +3019,10 @@ fun init_npc_spawn_pool(weights: &vector<u8>): vector<NpcSpawnEntry> {
 
 // 判断NPC是否可消耗
 fun is_npc_consumable(npc_kind: u8): bool {
-    // 炸弹、财神、土地神、福神、穷神是一次性的
+    // 所有NPC都是一次性的（路障、炸弹、狗、财神、土地神、福神、穷神）
+    npc_kind == types::NPC_BARRIER() ||
     npc_kind == types::NPC_BOMB() ||
+    npc_kind == types::NPC_DOG() ||
     npc_kind == types::NPC_WEALTH_GOD() ||
     npc_kind == types::NPC_LAND_GOD() ||
     npc_kind == types::NPC_FORTUNE_GOD() ||

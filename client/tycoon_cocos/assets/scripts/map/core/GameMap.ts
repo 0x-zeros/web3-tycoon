@@ -1356,8 +1356,11 @@ export class GameMap extends Component {
                 await this.renderPlayer(player);
             }
 
-            // 设置相机看向地图中心
-            this.focusCameraOnMapCenter();
+            // 只在编辑模式下设置相机看向地图中心
+            // 游戏模式下由 GameSession 设置相机跟随当前玩家
+            if (this._isEditMode) {
+                this.focusCameraOnMapCenter();
+            }
 
             console.log('[GameMap] 场景加载完成');
             return true;

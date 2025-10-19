@@ -449,6 +449,25 @@ export class GameSession {
 
         // 初始化 Tile 顶部中心点（从 GameMap 的 tile 节点获取）
         this._initializeTileCenters();
+
+        // 非编辑模式下，设置相机跟随当前活跃玩家
+        if (this._gameMap && !this._gameMap.isEditMode) {
+            const activePlayer = this.getActivePlayer();
+            if (activePlayer) {
+                const paperActor = activePlayer.getPaperActor();
+                if (paperActor && paperActor.node) {
+                    // 动态导入 CameraController（避免循环依赖）
+                    const { CameraController } = await import('../camera/CameraController');
+                    const cameraController = CameraController.getInstance();
+                    if (cameraController) {
+                        cameraController.setLookAtTarget(
+                            paperActor.node.getWorldPosition()
+                        );
+                        console.log('[GameSession] 相机已设置跟随当前玩家:', activePlayer.getPlayerIndex());
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -569,7 +588,7 @@ export class GameSession {
      *
      * @param eventTurn 旧的轮内回合（等于旧的 active_idx）
      */
-    public advance_turn(eventTurn: number): void {
+    public async advance_turn(eventTurn: number): Promise<void> {
         const playerCount = this._players.length;
 
         // 安全检查
@@ -641,6 +660,23 @@ export class GameSession {
             activePlayer: activePlayer,
             isMyTurn: this.isMyTurn()
         });
+
+        // 非编辑模式下，更新相机跟随新的当前玩家
+        if (activePlayer && this._gameMap && !this._gameMap.isEditMode) {
+            const paperActor = activePlayer.getPaperActor();
+            if (paperActor && paperActor.node) {
+                // 动态导入 CameraController（避免循环依赖）
+                const { CameraController } = await import('../camera/CameraController');
+                const cameraController = CameraController.getInstance();
+                if (cameraController) {
+                    cameraController.setLookAtTarget(
+                        paperActor.node.getWorldPosition(),
+                        true  // 启用平滑过渡
+                    );
+                    console.log('[GameSession] 相机已切换跟随新玩家:', activePlayer.getPlayerIndex());
+                }
+            }
+        }
     }
 
     // ========================= 决策管理 =========================

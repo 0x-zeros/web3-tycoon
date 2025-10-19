@@ -78,7 +78,7 @@ export class DecisionSkippedHandler {
 
             // 2. 更新 turn（注意 +1）
             session.setRound(event.round);
-            session.advance_turn(event.turn);
+            await session.advance_turn(event.turn);
 
             console.log('[DecisionSkippedHandler] Turn 已更新', {
                 round: event.round,

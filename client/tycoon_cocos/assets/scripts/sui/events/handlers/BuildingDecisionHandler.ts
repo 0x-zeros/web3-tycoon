@@ -93,7 +93,7 @@ export class BuildingDecisionHandler {
 
             // 4. 手动决策：更新 turn
             session.setRound(event.round);
-            session.advance_turn(event.turn);
+            await session.advance_turn(event.turn);
 
             console.log('[BuildingDecisionHandler] Turn 已更新', {
                 round: event.round,

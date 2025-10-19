@@ -32,10 +32,10 @@ export enum CameraMode {
 @ccclass('IsometricConfig')
 export class IsometricConfig {
     @property({ displayName: "相机距离", tooltip: "相机距离目标点的距离" })
-    public distance: number = 20;
+    public distance: number = 30;
 
     @property({ displayName: "相机高度", tooltip: "相机高度偏移" })
-    public height: number = 0;
+    public height: number = 5;
 
     @property({ displayName: "俯视角度", tooltip: "俯视角度（度数）" })
     public angle: number = -45;

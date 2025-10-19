@@ -248,16 +248,41 @@ export class CameraController extends BaseCameraController {
      */
     public setTarget(target: Node | null): void {
         this.followTarget = target;
-        
+
         if (target) {
             this.debugLog(`设置跟随目标: ${target.name}`);
-            
+
             // 如果当前是跟随模式，立即更新位置
             if (this._currentMode === CameraMode.THIRD_PERSON_FOLLOW) {
                 this._updateFollowPosition();
             }
         } else {
             this.debugLog('清除跟随目标');
+        }
+    }
+
+    /**
+     * 设置相机注视目标点（用于等距/俯视模式）
+     * @param target 目标世界坐标
+     * @param smooth 是否平滑过渡
+     */
+    public setLookAtTarget(target: Vec3, smooth: boolean = false): void {
+        if (smooth) {
+            // 使用tween实现平滑过渡
+            tween(this._lookAtTarget)
+                .to(0.5, target, { easing: 'sineInOut' })
+                .start();
+        } else {
+            this._lookAtTarget.set(target);
+        }
+
+        this.debugLog(`设置相机注视目标: (${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)}), smooth: ${smooth}`);
+
+        // 立即应用当前模式的相机位置
+        if (this._currentMode === CameraMode.ISOMETRIC) {
+            this._applyIsometricMode(smooth);
+        } else if (this._currentMode === CameraMode.TOP_DOWN) {
+            this._applyTopDownMode(smooth);
         }
     }
 

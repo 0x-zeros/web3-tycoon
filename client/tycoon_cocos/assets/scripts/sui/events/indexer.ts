@@ -7,6 +7,7 @@
 import type { SuiClient } from '@mysten/sui/client';
 import { EventType, EventMetadata, GameEvent } from './types';
 import { loadSuiClient } from '../loader';
+import { RpcConfigManager } from '../config/RpcConfigManager';
 
 /**
  * 事件索引器配置
@@ -243,9 +244,10 @@ export class TycoonEventIndexer {
             console.error('Failed to poll events:', error);
         }
 
-        // 继续轮询
+        // 继续轮询（每次读取最新配置的间隔时间）
         if (this.isRunning) {
-            this.pollTimer = setTimeout(() => this.pollEvents(), this.pollInterval);
+            const interval = RpcConfigManager.getEventIndexerInterval();
+            this.pollTimer = setTimeout(() => this.pollEvents(), interval);
         }
     }
 

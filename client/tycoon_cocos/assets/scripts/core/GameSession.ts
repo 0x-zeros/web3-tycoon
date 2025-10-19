@@ -652,6 +652,16 @@ export class GameSession {
 
         const activePlayer = this.getActivePlayer();
 
+        // ✅ 调试日志：确认activePlayer信息
+        console.log('[GameSession] advance_turn完成，activePlayer信息:', {
+            playerIndex: activePlayer?.getPlayerIndex(),
+            owner: activePlayer?.getOwner(),
+            position: activePlayer?.getPos(),
+            hasPaperActor: !!activePlayer?.getPaperActor(),
+            paperActorNodeName: activePlayer?.getPaperActor()?.node?.name,
+            paperActorPosition: activePlayer?.getPaperActor()?.node?.getWorldPosition()
+        });
+
         // 触发回合变化事件
         EventBus.emit(EventTypes.Game.TurnChanged, {
             session: this,
@@ -663,19 +673,47 @@ export class GameSession {
 
         // 非编辑模式下，更新相机跟随新的当前玩家
         if (activePlayer && this._gameMap && !this._gameMap.isEditMode) {
+            console.log('[GameSession] 准备设置相机跟随，检查条件:', {
+                hasGameMap: !!this._gameMap,
+                isEditMode: this._gameMap?.isEditMode,
+                activePlayerIndex: activePlayer.getPlayerIndex()
+            });
+
             const paperActor = activePlayer.getPaperActor();
+            console.log('[GameSession] PaperActor检查:', {
+                hasPaperActor: !!paperActor,
+                hasNode: !!paperActor?.node,
+                nodeName: paperActor?.node?.name,
+                worldPosition: paperActor?.node?.getWorldPosition()
+            });
+
             if (paperActor && paperActor.node) {
                 // 动态导入 CameraController（避免循环依赖）
                 const { CameraController } = await import('../camera/CameraController');
                 const cameraController = CameraController.getInstance();
                 if (cameraController) {
+                    const targetPos = paperActor.node.getWorldPosition();
+                    console.log('[GameSession] 设置相机目标位置:', {
+                        playerIndex: activePlayer.getPlayerIndex(),
+                        targetPos: `(${targetPos.x.toFixed(2)}, ${targetPos.y.toFixed(2)}, ${targetPos.z.toFixed(2)})`
+                    });
+
                     cameraController.setLookAtTarget(
-                        paperActor.node.getWorldPosition(),
+                        targetPos,
                         true  // 启用平滑过渡
                     );
-                    console.log('[GameSession] 相机已切换跟随新玩家:', activePlayer.getPlayerIndex());
+                    console.log('[GameSession] ✓ 相机已切换跟随新玩家:', activePlayer.getPlayerIndex());
                 }
+            } else {
+                console.warn('[GameSession] ✗ PaperActor或node不存在，无法设置相机');
             }
+        } else {
+            console.log('[GameSession] 跳过相机设置:', {
+                reason: !activePlayer ? 'no activePlayer' :
+                        !this._gameMap ? 'no gameMap' :
+                        this._gameMap.isEditMode ? 'isEditMode=true' :
+                        'unknown'
+            });
         }
     }
 

@@ -239,22 +239,31 @@ export class CameraController extends BaseCameraController {
      * @param smooth 是否平滑过渡
      */
     public setLookAtTarget(target: Vec3, smooth: boolean = false): void {
+        this.debugLog(`设置相机注视目标: (${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)}), smooth: ${smooth}`);
+
         if (smooth) {
-            // 使用tween实现平滑过渡
+            // ✅ 在tween过程中持续更新相机位置
             tween(this._lookAtTarget)
-                .to(0.5, target, { easing: 'sineInOut' })
+                .to(0.5, target, {
+                    easing: 'sineInOut',
+                    onUpdate: () => {
+                        // 每帧更新相机位置（根据当前模式）
+                        if (this._currentMode === CameraMode.ISOMETRIC) {
+                            this._applyIsometricMode(true);
+                        } else if (this._currentMode === CameraMode.TOP_DOWN) {
+                            this._applyTopDownMode(true);
+                        }
+                    }
+                })
                 .start();
         } else {
             this._lookAtTarget.set(target);
-        }
-
-        this.debugLog(`设置相机注视目标: (${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)}), smooth: ${smooth}`);
-
-        // 立即应用当前模式的相机位置
-        if (this._currentMode === CameraMode.ISOMETRIC) {
-            this._applyIsometricMode(smooth);
-        } else if (this._currentMode === CameraMode.TOP_DOWN) {
-            this._applyTopDownMode(smooth);
+            // 立即应用
+            if (this._currentMode === CameraMode.ISOMETRIC) {
+                this._applyIsometricMode(true);
+            } else if (this._currentMode === CameraMode.TOP_DOWN) {
+                this._applyTopDownMode(true);
+            }
         }
     }
 

@@ -1920,6 +1920,11 @@ export class SuiManager {
 
         console.log('  ✓ 初始化完成');
 
+        // ====== 第 3.5 步: 重新启动后台同步（预加载数据）======
+        console.log('[SuiManager] [3.5/4] 重新启动后台同步...');
+        await this.startBackgroundSync();
+        console.log('  ✓ 后台同步已启动');
+
         // ====== 第四步: 通知 UI 更新 ======
         console.log('[SuiManager] [4/4] 通知 UI...');
 

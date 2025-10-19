@@ -19,6 +19,7 @@ import {
 } from 'cc';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
+import { Blackboard } from '../events/Blackboard';
 
 const { ccclass, property } = _decorator;
 
@@ -97,26 +98,45 @@ export class DiceController {
     }
     
     /**
-     * 获取相机注视点位置
+     * 获取当前活跃玩家位置（用于骰子显示）
      */
-    private getCameraFocusPosition(): Vec3 {
-        // 获取主相机
-        const camera = director.getScene()?.getChildByName('Main Camera')?.getComponent(Camera);
-        if (!camera) {
-            console.warn('[DiceController] 找不到主相机，使用默认位置');
-            return new Vec3(0, 8, 0);  // ✅ 提高默认高度（5 → 8）
+    private getActivePlayerPosition(): Vec3 {
+        // 从 Blackboard 获取 GameSession
+        const session = Blackboard.instance.get<any>("currentGameSession");
+
+        if (!session) {
+            console.warn('[DiceController] GameSession 未找到，使用默认位置');
+            return new Vec3(0, 8, 0);
         }
 
-        // 计算相机前方一定距离的位置作为骰子出现位置
-        const cameraPos = camera.node.worldPosition.clone();
-        const forward = camera.node.forward.clone();
+        // 获取当前活跃玩家
+        const activePlayer = session.getActivePlayer();
+        if (!activePlayer) {
+            console.warn('[DiceController] 活跃玩家未找到，使用默认位置');
+            return new Vec3(0, 8, 0);
+        }
 
-        // 在相机前方10单位的位置
-        const focusPos = new Vec3();
-        Vec3.add(focusPos, cameraPos, forward.multiplyScalar(10));
-        focusPos.y = 8;  // ✅ 固定高度提高（5 → 8）
+        // 获取玩家的 PaperActor 节点
+        const paperActor = activePlayer.getPaperActor();
+        if (!paperActor || !paperActor.node) {
+            console.warn('[DiceController] 玩家节点未找到，使用默认位置');
+            return new Vec3(0, 8, 0);
+        }
 
-        return focusPos;
+        // 计算骰子位置：玩家位置右侧偏移 + 上方
+        const playerPos = paperActor.node.getWorldPosition();
+        const dicePos = new Vec3(
+            playerPos.x + 1.5,  // 右侧偏移3个单位
+            playerPos.y + 1.5,  // 上方5个单位（高度）
+            playerPos.z + 1.5     // Z轴与玩家相同
+        );
+
+        console.log('[DiceController] 骰子位置基于玩家:', {
+            playerPos: { x: playerPos.x, y: playerPos.y, z: playerPos.z },
+            dicePos: { x: dicePos.x, y: dicePos.y, z: dicePos.z }
+        });
+
+        return dicePos;
     }
     
     /**
@@ -158,8 +178,8 @@ export class DiceController {
             director.getScene()?.addChild(this.diceNode);
         }
 
-        // 设置初始位置和显示
-        const startPos = this.getCameraFocusPosition();
+        // 设置初始位置和显示（基于当前玩家位置）
+        const startPos = this.getActivePlayerPosition();
         this.diceNode.setPosition(startPos);
         this.diceNode.active = true;
         // 停止可能残留的补间动画
@@ -332,8 +352,8 @@ export class DiceController {
             director.getScene()?.addChild(this.diceNode);
         }
 
-        // 设置初始位置和显示
-        const startPos = this.getCameraFocusPosition();
+        // 设置初始位置和显示（基于当前玩家位置）
+        const startPos = this.getActivePlayerPosition();
         this.diceNode.setPosition(startPos);
         this.diceNode.active = true;
 

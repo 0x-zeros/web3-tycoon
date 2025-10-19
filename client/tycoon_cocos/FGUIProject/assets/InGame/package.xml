@@ -24,7 +24,6 @@
     <component id="n6n6oy" name="Building.xml" path="/components/"/>
     <component id="n6n6oz" name="BuildingSelect.xml" path="/" exported="true"/>
     <component id="n6n6p0" name="PlayerBuff.xml" path="/components/"/>
-    <component id="n6n6p1" name="Cash.xml" path="/" exported="true"/>
     <component id="b9csp2" name="Bankruptcy.xml" path="/" exported="true"/>
     <component id="b9csp3" name="GameEnd.xml" path="/" exported="true"/>
   </resources>

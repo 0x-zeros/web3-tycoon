@@ -96,7 +96,7 @@ export class RollAndStepAction {
 
         // 设置默认配置
         this.config = {
-            stepDelay: config?.stepDelay ?? 500,
+            stepDelay: config?.stepDelay ?? 300,  // 加速：500ms → 300ms
             autoPlay: config?.autoPlay ?? true,
             playbackSpeed: config?.playbackSpeed ?? 1.0
         };

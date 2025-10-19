@@ -114,7 +114,7 @@ export class Actor extends Component {
     /** 移动动画配置 */
     private m_moveConfig: MoveAnimationConfig = {
         type: 'smooth',
-        duration: 1.0,
+        duration: 0.5,  // 加速：1.0s → 0.5s
         heightOffset: 0.5,
         easing: 'sineInOut'
     };

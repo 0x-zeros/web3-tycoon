@@ -415,27 +415,27 @@ export class DiceController {
         const targetRotation = DICE_FACE_ROTATIONS[value];
 
         tween(this.diceNode)
-            // 减速阶段：继续旋转但逐渐减慢
-            .by(0.3, {
+            // 减速阶段：继续旋转但逐渐减慢（加速：0.3s → 0.12s）
+            .by(0.12, {
                 eulerAngles: new Vec3(90, 135, 90)
             }, { easing: 'quadOut' })
-            // 弹跳落地
-            .to(0.2, {
+            // 弹跳落地（加速：0.2s → 0.08s）
+            .to(0.08, {
                 position: new Vec3(
                     this.diceNode.position.x,
                     this.diceNode.position.y + 1,
                     this.diceNode.position.z
                 )
             }, { easing: 'quadOut' })
-            .to(0.2, {
+            .to(0.08, {
                 position: new Vec3(
                     this.diceNode.position.x,
                     this.diceNode.position.y - 0.5,
                     this.diceNode.position.z
                 )
             }, { easing: 'bounceOut' })
-            // 最终旋转到目标值
-            .to(0.3, { rotation: targetRotation }, { easing: 'quadInOut' })
+            // 最终旋转到目标值（加速：0.3s → 0.12s）
+            .to(0.12, { rotation: targetRotation }, { easing: 'quadInOut' })
             .call(() => {
                 this.isRolling = false;
 

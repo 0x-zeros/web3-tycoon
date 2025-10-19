@@ -78,6 +78,11 @@ export class BuildingDecisionHandler {
 
             // ✅ 2. 忽略自动决策事件（已在 RollAndStepHandler 中完整处理）
             if (event.auto_decision) {
+                if (!event.decision) {
+                    console.warn('[BuildingDecisionHandler] Auto-decision event with null decision, ignoring');
+                    return;
+                }
+
                 console.log('[BuildingDecisionHandler] Auto-decision event ignored (handled by RollAndStepHandler)', {
                     buildingId: event.decision.building_id,
                     player: event.player,
@@ -90,6 +95,12 @@ export class BuildingDecisionHandler {
 
             // ✅ 3. 手动决策：获取决策详情
             const decision = event.decision;
+
+            // 检查 decision 是否存在
+            if (!decision) {
+                console.error('[BuildingDecisionHandler] Missing decision data in BuildingDecisionEvent');
+                return;
+            }
 
             // 4. 手动决策：更新 turn
             session.setRound(event.round);

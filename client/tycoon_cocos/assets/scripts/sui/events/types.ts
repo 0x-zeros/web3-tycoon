@@ -167,8 +167,8 @@ export interface BuildingDecisionEvent {
     turn: number;
     /** 是否为自动决策 */
     auto_decision: boolean;
-    /** 决策详情 */
-    decision: BuildingDecisionInfo;
+    /** 决策详情（可能为 null） */
+    decision: BuildingDecisionInfo | null;
 }
 
 /**
@@ -184,8 +184,8 @@ export interface RentDecisionEvent {
     turn: number;
     /** 是否为自动决策 */
     auto_decision: boolean;
-    /** 决策详情 */
-    decision: RentDecisionInfo;
+    /** 决策详情（可能为 null） */
+    decision: RentDecisionInfo | null;
 }
 
 /**

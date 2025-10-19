@@ -81,6 +81,11 @@ export class RentDecisionHandler {
 
             // ✅ 2. 忽略自动决策事件（已在 RollAndStepHandler 中完整处理）
             if (event.auto_decision) {
+                if (!event.decision) {
+                    console.warn('[RentDecisionHandler] Auto-decision event with null decision, ignoring');
+                    return;
+                }
+
                 console.log('[RentDecisionHandler] Auto-decision event ignored (handled by RollAndStepHandler)', {
                     payer: event.decision.payer,
                     owner: event.decision.owner,
@@ -92,6 +97,12 @@ export class RentDecisionHandler {
 
             // ✅ 3. 手动决策：获取决策详情
             const decision = event.decision;
+
+            // 检查 decision 是否存在
+            if (!decision) {
+                console.error('[RentDecisionHandler] Missing decision data in RentDecisionEvent');
+                return;
+            }
 
             // 4. 手动决策：更新 turn
             session.setRound(event.round);

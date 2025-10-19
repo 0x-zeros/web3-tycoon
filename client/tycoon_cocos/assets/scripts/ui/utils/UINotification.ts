@@ -1,4 +1,4 @@
-import { _decorator, Color } from 'cc';
+import { _decorator, Color, Component, EventTouch, sys } from 'cc';
 import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
 
@@ -51,7 +51,8 @@ export interface NotificationOptions {
  * 单个Toast通知的封装类
  * 管理单个通知的完整生命周期：创建、显示、动画、自动消失、销毁
  */
-class NotificationToast {
+@ccclass('NotificationToast')
+class NotificationToast extends Component {
     private _gObject: fgui.GComponent;
     private _onDestroy?: () => void;
     private _isBottomToTop: boolean;
@@ -66,17 +67,30 @@ class NotificationToast {
     };
 
     /**
-     * 构造函数
+     * 初始化方法（替代构造函数）
      * @param options 通知配置
      * @param isBottomToTop 是否从下往上堆叠（决定退出动画方向）
      * @param onDestroy 销毁回调
      */
-    constructor(options: NotificationOptions, isBottomToTop: boolean, onDestroy?: () => void) {
+    public init(options: NotificationOptions, isBottomToTop: boolean, onDestroy?: () => void): void {
         this._isBottomToTop = isBottomToTop;
         this._onDestroy = onDestroy;
 
         // 创建GObject（不使用对象池，每次创建新对象）
         this._gObject = fgui.UIPackage.createObject("Common", "NotifyToast").asCom;
+
+        // 将组件添加到节点（确保 onOpenTx 方法能被调用）
+        const node = this._gObject.node;
+        if (node) {
+            const comp = node.getComponent(NotificationToast) || node.addComponent(NotificationToast);
+            // 复制当前实例的属性到节点组件
+            comp._gObject = this._gObject;
+            comp._onDestroy = this._onDestroy;
+            comp._isBottomToTop = this._isBottomToTop;
+        }
+
+        // 设置为可点击（允许富文本链接接收点击）
+        this._gObject.touchable = true;
 
         // 设置内容
         this._setupContent(options);
@@ -85,13 +99,14 @@ class NotificationToast {
     }
 
     /**
-     * 链接点击处理
+     * 打开交易链接（BBCode 点击事件）
+     * 此方法会被 RichText 的 <on click="onOpenTx" param="url"> 调用
+     * @param e 点击事件
+     * @param url 交易链接
      */
-    private onLinkClick = (href: string) => {
-        console.log('[NotificationToast] Link clicked:', href);
-        if (typeof window !== 'undefined' && window.open) {
-            window.open(href, '_blank');
-        }
+    public onOpenTx = (e: EventTouch, url: string) => {
+        console.log('[NotificationToast] Opening transaction:', url);
+        sys.openURL(url);
     };
 
     /**
@@ -105,8 +120,7 @@ class NotificationToast {
         if (msg) {
             console.log('[NotificationToast] Message component type:', msg.constructor.name, {
                 isGRichTextField: msg instanceof fgui.GRichTextField,
-                isGTextField: msg instanceof fgui.GTextField,
-                hasOnClickLink: !!(msg as any).onClickLink
+                isGTextField: msg instanceof fgui.GTextField
             });
         }
 
@@ -125,10 +139,7 @@ class NotificationToast {
             (msg as any).text = text;
         }
 
-        // 监听富文本链接点击（仅当组件支持时）
-        if (msg && msg instanceof fgui.GRichTextField && msg.onClickLink) {
-            msg.onClickLink.add(this.onLinkClick, this);
-        }
+        // BBCode 链接会自动调用节点上的 onOpenTx 方法，无需手动绑定事件
     }
 
     /** 递归查找第一个文本控件（Rich 或普通） */
@@ -192,12 +203,8 @@ class NotificationToast {
     /**
      * 销毁Toast（快速滑动淡出）
      */
-    public destroy(): void {
-        // 清理链接监听（仅当组件支持时）
-        const msg = this._findFirstText(this._gObject);
-        if (msg && msg instanceof fgui.GRichTextField && msg.onClickLink) {
-            msg.onClickLink.remove(this.onLinkClick, this);
-        }
+    public destroyToast(): void {
+        // BBCode 链接无需手动解绑，节点销毁时会自动清理
 
         // 根据堆叠方向决定滑动方向
         const targetY = this._isBottomToTop
@@ -225,7 +232,7 @@ class NotificationToast {
 
     /** 主动关闭 */
     public close(): void {
-        this.destroy();
+        this.destroyToast();
     }
 
     /**
@@ -366,12 +373,13 @@ export class UINotification extends UIBase {
             const oldest = this._toasts.shift();
             if (oldest) {
                 this._cancelAutoHide(oldest);
-                oldest.destroy();
+                oldest.destroyToast();
             }
         }
 
-        // 创建Toast实例（传入堆叠方向，决定退出动画方向）
-        const toast = new NotificationToast(options, this._isBottomToTop(), () => {
+        // 创建Toast实例（使用 init 方法初始化）
+        const toast = new NotificationToast();
+        toast.init(options, this._isBottomToTop(), () => {
             // Toast自己销毁时，从数组移除
             const index = this._toasts.indexOf(toast);
             if (index !== -1) {
@@ -501,7 +509,7 @@ export class UINotification extends UIBase {
         // 销毁所有Toast
         this._toasts.forEach(toast => {
             this._cancelAutoHide(toast);
-            toast.destroy();
+            toast.destroyToast();
         });
         this._toasts = [];
     }
@@ -649,7 +657,7 @@ export class UINotification extends UIBase {
         const shortHash = txHash.slice(0, 8) + '...' + txHash.slice(-6);
         const gasText = gasInfo ? `\nGas: ${gasInfo.gasSui}` : '';
         const linkText = explorerUrl
-            ? `\n<a href='${explorerUrl}'>[查看交易]</a>`
+            ? `\n<on click="onOpenTx" param="${explorerUrl}"><color=#2e7aff><u>[查看交易]</u></color></on>`
             : `\nTX: ${shortHash}`;
 
         const richMessage = message + gasText + linkText;

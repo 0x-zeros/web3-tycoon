@@ -1,5 +1,5 @@
 {
-  "name": "web3-tycoon",
+  "name": "web3-tycoon cloudflare",
   "server": "",
   "engineModulesConfigKey": "defaultConfig",
   "platform": "web-mobile",
@@ -20,7 +20,7 @@
       "cleanupImageCache": "inherit-project-setting"
     }
   },
-  "nativeCodeBundleMode": "both",
+  "nativeCodeBundleMode": "wasm",
   "polyfills": {
     "asyncFunctions": true
   },
@@ -57,7 +57,7 @@
   "packages": {
     "web-mobile": {
       "useWebGPU": false,
-      "orientation": "auto",
+      "orientation": "landscape",
       "embedWebDebugger": false,
       "__version__": "1.0.1"
     },

@@ -355,7 +355,15 @@ export class SuiManager {
 
         // ✅ 等待交易被完全索引（确保 effects 可读，修复 testnet 误报失败）
         console.log('[SuiManager] Waiting for transaction to be indexed...');
-        await this._client!.waitForTransaction({ digest: result.digest });
+        await this._client!.waitForTransaction({
+            digest: result.digest,
+            options: {
+                showEffects: true,
+                showEvents: true,
+                showObjectChanges: true,
+                showBalanceChanges: true
+            }
+        });
         console.log('[SuiManager] Transaction indexed');
 
         this._log('[SuiManager] Transaction executed', {
@@ -573,7 +581,12 @@ export class SuiManager {
             dice: rollEvent.dice,
             endPos: rollEvent.end_pos,
             txHash: result.digest
-        };
+        } as any;
+
+        // 附加 gas 信息
+        if ((result as any)._gasInfo) {
+            response._gasInfo = (result as any)._gasInfo;
+        }
 
         this._log('[SuiManager] Roll and step completed', response);
 
@@ -609,7 +622,12 @@ export class SuiManager {
         const response = {
             success: true,
             txHash: result.digest
-        };
+        } as any;
+
+        // 附加 gas 信息
+        if ((result as any)._gasInfo) {
+            response._gasInfo = (result as any)._gasInfo;
+        }
 
         this._log('[SuiManager] Skip turn completed', response);
 

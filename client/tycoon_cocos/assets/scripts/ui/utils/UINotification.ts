@@ -85,11 +85,30 @@ class NotificationToast {
     }
 
     /**
+     * 链接点击处理
+     */
+    private onLinkClick = (href: string) => {
+        console.log('[NotificationToast] Link clicked:', href);
+        if (typeof window !== 'undefined' && window.open) {
+            window.open(href, '_blank');
+        }
+    };
+
+    /**
      * 设置Toast内容
      */
     private _setupContent(options: NotificationOptions): void {
         const bg = (this._gObject.getChild("bg") as fgui.GGraph) || this._findFirstGraph(this._gObject);
         const msg = this._findFirstText(this._gObject);
+
+        // 调试：打印组件类型
+        if (msg) {
+            console.log('[NotificationToast] Message component type:', msg.constructor.name, {
+                isGRichTextField: msg instanceof fgui.GRichTextField,
+                isGTextField: msg instanceof fgui.GTextField,
+                hasOnClickLink: !!(msg as any).onClickLink
+            });
+        }
 
         // 设置背景颜色
         if (bg && options.type) {
@@ -104,6 +123,11 @@ class NotificationToast {
                 ? `【${options.title}】 ${options.message}`
                 : options.message;
             (msg as any).text = text;
+        }
+
+        // 监听富文本链接点击（仅当组件支持时）
+        if (msg && msg instanceof fgui.GRichTextField && msg.onClickLink) {
+            msg.onClickLink.add(this.onLinkClick, this);
         }
     }
 
@@ -169,6 +193,12 @@ class NotificationToast {
      * 销毁Toast（快速滑动淡出）
      */
     public destroy(): void {
+        // 清理链接监听（仅当组件支持时）
+        const msg = this._findFirstText(this._gObject);
+        if (msg && msg instanceof fgui.GRichTextField && msg.onClickLink) {
+            msg.onClickLink.remove(this.onLinkClick, this);
+        }
+
         // 根据堆叠方向决定滑动方向
         const targetY = this._isBottomToTop
             ? this._gObject.y + 50   // 从下往上堆叠：向下滑出
@@ -598,6 +628,36 @@ export class UINotification extends UIBase {
             } else {
                 console.error("[UINotification] Anchor not found:", anchorName);
             }
+        }
+    }
+
+    /**
+     * 交易通知工具方法
+     * @param success 是否成功
+     * @param message 消息内容
+     * @param txHash 交易哈希
+     * @param gasInfo Gas 信息（可选）
+     * @param explorerUrl 区块浏览器链接（可选）
+     */
+    public static txNotification(
+        success: boolean,
+        message: string,
+        txHash: string,
+        gasInfo?: { gasSui: string },
+        explorerUrl?: string
+    ): void {
+        const shortHash = txHash.slice(0, 8) + '...' + txHash.slice(-6);
+        const gasText = gasInfo ? `\nGas: ${gasInfo.gasSui}` : '';
+        const linkText = explorerUrl
+            ? `\n<a href='${explorerUrl}'>[查看交易]</a>`
+            : `\nTX: ${shortHash}`;
+
+        const richMessage = message + gasText + linkText;
+
+        if (success) {
+            this.success(richMessage, undefined, 6000);
+        } else {
+            this.error(richMessage, undefined, 6000);
         }
     }
 }

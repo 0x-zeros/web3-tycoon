@@ -328,6 +328,11 @@ export class UIInGameDice extends UIBase {
 
             transactionSuccess = true;  // 标记交易成功
 
+            // ===== 显示成功通知 =====
+            const gasInfo = (result as any)._gasInfo;
+            const txUrl = SuiManager.instance.getExplorer(result.txHash, 'txblock');
+            UINotification.txNotification(true, '掷骰成功', result.txHash, gasInfo, txUrl);
+
             // ===== 7. 交易成功，等待事件处理 =====
             // EventIndexer 会监听链上 RollAndStepActionEvent
             // 然后触发 RollAndStepHandler 处理，自动播放动画
@@ -413,9 +418,14 @@ export class UIInGameDice extends UIBase {
             }
 
             // 调用 SuiManager 封装方法
-            await SuiManager.instance.skipTurn(session);
+            const result = await SuiManager.instance.skipTurn(session);
 
             console.log('[UIInGameDice] 跳过回合交易已发送');
+
+            // 显示成功通知
+            const gasInfo = (result as any)._gasInfo;
+            const txUrl = SuiManager.instance.getExplorer(result.txHash, 'txblock');
+            UINotification.txNotification(true, '跳过回合成功', result.txHash, gasInfo, txUrl);
 
         } catch (error) {
             console.error('[UIInGameDice] 跳过回合失败', error);

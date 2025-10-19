@@ -105,15 +105,15 @@ export class TransactionErrorHandler {
     ): void {
         switch (severity) {
             case ErrorSeverity.INFO:
-                UINotification.info(message, title);
+                UINotification.info(message, title, 6000);
                 break;
 
             case ErrorSeverity.WARNING:
-                UINotification.warning(message, title);
+                UINotification.warning(message, title, 6000);
                 break;
 
             case ErrorSeverity.ERROR:
-                UINotification.error(message, title);
+                UINotification.error(message, title, 6000);
                 break;
 
             case ErrorSeverity.CRITICAL:
@@ -124,7 +124,7 @@ export class TransactionErrorHandler {
                 break;
 
             default:
-                UINotification.error(message, title);
+                UINotification.error(message, title, 6000);
         }
     }
 

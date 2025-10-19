@@ -127,44 +127,45 @@ export interface CardEffect {
 
 /**
  * 预定义的卡牌效果
+ * 对应Move合约 types.move 中的 CARD_* 常量
  */
 export const CARD_EFFECTS: Map<number, CardEffect> = new Map([
-    [1, { // CARD_MOVE_CTRL
+    [0, { // CARD_MOVE_CTRL - 遥控骰子
         type: 'movement',
         duration: 0,
         description: '控制下次移动的骰子点数'
     }],
-    [2, { // CARD_BARRIER
+    [1, { // CARD_BARRIER - 路障卡
         type: 'npc',
         duration: 0,
         description: '在指定地块放置路障'
     }],
-    [10, { // CARD_BOMB
+    [2, { // CARD_BOMB - 炸弹卡
         type: 'npc',
         duration: 0,
         description: '在指定地块放置炸弹'
     }],
-    [11, { // CARD_DOG
-        type: 'npc',
-        duration: 0,
-        description: '在指定地块放置恶犬'
-    }],
-    [20, { // CARD_RENT_FREE
+    [3, { // CARD_RENT_FREE - 免租卡
         type: 'buff',
         duration: 1,
         description: '下次经过地产免租金'
     }],
-    [30, { // CARD_FREEZE
+    [4, { // CARD_FREEZE - 冰冻卡
         type: 'debuff',
         duration: 2,
         description: '冻结目标玩家2回合'
     }],
-    [41, { // CARD_CLEANSE
+    [5, { // CARD_DOG - 恶犬卡
+        type: 'npc',
+        duration: 0,
+        description: '在指定地块放置恶犬'
+    }],
+    [6, { // CARD_CLEANSE - 机器娃娃
         type: 'buff',
         duration: 0,
-        description: '清除自身所有负面效果'
+        description: '清除一段路上所有NPC'
     }],
-    [50, { // CARD_TURN
+    [7, { // CARD_TURN - 转向卡
         type: 'movement',
         duration: 0,
         description: '改变移动方向'
@@ -177,17 +178,18 @@ export const CARD_EFFECTS: Map<number, CardEffect> = new Map([
 
 /**
  * 获取卡牌名称
+ * 对应Move合约 types.move 中的 CARD_* 常量
  */
 export function getCardName(kind: number): string {
     const names: { [key: number]: string } = {
-        1: '遥控骰子',
-        2: '路障卡',
-        10: '炸弹卡',
-        11: '恶犬卡',
-        20: '免租卡',
-        30: '冰冻卡',
-        41: '净化卡',
-        50: '转向卡'
+        0: '遥控骰子',  // CARD_MOVE_CTRL
+        1: '路障卡',    // CARD_BARRIER
+        2: '炸弹卡',    // CARD_BOMB
+        3: '免租卡',    // CARD_RENT_FREE
+        4: '冰冻卡',    // CARD_FREEZE
+        5: '恶犬卡',    // CARD_DOG
+        6: '机器娃娃',  // CARD_CLEANSE - 清除一段路上所有NPC
+        7: '转向卡'     // CARD_TURN
     };
     return names[kind] || `未知卡牌(${kind})`;
 }
@@ -196,8 +198,8 @@ export function getCardName(kind: number): string {
  * 判断卡牌是否需要目标
  */
 export function cardNeedsTarget(kind: number): boolean {
-    // 需要选择目标的卡牌
-    const targetCards = [2, 10, 11, 30]; // 路障、炸弹、恶犬、冰冻
+    // 需要选择目标的卡牌：路障、炸弹、恶犬、冰冻、机器娃娃
+    const targetCards = [1, 2, 4, 5, 6];
     return targetCards.includes(kind);
 }
 
@@ -205,8 +207,8 @@ export function cardNeedsTarget(kind: number): boolean {
  * 判断卡牌是否需要参数
  */
 export function cardNeedsParam(kind: number): boolean {
-    // 需要额外参数的卡牌
-    const paramCards = [1]; // 遥控骰子需要指定点数
+    // 需要额外参数的卡牌：遥控骰子需要指定点数
+    const paramCards = [0]; // CARD_MOVE_CTRL
     return paramCards.includes(kind);
 }
 
@@ -215,13 +217,14 @@ export function cardNeedsParam(kind: number): boolean {
  */
 export function validateCardParams(kind: number, context: CardEffectContext): boolean {
     switch (kind) {
-        case 1: // 遥控骰子
+        case 0: // CARD_MOVE_CTRL - 遥控骰子
             return context.dice_value !== undefined && context.dice_value >= 1 && context.dice_value <= 6;
-        case 2: // 路障
-        case 10: // 炸弹
-        case 11: // 恶犬
+        case 1: // CARD_BARRIER - 路障
+        case 2: // CARD_BOMB - 炸弹
+        case 5: // CARD_DOG - 恶犬
+        case 6: // CARD_CLEANSE - 机器娃娃
             return context.target_tile !== undefined;
-        case 30: // 冰冻
+        case 4: // CARD_FREEZE - 冰冻
             return context.target_player_idx !== undefined;
         default:
             return true;

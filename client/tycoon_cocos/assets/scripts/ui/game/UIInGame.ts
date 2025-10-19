@@ -466,11 +466,24 @@ export class UIInGame extends UIBase {
     private _onDecisionPending(data: any): void {
         console.log('[UIInGame] 收到待决策事件', data);
 
-        // 如果 UI 已经初始化完成，显示决策窗口（异步，不阻塞）
+        // 直接从事件数据获取决策信息，避免异步时序问题
+        const decision = data.decision;  // PendingDecisionInfo
+        const session = data.session;    // GameSession
+
+        if (!decision || !session) {
+            console.warn('[UIInGame] DecisionPending 事件缺少数据');
+            return;
+        }
+
+        // 如果 UI 已经初始化完成，直接显示决策窗口
         if (this._isInitialized) {
-            this._showDecisionDialogIfNeeded().catch(error => {
-                console.error('[UIInGame] Failed to show decision dialog:', error);
-            });
+            const myPlayer = session.getMyPlayer();
+            if (myPlayer) {
+                console.log('[UIInGame] 直接显示决策窗口（从事件数据）', decision);
+                this._showDecisionDialog(decision, myPlayer, session);
+            } else {
+                console.warn('[UIInGame] My player not found in event session');
+            }
         }
         // 如果还没初始化完成，什么都不做（等待 onShow 中的主动查询）
     }

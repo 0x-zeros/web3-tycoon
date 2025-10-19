@@ -886,7 +886,7 @@ fun try_execute_buy_building(
 }
 
 /// 尝试执行升级建筑（内部逻辑复用）
-/// 返回：(是否成功, Option<CashDelta>, 新等级)
+/// 返回：(是否成功, Option<CashDelta>, 新等级, 最终建筑类型)
 fun try_execute_upgrade_building(
     game: &mut Game,
     player_index: u8,
@@ -894,13 +894,15 @@ fun try_execute_upgrade_building(
     tile_id: u16,
     upgrade_cost: u64,
     current_level: u8,
-    game_data: &GameData
-): (bool, option::Option<events::CashDelta>, u8) {
+    _game_data: &GameData,
+    building_size: u8,           // 建筑尺寸
+    requested_building_type: u8  // 请求的建筑类型（用于2x2 lv0->lv1）
+): (bool, option::Option<events::CashDelta>, u8, u8) {
     let player = &game.players[player_index as u64];
 
     // 检查现金
     if (player.cash <= upgrade_cost) {
-        return (false, option::none(), current_level)
+        return (false, option::none(), current_level, types::BUILDING_NONE())
     };
 
     let player_addr = player.owner;
@@ -911,11 +913,26 @@ fun try_execute_upgrade_building(
 
     // 提升等级
     let new_level = current_level + 1;
-    let building_type = game.buildings[building_id as u64].building_type;  // 先保存type
-    game.buildings[building_id as u64].level = new_level;
+
+    // 处理2x2建筑从lv0->lv1的类型设置，并返回最终类型
+    let final_building_type = {
+        let building_mut = &mut game.buildings[building_id as u64];
+
+        if (building_size == types::SIZE_2X2() && current_level == 0) {
+            // 验证建筑类型是否有效（必须是大建筑类型）
+            assert!(types::is_large_building_type(requested_building_type), EInvalidBuildingType);
+
+            // TODO: 其他建筑类型功能待实现（research/oil/commercial/hotel）
+            // 目前统一设置为 temple，后续实现其他类型功能后修改
+            building_mut.building_type = types::BUILDING_TEMPLE();
+        };
+
+        building_mut.level = new_level;
+        building_mut.building_type  // 返回升级后的建筑类型
+    };
 
     // 维护 temple_levels 缓存（如果是土地庙）
-    if (building_type == types::BUILDING_TEMPLE()) {
+    if (final_building_type == types::BUILDING_TEMPLE()) {
         rebuild_temple_levels_cache(game, player_index);
     };
 
@@ -928,7 +945,7 @@ fun try_execute_upgrade_building(
         tile_id
     );
 
-    (true, option::some(cash_delta), new_level)
+    (true, option::some(cash_delta), new_level, final_building_type)
 }
 
 /// 尝试执行租金支付（内部逻辑复用）
@@ -1102,25 +1119,14 @@ entry fun buy_building(
     let price = (base_price * price_index);
     assert!(player.cash > price, EInsufficientCash);
 
-    // 扣除现金
-    {
-        let player_mut = &mut game.players[player_index as u64];
-        player_mut.cash = player_mut.cash - price;
-    };
+    // 调用内部函数执行购买逻辑
+    let (success, _cash_delta_opt) = try_execute_buy_building(
+        game, player_index, building_id, tile_id, price, building_static
+    );
+    assert!(success, EInsufficientCash);
 
-    // 设置建筑所有权和等级
-    let building_type = {
-        let building_mut = &mut game.buildings[building_id as u64];
-        building_mut.owner = player_index;
-        building_mut.level = 1;
-        building_mut.building_type  // 保存类型用于后续判断
-    };
-
-    // 维护 temple_levels 缓存（如果购买的是土地庙）
-    if (building_type == types::BUILDING_TEMPLE()) {
-        let player_mut = &mut game.players[player_index as u64];
-        player_mut.temple_levels.push_back(1);  // 新购土地庙初始L1
-    };
+    // 获取购买后的建筑类型
+    let building_type = game.buildings[building_id as u64].building_type;
 
     // 清除待决策状态
     clear_decision_state(game);
@@ -1198,6 +1204,7 @@ entry fun upgrade_building(
 
     // 获取建筑静态信息
     let building_static = map::get_building(map, building_id);
+    let building_size = map::building_size(building_static);
 
     // 计算升级费用（从当前等级升到下一级）
     let upgrade_cost = calculate_building_price(building_static, building, current_level, current_level + 1, game, game_data);
@@ -1205,38 +1212,12 @@ entry fun upgrade_building(
     // 验证现金
     assert!(player.cash > upgrade_cost, EInsufficientCash);
 
-    // 扣除现金
-    {
-        let player_mut = &mut game.players[player_index as u64];
-        player_mut.cash = player_mut.cash - upgrade_cost;
-    };
-
-    // 提升等级
-    let new_level = current_level + 1;
-    let building_size = map::building_size(building_static);
-
-    // 处理2x2建筑从lv0->lv1的类型设置，并返回最终类型
-    let final_building_type = {
-        let building_mut = &mut game.buildings[building_id as u64];
-
-        if (building_size == types::SIZE_2X2() && current_level == 0) {
-            // 验证建筑类型是否有效（必须是大建筑类型）
-            assert!(types::is_large_building_type(building_type), EInvalidBuildingType);
-
-            // TODO: 其他建筑类型功能待实现（research/oil/commercial/hotel）
-            // 目前统一设置为 temple，后续实现其他类型功能后修改
-            building_mut.building_type = types::BUILDING_TEMPLE();
-        };
-
-        building_mut.level = new_level;
-        building_mut.building_type  // 返回升级后的建筑类型
-    };
-
-    // 维护 temple_levels 缓存（如果是土地庙）
-    if (final_building_type == types::BUILDING_TEMPLE()) {
-        // 重建该玩家的 temple_levels 缓存（简单可靠）
-        rebuild_temple_levels_cache(game, player_index);
-    };
+    // 调用内部函数执行升级逻辑
+    let (success, _cash_delta_opt, new_level, final_building_type) = try_execute_upgrade_building(
+        game, player_index, building_id, tile_id, upgrade_cost,
+        current_level, game_data, building_size, building_type
+    );
+    assert!(success, EInsufficientCash);
 
     // 清除待决策状态
     clear_decision_state(game);
@@ -2038,8 +2019,9 @@ fun handle_tile_stop_with_collector(
 
                     if (auto_upgrade && !needs_type_selection) {
                         // 可以自动升级（不需要类型选择）
-                        let (success, cash_delta_opt, new_level) = try_execute_upgrade_building(
-                            game, player_index, building_id, tile_id, upgrade_cost, level, game_data
+                        let (success, cash_delta_opt, new_level, final_type) = try_execute_upgrade_building(
+                            game, player_index, building_id, tile_id, upgrade_cost, level, game_data,
+                            building_size, types::BUILDING_TEMPLE()  // 自动升级默认使用TEMPLE
                         );
 
                         if (success) {
@@ -2050,14 +2032,13 @@ fun handle_tile_stop_with_collector(
                             };
 
                             // ✅ 构造建筑决策信息
-                            let upgraded_building = &game.buildings[building_id as u64];
                             let decision_info = events::make_building_decision_info(
                                 types::DECISION_UPGRADE_PROPERTY(),
                                 building_id,
                                 tile_id,
                                 upgrade_cost,
                                 new_level,
-                                upgraded_building.building_type
+                                final_type
                             );
 
                             // ✅ 发射建筑决策事件（使用新签名）

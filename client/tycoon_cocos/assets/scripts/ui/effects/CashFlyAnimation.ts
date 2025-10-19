@@ -128,14 +128,14 @@ export class CashFlyAnimation {
      * @param player 玩家
      * @param amount 金额（正数）
      */
-    public playCashDecrease(player: Player, amount: bigint): void {
+    public async playCashDecrease(player: Player, amount: bigint): Promise<void> {
         if (!this._initialized) {
             console.warn('[CashFlyAnimation] 未初始化');
             return;
         }
 
         // 获取玩家的屏幕坐标
-        const screenPos = this._getPlayerScreenPosition(player);
+        const screenPos = await this._getPlayerScreenPosition(player);
         if (!screenPos) {
             console.warn('[CashFlyAnimation] 无法获取玩家屏幕坐标');
             return;
@@ -167,14 +167,14 @@ export class CashFlyAnimation {
      * @param player 玩家
      * @param amount 金额（正数）
      */
-    public playCashIncrease(player: Player, amount: bigint): void {
+    public async playCashIncrease(player: Player, amount: bigint): Promise<void> {
         if (!this._initialized) {
             console.warn('[CashFlyAnimation] 未初始化');
             return;
         }
 
         // 获取玩家的屏幕坐标
-        const screenPos = this._getPlayerScreenPosition(player);
+        const screenPos = await this._getPlayerScreenPosition(player);
         if (!screenPos) {
             console.warn('[CashFlyAnimation] 无法获取玩家屏幕坐标');
             return;
@@ -207,15 +207,15 @@ export class CashFlyAnimation {
      * @param toPlayer 收款玩家
      * @param amount 金额（正数）
      */
-    public playCashTransfer(fromPlayer: Player, toPlayer: Player, amount: bigint): void {
+    public async playCashTransfer(fromPlayer: Player, toPlayer: Player, amount: bigint): Promise<void> {
         if (!this._initialized) {
             console.warn('[CashFlyAnimation] 未初始化');
             return;
         }
 
         // 获取起点和终点屏幕坐标
-        const fromPos = this._getPlayerScreenPosition(fromPlayer);
-        const toPos = this._getPlayerScreenPosition(toPlayer);
+        const fromPos = await this._getPlayerScreenPosition(fromPlayer);
+        const toPos = await this._getPlayerScreenPosition(toPlayer);
 
         if (!fromPos || !toPos) {
             console.warn('[CashFlyAnimation] 无法获取玩家屏幕坐标');
@@ -248,7 +248,7 @@ export class CashFlyAnimation {
      * @param player 玩家
      * @returns 屏幕坐标，如果无法获取返回 null
      */
-    private _getPlayerScreenPosition(player: Player): Vec2 | null {
+    private async _getPlayerScreenPosition(player: Player): Promise<Vec2 | null> {
         // 获取 PaperActor
         const paperActor = player.getPaperActor();
         if (!paperActor || !paperActor.node) {
@@ -261,9 +261,11 @@ export class CashFlyAnimation {
         paperActor.node.getWorldPosition(worldPos);
 
         // 世界坐标 → 屏幕坐标
-        const camera = Camera.main;
+        // 使用 CameraController 获取主摄像机（不能使用 Camera.main）
+        const { CameraController } = await import('../../camera/CameraController');
+        const camera = CameraController.getMainCamera();
         if (!camera) {
-            console.warn('[CashFlyAnimation] Camera.main 未初始化');
+            console.warn('[CashFlyAnimation] 主摄像机未初始化');
             return null;
         }
 

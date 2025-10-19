@@ -167,7 +167,7 @@ export class RentDecisionHandler {
                 });
 
                 // 播放转账动画（从 payer 飞到 owner，抛物线）
-                CashFlyAnimation.getInstance().playCashTransfer(payer, owner, rentAmount);
+                await CashFlyAnimation.getInstance().playCashTransfer(payer, owner, rentAmount);
                 console.log('[RentDecisionHandler] 触发转账动画');
 
                 UINotification.info(

@@ -252,6 +252,11 @@ export class UIInGame extends UIBase {
     protected async onShow(data?: any): Promise<void> {
         console.log("[UIInGame] Showing in-game UI");
 
+        // 初始化现金飞字动画系统
+        const { CashFlyAnimation } = await import('../effects/CashFlyAnimation');
+        CashFlyAnimation.getInstance().initialize('InGame', 'Cash');
+        console.log('[UIInGame] CashFlyAnimation 已初始化');
+
         // 开始游戏计时器
         this._startGameTimer();
 
@@ -284,6 +289,11 @@ export class UIInGame extends UIBase {
 
         // 停止游戏计时器
         this._stopGameTimer();
+
+        // 销毁现金飞字动画系统
+        const { CashFlyAnimation } = await import('../effects/CashFlyAnimation');
+        CashFlyAnimation.getInstance().destroy();
+        console.log('[UIInGame] CashFlyAnimation 已销毁');
 
         // 通知 CommonLayout 隐藏游戏内按钮
         const { UIManager } = await import("../core/UIManager");

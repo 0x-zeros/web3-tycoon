@@ -407,11 +407,11 @@ export class RollAndStepHandler {
                     if (change.is_debit) {
                         // 减钱动画（向上飘，红色）
                         console.log('[RollAndStepHandler] 调用 playCashDecrease');
-                        CashFlyAnimation.getInstance().playCashDecrease(player, amount);
+                        await CashFlyAnimation.getInstance().playCashDecrease(player, amount);
                     } else {
                         // 加钱动画（向下飘，绿色）
                         console.log('[RollAndStepHandler] 调用 playCashIncrease');
-                        CashFlyAnimation.getInstance().playCashIncrease(player, amount);
+                        await CashFlyAnimation.getInstance().playCashIncrease(player, amount);
                     }
 
                     console.log('[RollAndStepHandler] 玩家现金已更新', {

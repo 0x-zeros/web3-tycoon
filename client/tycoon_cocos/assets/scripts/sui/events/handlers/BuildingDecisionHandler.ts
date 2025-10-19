@@ -124,7 +124,7 @@ export class BuildingDecisionHandler {
             player.setCash(newCash);
 
             // 播放减钱动画
-            CashFlyAnimation.getInstance().playCashDecrease(player, amount);
+            await CashFlyAnimation.getInstance().playCashDecrease(player, amount);
             console.log('[BuildingDecisionHandler] 触发减钱动画');
 
             console.log('[BuildingDecisionHandler] 玩家现金已更新', {

@@ -164,7 +164,8 @@ export class UIInGameDice extends UIBase {
         // btn_skipTurn: 轮到自己 && 在监狱/医院
         if (this.m_btn_skipTurn) {
             this.m_btn_skipTurn.visible = isMyTurn && shouldSkip;
-            console.log('[UIInGameDice] SkipTurn 按钮:', (isMyTurn && shouldSkip) ? '显示' : '隐藏');
+            this.m_btn_skipTurn.enabled = isMyTurn && shouldSkip;  // ✅ 同时设置 enabled
+            console.log('[UIInGameDice] SkipTurn 按钮:', (isMyTurn && shouldSkip) ? '显示并启用' : '隐藏');
         }
 
         // dice: 轮到自己 && 不在监狱/医院
@@ -411,6 +412,8 @@ export class UIInGameDice extends UIBase {
             this.m_btn_skipTurn.enabled = false;
         }
 
+        let transactionSuccess = false;  // 记录交易是否成功
+
         try {
             const session = GameInitializer.getInstance()?.getGameSession();
             if (!session) {
@@ -422,10 +425,17 @@ export class UIInGameDice extends UIBase {
 
             console.log('[UIInGameDice] 跳过回合交易已发送');
 
+            transactionSuccess = true;  // 标记交易成功
+
             // 显示成功通知
             const gasInfo = (result as any)._gasInfo;
             const txUrl = SuiManager.instance.getExplorer(result.txHash, 'txblock');
             UINotification.txNotification(true, '跳过回合成功', result.txHash, gasInfo, txUrl);
+
+            // ===== 7. 交易成功，等待事件处理 =====
+            // EventIndexer 会监听链上 SkipTurnEvent
+            // 然后触发 SkipTurnHandler 处理，更新回合状态
+            // TurnChanged 事件会更新按钮状态，这里不需要恢复
 
         } catch (error) {
             console.error('[UIInGameDice] 跳过回合失败', error);
@@ -435,10 +445,21 @@ export class UIInGameDice extends UIBase {
                 title: '跳过回合失败'
             });
 
-            // 恢复按钮（如果仍然需要跳过）
-            if (this.m_btn_skipTurn) {
-                this.m_btn_skipTurn.enabled = true;
+        } finally {
+            // 只在失败时恢复按钮状态
+            if (!transactionSuccess && this.m_btn_skipTurn) {
+                // 恢复为当前回合状态（而不是无条件 true）
+                const session = GameInitializer.getInstance()?.getGameSession();
+                if (session) {
+                    const myPlayer = session.getMyPlayer();
+                    const shouldSkip = myPlayer && (myPlayer.isInPrison() || myPlayer.isInHospital());
+                    const isMyTurn = session.isMyTurn();
+                    this.m_btn_skipTurn.enabled = isMyTurn && shouldSkip;
+
+                    console.log('[UIInGameDice] 交易失败，恢复按钮状态:', (isMyTurn && shouldSkip) ? '启用' : '禁用');
+                }
             }
+            // 成功时保持 disabled，等待 TurnChanged 事件更新
         }
     }
 

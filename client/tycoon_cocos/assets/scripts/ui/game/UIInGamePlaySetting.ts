@@ -23,8 +23,11 @@ export class UIInGamePlaySetting extends UIBase {
     private btn_exitGame!: fgui.GButton;
     private btn_close!: fgui.GButton;
 
+    // 事件绑定状态标记
+    private _eventsBound: boolean = false;
+
     /**
-     * 初始化（绑定组件）
+     * 初始化（只绑定组件引用，不绑定事件）
      */
     protected onInit(): void {
         // 绑定 FairyGUI 组件
@@ -36,11 +39,30 @@ export class UIInGamePlaySetting extends UIBase {
             return;
         }
 
-        // 绑定事件
-        this.btn_exitGame.onClick(this.onExitGameClick, this);
-        this.btn_close.onClick(this.onCloseClick, this);
-
         console.log('[UIInGamePlaySetting] Initialized');
+    }
+
+    /**
+     * 绑定事件（每次显示时调用）
+     */
+    protected bindEvents(): void {
+        // 防止重复绑定
+        if (this._eventsBound) {
+            console.log('[UIInGamePlaySetting] Events already bound, skipping');
+            return;
+        }
+
+        // 绑定按钮事件
+        if (this.btn_exitGame) {
+            this.btn_exitGame.onClick(this.onExitGameClick, this);
+        }
+
+        if (this.btn_close) {
+            this.btn_close.onClick(this.onCloseClick, this);
+        }
+
+        this._eventsBound = true;
+        console.log('[UIInGamePlaySetting] Events bound');
     }
 
     /**
@@ -48,6 +70,9 @@ export class UIInGamePlaySetting extends UIBase {
      */
     protected onShow(data?: any): void {
         console.log('[UIInGamePlaySetting] Showing play setting panel');
+
+        // ✅ 手动绑定事件（因为 visible 切换不触发 onEnable）
+        this.bindEvents();
     }
 
     /**
@@ -55,7 +80,9 @@ export class UIInGamePlaySetting extends UIBase {
      */
     protected onHide(): void {
         console.log('[UIInGamePlaySetting] Hiding play setting panel');
-        // 注意: 事件在 onCloseClick() 中发送，这里不需要再发送
+
+        // ✅ 手动解绑事件（防止内存泄漏）
+        this.unbindEvents();
     }
 
     /**
@@ -91,6 +118,10 @@ export class UIInGamePlaySetting extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
+        if (!this._eventsBound) {
+            return;
+        }
+
         if (this.btn_exitGame) {
             this.btn_exitGame.offClick(this.onExitGameClick, this);
         }
@@ -98,6 +129,9 @@ export class UIInGamePlaySetting extends UIBase {
         if (this.btn_close) {
             this.btn_close.offClick(this.onCloseClick, this);
         }
+
+        this._eventsBound = false;
+        console.log('[UIInGamePlaySetting] Events unbound');
 
         super.unbindEvents();
     }

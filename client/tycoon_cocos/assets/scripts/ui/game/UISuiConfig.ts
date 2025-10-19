@@ -46,8 +46,11 @@ export class UISuiConfig extends UIBase {
     // Keypair 组件容器（用于控制显示/隐藏）
     private keypairGroup!: fgui.GComponent;
 
+    // 事件绑定状态标记
+    private _eventsBound: boolean = false;
+
     /**
-     * 初始化（绑定组件）
+     * 初始化（绑定组件引用）
      */
     protected onInit(): void {
         // 绑定 Controller
@@ -73,14 +76,35 @@ export class UISuiConfig extends UIBase {
             return;
         }
 
-        // 绑定事件
-        this.btn_cancel.onClick(this.onCancelClick, this);
-        this.btn_ok.onClick(this.onOkClick, this);
+        console.log('[UISuiConfig] Components initialized');
+    }
 
-        // 监听 env controller 变化（控制 useKeypair 可见性）
-        this.envController.on(fgui.Event.STATUS_CHANGED, this.onEnvControllerChanged, this);
+    /**
+     * 绑定事件（每次显示时调用）
+     */
+    protected bindEvents(): void {
+        // 防止重复绑定
+        if (this._eventsBound) {
+            console.log('[UISuiConfig] Events already bound, skipping');
+            return;
+        }
 
-        console.log('[UISuiConfig] Initialized');
+        // 绑定按钮事件
+        if (this.btn_cancel) {
+            this.btn_cancel.onClick(this.onCancelClick, this);
+        }
+
+        if (this.btn_ok) {
+            this.btn_ok.onClick(this.onOkClick, this);
+        }
+
+        // 监听 env controller 变化
+        if (this.envController) {
+            this.envController.on(fgui.Event.STATUS_CHANGED, this.onEnvControllerChanged, this);
+        }
+
+        this._eventsBound = true;
+        console.log('[UISuiConfig] Events bound');
     }
 
     /**
@@ -89,7 +113,20 @@ export class UISuiConfig extends UIBase {
     protected onShow(data?: any): void {
         console.log('[UISuiConfig] Showing Sui config UI');
 
+        // ✅ 手动绑定事件（因为 visible 切换不触发 onEnable）
+        this.bindEvents();
+
         this.loadCurrentConfig();
+    }
+
+    /**
+     * 隐藏回调
+     */
+    protected onHide(): void {
+        console.log('[UISuiConfig] Hiding Sui config UI');
+
+        // ✅ 手动解绑事件（防止内存泄漏）
+        this.unbindEvents();
     }
 
     // ================== 配置加载 ==================
@@ -116,40 +153,43 @@ export class UISuiConfig extends UIBase {
             this.input_storageKey.text = KeystoreConfig.instance.getStorageKey();
             this.input_password.text = KeystoreConfig.instance.getPassword();
         }
-
-        // 更新 useKeypair 可见性
-        this.updateUseKeypairVisibility();
     }
 
     // ================== Controller 监听 ==================
 
     /**
      * env controller 变化时触发
-     * 用于控制 useKeypair 的显示/隐藏
+     * FairyGUI 自动切换 env controller，触发此回调
+     *
+     * 约束规则：
+     * - mainnet/testnet → 强制 wallet
+     * - localnet → 强制 keypair
+     * - devnet → 自由选择
      */
     private onEnvControllerChanged(): void {
-        this.updateUseKeypairVisibility();
-    }
+        const envIndex = this.envController.selectedIndex;
+        const env = this.getEnvName(envIndex);
 
-    /**
-     * 更新 useKeypair controller 可见性
-     * 规则：只有 devnet 和 localnet 才显示
-     */
-    private updateUseKeypairVisibility(): void {
-        const env = this.getEnvName(this.envController.selectedIndex);
-        const showUseKeypair = env === 'devnet' || env === 'localnet';
+        console.log('[UISuiConfig] Env controller changed to:', env, '(index:', envIndex, ')');
 
-        // 显示/隐藏 keypair 组件
-        if (this.keypairGroup) {
-            this.keypairGroup.visible = showUseKeypair;
+        // mainnet (0) 或 testnet (1) → 强制 wallet (0)
+        if (envIndex === 0 || envIndex === 1) {
+            this.useKeypairController.selectedIndex = 0;  // wallet
+            console.log('[UISuiConfig] → 强制设置为 wallet (mainnet/testnet 不支持 keypair)');
+        }
+        // localnet (3) → 强制 keypair (1)
+        else if (envIndex === 3) {
+            this.useKeypairController.selectedIndex = 1;  // keypair
+            console.log('[UISuiConfig] → 强制设置为 keypair (localnet 只支持 keypair)');
+        }
+        // devnet (2) → 保持当前选择（不改变）
+        else {
+            console.log('[UISuiConfig] → 保持当前选择（devnet 可自由选择）');
+            // 不修改 useKeypairController.selectedIndex
         }
 
-        // 隐藏时强制切换到 wallet
-        if (!showUseKeypair) {
-            this.useKeypairController.selectedIndex = 0;
-        }
-
-        console.log('[UISuiConfig] UseKeypair visibility:', showUseKeypair);
+        // useKeypair controller 切换 page 后，FairyGUI 会自动显示/隐藏 keypair 组件
+        // 不需要手动设置 keypairGroup.visible
     }
 
     // ================== 按钮事件 ==================
@@ -322,9 +362,16 @@ export class UISuiConfig extends UIBase {
         return index >= 0 ? index : 1; // 默认 testnet
     }
 
-    // ================== 解绑事件 ==================
+    // ================== 解绑事件（每次隐藏时调用）==================
 
     protected unbindEvents(): void {
+        // 如果没有绑定过，跳过
+        if (!this._eventsBound) {
+            console.log('[UISuiConfig] Events not bound, skipping unbind');
+            return;
+        }
+
+        // 解绑按钮事件
         if (this.btn_cancel) {
             this.btn_cancel.offClick(this.onCancelClick, this);
         }
@@ -333,9 +380,13 @@ export class UISuiConfig extends UIBase {
             this.btn_ok.offClick(this.onOkClick, this);
         }
 
+        // 解绑 controller 监听
         if (this.envController) {
             this.envController.off(fgui.Event.STATUS_CHANGED, this.onEnvControllerChanged, this);
         }
+
+        this._eventsBound = false;
+        console.log('[UISuiConfig] Events unbound');
 
         super.unbindEvents();
     }

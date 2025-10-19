@@ -13,6 +13,7 @@ import type { IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@
 import { loadWalletStandard, loadSuiClient } from '../../sui/loader';
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
+import { SuiEnvConfigManager } from "../../config/SuiEnvConfigManager";
 
 
 const { ccclass } = _decorator;
@@ -52,6 +53,11 @@ export class UIWallet extends UIBase {
 
     // WalletList组件引用
     private m_walletListComponent: fgui.GComponent | null = null;
+
+    // 网络切换回调引用（用于 unwatch）
+    private _networkChangedHandler = (data: any) => {
+        this._onNetworkChanged(data);
+    };
 
     /**
      * 初始化回调
@@ -118,6 +124,9 @@ export class UIWallet extends UIBase {
 
         // 监听地址变化（用于 Keypair 切换账号）
         Blackboard.instance.watch("sui_current_address", this._onAddressChanged, this);
+
+        // 监听网络切换事件（使用保存的箭头函数引用）
+        Blackboard.instance.watch("sui_network_changed", this._networkChangedHandler, this);
     }
 
     /**
@@ -149,6 +158,7 @@ export class UIWallet extends UIBase {
         Blackboard.instance.unwatch("sui_balance", this._onBalanceChanged, this);
         Blackboard.instance.unwatch("sui_keypair_connected", this._onKeypairConnected, this);
         Blackboard.instance.unwatch("sui_current_address", this._onAddressChanged, this);
+        Blackboard.instance.unwatch("sui_network_changed", this._networkChangedHandler, this);
 
         // 调用父类解绑
         super.unbindEvents();
@@ -649,19 +659,33 @@ export class UIWallet extends UIBase {
 
     /**
      * 更新 chain 显示
+     * 统一从 SuiEnvConfigManager 读取配置（确保与 GameInitializer 一致）
      */
     private _updateChainDisplay(): void {
         if (!this.m_txt_chain) return;
 
-        const network = SuiManager.instance.getNetworkName();
-        const signerType = SuiManager.instance.getSignerType();
+        // 优先从 SuiManager 读取（如果已初始化）
+        let network = SuiManager.instance?.config?.network;
+        let signerType = SuiManager.instance?.getSignerType();
+
+        // 如果 SuiManager 未初始化，从 SuiEnvConfigManager 读取保存的配置
+        if (!network) {
+            const savedConfig = SuiEnvConfigManager.instance.load();
+            network = savedConfig.network;
+            signerType = savedConfig.signerType;
+            console.log('[UIWallet] SuiManager not ready, using saved config:', savedConfig);
+        }
+
+        const networkName = SuiManager.instance?.getNetworkName() || network;
 
         // Keypair 模式：添加 (Keypair) 标识
         if (signerType === 'keypair') {
-            this.m_txt_chain.text = `${network} (Keypair)`;
+            this.m_txt_chain.text = `${networkName} (Keypair)`;
         } else {
-            this.m_txt_chain.text = network;
+            this.m_txt_chain.text = networkName;
         }
+
+        console.log('[UIWallet] Chain display updated:', this.m_txt_chain.text);
     }
 
     /**
@@ -755,6 +779,68 @@ export class UIWallet extends UIBase {
 
             UINotification.info(`地址已更新\n${this._shortenAddress(address)}`);
         }
+    }
+
+    /**
+     * 网络切换事件处理
+     * SuiManager.reinit() 后触发
+     */
+    private _onNetworkChanged(data: any): void {
+        console.log('[UIWallet] Network changed event received:', data);
+
+        // 1. 更新 chain 显示（新网络名称）
+        this._updateChainDisplay();
+
+        // 2. 清除旧的钱包连接状态
+        this.m_connectedWallet = null;
+        this.m_connectedAccount = null;
+
+        // 3. 重置 UI 状态
+        if (this.m_controller) {
+            // 检查新的 signer 状态
+            const signerType = SuiManager.instance.getSignerType();
+            const address = SuiManager.instance.currentAddress;
+
+            if (signerType === 'keypair' && address) {
+                // Keypair 模式已连接
+                this._isKeypairMode = true;
+                this.m_controller.selectedIndex = 1;  // connected
+
+                if (this.m_btn_wallet) {
+                    this.m_btn_wallet.title = this._shortenAddress(address);
+                }
+
+                console.log('[UIWallet] Keypair mode detected after network change');
+            } else {
+                // Wallet 模式，未连接
+                this._isKeypairMode = false;
+                this.m_controller.selectedIndex = 0;  // disconnected
+
+                if (this.m_btn_wallet) {
+                    this.m_btn_wallet.title = "Connect";
+                }
+
+                console.log('[UIWallet] Wallet mode, disconnected');
+            }
+
+            // 更新 disconnect 按钮可见性
+            if (this.m_btn_disconnect) {
+                this.m_btn_disconnect.visible = false;
+            }
+        }
+
+        // 4. 更新余额显示
+        const newBalance = Blackboard.instance.get<bigint>("sui_balance");
+        if (newBalance !== undefined && newBalance !== null) {
+            this._onBalanceChanged(newBalance);  // 使用现有方法
+        } else {
+            // 清空余额显示
+            if (this.m_btn_balance) {
+                this.m_btn_balance.title = "0 SUI";
+            }
+        }
+
+        console.log('[UIWallet] Wallet UI updated after network change');
     }
 
     /**

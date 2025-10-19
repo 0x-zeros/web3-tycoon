@@ -4,22 +4,22 @@
   <controller name="useKeypair" pages="0,no,1,yes" selected="1"/>
   <displayList>
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="800,600"/>
-    <component id="n15_mrxi" name="n15" src="mrxiow9" fileName="components/Button23.xml" xy="595,5" size="194,84">
+    <component id="n15_mrxi" name="btn_useLocalnet" src="mrxiow9" fileName="components/Button23.xml" xy="595,5" size="194,84">
       <Button title="local" controller="env" page="3"/>
     </component>
-    <component id="n16_mrxi" name="n16" src="mrxiow9" fileName="components/Button23.xml" xy="11,5" size="194,84">
+    <component id="n16_mrxi" name="btn_useMainnet" src="mrxiow9" fileName="components/Button23.xml" xy="11,5" size="194,84">
       <Button title="mainnet" controller="env" page="0"/>
     </component>
-    <component id="n17_mrxi" name="n17" src="mrxiow9" fileName="components/Button23.xml" xy="206,5" size="194,84">
+    <component id="n17_mrxi" name="btn_useTestnet" src="mrxiow9" fileName="components/Button23.xml" xy="206,5" size="194,84">
       <Button title="testnet" controller="env" page="1"/>
     </component>
-    <component id="n18_mrxi" name="n18" src="mrxiow9" fileName="components/Button23.xml" xy="401,5" size="194,84">
+    <component id="n18_mrxi" name="btn_useDevnet" src="mrxiow9" fileName="components/Button23.xml" xy="401,5" size="194,84">
       <Button checked="true" title="devnet" controller="env" page="2"/>
     </component>
     <text id="n13_mrxi" name="desc_mainnet" xy="11,112" size="780,95" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到mainet，只能使用浏览器钱包，比如slush，suiet等。">
       <gearDisplay controller="env" pages="0"/>
     </text>
-    <text id="n1_f49a" name="n1" xy="136,250" size="647,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="使用keypair">
+    <text id="n1_f49a" name="n1" xy="136,250" size="647,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="使用keypair">
       <gearDisplay controller="env" pages="2,3"/>
     </text>
     <text id="n20_mrxi" name="desc_testnet" xy="9,107" size="780,95" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到testnet，只能使用浏览器钱包，比如slush，suiet等。(现在自动faucet无法获取到测试sui代币)">

@@ -4,7 +4,6 @@
     <graph id="n11_mumq" name="n11" xy="0,0" size="1920,1080" type="rect" lineSize="0" fillColor="#ffa4ceda">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <component id="n16_azob" name="keyPairInfo" src="azobb" fileName="components/Keypair.xml" xy="146,557"/>
     <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="801,778" size="364,130">
       <Button title="开始游戏"/>
     </component>

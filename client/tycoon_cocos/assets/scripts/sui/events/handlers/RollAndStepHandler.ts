@@ -366,15 +366,12 @@ export class RollAndStepHandler {
                 return;
             }
 
-            // 2. 使用事件数据更新 GameSession（而不是重新查询 Game）
-            // RollAndStepActionEvent 包含 round 和 turn_in_round
-            // GameSession 通过事件保持与链上同步，不需要重新查询
+            // 2. 更新 round（但暂不切换 turn，等决策检查完成后再切换）
             session.setRound(event.round);
-            await session.advance_turn(event.turn_in_round);
 
-            console.log('[RollAndStepHandler] 回合状态已同步（from event）', {
+            console.log('[RollAndStepHandler] Round 已同步（from event）', {
                 round: event.round,
-                turn: event.turn_in_round
+                turn_will_be: event.turn_in_round
             });
         }
 
@@ -476,8 +473,18 @@ export class RollAndStepHandler {
         // 检查是否需要瞬移（最后一步的 to_tile vs end_pos）
         await this._handleTeleportIfNeeded(event);
 
-        // 检查是否有待决策状态
+        // ✅ 检查是否有待决策状态（在切换回合之前）
         await this._handleDecisionIfNeeded(event);
+
+        // ✅ 最后才切换回合（确保决策检查时 isMyTurn() 仍为 true）
+        if (session) {
+            await session.advance_turn(event.turn_in_round);
+
+            console.log('[RollAndStepHandler] Turn 已同步（from event）', {
+                round: event.round,
+                turn: event.turn_in_round
+            });
+        }
     }
 
     /**

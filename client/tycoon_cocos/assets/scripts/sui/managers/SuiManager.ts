@@ -343,7 +343,7 @@ export class SuiManager {
     /**
      * 签名并执行交易
      * @param tx 交易对象
-     * @returns 交易结果
+     * @returns 交易结果（包含 gas 信息）
      */
     public async signAndExecuteTransaction(tx: Transaction): Promise<SuiTransactionBlockResponse> {
         this._ensureInitialized();
@@ -353,10 +353,35 @@ export class SuiManager {
 
         const result = await this._signer!.signAndExecuteTransaction(tx, this._client!);
 
+        // ✅ 等待交易被完全索引（确保 effects 可读，修复 testnet 误报失败）
+        console.log('[SuiManager] Waiting for transaction to be indexed...');
+        await this._client!.waitForTransaction({ digest: result.digest });
+        console.log('[SuiManager] Transaction indexed');
+
         this._log('[SuiManager] Transaction executed', {
             digest: result.digest,
             status: result.effects?.status?.status
         });
+
+        // ✅ 提取并附加 gas 消耗信息
+        const gasUsed = result.effects?.gasUsed;
+        if (gasUsed) {
+            const totalGas = BigInt(gasUsed.computationCost) +
+                            BigInt(gasUsed.storageCost) -
+                            BigInt(gasUsed.storageRebate);
+            const gasSui = Number(totalGas) / 1_000_000_000;
+
+            console.log('[SuiManager] Gas used:', gasSui.toFixed(6), 'SUI');
+
+            // 附加 gas 信息到 result（供调用者使用）
+            (result as any)._gasInfo = {
+                totalGas,
+                gasSui: gasSui.toFixed(6) + ' SUI',
+                computationCost: gasUsed.computationCost,
+                storageCost: gasUsed.storageCost,
+                storageRebate: gasUsed.storageRebate
+            };
+        }
 
         // 交易成功后，异步刷新余额（不阻塞）
         if (result.effects?.status?.status === 'success') {

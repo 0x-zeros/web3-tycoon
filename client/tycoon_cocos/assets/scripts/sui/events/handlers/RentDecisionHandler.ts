@@ -20,7 +20,6 @@ import { EventTypes } from '../../../events/EventTypes';
 import { UINotification } from '../../../ui/utils/UINotification';
 import type { GameSession } from '../../../core/GameSession';
 import { CardKind } from '../../types/constants';
-import { CashFlyAnimation } from '../../../ui/effects/CashFlyAnimation';
 
 /**
  * RentDecisionHandler 类
@@ -166,13 +165,17 @@ export class RentDecisionHandler {
                     amount: rentAmount.toString()
                 });
 
-                // 播放转账动画（从 payer 飞到 owner，抛物线）
-                await CashFlyAnimation.getInstance().playCashTransfer(payer, owner, rentAmount);
-                console.log('[RentDecisionHandler] 触发转账动画');
-
-                UINotification.info(
-                    `玩家${payer.getPlayerIndex() + 1}支付${rentAmount.toString()}租金给玩家${owner.getPlayerIndex() + 1}`
-                );
+                // 只有myplayer才显示现金变动Notification
+                const myPlayer = session.getMyPlayer();
+                if (myPlayer) {
+                    if (payer === myPlayer) {
+                        // 我是付款者，显示减钱
+                        UINotification.info(`-${rentAmount}`, undefined, 2000);
+                    } else if (owner === myPlayer) {
+                        // 我是收款者，显示加钱
+                        UINotification.info(`+${rentAmount}`, undefined, 2000);
+                    }
+                }
             }
 
             console.log('[RentDecisionHandler] RentDecisionEvent 处理完成');

@@ -21,7 +21,6 @@ import { Blackboard } from '../../../events/Blackboard';
 import { UINotification } from '../../../ui/utils/UINotification';
 import { DecisionType } from '../../types/constants';
 import type { Player } from '../../types/game';
-import { CashFlyAnimation } from '../../../ui/effects/CashFlyAnimation';
 
 /**
  * RollAndStepHandler 类
@@ -393,22 +392,12 @@ export class RollAndStepHandler {
                     // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
                     player.setCash(newCash);
 
-                    // ✅ 播放飞字动画（添加详细日志）
-                    console.log('[RollAndStepHandler] 准备播放现金动画', {
-                        isDebit: change.is_debit,
-                        amount: amount.toString(),
-                        player: player.getPlayerIndex(),
-                        hasPaperActor: !!player.getPaperActor()
-                    });
-
-                    if (change.is_debit) {
-                        // 减钱动画（向上飘，红色）
-                        console.log('[RollAndStepHandler] 调用 playCashDecrease');
-                        await CashFlyAnimation.getInstance().playCashDecrease(player, amount);
-                    } else {
-                        // 加钱动画（向下飘，绿色）
-                        console.log('[RollAndStepHandler] 调用 playCashIncrease');
-                        await CashFlyAnimation.getInstance().playCashIncrease(player, amount);
+                    // ✅ 只有myplayer才显示现金变动Notification
+                    const myPlayer = this.currentSession?.getMyPlayer();
+                    if (myPlayer && player === myPlayer) {
+                        const text = change.is_debit ? `-${amount}` : `+${amount}`;
+                        UINotification.info(text, undefined, 2000);
+                        console.log('[RollAndStepHandler] 显示现金变动:', text);
                     }
 
                     console.log('[RollAndStepHandler] 玩家现金已更新', {

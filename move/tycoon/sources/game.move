@@ -853,7 +853,7 @@ fun try_execute_buy_building(
     let player = &game.players[player_index as u64];
 
     // 检查现金
-    if (player.cash < price) {
+    if (player.cash <= price) {
         return (false, option::none())
     };
 
@@ -899,7 +899,7 @@ fun try_execute_upgrade_building(
     let player = &game.players[player_index as u64];
 
     // 检查现金
-    if (player.cash < upgrade_cost) {
+    if (player.cash <= upgrade_cost) {
         return (false, option::none(), current_level)
     };
 
@@ -1100,7 +1100,7 @@ entry fun buy_building(
     assert!(base_price > 0, EInvalidPrice);
     let price_index = calculate_price_index(game);
     let price = (base_price * price_index);
-    assert!(player.cash >= price, EInsufficientCash);
+    assert!(player.cash > price, EInsufficientCash);
 
     // 扣除现金
     {
@@ -1203,7 +1203,7 @@ entry fun upgrade_building(
     let upgrade_cost = calculate_building_price(building_static, building, current_level, current_level + 1, game, game_data);
 
     // 验证现金
-    assert!(player.cash >= upgrade_cost, EInsufficientCash);
+    assert!(player.cash > upgrade_cost, EInsufficientCash);
 
     // 扣除现金
     {

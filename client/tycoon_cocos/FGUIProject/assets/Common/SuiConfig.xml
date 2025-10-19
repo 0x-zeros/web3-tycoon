@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="800,600">
-  <controller name="env" pages="0,mainnet,1,testnet,2,devnet,3,local" selected="3"/>
-  <controller name="useKeypair" pages="0,yes,1,no" selected="0"/>
+  <controller name="env" pages="0,mainnet,1,testnet,2,devnet,3,localnet" selected="2"/>
+  <controller name="useKeypair" pages="0,no,1,yes" selected="1"/>
   <displayList>
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="800,600"/>
     <component id="n15_mrxi" name="n15" src="mrxiow9" fileName="components/Button23.xml" xy="595,5" size="194,84">
-      <Button checked="true" title="local" controller="env" page="3"/>
+      <Button title="local" controller="env" page="3"/>
     </component>
     <component id="n16_mrxi" name="n16" src="mrxiow9" fileName="components/Button23.xml" xy="11,5" size="194,84">
       <Button title="mainnet" controller="env" page="0"/>
@@ -14,7 +14,7 @@
       <Button title="testnet" controller="env" page="1"/>
     </component>
     <component id="n18_mrxi" name="n18" src="mrxiow9" fileName="components/Button23.xml" xy="401,5" size="194,84">
-      <Button title="devnet" controller="env" page="2"/>
+      <Button checked="true" title="devnet" controller="env" page="2"/>
     </component>
     <text id="n13_mrxi" name="desc_mainnet" xy="11,112" size="780,95" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="已切换到mainet，只能使用浏览器钱包，比如slush，suiet等。">
       <gearDisplay controller="env" pages="0"/>
@@ -33,7 +33,7 @@
     </text>
     <component id="n10_mrxi" name="btn_toggleKeypair" src="mrxiow4" fileName="components/Button32.xml" xy="66,242">
       <gearDisplay controller="env" pages="2,3"/>
-      <Button checked="true" controller="useKeypair" page="0"/>
+      <Button checked="true" controller="useKeypair" page="1"/>
     </component>
     <component id="n14_mrxi" name="btn_ok" src="lrk2ow1" fileName="components/Button13.xml" xy="592,507" size="194,84">
       <relation target="" sidePair="center-center,middle-middle"/>
@@ -45,7 +45,7 @@
     </component>
     <component id="n24_mrxi" name="keypair" src="mrxiowa" fileName="components/Keypair.xml" xy="64,367">
       <gearDisplay controller="env" pages="2,3"/>
-      <gearDisplay2 controller="useKeypair" pages="0" condition="0"/>
+      <gearDisplay2 controller="useKeypair" pages="1" condition="0"/>
     </component>
   </displayList>
 </component>

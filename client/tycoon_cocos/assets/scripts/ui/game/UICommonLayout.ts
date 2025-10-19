@@ -20,11 +20,13 @@ export class UICommonLayout extends UIBase {
     private wallet!: fgui.GComponent;
     private commonSetting!: fgui.GComponent;
     private gameConfig!: fgui.GComponent;
+    private suiConfig!: fgui.GComponent;
 
     // UI 逻辑组件
     private walletUI!: UIWallet;
     private settingUI!: UICommonSetting;
     private gameConfigUI!: any;  // UIGameConfig 类型
+    private suiConfigUI!: any;  // UISuiConfig 类型
 
     /**
      * UI 包名和组件名
@@ -47,8 +49,9 @@ export class UICommonLayout extends UIBase {
         this.wallet = this.getFGuiComponent('wallet')!;
         this.commonSetting = this.getFGuiComponent('commonSetting')!;
         this.gameConfig = this.getFGuiComponent('gameConfig')!;
+        this.suiConfig = this.getFGuiComponent('suiConfig')!;
 
-        if (!this.wallet || !this.commonSetting || !this.gameConfig) {
+        if (!this.wallet || !this.commonSetting || !this.gameConfig || !this.suiConfig) {
             console.error('[UICommonLayout] Failed to get child components');
             return;
         }
@@ -78,7 +81,20 @@ export class UICommonLayout extends UIBase {
             console.log('[UICommonLayout] GameConfig initialized (hidden by default)');
         });
 
-        console.log('[UICommonLayout] Initialized with Wallet, CommonSetting, and GameConfig');
+        // 动态导入 UISuiConfig 避免循环依赖
+        import('./UISuiConfig').then(({ UISuiConfig }) => {
+            this.suiConfigUI = this.suiConfig.node.addComponent(UISuiConfig);
+            this.suiConfigUI.setUIName('SuiConfig');
+            this.suiConfigUI.setPanel(this.suiConfig);
+            this.suiConfigUI.init();
+
+            // 默认隐藏
+            this.suiConfig.visible = false;
+
+            console.log('[UICommonLayout] SuiConfig initialized (hidden by default)');
+        });
+
+        console.log('[UICommonLayout] Initialized with Wallet, CommonSetting, GameConfig, and SuiConfig');
     }
 
     /**
@@ -122,6 +138,35 @@ export class UICommonLayout extends UIBase {
         return this.gameConfig?.visible || false;
     }
 
+    // ================== SuiConfig 控制 ==================
+
+    /**
+     * 切换 SuiConfig 显示/隐藏
+     */
+    public toggleSuiConfig(): void {
+        if (!this.suiConfig) {
+            console.warn('[UICommonLayout] suiConfig component not initialized');
+            return;
+        }
+
+        this.suiConfig.visible = !this.suiConfig.visible;
+        console.log('[UICommonLayout] SuiConfig visible:', this.suiConfig.visible);
+    }
+
+    /**
+     * 获取 SuiConfig 可见性
+     */
+    public isSuiConfigVisible(): boolean {
+        return this.suiConfig?.visible || false;
+    }
+
+    /**
+     * 获取 SuiConfig UI 实例
+     */
+    public getSuiConfig(): any {
+        return this.suiConfigUI;
+    }
+
     // ================== 游戏内按钮控制（转发到 CommonSetting） ==================
 
     /**
@@ -146,5 +191,31 @@ export class UICommonLayout extends UIBase {
         }
 
         this.settingUI.hideInGameButtons();
+    }
+
+    // ================== 环境按钮控制（转发到 CommonSetting） ==================
+
+    /**
+     * 显示环境按钮（在 UIModeSelect 显示时调用）
+     */
+    public showEnvButton(): void {
+        if (!this.settingUI) {
+            console.warn('[UICommonLayout] settingUI not initialized');
+            return;
+        }
+
+        this.settingUI.showEnvButton();
+    }
+
+    /**
+     * 隐藏环境按钮（在 UIModeSelect 隐藏时调用）
+     */
+    public hideEnvButton(): void {
+        if (!this.settingUI) {
+            console.warn('[UICommonLayout] settingUI not initialized');
+            return;
+        }
+
+        this.settingUI.hideEnvButton();
     }
 }

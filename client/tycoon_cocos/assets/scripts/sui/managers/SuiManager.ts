@@ -1809,6 +1809,88 @@ export class SuiManager {
             console.log('[SuiManager] Asset polling stopped and cleared');
         }
     }
+
+    // ============ 网络切换（重新初始化）============
+
+    /**
+     * 重新初始化 SuiManager（用于网络切换）
+     * 完全清理并重建所有资源
+     *
+     * 影响范围：
+     * - RPC URL → 重建 SuiClient
+     * - EventListener → 停止并重启
+     * - AssetPolling → 停止并重启
+     * - 所有缓存数据 → 清空
+     *
+     * @param newConfig 新的 Sui 配置
+     */
+    public async reinit(newConfig: SuiConfig): Promise<void> {
+        console.log('[SuiManager] ======================================');
+        console.log('[SuiManager] 开始重新初始化');
+        console.log('[SuiManager] ======================================');
+        console.log('  旧网络:', this._config?.network);
+        console.log('  新网络:', newConfig.network);
+        console.log('  新签名器:', newConfig.signerType);
+
+        // ====== 第一步: 停止所有服务 ======
+        console.log('[SuiManager] [1/4] 停止服务...');
+
+        // 停止事件监听器
+        if (this._eventIndexer) {
+            this._eventIndexer.stop();
+            this._eventIndexer = null;
+            console.log('  ✓ EventIndexer 已停止');
+        }
+
+        // 停止资产轮询
+        if (this._pollingService) {
+            this._pollingService.clear();
+            console.log('  ✓ AssetPolling 已停止');
+        }
+
+        // ====== 第二步: 清除状态和缓存 ======
+        console.log('[SuiManager] [2/4] 清除状态和缓存...');
+
+        this._initialized = false;
+        this._signer = null;
+        this._currentAddress = null;
+        this._currentSeat = null;
+
+        this._cachedGameData = null;
+        this._cachedGames = [];
+        this._cachedMapTemplates = [];
+        this._playerAssets = null;
+        this._cacheTimestamp = 0;
+
+        this._preloadStarted = false;
+        this._preloadCompleted = false;
+
+        this._currentGame = null;
+        this._lastPublishedTemplateId = null;
+
+        console.log('  ✓ 所有缓存已清除');
+
+        // ====== 第三步: 重新初始化 ======
+        console.log('[SuiManager] [3/4] 重新初始化...');
+
+        await this.init(newConfig, this._options);
+
+        console.log('  ✓ 初始化完成');
+
+        // ====== 第四步: 通知 UI 更新 ======
+        console.log('[SuiManager] [4/4] 通知 UI...');
+
+        // 通过 Blackboard 通知 UI 网络已切换
+        Blackboard.instance.set('sui_network_changed', {
+            network: newConfig.network,
+            signerType: newConfig.signerType,
+            timestamp: Date.now()
+        });
+
+        console.log('[SuiManager] ======================================');
+        console.log('[SuiManager] 重新初始化完成');
+        console.log('[SuiManager] ======================================');
+    }
 }
 
 /**

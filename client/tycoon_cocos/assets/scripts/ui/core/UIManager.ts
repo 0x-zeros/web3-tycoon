@@ -1027,6 +1027,24 @@ export class UIManager {
     }
 
     /**
+     * 切换 SuiConfig 显示/隐藏
+     */
+    public toggleSuiConfig(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.toggleSuiConfig();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
+    }
+
+    /**
+     * 获取 SuiConfig 可见性
+     */
+    public isSuiConfigVisible(): boolean {
+        return this._commonLayoutUI?.isSuiConfigVisible() || false;
+    }
+
+    /**
      * 显示游戏内按钮（btn_playSetting, btn_debug）
      * 由 UIInGame.onShow() 调用
      */
@@ -1045,6 +1063,30 @@ export class UIManager {
     public hideInGameButtons(): void {
         if (this._commonLayoutUI) {
             this._commonLayoutUI.hideInGameButtons();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
+    }
+
+    /**
+     * 显示环境按钮（btn_env）
+     * 由 UIModeSelect.onShow() 调用
+     */
+    public showEnvButton(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.showEnvButton();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
+    }
+
+    /**
+     * 隐藏环境按钮（btn_env）
+     * 由 UIModeSelect.onHide() 调用
+     */
+    public hideEnvButton(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.hideEnvButton();
         } else {
             console.warn('[UIManager] CommonLayout not initialized');
         }

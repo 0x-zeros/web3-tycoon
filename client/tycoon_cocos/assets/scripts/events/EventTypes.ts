@@ -42,7 +42,9 @@ export const EventTypes = {
         /** 卡牌飞出动画 */
         CardFlyOut: "ui_card_fly_out",
         /** PlaySetting 面板关闭 */
-        PlaySettingClosed: "ui_play_setting_closed"
+        PlaySettingClosed: "ui_play_setting_closed",
+        /** SuiConfig 面板关闭 */
+        SuiConfigClosed: "ui_sui_config_closed"
     },
 
     /** 地图相关事件 */

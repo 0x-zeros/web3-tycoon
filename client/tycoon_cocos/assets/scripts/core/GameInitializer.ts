@@ -18,7 +18,7 @@ import { Blackboard } from '../events/Blackboard';
 import { fromEntries } from '../utils/object-utils';
 import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
-import { CURRENT_SUI_CONFIG } from '../sui/config';
+import { SuiEnvConfigManager } from '../config/SuiEnvConfigManager';
 import { GameSession } from './GameSession';
 import * as TWEEN from '@tweenjs/tween.js';
 
@@ -315,14 +315,21 @@ export class GameInitializer extends Component {
         console.log('[GameInitializer] Initializing SuiManager...');
 
         try {
-            await SuiManager.instance.init(CURRENT_SUI_CONFIG, {
+            // 加载保存的配置（从 localStorage）
+            const savedConfig = SuiEnvConfigManager.instance.loadAndGetConfig();
+            console.log('[GameInitializer] Using saved config:', {
+                network: savedConfig.network,
+                signerType: savedConfig.signerType
+            });
+
+            await SuiManager.instance.init(savedConfig, {
                 debug: true  // 开发阶段启用调试日志
             });
 
             console.log('[GameInitializer] SuiManager initialized successfully');
-            console.log('  Network:', CURRENT_SUI_CONFIG.network);
-            console.log('  PackageID:', CURRENT_SUI_CONFIG.packageId);
-            console.log('  GameDataID:', CURRENT_SUI_CONFIG.gameDataId);
+            console.log('  Network:', savedConfig.network);
+            console.log('  PackageID:', savedConfig.packageId);
+            console.log('  GameDataID:', savedConfig.gameDataId);
 
             // 启动后台数据同步（不等待完成）
             SuiManager.instance.startBackgroundSync().catch(error => {

@@ -1,0 +1,342 @@
+/**
+ * UISuiConfig - Sui 网络配置界面
+ *
+ * 功能：
+ * 1. 切换网络环境（mainnet/testnet/devnet/localnet）
+ * 2. 切换钱包类型（wallet/keypair，仅 devnet/localnet）
+ * 3. 配置 keypair storageKey 和 password
+ * 4. 持久化配置到 localStorage
+ *
+ * Controller:
+ * - env: 网络选择（0=mainnet,1=testnet,2=devnet,3=localnet）
+ * - useKeypair: 钱包类型（0=wallet,1=keypair，仅 devnet/localnet 显示）
+ *
+ * 按钮:
+ * - btn_cancel: 关闭不保存
+ * - btn_ok: 检测变化→独立处理 env/useKeypair→保存
+ */
+
+import { _decorator } from 'cc';
+import * as fgui from 'fairygui-cc';
+import { UIBase } from '../core/UIBase';
+import { EventBus } from '../../events/EventBus';
+import { EventTypes } from '../../events/EventTypes';
+import { SuiManager } from '../../sui/managers/SuiManager';
+import { SuiEnvConfigManager } from '../../config/SuiEnvConfigManager';
+import { KeystoreConfig } from '../../sui/utils/KeystoreConfig';
+import { UINotification } from '../utils/UINotification';
+import { NetworkType } from '../../sui/config/SuiConfig';
+
+const { ccclass } = _decorator;
+
+@ccclass('UISuiConfig')
+export class UISuiConfig extends UIBase {
+    // Controller
+    private envController!: fgui.Controller;
+    private useKeypairController!: fgui.Controller;
+
+    // Keypair 输入框
+    private input_storageKey!: fgui.GTextInput;
+    private input_password!: fgui.GTextInput;
+
+    // 按钮
+    private btn_cancel!: fgui.GButton;
+    private btn_ok!: fgui.GButton;
+
+    // Keypair 组件容器（用于控制显示/隐藏）
+    private keypairGroup!: fgui.GComponent;
+
+    /**
+     * 初始化（绑定组件）
+     */
+    protected onInit(): void {
+        // 绑定 Controller
+        this.envController = this.getController('env')!;
+        this.useKeypairController = this.getController('useKeypair')!;
+
+        // 绑定 Keypair 输入框
+        const keypairComponent = this.getChild('keypair')?.asCom;
+        if (keypairComponent) {
+            this.keypairGroup = keypairComponent;
+            this.input_storageKey = keypairComponent.getChild('storageKey') as fgui.GTextInput;
+            this.input_password = keypairComponent.getChild('password') as fgui.GTextInput;
+        }
+
+        // 绑定按钮
+        this.btn_cancel = this.getButton('btn_cancel')!;
+        this.btn_ok = this.getButton('btn_ok')!;
+
+        // 检查组件是否完整
+        if (!this.envController || !this.useKeypairController ||
+            !this.btn_cancel || !this.btn_ok) {
+            console.error('[UISuiConfig] Failed to get required components');
+            return;
+        }
+
+        // 绑定事件
+        this.btn_cancel.onClick(this.onCancelClick, this);
+        this.btn_ok.onClick(this.onOkClick, this);
+
+        // 监听 env controller 变化（控制 useKeypair 可见性）
+        this.envController.on(fgui.Event.STATUS_CHANGED, this.onEnvControllerChanged, this);
+
+        console.log('[UISuiConfig] Initialized');
+    }
+
+    /**
+     * 显示回调 - 加载当前配置
+     */
+    protected onShow(data?: any): void {
+        console.log('[UISuiConfig] Showing Sui config UI');
+
+        this.loadCurrentConfig();
+    }
+
+    // ================== 配置加载 ==================
+
+    /**
+     * 加载当前配置到 UI
+     */
+    private loadCurrentConfig(): void {
+        const config = SuiManager.instance.config;
+
+        console.log('[UISuiConfig] Loading current config:', {
+            network: config.network,
+            signerType: config.signerType
+        });
+
+        // 设置 env controller
+        this.envController.selectedIndex = this.getEnvIndex(config.network as NetworkType);
+
+        // 设置 useKeypair controller
+        this.useKeypairController.selectedIndex = config.signerType === 'keypair' ? 1 : 0;
+
+        // 加载 keypair 配置
+        if (this.input_storageKey && this.input_password) {
+            this.input_storageKey.text = KeystoreConfig.instance.getStorageKey();
+            this.input_password.text = KeystoreConfig.instance.getPassword();
+        }
+
+        // 更新 useKeypair 可见性
+        this.updateUseKeypairVisibility();
+    }
+
+    // ================== Controller 监听 ==================
+
+    /**
+     * env controller 变化时触发
+     * 用于控制 useKeypair 的显示/隐藏
+     */
+    private onEnvControllerChanged(): void {
+        this.updateUseKeypairVisibility();
+    }
+
+    /**
+     * 更新 useKeypair controller 可见性
+     * 规则：只有 devnet 和 localnet 才显示
+     */
+    private updateUseKeypairVisibility(): void {
+        const env = this.getEnvName(this.envController.selectedIndex);
+        const showUseKeypair = env === 'devnet' || env === 'localnet';
+
+        // 显示/隐藏 keypair 组件
+        if (this.keypairGroup) {
+            this.keypairGroup.visible = showUseKeypair;
+        }
+
+        // 隐藏时强制切换到 wallet
+        if (!showUseKeypair) {
+            this.useKeypairController.selectedIndex = 0;
+        }
+
+        console.log('[UISuiConfig] UseKeypair visibility:', showUseKeypair);
+    }
+
+    // ================== 按钮事件 ==================
+
+    /**
+     * Cancel 按钮点击 - 关闭不保存
+     */
+    private onCancelClick(): void {
+        console.log('[UISuiConfig] Cancel clicked');
+
+        this.panel.visible = false;
+        EventBus.emit(EventTypes.UI.SuiConfigClosed);
+    }
+
+    /**
+     * OK 按钮点击 - 检测变化并应用
+     * 独立处理 env 切换和 useKeypair 切换
+     */
+    private async onOkClick(): Promise<void> {
+        console.log('[UISuiConfig] OK clicked');
+
+        // 禁用按钮（防止重复点击）
+        this.btn_ok.enabled = false;
+
+        try {
+            // 读取新配置
+            const newEnv = this.getEnvName(this.envController.selectedIndex);
+            const newUseKeypair = this.useKeypairController.selectedIndex === 1;
+            const newSignerType = newUseKeypair ? 'keypair' : 'wallet';
+
+            // 读取当前配置
+            const currentConfig = SuiManager.instance.config;
+            const envChanged = newEnv !== currentConfig.network;
+            const signerChanged = newSignerType !== currentConfig.signerType;
+
+            // 没有变化，直接关闭
+            if (!envChanged && !signerChanged) {
+                console.log('[UISuiConfig] No changes detected');
+                this.panel.visible = false;
+                return;
+            }
+
+            // ✅ 独立处理 1: env 切换（影响大，重新初始化）
+            if (envChanged) {
+                console.log('[UISuiConfig] Network changed:', currentConfig.network, '→', newEnv);
+                await this.handleNetworkChange(newEnv, newSignerType);
+            }
+            // ✅ 独立处理 2: useKeypair 切换（影响小，只换 signer）
+            else if (signerChanged) {
+                console.log('[UISuiConfig] Signer changed:', currentConfig.signerType, '→', newSignerType);
+                await this.handleSignerChange(newUseKeypair);
+            }
+
+            // 保存配置到 localStorage
+            SuiEnvConfigManager.instance.save(newEnv as NetworkType, newSignerType);
+
+            // 关闭面板
+            this.panel.visible = false;
+            EventBus.emit(EventTypes.UI.SuiConfigClosed);
+
+        } catch (error) {
+            console.error('[UISuiConfig] Failed to apply config:', error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            UINotification.error(`配置应用失败：${errorMsg}`);
+        } finally {
+            // 重新启用按钮
+            this.btn_ok.enabled = true;
+        }
+    }
+
+    // ================== 网络切换（重新初始化）==================
+
+    /**
+     * 处理网络切换
+     * 影响：RPC、EventListener、AssetPolling、所有缓存数据
+     * 方法：完全重新初始化 SuiManager
+     */
+    private async handleNetworkChange(network: string, signerType: 'wallet' | 'keypair'): Promise<void> {
+        UINotification.info(`正在切换到 ${network}...`);
+
+        // 获取新配置
+        const newConfig = SuiEnvConfigManager.instance.getConfig(network as NetworkType, signerType);
+
+        // 完全重新初始化 SuiManager
+        // - 停止 EventListener 和 AssetPolling
+        // - 清空所有缓存（GameData、Games、Templates、Assets）
+        // - 重建 SuiClient（新 RPC URL）
+        // - 重新启动服务
+        await SuiManager.instance.reinit(newConfig);
+
+        // 如果是 keypair 模式，加载 keypair
+        if (signerType === 'keypair') {
+            const storageKey = this.input_storageKey?.text.trim() || '';
+            const password = this.input_password?.text || '';
+
+            if (storageKey && password) {
+                KeystoreConfig.instance.applyConfig(storageKey, password);
+                await SuiManager.instance.reloadKeypair();
+            }
+        }
+
+        UINotification.success(`已切换到 ${network}`);
+    }
+
+    // ================== 钱包类型切换（轻量操作）==================
+
+    /**
+     * 处理钱包类型切换
+     * 影响：_signer、player assets
+     * 方法：重新设置 signer，重新加载 assets
+     */
+    private async handleSignerChange(useKeypair: boolean): Promise<void> {
+        if (useKeypair) {
+            // 切换到 keypair
+            const storageKey = this.input_storageKey?.text.trim() || '';
+            const password = this.input_password?.text || '';
+
+            if (!storageKey || !password) {
+                UINotification.warning('请填写 Storage Key 和 Password');
+                return;
+            }
+
+            // 应用配置
+            KeystoreConfig.instance.applyConfig(storageKey, password);
+
+            // 重新加载 keypair
+            UINotification.info("正在加载密钥...");
+            const addressChanged = await SuiManager.instance.reloadKeypair();
+
+            if (addressChanged) {
+                const newAddress = SuiManager.instance.currentAddress;
+                UINotification.success(`已切换到 Keypair 模式\n${newAddress}`);
+            } else {
+                UINotification.success("已切换到 Keypair 模式");
+            }
+
+        } else {
+            // 切换到 wallet
+            SuiManager.instance.clearSigner();
+
+            UINotification.info("已切换到 Wallet 模式\n请连接钱包");
+        }
+    }
+
+    // ================== 关闭按钮 ==================
+
+    /**
+     * 关闭按钮点击
+     */
+    private onClose(): void {
+        this.onCancelClick();
+    }
+
+    // ================== 工具方法 ==================
+
+    /**
+     * 根据 controller index 获取网络名称
+     */
+    private getEnvName(index: number): NetworkType {
+        const networks: NetworkType[] = ['mainnet', 'testnet', 'devnet', 'localnet'];
+        return networks[index] || 'testnet';
+    }
+
+    /**
+     * 根据网络名称获取 controller index
+     */
+    private getEnvIndex(network: string): number {
+        const networks = ['mainnet', 'testnet', 'devnet', 'localnet'];
+        const index = networks.indexOf(network);
+        return index >= 0 ? index : 1; // 默认 testnet
+    }
+
+    // ================== 解绑事件 ==================
+
+    protected unbindEvents(): void {
+        if (this.btn_cancel) {
+            this.btn_cancel.offClick(this.onCancelClick, this);
+        }
+
+        if (this.btn_ok) {
+            this.btn_ok.offClick(this.onOkClick, this);
+        }
+
+        if (this.envController) {
+            this.envController.off(fgui.Event.STATUS_CHANGED, this.onEnvControllerChanged, this);
+        }
+
+        super.unbindEvents();
+    }
+}

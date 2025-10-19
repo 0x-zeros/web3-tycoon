@@ -23,6 +23,7 @@ const { ccclass } = _decorator;
 export class UICommonSetting extends UIBase {
     // FairyGUI 组件引用
     private btn_gameConfig!: fgui.GButton;
+    private btn_env!: fgui.GButton;
     private btn_playSetting!: fgui.GButton;
     private btn_debug!: fgui.GButton;
 
@@ -43,19 +44,23 @@ export class UICommonSetting extends UIBase {
     protected onInit(): void {
         // 绑定 FairyGUI 组件（使用 UIBase 提供的辅助方法）
         this.btn_gameConfig = this.getButton('btn_gameConfig')!;
+        this.btn_env = this.getButton('btn_env')!;
         this.btn_playSetting = this.getButton('btn_playSetting')!;
         this.btn_debug = this.getButton('btn_debug')!;
 
         // 绑定事件
         this.btn_gameConfig.onClick(this.onGameConfigClick, this);
+        this.btn_env.onClick(this.onEnvClick, this);
         this.btn_playSetting.onClick(this.onPlaySettingClick, this);
         this.btn_debug.onClick(this.onDebugClick, this);
 
-        // 默认隐藏游戏内按钮（UIInGame 显示时才显示）
-        this.hideInGameButtons();
+        // 默认隐藏特殊按钮
+        this.btn_env.visible = false;        // 只在 ModeSelect 显示
+        this.hideInGameButtons();             // InGame 按钮默认隐藏
 
-        // 监听 PlaySetting 关闭事件（用于同步按钮状态）
+        // 监听事件
         EventBus.on(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
+        EventBus.on(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
 
         console.log('[UICommonSetting] Initialized');
     }
@@ -71,6 +76,20 @@ export class UICommonSetting extends UIBase {
 
         // 同步按钮状态
         this.btn_gameConfig.selected = UIManager.instance.isGameConfigVisible();
+    }
+
+    /**
+     * 环境配置按钮点击（Toggle 按钮）
+     * 控制 SuiConfig 显示/隐藏
+     */
+    private onEnvClick(): void {
+        console.log('[UICommonSetting] Env button clicked');
+
+        // 切换 SuiConfig 显示/隐藏
+        UIManager.instance.toggleSuiConfig();
+
+        // 同步按钮状态
+        this.btn_env.selected = UIManager.instance.isSuiConfigVisible();
     }
 
     /**
@@ -119,6 +138,14 @@ export class UICommonSetting extends UIBase {
         this.btn_playSetting.selected = false;
     }
 
+    /**
+     * SuiConfig 关闭事件（用于同步按钮状态）
+     */
+    private onSuiConfigClosed(): void {
+        console.log('[UICommonSetting] SuiConfig closed event received');
+        this.btn_env.selected = false;
+    }
+
     // ================== 显示/隐藏游戏内按钮 ==================
 
     /**
@@ -155,12 +182,42 @@ export class UICommonSetting extends UIBase {
         }
     }
 
+    // ================== 显示/隐藏环境按钮 ==================
+
+    /**
+     * 显示环境按钮（在 UIModeSelect 显示时调用）
+     */
+    public showEnvButton(): void {
+        console.log('[UICommonSetting] Showing env button');
+
+        if (this.btn_env) {
+            this.btn_env.visible = true;
+            this.btn_env.selected = false;
+        }
+    }
+
+    /**
+     * 隐藏环境按钮（在 UIModeSelect 隐藏时调用）
+     */
+    public hideEnvButton(): void {
+        console.log('[UICommonSetting] Hiding env button');
+
+        if (this.btn_env) {
+            this.btn_env.visible = false;
+            this.btn_env.selected = false;
+        }
+    }
+
     /**
      * 解绑事件
      */
     protected unbindEvents(): void {
         if (this.btn_gameConfig) {
             this.btn_gameConfig.offClick(this.onGameConfigClick, this);
+        }
+
+        if (this.btn_env) {
+            this.btn_env.offClick(this.onEnvClick, this);
         }
 
         if (this.btn_playSetting) {
@@ -173,6 +230,7 @@ export class UICommonSetting extends UIBase {
 
         // 移除事件监听
         EventBus.off(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
+        EventBus.off(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
 
         super.unbindEvents();
     }

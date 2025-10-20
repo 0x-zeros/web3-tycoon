@@ -12,6 +12,8 @@ import { encryptWithPassword, decryptWithPassword } from './CryptoUtils';
 import { requestSuiFromFaucet } from './FaucetUtils';
 import { UINotification } from '../../ui/utils/UINotification';
 import { KeystoreConfig } from './KeystoreConfig';
+import { SuiEnvConfigManager } from '../../config/SuiEnvConfigManager';
+import { getNetworkRpcUrl, NetworkType } from '../config/SuiConfig';
 
 /**
  * 加载或生成 Keypair（自动处理 faucet 和加密存储）
@@ -28,10 +30,17 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
     const storageKey = config.getFullStorageKey();
     const password = config.getPassword();
 
+    // 获取当前网络配置
+    const savedConfig = SuiEnvConfigManager.instance.load();
+    const network = savedConfig.network;
+    const rpcUrl = getNetworkRpcUrl(network);
+
     console.log('='.repeat(60));
     console.log('[KeystoreLoader] === START ===');
     console.log('  Timestamp:', new Date().toISOString());
     console.log('  Storage key:', storageKey);
+    console.log('  Network:', network);
+    console.log('  RPC URL:', rpcUrl);
     console.log('  Config:', config.getSummary());
     console.log('='.repeat(60));
 
@@ -60,7 +69,10 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
             console.log('  Address:', address);
 
             // Step 4: 检查余额并请求 faucet（如果需要）
-            await checkBalanceAndRequestFaucet(address);
+            // 仅在 localnet/devnet/testnet 时检查余额
+            if (network === 'localnet' || network === 'devnet' || network === 'testnet') {
+                await checkBalanceAndRequestFaucet(address, network, rpcUrl);
+            }
 
             console.log('[KeystoreLoader] === SUCCESS (LOADED) ===');
             console.log('='.repeat(60));
@@ -78,20 +90,22 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
         const address = newKeypair.toSuiAddress();
         console.log('  Generated address:', address);
 
-        // Step 5: Faucet（异步）
-        console.log('[KeystoreLoader] Step 5: Requesting faucet (async)');
-        UINotification.info("正在从水龙头获取测试币...");
+        // Step 5: Faucet（异步，仅在测试网络）
+        if (network === 'localnet' || network === 'devnet' || network === 'testnet') {
+            console.log('[KeystoreLoader] Step 5: Requesting faucet (async)');
+            UINotification.info("正在从水龙头获取测试币...");
 
-        requestSuiFromFaucet(address, 'localnet').then(success => {
-            console.log('[KeystoreLoader] Faucet callback, success:', success);
-            if (success) {
-                UINotification.success("测试币获取成功");
-            } else {
-                UINotification.warning("测试币获取失败");
-            }
-        }).catch(error => {
-            console.error('[KeystoreLoader] Faucet callback error:', error);
-        });
+            requestSuiFromFaucet(address, network).then(success => {
+                console.log('[KeystoreLoader] Faucet callback, success:', success);
+                if (success) {
+                    UINotification.success("测试币获取成功");
+                } else {
+                    UINotification.warning("测试币获取失败");
+                }
+            }).catch(error => {
+                console.error('[KeystoreLoader] Faucet callback error:', error);
+            });
+        }
 
         // Step 6: 导出
         console.log('[KeystoreLoader] Step 6: Exporting keypair to base64');
@@ -236,15 +250,23 @@ export function clearStoredKeypair(): void {
 /**
  * 检查余额，如果少于 10 SUI 则请求 faucet
  * @param address 地址
+ * @param network 网络类型
+ * @param rpcUrl RPC URL
  */
-async function checkBalanceAndRequestFaucet(address: string): Promise<void> {
+async function checkBalanceAndRequestFaucet(
+    address: string,
+    network: 'localnet' | 'devnet' | 'testnet',
+    rpcUrl: string
+): Promise<void> {
     console.log('[KeystoreLoader] Step 4: Checking balance');
+    console.log('  Network:', network);
+    console.log('  RPC URL:', rpcUrl);
 
     try {
         // 动态加载并创建临时 client 查询余额
         const { loadSuiClient } = await import('../loader');
         const { SuiClient } = await loadSuiClient();
-        const client = new SuiClient({ url: 'http://127.0.0.1:9000' });
+        const client = new SuiClient({ url: rpcUrl });
 
         const balanceResult = await client.getBalance({
             owner: address,
@@ -261,7 +283,7 @@ async function checkBalanceAndRequestFaucet(address: string): Promise<void> {
             console.log('[KeystoreLoader] Balance too low (< 10 SUI), requesting faucet');
             UINotification.warning(`余额不足（${balanceInSui.toFixed(4)} SUI），正在请求测试币...`);
 
-            const success = await requestSuiFromFaucet(address, 'localnet');
+            const success = await requestSuiFromFaucet(address, network);
             if (success) {
                 UINotification.success("测试币获取成功");
             } else {

@@ -1,0 +1,51 @@
+name: Deploy CDN to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - 'client/tycoon_cocos/build/web-walrus/remote/**'
+  workflow_dispatch:  # 允许手动触发部署
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy CDN Resources to Cloudflare Pages
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if remote directory exists
+        id: check_dir
+        run: |
+          if [ -d "client/tycoon_cocos/build/web-walrus/remote" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ remote 目录存在"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  remote 目录不存在，跳过部署"
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.check_dir.outputs.exists == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy client/tycoon_cocos/build/web-walrus/remote --project-name=web3-tycoon-cdn --branch=${{ github.ref_name }}
+
+      - name: Output deployment info
+        if: steps.check_dir.outputs.exists == 'true'
+        run: |
+          echo "✅ CDN 部署完成！"
+          echo "分支: ${{ github.ref_name }}"
+          echo "项目: web3-tycoon-cdn"
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "🌐 生产环境 URL: https://cdn.web3tycoon.com"
+            echo "📦 Cloudflare Pages URL: https://web3-tycoon-cdn.pages.dev"
+          else
+            echo "🌐 预览环境 URL: https://${{ github.sha }}.web3-tycoon-cdn.pages.dev"
+          fi

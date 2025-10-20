@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Walrus 部署准备脚本
-# 功能：将 Cocos Creator 构建的 web-mobile 文件复制到 walrus/web-mobile 目录
+# 功能：将 Cocos Creator 构建的 web-walrus 文件复制到 walrus/web-walrus 目录
 #      排除 remote 文件夹（远程资源），保留本地 assets 以实现自包含部署
 
 set -e  # 遇到错误立即退出
@@ -17,8 +17,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # 源目录和目标目录
-SOURCE_DIR="$PROJECT_ROOT/client/tycoon_cocos/build/web-mobile"
-TARGET_DIR="$SCRIPT_DIR/web-mobile"
+SOURCE_DIR="$PROJECT_ROOT/client/tycoon_cocos/build/web-walrus"
+TARGET_DIR="$SCRIPT_DIR/web-walrus"
 
 echo -e "${GREEN}=== Walrus 部署准备 ===${NC}"
 echo "项目根目录: $PROJECT_ROOT"
@@ -29,7 +29,7 @@ echo ""
 # 检查源目录是否存在
 if [ ! -d "$SOURCE_DIR" ]; then
     echo -e "${RED}错误: 源目录不存在${NC}"
-    echo "请先在 Cocos Creator 中构建 Web Mobile 版本"
+    echo "请先在 Cocos Creator 中构建 Web Walrus 版本"
     echo "路径: $SOURCE_DIR"
     exit 1
 fi
@@ -105,7 +105,7 @@ fi
 echo ""
 echo -e "${GREEN}准备完成！现在可以执行部署命令：${NC}"
 echo "  cd $SCRIPT_DIR"
-echo "  ./site-builder deploy web-mobile --epochs 5"
+echo "  ./site-builder deploy web-walrus --epochs 5"
 echo ""
 
 # 统计信息

@@ -1,9 +1,16 @@
 # Walrus 工具目录 Git 忽略规则
 # 策略：使用排除法，只保留必要的配置文件被 Git 管理
 
-# 忽略 web-mobile 目录下的所有复制文件
+# 忽略 web-mobile 目录下的所有复制文件（主版本）
 web-mobile/*
 
 # 但保留 web-mobile 目录下的配置文件（需要版本管理）
 !web-mobile/.gitkeep
 !web-mobile/ws-resources.json
+
+# 忽略 web-walrus 目录下的所有复制文件（Walrus 版本）
+web-walrus/*
+
+# 但保留 web-walrus 目录下的配置文件（需要版本管理）
+!web-walrus/.gitkeep
+!web-walrus/ws-resources.json

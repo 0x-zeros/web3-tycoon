@@ -215,19 +215,19 @@ export class UIEditor extends UIBase {
             this.m_btn_showIds.title = "显示ID";
         }
 
-        // 初始化地块类型显示状态为隐藏
-        this._isShowingTileTypes = false;
+        // 初始化地块类型显示状态为显示（因为编辑器加载时默认显示）
+        this._isShowingTileTypes = true;
         if (this.m_btn_showTileType) {
-            this.m_btn_showTileType.title = "显示类型";
+            this.m_btn_showTileType.title = "隐藏类型";
         }
 
-        // 确保ID标签和地块类型被隐藏
+        // 确保ID标签被隐藏（但不清除地块类型，因为默认显示）
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
                 mapInfo.component.hideIds();
-                mapInfo.component.clearTileTypeOverlays();
+                // mapInfo.component.clearTileTypeOverlays();  // ✅ 不清除，保持默认显示
             }
         }
     }

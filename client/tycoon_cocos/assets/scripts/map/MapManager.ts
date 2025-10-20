@@ -252,6 +252,13 @@ export class MapManager extends Component {
 
             this.log(`地图 ${mapId} 加载成功`);
 
+            // 如果是编辑模式，默认显示地块类型 overlay
+            if (isEdit) {
+                console.log('[MapManager] Editor mode: showing tile type overlays by default...');
+                await mapComponent.showTileTypeOverlays();
+                console.log('[MapManager] Tile type overlays shown');
+            }
+
             // 发送地图加载完成事件
             EventBus.emit(EventTypes.Game.MapLoaded, {
                 mapId: mapId,

@@ -115,6 +115,9 @@ export class GameMap extends Component {
     
     /** 是否为编辑模式 */
     private _isEditMode: boolean = false;
+
+    /** 地块类型 overlay 是否正在显示 */
+    private _isShowingTileTypes: boolean = false;
     
     /** 体素系统 */
     private _voxelSystem: VoxelSystem | null = null;
@@ -616,6 +619,18 @@ export class GameMap extends Component {
 
         // console.log(`[GameMap] Placed tile ${blockId} at (${gridPos.x}, ${gridPos.y})`);
 
+        // 如果类型 overlay 正在显示，为新 tile 添加 overlay
+        if (this._isShowingTileTypes && tile.getTypeId() !== 0) {
+            const typeTexture = NumberTextureGenerator.getTileTypeTexture(tile.getTypeId());
+            await this.addTileOverlay(gridPos, {
+                texture: typeTexture,
+                faces: [OverlayFace.UP],
+                inflate: 0.0025,
+                layerIndex: 5,
+                techniqueIndex: 1
+            });
+        }
+
         // 编辑模式下触发自动保存
         if (this._isEditMode) {
             this.scheduleAutoSave();
@@ -875,14 +890,14 @@ export class GameMap extends Component {
     ): Promise<void> {
         const key = `${x}_${y}`;
 
-        // 1. 更新 PaperActor（2D精灵）
-        const buildingNode = this._buildings.get(key);
-        if (buildingNode && buildingNode.isValid) {
-            const success = PaperActorFactory.upgradeBuilding(buildingNode, level);
-            if (!success) {
-                console.warn(`[GameMap] PaperActor 更新失败 at (${x}, ${y})`);
-            }
-        }
+        // 1. 更新 PaperActor（2D精灵）- 暂时禁用
+        // const buildingNode = this._buildings.get(key);
+        // if (buildingNode && buildingNode.isValid) {
+        //     const success = PaperActorFactory.upgradeBuilding(buildingNode, level);
+        //     if (!success) {
+        //         console.warn(`[GameMap] PaperActor 更新失败 at (${x}, ${y})`);
+        //     }
+        // }
 
         // 2. 更新 Actor（3D模型）
         const actorNode = this._buildingActors.get(key);
@@ -2392,6 +2407,11 @@ export class GameMap extends Component {
         level: number = 0,
         direction?: number
     ): Node | null {
+        // 编辑器模式才显示 PaperActor，游戏模式不显示
+        if (!this._isEditMode) {
+            return null;
+        }
+
         // 1. 计算PaperActor的位置（统一标准）
         // PaperActor原点在底部中心，Y坐标统一为0.5
         let actorPos: Vec3;
@@ -3304,6 +3324,9 @@ export class GameMap extends Component {
             });
         }
 
+        // 设置显示状态
+        this._isShowingTileTypes = true;
+
         console.log('[GameMap] Tile type overlays created');
     }
 
@@ -3321,6 +3344,9 @@ export class GameMap extends Component {
                 overlays.delete(5);
             }
         });
+
+        // 设置显示状态
+        this._isShowingTileTypes = false;
 
         console.log('[GameMap] Tile type overlays cleared');
     }

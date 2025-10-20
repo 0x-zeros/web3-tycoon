@@ -9,6 +9,6 @@
     <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="801,778" size="364,130">
       <Button title="开始游戏"/>
     </component>
-    <richtext id="n22_12ec4" name="tip" xy="469,594" size="898,138" fontSize="30" color="#ffffff" autoSize="none" text="Tip:  testnet没有sui的话可以切换devnet，并使用faucet获取。&#xA;"/>
+    <richtext id="n22_12ec4" name="tip" xy="469,594" size="898,138" fontSize="30" color="#ffffff" autoSize="none" text="Tip:  如果没有安装钱包的话，切换到devnet的keypair模式也能进行游戏&#xA;"/>
   </displayList>
 </component>

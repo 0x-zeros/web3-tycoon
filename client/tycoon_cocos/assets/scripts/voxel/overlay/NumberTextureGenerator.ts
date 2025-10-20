@@ -221,12 +221,17 @@ export class NumberTextureGenerator {
         // 获取类型名称和颜色
         const typeName = this.getTileTypeName(typeId);
         const bgColor = this.getTileTypeColor(typeId);
+        const textColor = this.getTileTypeTextColor(typeId);  // 根据类型获取文字颜色
+
+        // 根据类型调整字体大小
+        // 金额类型（奖励4、费用5）使用更小的字体
+        const fontSize = (typeId === 4 || typeId === 5) ? 18 : 22;
 
         return this.getNumberTexture(0, {
             size: 64,
-            fontSize: 22,  // 中文2个字，字体稍小
+            fontSize: fontSize,  // 动态字体大小
             bgColor: bgColor,
-            textColor: '#FFF',  // 白色文字
+            textColor: textColor,  // 动态文字颜色
             withBorder: true,  // 显示边框
             borderRadius: 4,
             customText: typeName
@@ -262,7 +267,7 @@ export class NumberTextureGenerator {
      * @returns CSS rgba 颜色字符串
      */
     private static getTileTypeColor(typeId: number): string {
-        // 测试：背景全透明，只显示白色文字
+        // 测试：背景全透明，只显示文字
         return 'rgba(0, 0, 0, 0)';  // 完全透明
 
         // ===== 原颜色方案（从贴图提取）=====
@@ -277,6 +282,25 @@ export class NumberTextureGenerator {
         //     case 7: return 'rgba(100, 100, 100, 0.7)';   // 新闻：灰色
         //     default: return 'rgba(255, 255, 255, 0.7)';  // 默认：白色
         // }
+    }
+
+    /**
+     * 获取地块类型文字颜色（根据背景自适应，每种类型专属颜色）
+     *
+     * @param typeId Web3TileType
+     * @returns CSS 颜色字符串
+     */
+    private static getTileTypeTextColor(typeId: number): string {
+        switch (typeId) {
+            case 1: return '#4A4A4A';     // 乐透（白色背景）：深灰，稳重
+            case 2: return '#FFFFFF';     // 医院（绿色背景）：白色，清晰
+            case 3: return '#00E5FF';     // 机会（深蓝背景）：亮青色，与图片色系一致
+            case 4: return '#2E7D32';     // 奖励（浅绿背景）：深绿，正向提示
+            case 5: return '#FF6F00';     // 费用（黄色背景）：深橙，警示但不严肃
+            case 6: return '#5E35B1';     // 卡片（白色背景）：紫色，神秘稀有
+            case 7: return '#E3F2FD';     // 新闻（灰色背景）：浅蓝，资讯感
+            default: return '#FFFFFF';    // 默认：白色
+        }
     }
 }
 

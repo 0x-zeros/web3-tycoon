@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="280,883">
   <displayList>
+    <image id="n12_6i1j" name="n12" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="280,883">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
     <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,261" size="230,50">
       <Button title="地图元素"/>
     </component>

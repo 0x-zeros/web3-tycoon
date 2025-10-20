@@ -92,7 +92,16 @@ export class UIInGamePlaySetting extends UIBase {
     private async onExitGameClick(): Promise<void> {
         console.log('[UIInGamePlaySetting] Exit game button clicked');
 
-        // 动态导入 UIManager（避免循环依赖）
+        // 1. 先关闭 PlaySetting 面板
+        if (this.panel) {
+            this.panel.visible = false;
+            console.log('[UIInGamePlaySetting] Panel closed before exit');
+        }
+
+        // 通知 CommonSetting 更新按钮状态
+        EventBus.emit(EventTypes.UI.PlaySettingClosed);
+
+        // 2. 退出游戏
         const { UIManager } = await import('../core/UIManager');
         UIManager.instance?.exitGame();
     }

@@ -437,13 +437,18 @@ export class MapManager extends Component {
      */
     private async onMapSelected(data: { mapId: string, isEdit: boolean }): Promise<void> {
         this.log(`收到地图选择事件: mapId=${data.mapId}, isEdit=${data.isEdit}`);
-        
+
         const result = await this.loadMap(data.mapId, data.isEdit);
         if (result.success) {
+            // 显示 UIInGame（编辑器和游戏都用这个界面）
+            console.log("[MapManager] loadMap成功, 显示 UIInGame");
+            const { UIManager } = await import('../ui/core/UIManager');
+            await UIManager.instance?.showUI("InGame");
+
             // 发送游戏开始事件
-            console.log("[MapManager] loadMap成功, 发送GameStart事件");
+            console.log("[MapManager] 发送 GameStart 事件");
             EventBus.emit(EventTypes.Game.GameStart, {
-                mode: "editor", // 这里可以根据实际情况调整
+                mode: data.isEdit ? "edit" : "play",  // ✅ 根据 isEdit 设置
                 source: "map_select"
             });
         } else {

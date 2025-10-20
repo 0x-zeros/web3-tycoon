@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1280,1280">
-  <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="0"/>
+<component size="1407,544">
+  <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="3"/>
   <displayList>
-    <graph id="n2_105vo" name="n2" xy="0,0" size="1278,869" type="rect" lineSize="2" lineColor="#ff6666cc" fillColor="#00ffffff"/>
-    <list id="n0_105vo" name="tiles" xy="0,0" size="1280,868" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <image id="n11_6i1j" name="n11" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1280,544"/>
+    <list id="n0_105vo" name="tiles" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
       <item title="1"/>
       <item title="地块 01"/>
@@ -13,15 +13,8 @@
       <item/>
       <item/>
       <item title="地块07"/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
     </list>
-    <list id="n3_105vo" name="objects" xy="0,-1" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n3_105vo" name="objects" xy="0,-1" size="1280,530" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="1"/>
       <item title="object1"/>
       <item title="object2"/>
@@ -34,7 +27,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,524" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="2"/>
       <item title="building 1"/>
       <item/>
@@ -47,7 +40,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,567" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,533" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="3"/>
       <item title="decorations 1"/>
       <item/>
@@ -60,17 +53,17 @@
       <item/>
       <item/>
     </list>
-    <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1284,5" size="126,180">
-      <Button checked="true" title="地块" controller="category" page="0"/>
+    <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,3" size="126,180">
+      <Button title="地块" controller="category" page="0"/>
     </component>
-    <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,184" size="126,180">
+    <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,367" size="126,180" visible="false">
       <Button title="NPC" controller="category" page="1"/>
     </component>
-    <component id="n8_ez89" name="btn_buildings" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1283,371" size="126,180">
+    <component id="n8_ez89" name="btn_buildings" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,184" size="126,180">
       <Button title="建筑" controller="category" page="2"/>
     </component>
-    <component id="n9_w84m" name="btn_decorations" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,555" size="126,180">
-      <Button title="装饰" controller="category" page="3"/>
+    <component id="n9_w84m" name="btn_decorations" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,551" size="126,180" visible="false">
+      <Button checked="true" title="装饰" controller="category" page="3"/>
     </component>
   </displayList>
 </component>

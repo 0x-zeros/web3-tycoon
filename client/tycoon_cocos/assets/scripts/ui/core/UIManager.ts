@@ -4,6 +4,7 @@ import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
 import { UI3DInteractionManager } from "../../events/UI3DInteractionManager";
+import { MapManager } from "../../map/MapManager";
 import * as fgui from "fairygui-cc";
 
 // 从 UITypes 导入 UILayer（避免循环依赖）
@@ -1123,7 +1124,7 @@ export class UIManager {
     public exitGame(): void {
         console.log('[UIManager] 退出游戏');
 
-        // 1. 调用 GameSession 清理游戏状态
+        // 1. 调用 GameSession 清理游戏状态（游戏模式）
         const session = Blackboard.instance.get<any>('currentGameSession');
         if (session && session.exitGameCleanup) {
             session.exitGameCleanup();
@@ -1132,13 +1133,20 @@ export class UIManager {
             console.warn('[UIManager] GameSession not found or exitGameCleanup not available');
         }
 
-        // 2. 隐藏游戏内界面
+        // 2. 卸载当前地图场景（游戏模式和编辑器模式都需要）
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            mapManager.unloadCurrentMap();
+            console.log('[UIManager] 地图场景已卸载');
+        }
+
+        // 3. 隐藏游戏内界面
         if (this.isUIShowing("InGame")) {
             this.hideUI("InGame");
             console.log('[UIManager] UIInGame 已隐藏');
         }
 
-        // 3. 显示地图选择界面
+        // 4. 显示地图选择界面
         this.showUI("MapSelect");
         console.log('[UIManager] 显示地图选择界面');
 

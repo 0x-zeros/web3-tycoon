@@ -1474,11 +1474,27 @@ export class GameMap extends Component {
     }
 
     /**
-     * 渲染 NPC
+     * 渲染 NPC（入口方法，根据配置选择渲染方式）
      * @param npc NPC 逻辑对象
      * @param tileId NPC 所在的 tile ID
      */
     private async renderNPC(npc: any, tileId: number): Promise<void> {
+        // 使用新的 CompositeVoxelActor 渲染（可通过配置切换）
+        const USE_COMPOSITE_RENDERER = true;
+
+        if (USE_COMPOSITE_RENDERER) {
+            await this.renderNPCWithComposite(npc, tileId);
+        } else {
+            await this.renderNPCWithPaperActor(npc, tileId);
+        }
+    }
+
+    /**
+     * 使用 PaperActor 渲染 NPC（原方式，保留）
+     * @param npc NPC 逻辑对象
+     * @param tileId NPC 所在的 tile ID
+     */
+    private async renderNPCWithPaperActor(npc: any, tileId: number): Promise<void> {
         // 1. 从 GameSession 获取 GameTile，获取位置
         const session = (this as any)._session;
         if (!session) {
@@ -1526,7 +1542,7 @@ export class GameMap extends Component {
         // 8. 存储到索引
         this._npcActors.set(tileId, npcNode);
 
-        console.log(`[GameMap] Rendered NPC at tile ${tileId}:`, actorId);
+        console.log(`[GameMap] Rendered NPC with PaperActor at tile ${tileId}:`, actorId);
     }
 
     /**
@@ -1550,7 +1566,7 @@ export class GameMap extends Component {
     }
 
     /**
-     * NPC Kind → Actor ID 映射
+     * NPC Kind → Actor ID 映射（PaperActor 使用）
      */
     private getNPCActorId(npcKind: number): string {
 
@@ -1565,6 +1581,98 @@ export class GameMap extends Component {
         };
 
         return kindToActorMap[npcKind] || 'web3:land_god';  // 默认土地神
+    }
+
+    /**
+     * NPC Kind → Block ID 映射（CompositeVoxelActor 使用）
+     * 根据 NPC 类型选择合适的 block 颜色
+     */
+    private getNPCBlockId(npcKind: number): string {
+        switch (npcKind) {
+            case NpcKind.BARRIER:     return 'web3:chance';    // 路障：深蓝色（阻碍感）
+            case NpcKind.BOMB:        return 'web3:fee';       // 炸弹：黄色（警示感）
+            case NpcKind.DOG:         return 'web3:news';      // 恶犬：灰色（威胁感）
+            case NpcKind.LAND_GOD:    return 'web3:bonus';     // 土地神：浅绿色（增益感）
+            case NpcKind.WEALTH_GOD:  return 'web3:bonus';     // 财神：浅绿色（增益感）
+            case NpcKind.FORTUNE_GOD: return 'web3:bonus';     // 福神：浅绿色（增益感）
+            case NpcKind.POOR_GOD:    return 'web3:hospital';  // 穷神：绿色（负面但不严重）
+            default:                  return 'web3:empty_land'; // 默认：空地
+        }
+    }
+
+    /**
+     * 使用 CompositeVoxelActor 渲染 NPC（新方式）
+     * @param npc NPC 逻辑对象
+     * @param tileId NPC 所在 tile ID
+     */
+    private async renderNPCWithComposite(npc: any, tileId: number): Promise<void> {
+        // 1. 从 GameSession 获取 GameTile，获取位置
+        const session = (this as any)._session;
+        if (!session) {
+            console.warn('[GameMap] Session not set, cannot render NPC');
+            return;
+        }
+
+        const gameTile = session.getTileByIndex(tileId);
+        if (!gameTile) {
+            console.warn(`[GameMap] Tile ${tileId} not found for NPC`);
+            return;
+        }
+
+        // 2. 计算世界位置（tile 中心，y=0.25 因为 NPC 高度是 0.5）
+        const position = new Vec3(
+            gameTile.x + 0.5,
+            0.25,  // y=0.25（scale.y=0.5 时，底部在 y=0，顶部在 y=0.5）
+            gameTile.y + 0.5
+        );
+
+        // 3. 创建 NPC 节点
+        const npcNode = new Node(`NPC_${npc.getKind()}_T${tileId}`);
+        npcNode.setParent(this._npcsRoot!);
+
+        // 4. 添加 CompositeVoxelActor 组件
+        const { CompositeVoxelActor } = await import('../../voxel/composite/CompositeVoxelActor');
+        const actor = npcNode.addComponent(CompositeVoxelActor);
+
+        // 5. 获取 NPC 配置
+        const blockId = this.getNPCBlockId(npc.getKind());
+        const npcName = npc.getName();
+        const nameTexture = NumberTextureGenerator.getNPCNameTexture(npcName);
+
+        // 6. 配置并渲染
+        await actor.setConfig({
+            components: [
+                {
+                    blockId: blockId,
+                    position: new Vec3(0, 0, 0),
+                    scale: new Vec3(0.8, 0.5, 0.8),  // 扁平的 NPC
+                    overlays: [
+                        {
+                            texture: nameTexture,
+                            faces: [OverlayFace.UP],
+                            layerIndex: 0,
+                            inflate: 0.002,
+                            techniqueIndex: 1  // 透明渲染
+                        }
+                    ]
+                }
+            ],
+            basePosition: position
+        });
+
+        // 7. 存储到索引
+        this._npcActors.set(tileId, npcNode);
+
+        // 8. 双向关联（CompositeVoxelActor 可以作为一种 actor，保存到 NPC）
+        // NPC 需要引用节点以便后续操作
+        // TODO: 可以考虑让 NPC 直接引用 npcNode 而不是 PaperActor
+
+        console.log(`[GameMap] Rendered NPC with CompositeVoxelActor at tile ${tileId}:`, {
+            kind: npc.getKind(),
+            name: npcName,
+            blockId: blockId,
+            position: position
+        });
     }
 
     /**

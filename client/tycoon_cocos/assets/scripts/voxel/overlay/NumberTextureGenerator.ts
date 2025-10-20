@@ -211,6 +211,25 @@ export class NumberTextureGenerator {
     }
 
     /**
+     * 生成 NPC 名字纹理
+     * 用于在 NPC block 顶部显示名字
+     *
+     * @param npcName NPC 中文名字（如 "路障"、"财神" 等）
+     * @returns Texture2D
+     */
+    static getNPCNameTexture(npcName: string): Texture2D {
+        return this.getNumberTexture(0, {
+            size: 64,
+            fontSize: 20,                 // NPC 名字 2-3 个字
+            bgColor: 'rgba(0, 0, 0, 0)',  // 透明背景
+            textColor: '#FFF',            // 白色文字
+            withBorder: true,             // 有边框
+            borderRadius: 4,
+            customText: npcName
+        });
+    }
+
+    /**
      * 获取地块类型纹理
      * 根据 Web3TileType 生成带类型名称和颜色的纹理
      *

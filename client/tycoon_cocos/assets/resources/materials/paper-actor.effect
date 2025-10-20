@@ -34,7 +34,7 @@ CCEffect %{
           blendDstAlpha: one_minus_src_alpha
       properties: *props
       migrations: *migs
-      priority: 255   # default 128 0 ~ 255
+      priority: 250   # default 128 0 ~ 255
 }%
 
 CCProgram unlit-vs %{

@@ -37,7 +37,7 @@ CCEffect %{
     properties:
       mainTexture: { value: white }
       mainColor:   { value: [1.0, 1.0, 1.0, 1.0] } # w 作为整体透明度
-    #priority: 255   # default 128 0 ~ 255
+    priority: 255   # default 128 0 ~ 255
 }%
 
 CCProgram vert %{

@@ -1,4 +1,8 @@
-# Web3 Tycoon 🎲
+<div align="center">
+
+<img src="assets/images/logo512.png" alt="Web3 Tycoon Logo" width="200"/>
+
+# Web3 Tycoon
 
 > 基于 Sui 区块链的全链上 3D 大富翁游戏
 
@@ -6,6 +10,8 @@
 [![Move](https://img.shields.io/badge/Language-Move-green)](https://move-language.github.io/)
 [![Cocos Creator](https://img.shields.io/badge/Engine-Cocos%20Creator%203.8.7-orange)](https://www.cocos.com/creator)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue)](https://www.typescriptlang.org/)
+
+</div>
 
 🌐 **在线体验**: [www.web3tycoon.com](https://www.web3tycoon.com) | [Walrus 去中心化版本](https://web3tycoon.wal.app/)
 
@@ -17,23 +23,20 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - ⛓️ **完全链上游戏逻辑** - 所有游戏状态和规则由 Move 智能合约管理
 - 🎲 **经典大富翁玩法** - 投资地产、收取租金、策略决策
 - 🔐 **Sui 原生随机数** - 使用 Sui Random 对象确保公平性
-- 🎨 **AIGC 美术资源** - 基于 OpenAI DALL-E 3 的自动化资源生成
 - 🌐 **去中心化部署** - Cloudflare Pages + Walrus Sites 双重部署
 
 ## 🎮 游戏特色
 
 - 🎲 **经典大富翁玩法** - 掷骰子、买地产、收租金、策略决策
 - ⛓️ **完全链上逻辑** - 所有游戏规则在 Move 智能合约中执行
-- 🎨 **体素风格 3D** - Cocos Creator 3D 引擎 + Minecraft 风格渲染
-- 🌍 **Web3 主题世界** - 医院、彩票站等 Web3 主题建筑
-- 🎴 **卡牌系统** - 机会卡、命运卡、技能卡影响游戏走向
+- 🎨 **体素风格 3D** - Cocos Creator 3D 引擎 + Minecraft 风格渲染(demo阶段)
+- 🌍 **Web3 主题世界** - defi、交易等 Web3 主题玩法
+- 🎴 **卡牌系统** - 机会卡、技能卡影响游戏走向
 - 🎲 **公平随机** - 使用 Sui 原生随机数确保公平性
 
 ## 🚀 快速开始
 
 ### 环境要求
-
-- **Node.js** 18+
 - **Sui CLI** (最新版)
 - **Cocos Creator** 3.8.7
 
@@ -52,7 +55,7 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - 🏗️ [技术架构](docs/tech/architecture.md) - 系统架构与核心组件
 - 🔗 [Sui 区块链集成](docs/tech/sui-integration.md) - Move 合约与客户端对齐
 - 📦 [项目结构](docs/project-structure.md) - 文件组织与代码规范
-- 📅 [开发计划](docs/development-plan.md) - 黑客松开发路线
+
 
 ## 🎯 技术亮点
 
@@ -62,17 +65,13 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - **事件驱动同步**：通过 Sui 事件实现状态同步
 - **可验证性**：所有操作可审计和重放
 
-### Move 2024 Edition 最佳实践
-- 使用 Vector `v[i]`、`.push_back()` 等 2024 新语法
-- Object Capabilities 权限管理（`AdminCap`, `Seat`）
-- 聚合事件实现客户端同步
-- 链上随机数最佳实践
 
 ### TypeScript 与 Move 深度对齐
 - TS 类型定义与 Move 合约结构一致
-- 客户端 BFS 寻路算法匹配链上逻辑
+- 客户端寻路算法匹配链上逻辑节省gas
 - 完整的事件索引和状态恢复系统
 - Wallet Standard 标准钱包接入
+
 
 ### 去中心化部署
 - Cloudflare Pages（全球 CDN + 自动部署）
@@ -84,14 +83,16 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - Move 智能合约（地产、卡牌、Buff、随机数）
 - 事件驱动架构（聚合事件 + 状态同步）
 - 3D 客户端（Cocos Creator + 体素渲染）
-- 地图系统（Tile + Building 分离架构）
-- AIGC 资源生成（OpenAI DALL-E 3）
+- 地图编辑器 (玩家可以自己编辑地图发布)
 - 双重部署（Cloudflare Pages + Walrus Sites）
 
-🚧 **进行中**
-- 客户端-区块链深度集成
-- 玩家移动动画和游戏流程
-- UI 完善和交互优化
+🚧 **进行中/TODO**
+- 美术资源，UI资源，场景，动画等
+- AIGC 资源
+- 更多卡牌和建筑功能
+- 地图发布者奖励
+- defi，价格预测玩法的集成
+-
 
 ## 🤝 参与贡献
 
@@ -107,14 +108,14 @@ Apache-2.0 License
 
 <div align="center">
 
-**🎲 Web3 Tycoon - 在游戏中学习 Web3，在 DeFi 中获得乐趣！🎲**
+<img src="assets/images/logo_deco.png" alt="Web3 Tycoon" width="400"/>
+
+**在游戏中学习 Web3，在 DeFi 中获得乐趣！**
 
 [开始游戏](https://www.web3tycoon.com) • [Walrus 去中心化版本](https://web3tycoon.wal.app/) • [查看文档](docs/) • [智能合约](move/tycoon/)
 
 Made with ❤️ by Web3 Tycoon Team
 
-</div>
-
----
-
 **License**: Apache-2.0
+
+</div>

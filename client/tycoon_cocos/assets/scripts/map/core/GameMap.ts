@@ -915,9 +915,12 @@ export class GameMap extends Component {
                 const actor = actorNode.getComponent(CompositeVoxelActor);
                 if (actor && gameBuilding) {
                     const size = gameBuilding.size;
+
+                    // 根据等级调整 scale：level 0=0.45, 1=0.55, 2=0.65, 3=0.75, 4=0.85, 5=0.95
+                    const baseScale = 0.45 + level * 0.1;
                     const scale = size === 1
-                        ? new Vec3(0.8, 0.1, 0.8)
-                        : new Vec3(1.6, 0.1, 1.6);
+                        ? new Vec3(baseScale, 0.1, baseScale)
+                        : new Vec3(baseScale * 2, 0.1, baseScale * 2);
 
                     const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(level, owner);
 
@@ -1761,13 +1764,17 @@ export class GameMap extends Component {
     private async renderBuildingWithComposite(gameBuilding: any, gridPos: Vec2): Promise<void> {
         // 1. 计算位置和缩放
         const size = gameBuilding.size;
+        const level = gameBuilding.level;
+
         const position = size === 1
             ? new Vec3(gridPos.x + 0.5, 0.6, gridPos.y + 0.5)  // 1x1 中心
             : new Vec3(gridPos.x + 1, 0.6, gridPos.y + 1);     // 2x2 中心（4个tile的中心）
 
+        // 根据等级调整 scale：level 0=0.45, 1=0.55, 2=0.65, 3=0.75, 4=0.85, 5=0.95
+        const baseScale = 0.45 + level * 0.1;
         const scale = size === 1
-            ? new Vec3(0.8, 0.1, 0.8)    // 1x1
-            : new Vec3(1.6, 0.1, 1.6);   // 2x2（0.8 × 2 = 1.6）
+            ? new Vec3(baseScale, 0.1, baseScale)              // 1x1，XZ 随等级增长
+            : new Vec3(baseScale * 2, 0.1, baseScale * 2);     // 2x2，XZ 随等级增长
 
         // 2. 创建节点
         const buildingNode = new Node(`B_${size}x${size}_${gridPos.x}_${gridPos.y}`);

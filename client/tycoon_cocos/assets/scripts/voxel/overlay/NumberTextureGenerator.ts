@@ -386,18 +386,18 @@ export class NumberTextureGenerator {
     }
 
     /**
-     * 获取建筑拥有者颜色（Material Design 配色）
+     * 获取建筑拥有者颜色（高对比度配色，适配浅蓝色背景）
      *
      * @param owner 拥有者索引
      * @returns CSS 颜色字符串
      */
     private static getBuildingOwnerColor(owner: number): string {
         switch (owner) {
-            case 255: return '#9E9E9E';  // 无主：浅灰，中性温和
-            case 0:   return '#2196F3';  // Player 0：蓝色，清爽科技
-            case 1:   return '#F44336';  // Player 1：红色，热烈醒目
-            case 2:   return '#4CAF50';  // Player 2：绿色，生机财富
-            case 3:   return '#9C27B0';  // Player 3：紫色，高贵神秘
+            case 255: return '#424242';  // 无主：深灰，高对比
+            case 0:   return '#FFC107';  // Player 0：亮黄，醒目
+            case 1:   return '#FF5252';  // Player 1：亮红，热烈
+            case 2:   return '#69F0AE';  // Player 2：荧光绿，财富
+            case 3:   return '#E040FB';  // Player 3：荧光紫，高贵
             default:  return '#FFD700';  // 其他：金黄（兼容）
         }
     }

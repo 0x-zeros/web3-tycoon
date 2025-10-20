@@ -630,7 +630,7 @@ export class RollAndStepHandler {
             level: newLevel,
             buildingType,
             decisionType: buildingDecision.decision_type,
-            amount: buildingDecision.amount.toString(),
+            amount: buildingDecision.amount?.toString() || 'N/A',
             tileId: buildingDecision.tile_id
         });
 

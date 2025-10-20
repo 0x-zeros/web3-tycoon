@@ -351,16 +351,18 @@ export class NumberTextureGenerator {
      * 生成建筑标签纹理（空地/等级）
      *
      * @param level 建筑等级（0-5）
+     * @param owner 拥有者索引（255=无主，0-3=玩家）
      * @returns Texture2D
      */
-    static getBuildingLabelTexture(level: number): Texture2D {
+    static getBuildingLabelTexture(level: number, owner: number): Texture2D {
         const text = this.getBuildingLevelText(level);
+        const textColor = this.getBuildingOwnerColor(owner);
 
         return this.getNumberTexture(0, {
             size: 64,
             fontSize: 22,
             bgColor: 'rgba(0, 0, 0, 0)',  // 透明背景
-            textColor: '#FFD700',          // 金黄色，醒目
+            textColor: textColor,          // 根据 owner 动态颜色
             withBorder: true,
             borderRadius: 4,
             customText: text
@@ -380,6 +382,23 @@ export class NumberTextureGenerator {
             return `${level}级`;
         } else {
             return '未知';
+        }
+    }
+
+    /**
+     * 获取建筑拥有者颜色（Material Design 配色）
+     *
+     * @param owner 拥有者索引
+     * @returns CSS 颜色字符串
+     */
+    private static getBuildingOwnerColor(owner: number): string {
+        switch (owner) {
+            case 255: return '#9E9E9E';  // 无主：浅灰，中性温和
+            case 0:   return '#2196F3';  // Player 0：蓝色，清爽科技
+            case 1:   return '#F44336';  // Player 1：红色，热烈醒目
+            case 2:   return '#4CAF50';  // Player 2：绿色，生机财富
+            case 3:   return '#9C27B0';  // Player 3：紫色，高贵神秘
+            default:  return '#FFD700';  // 其他：金黄（兼容）
         }
     }
 }

@@ -919,7 +919,7 @@ export class GameMap extends Component {
                         ? new Vec3(0.8, 0.1, 0.8)
                         : new Vec3(1.6, 0.1, 1.6);
 
-                    const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(level);
+                    const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(level, owner);
 
                     await actor.setConfig({
                         components: [{
@@ -1762,8 +1762,8 @@ export class GameMap extends Component {
         // 1. 计算位置和缩放
         const size = gameBuilding.size;
         const position = size === 1
-            ? new Vec3(gridPos.x + 0.5, 1.1, gridPos.y + 0.5)  // 1x1 中心
-            : new Vec3(gridPos.x + 1, 1.1, gridPos.y + 1);     // 2x2 中心（4个tile的中心）
+            ? new Vec3(gridPos.x + 0.5, 0.6, gridPos.y + 0.5)  // 1x1 中心
+            : new Vec3(gridPos.x + 1, 0.6, gridPos.y + 1);     // 2x2 中心（4个tile的中心）
 
         const scale = size === 1
             ? new Vec3(0.8, 0.1, 0.8)    // 1x1
@@ -1778,8 +1778,11 @@ export class GameMap extends Component {
         const { CompositeVoxelActor } = await import('../../voxel/composite/CompositeVoxelActor');
         const actor = buildingNode.addComponent(CompositeVoxelActor);
 
-        // 4. 生成标签纹理（根据 level）
-        const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(gameBuilding.level);
+        // 4. 生成标签纹理（根据 level 和 owner）
+        const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(
+            gameBuilding.level,
+            gameBuilding.owner
+        );
 
         // 5. 配置并渲染
         await actor.setConfig({

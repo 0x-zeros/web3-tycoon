@@ -175,7 +175,7 @@ if (tileType === TILE_KIND.PROPERTY) {
 ### StopEffect（停留效果）
 
 停留在地块上的效果：
-- `stop_type` - 停留类型（租金、医院、监狱等）
+- `stop_type` - 停留类型（租金、医院、奖励等）
 - `amount` - 相关金额
 - `owner` - 地块所有者（可选）
 - `card_gains` - 获得的卡牌

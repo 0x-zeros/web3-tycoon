@@ -75,8 +75,8 @@ module tycoon::game {
         balance: u64,
         position: u8,
         properties: vector<u32>,
-        in_jail: bool,
-        jail_turns: u8
+        in_hospital: bool,
+        hospital_turns: u8
     }
 }
 ```

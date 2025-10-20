@@ -55,7 +55,7 @@ graph TD
 
 #### 2.2 特殊情况处理
 - **双骰子奖励**：掷出双骰子获得额外回合
-- **监狱状态**：跳过掷骰子，直接进入地块事件处理
+- **医院状态**：跳过掷骰子，直接进入地块事件处理
 - **卡片中断**：某些卡片可以中断正常流程
 
 ### 3. 游戏结束条件
@@ -82,7 +82,6 @@ interface PurchaseConditions {
   // 基本条件
   isUnowned: boolean;              // 地产无主
   hasEnoughMoney: boolean;         // 玩家有足够资金
-  notInJail: boolean;              // 玩家不在监狱
   notMortgaged: boolean;           // 地产未被抵押
 
   // 特殊条件
@@ -330,10 +329,9 @@ enum PlayerStatus {
 #### 1.2 特殊状态
 ```typescript
 interface SpecialStatus {
-  // 监狱状态
-  inJail: boolean;
-  jailTurns: number;
-  jailReason: string;
+  // 医院状态
+  inHospital: boolean;
+  hospitalTurns: number;
 
   // 保护状态
   protected: boolean;
@@ -424,8 +422,6 @@ enum PlayerAction {
   MORTGAGE = 'mortgage',
 
   // 特殊行动
-  GO_TO_JAIL = 'go_to_jail',
-  GET_OUT_OF_JAIL = 'get_out_of_jail',
   DECLARE_BANKRUPTCY = 'declare_bankruptcy'
 }
 ```

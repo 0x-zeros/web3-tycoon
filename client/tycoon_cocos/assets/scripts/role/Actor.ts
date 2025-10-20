@@ -652,10 +652,6 @@ export class Actor extends Component {
             case 'moving':
                 this.playAnimation('move');
                 break;
-            case 'jailed':
-                this.playAnimation('defeat');
-                this.playEffect('jail', 3.0);
-                break;
             case 'winner':
                 this.playAnimation('celebrate');
                 this.playEffect('victory', 5.0);

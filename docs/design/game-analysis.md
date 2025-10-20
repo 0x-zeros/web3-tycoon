@@ -13,7 +13,7 @@
 #### 1. 地图系统
 **经典地图特征：**
 - 方形闭环设计（通常40个格子）
-- 4个角落特殊格子（起点、监狱、奖励地块、进监狱）
+- 特殊格子（起点、医院、奖励地块等）
 - 地产格子（可购买、升级）
 - 功能格子（机会、命运、费用地块等）
 
@@ -27,8 +27,7 @@ enum TileType {
     CHANCE = 'chance',         // 机会卡
     COMMUNITY = 'community',   // 社区箱
     TAX = 'tax',              // 费用地块
-    JAIL = 'jail',            // 监狱
-    GO_TO_JAIL = 'go_to_jail', // 进监狱
+    HOSPITAL = 'hospital',     // 医院
     FREE_PARKING = 'free_parking', // 奖励地块
     SPECIAL = 'special'        // 特殊事件
 }

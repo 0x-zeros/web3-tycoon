@@ -187,7 +187,7 @@ import { TileKind, NpcKind, CardKind, BuffKind } from '@/scripts/sui';
 // 地块类型
 TileKind.PROPERTY  // 地产
 TileKind.HOSPITAL  // 医院
-TileKind.PRISON    // 监狱
+TileKind.CHANCE    // 机会
 
 // NPC类型
 NpcKind.BARRIER    // 路障

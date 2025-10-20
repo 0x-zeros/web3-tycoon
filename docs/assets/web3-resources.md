@@ -54,7 +54,7 @@ NPC、物体的纹理资源（仅用于PaperActor，不包括装饰物）
   - `hotel_lv0-3.png` - 大饭店（4个等级）
   - `tech_company_lv0-3.png` - 科技公司（4个等级）
   - `bank_lv0-3.png` - 银行（4个等级）
-  - `jail.png` - 监狱（单一纹理）
+  - `hospital.png` - 医院（单一纹理）
   - `airport.png` - 机场（单一纹理）
 
 #### Web3主题建筑

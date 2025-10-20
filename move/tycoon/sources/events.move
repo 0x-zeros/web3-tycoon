@@ -153,7 +153,6 @@ const STOP_NONE: u8 = 0;
 const STOP_BUILDING_TOLL: u8 = 1;
 const STOP_BUILDING_NO_RENT: u8 = 2;
 const STOP_HOSPITAL: u8 = 3;
-const STOP_PRISON: u8 = 4;
 const STOP_BONUS: u8 = 5;
 const STOP_FEE: u8 = 6;
 const STOP_CARD_STOP: u8 = 7;
@@ -636,7 +635,6 @@ public fun stop_none(): u8 { STOP_NONE }
 public fun stop_building_toll(): u8 { STOP_BUILDING_TOLL }
 public fun stop_building_no_rent(): u8 { STOP_BUILDING_NO_RENT }
 public fun stop_hospital(): u8 { STOP_HOSPITAL }
-public fun stop_prison(): u8 { STOP_PRISON }
 public fun stop_bonus(): u8 { STOP_BONUS }
 public fun stop_fee(): u8 { STOP_FEE }
 public fun stop_card_stop(): u8 { STOP_CARD_STOP }

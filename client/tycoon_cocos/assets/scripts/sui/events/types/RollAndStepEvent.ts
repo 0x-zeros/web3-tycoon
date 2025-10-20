@@ -111,7 +111,6 @@ export enum StopType {
     BUILDING_TOLL = 1,
     BUILDING_NO_RENT = 2,
     HOSPITAL = 3,
-    PRISON = 4,
     BONUS = 5,
     FEE = 6,
     CARD_STOP = 7,

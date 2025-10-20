@@ -267,10 +267,6 @@ export class RollAndStepHandler {
             //   显示：医院提示，停留回合数
             //   回合数：step.stop_effect.turns
             //
-            // - StopType.PRISON (4): 进入监狱
-            //   显示：监狱提示，停留回合数
-            //   回合数：step.stop_effect.turns
-            //
             // - StopType.BONUS (5): 获得奖金
             //   显示：奖金飞字动画（金币特效）
             //   金额：step.stop_effect.amount
@@ -422,25 +418,17 @@ export class RollAndStepHandler {
             }
         }
 
-        // 处理Prison/Hospital状态（从最后一个step的StopEffect获取）
+        // 处理Hospital状态（从最后一个step的StopEffect获取）
         if (lastStep && lastStep.stop_effect) {
             const stopEffect = lastStep.stop_effect;
             const player = session.getPlayerByAddress(event.player);
 
             if (player && stopEffect.turns !== null && stopEffect.turns !== undefined) {
-                // 根据stop_type判断是prison还是hospital
-                // StopType.HOSPITAL = 3, StopType.PRISON = 4
+                // StopType.HOSPITAL = 3
                 if (stopEffect.stop_type === 3) {
                     // 住院
                     player.setInHospitalTurns(stopEffect.turns);
                     console.log('[RollAndStepHandler] 玩家进入医院', {
-                        player: event.player,
-                        turns: stopEffect.turns
-                    });
-                } else if (stopEffect.stop_type === 4) {
-                    // 入狱
-                    player.setInPrisonTurns(stopEffect.turns);
-                    console.log('[RollAndStepHandler] 玩家进入监狱', {
                         player: event.player,
                         turns: stopEffect.turns
                     });

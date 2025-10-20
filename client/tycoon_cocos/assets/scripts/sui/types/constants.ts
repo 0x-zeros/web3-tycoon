@@ -121,7 +121,6 @@ export enum DecisionType {
 
 // ===== SkipReason 跳过回合原因 =====
 export enum SkipReason {
-    PRISON = 1,    // 监狱
     HOSPITAL = 2   // 医院
 }
 
@@ -134,7 +133,6 @@ export const INVALID_TILE_ID = 65535; // 无效tile_id（u16 max）
 export const DEFAULT_MAX_PLAYERS = 4;
 export const DEFAULT_MAX_ROUNDS = 100;
 export const DEFAULT_HOSPITAL_TURNS = 2;
-export const DEFAULT_PRISON_TURNS = 2;
 
 // ===== 默认数值配置（编辑器初始值，可微调） =====
 
@@ -207,7 +205,6 @@ export enum StopType {
     BUILDING_TOLL = 1,         // 建筑过路费
     BUILDING_NO_RENT = 2,      // 建筑免租
     HOSPITAL = 3,              // 医院
-    PRISON = 4,                // 监狱
     BONUS = 5,                 // 奖金
     FEE = 6,                   // 罚款
     CARD_STOP = 7,             // 卡片停留

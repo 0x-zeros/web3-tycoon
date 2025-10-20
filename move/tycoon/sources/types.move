@@ -85,7 +85,6 @@ public fun DECISION_UPGRADE_PROPERTY(): u8 { 2 }   // 可以升级地产
 public fun DECISION_PAY_RENT(): u8 { 3 }          // 需要决定如何支付租金（有免租卡时）
 
 // ===== SkipReason 跳过回合原因 =====
-public fun SKIP_PRISON(): u8 { 1 }
 public fun SKIP_HOSPITAL(): u8 { 2 }
 
 //   命名：
@@ -109,5 +108,4 @@ public fun is_large_building_type(building_type: u8): bool {
 public fun DEFAULT_MAX_PLAYERS(): u8 { 4 }
 public fun DEFAULT_MAX_ROUNDS(): u16 { 100 }
 public fun DEFAULT_HOSPITAL_TURNS(): u8 { 2 }
-public fun DEFAULT_PRISON_TURNS(): u8 { 2 }
 

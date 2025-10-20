@@ -142,9 +142,7 @@ export class UIInGameDice extends UIBase {
         const myPlayer = session.getMyPlayer();
 
         // 检查是否在监狱或医院
-        const shouldSkip = myPlayer && (
-            myPlayer.isInPrison() || myPlayer.isInHospital()
-        );
+        const shouldSkip = myPlayer && myPlayer.isInHospital();
 
         // 【调试日志】详细输出状态信息
         console.log('[UIInGameDice] _updateButtonState DEBUG:', {
@@ -154,7 +152,6 @@ export class UIInGameDice extends UIBase {
             round: session.getRound(),
             isMyTurn: isMyTurn,
             hasMyPlayer: !!myPlayer,
-            inPrison: myPlayer?.getInPrisonTurns() || 0,
             inHospital: myPlayer?.getInHospitalTurns() || 0,
             shouldSkip: shouldSkip,
             btnRollEnabled: isMyTurn && !shouldSkip,
@@ -452,7 +449,7 @@ export class UIInGameDice extends UIBase {
                 const session = GameInitializer.getInstance()?.getGameSession();
                 if (session) {
                     const myPlayer = session.getMyPlayer();
-                    const shouldSkip = myPlayer && (myPlayer.isInPrison() || myPlayer.isInHospital());
+                    const shouldSkip = myPlayer && myPlayer.isInHospital();
                     const isMyTurn = session.isMyTurn();
                     this.m_btn_skipTurn.enabled = isMyTurn && shouldSkip;
 

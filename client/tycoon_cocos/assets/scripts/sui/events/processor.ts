@@ -32,7 +32,6 @@ export enum GameEffectType {
     CONTROLLED_MOVE = 'controlled_move',
     BLOCKED_MOVE = 'blocked_move',
     SENT_TO_HOSPITAL = 'sent_to_hospital',
-    SENT_TO_PRISON = 'sent_to_prison',
 
     // 卡牌效果
     USE_CARD = 'use_card',
@@ -51,8 +50,7 @@ export enum GameEffectType {
     // 状态效果
     BANKRUPT = 'bankrupt',
     FROZEN = 'frozen',
-    IN_HOSPITAL = 'in_hospital',
-    IN_PRISON = 'in_prison'
+    IN_HOSPITAL = 'in_hospital'
 }
 
 /**
@@ -369,14 +367,6 @@ export class TycoonEventProcessor {
                     player,
                     data: { turns: stop.turns },
                     description: `进入医院${stop.turns}回合`
-                });
-                break;
-            case StopType.PRISON:
-                effects.push({
-                    type: GameEffectType.IN_PRISON,
-                    player,
-                    data: { turns: stop.turns },
-                    description: `进入监狱${stop.turns}回合`
                 });
                 break;
             case StopType.BONUS:

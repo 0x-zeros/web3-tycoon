@@ -217,14 +217,12 @@ export class GameTile {
      */
     public isFunctionalTile(): boolean {
         return this.kind === TileKind.HOSPITAL ||
-               this.kind === TileKind.PRISON ||
                this.kind === TileKind.LOTTERY ||
                this.kind === TileKind.CHANCE ||
                this.kind === TileKind.BONUS ||
                this.kind === TileKind.FEE ||
                this.kind === TileKind.CARD ||
-               this.kind === TileKind.NEWS ||
-               this.kind === TileKind.SHOP;
+               this.kind === TileKind.NEWS;
     }
 
     // ========================= 类型转换（私有静态方法） =========================
@@ -237,13 +235,11 @@ export class GameTile {
             case TileKind.EMPTY: return 'web3:empty_land';
             case TileKind.LOTTERY: return 'web3:lottery';
             case TileKind.HOSPITAL: return 'web3:hospital';
-            case TileKind.PRISON: return 'web3:hospital';  // 暂用 hospital
             case TileKind.CHANCE: return 'web3:chance';
             case TileKind.BONUS: return 'web3:bonus';
             case TileKind.FEE: return 'web3:fee';
             case TileKind.CARD: return 'web3:card';
             case TileKind.NEWS: return 'web3:news';
-            case TileKind.SHOP: return 'web3:card';  // 暂用 card
             default:
                 console.warn(`[GameTile] Unknown tile kind: ${kind}, using empty_land`);
                 return 'web3:empty_land';
@@ -300,13 +296,11 @@ function getTileKindName(kind: number): string {
         case TileKind.EMPTY: return '空地';
         case TileKind.LOTTERY: return '乐透';
         case TileKind.HOSPITAL: return '医院';
-        case TileKind.PRISON: return '监狱';
         case TileKind.CHANCE: return '机会';
         case TileKind.BONUS: return '奖励';
         case TileKind.FEE: return '收费站';
         case TileKind.CARD: return '卡片站';
         case TileKind.NEWS: return '新闻站';
-        case TileKind.SHOP: return '商店';
         default: return `未知(${kind})`;
     }
 }

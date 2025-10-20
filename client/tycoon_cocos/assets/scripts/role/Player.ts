@@ -42,9 +42,6 @@ export class Player extends Role {
     /** 破产状态（对应 Move Player.bankrupt） */
     protected _bankrupt: boolean = false;
 
-    /** 监狱剩余回合数（对应 Move Player.in_prison_turns） */
-    protected _inPrisonTurns: number = 0;
-
     /** 医院剩余回合数（对应 Move Player.in_hospital_turns） */
     protected _inHospitalTurns: number = 0;
 
@@ -89,7 +86,6 @@ export class Player extends Role {
         this._pos = movePlayer.pos;
         this._cash = movePlayer.cash;
         this._bankrupt = movePlayer.bankrupt;
-        this._inPrisonTurns = movePlayer.in_prison_turns;
         this._inHospitalTurns = movePlayer.in_hospital_turns;
         this._lastTileId = movePlayer.last_tile_id;
         this._nextTileId = movePlayer.next_tile_id;
@@ -104,7 +100,6 @@ export class Player extends Role {
         // 同步到 Role 基类属性
         this.setAttr(RoleAttribute.MONEY, Number(movePlayer.cash));
         this.setAttr(RoleAttribute.POSITION, movePlayer.pos);
-        this.setAttr(RoleAttribute.JAIL_TURNS, movePlayer.in_prison_turns);
         this.setAttr(RoleAttribute.BANKRUPT, movePlayer.bankrupt ? 1 : 0);
 
         // 设置当前地块ID
@@ -113,8 +108,6 @@ export class Player extends Role {
         // 设置状态
         if (this._bankrupt) {
             this.setState(RoleState.BANKRUPT);
-        } else if (this.isInPrison()) {
-            this.setState(RoleState.JAILED);
         } else {
             this.setState(RoleState.IDLE);
         }
@@ -366,13 +359,6 @@ export class Player extends Role {
     // ========================= 状态查询 =========================
 
     /**
-     * 是否在监狱
-     */
-    public isInPrison(): boolean {
-        return this._inPrisonTurns > 0;
-    }
-
-    /**
      * 是否在医院
      */
     public isInHospital(): boolean {
@@ -383,7 +369,7 @@ export class Player extends Role {
      * 是否可以行动
      */
     public canAct(): boolean {
-        return !this._bankrupt && !this.isInPrison() && !this.isInHospital();
+        return !this._bankrupt && !this.isInHospital();
     }
 
     /**
@@ -482,10 +468,6 @@ export class Player extends Role {
         // 更新状态
         if (bankrupt) {
             this.setState(RoleState.BANKRUPT);
-        } else if (this.isInPrison()) {
-            this.setState(RoleState.JAILED);
-        } else if (this.isInHospital()) {
-            this.setState(RoleState.IDLE);
         } else {
             this.setState(RoleState.IDLE);
         }
@@ -502,38 +484,7 @@ export class Player extends Role {
         });
     }
 
-    public getInPrisonTurns(): number { return this._inPrisonTurns; }
     public getInHospitalTurns(): number { return this._inHospitalTurns; }
-
-    /**
-     * 设置监狱剩余回合数
-     * @param turns 剩余回合数
-     */
-    public setInPrisonTurns(turns: number): void {
-        const oldTurns = this._inPrisonTurns;
-        this._inPrisonTurns = turns;
-
-        // 同步到Role基类属性
-        this.setAttr(RoleAttribute.JAIL_TURNS, turns);
-
-        // 更新状态
-        if (turns > 0) {
-            this.setState(RoleState.JAILED);
-        } else if (!this._bankrupt && !this.isInHospital()) {
-            this.setState(RoleState.IDLE);
-        }
-
-        console.log(`[Player] 监狱回合变化: ${oldTurns} -> ${turns}`);
-
-        // 触发状态变化事件
-        EventBus.emit(EventTypes.Player.StatusChange, {
-            playerId: this.m_oId,
-            playerIndex: this._playerIndex,
-            statusType: 'prison',
-            oldValue: oldTurns,
-            newValue: turns
-        });
-    }
 
     /**
      * 设置医院剩余回合数
@@ -544,9 +495,9 @@ export class Player extends Role {
         this._inHospitalTurns = turns;
 
         // 更新状态
-        if (turns > 0 && !this.isInPrison()) {
+        if (turns > 0) {
             this.setState(RoleState.IDLE); // 医院状态暂时用IDLE，可以考虑新增状态
-        } else if (!this._bankrupt && !this.isInPrison() && turns === 0) {
+        } else if (!this._bankrupt && turns === 0) {
             this.setState(RoleState.IDLE);
         }
 
@@ -681,7 +632,6 @@ export class Player extends Role {
         this._pos = 0;
         this._cash = BigInt(0);
         this._bankrupt = false;
-        this._inPrisonTurns = 0;
         this._inHospitalTurns = 0;
         this._lastTileId = INVALID_TILE_ID;
         this._nextTileId = INVALID_TILE_ID;
@@ -705,7 +655,6 @@ export class Player extends Role {
             `Pos: ${this._pos}`,
             `Cash: ${this._cash.toString()}`,
             `Bankrupt: ${this._bankrupt}`,
-            `Prison: ${this._inPrisonTurns}`,
             `Hospital: ${this._inHospitalTurns}`,
             `Buffs: ${this._buffs.length}`,
             `Cards: ${this._cards.length}`

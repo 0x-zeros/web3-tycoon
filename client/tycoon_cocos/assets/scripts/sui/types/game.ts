@@ -37,8 +37,6 @@ export interface Player {
     bankrupt: boolean;
     /** 剩余医院回合数 */
     in_hospital_turns: number;
-    /** 剩余监狱回合数 */
-    in_prison_turns: number;
     /** 上一步的tile_id（用于避免回头） */
     last_tile_id: number;
     /** 下一步强制目标tile（65535=无强制，用于转向卡等） */
@@ -242,13 +240,6 @@ export function hasOwner(building: Building): boolean {
 }
 
 /**
- * 判断玩家是否在监狱
- */
-export function isInPrison(player: Player): boolean {
-    return player.in_prison_turns > 0;
-}
-
-/**
  * 判断玩家是否在医院
  */
 export function isInHospital(player: Player): boolean {
@@ -259,7 +250,7 @@ export function isInHospital(player: Player): boolean {
  * 判断玩家是否可以行动
  */
 export function canAct(player: Player): boolean {
-    return !player.bankrupt && !isInPrison(player) && !isInHospital(player);
+    return !player.bankrupt && !isInHospital(player);
 }
 
 /**

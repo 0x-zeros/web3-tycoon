@@ -115,7 +115,6 @@ public struct BuffEntry has store, copy, drop {
 // - owner: 玩家的区块链地址，用于身份验证
 // - pos: 当前所在地块的ID
 // - cash: 现金余额
-// - in_prison_turns: 剩余监狱回合数（0表示不在监狱）
 // - in_hospital_turns: 剩余医院回合数（0表示不在医院）
 // - bankrupt: 破产标志，破产后不参与游戏但保留在players表中
 // - cards: 手牌集合，使用vector存储以优化小集合性能
@@ -127,7 +126,6 @@ public struct Player has store {
     owner: address,
     pos: u16,  // tile_id (最多65535个地块)
     cash: u64,
-    in_prison_turns: u8,
     in_hospital_turns: u8,
     bankrupt: bool,
     cards: vector<CardEntry>,  // 改为vector存储
@@ -1266,7 +1264,6 @@ fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Pl
         pos: 0,
         cash,
         buffs: vector[],  // 初始化buffs
-        in_prison_turns: 0,
         in_hospital_turns: 0,
         bankrupt: false,
         cards: initial_cards,
@@ -1334,7 +1331,7 @@ fun validate_seat_and_turn(game: &Game, seat: &Seat) {
 // 检查是否应该跳过回合
 fun should_skip_turn(game: &Game, player_index: u8): bool {
     let player = &game.players[player_index as u64];
-    player.in_prison_turns > 0 || player.in_hospital_turns > 0
+    player.in_hospital_turns > 0
 }
 
 // 处理跳过回合
@@ -1342,13 +1339,10 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
     let player = &mut game.players[player_index as u64];
     let player_addr = player.owner;
 
-    let (reason, remaining_turns) = if (player.in_prison_turns > 0) {
-        player.in_prison_turns = player.in_prison_turns - 1;
-        (types::SKIP_PRISON(), player.in_prison_turns)
-    } else {
-        player.in_hospital_turns = player.in_hospital_turns - 1;
-        (types::SKIP_HOSPITAL(), player.in_hospital_turns)
-    };
+    // 减少医院回合数
+    player.in_hospital_turns = player.in_hospital_turns - 1;
+    let reason = types::SKIP_HOSPITAL();
+    let remaining_turns = player.in_hospital_turns;
 
     // 保存 round 和 turn（在 clean_turn_state 之前）
     let event_round = game.round;
@@ -2252,12 +2246,6 @@ fun handle_tile_stop_with_collector(
 fun handle_hospital_stop(game: &mut Game, player_index: u8, tile_id: u16) {
     let player = &mut game.players[player_index as u64];
     player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
-}
-
-// 处理监狱停留
-fun handle_prison_stop(game: &mut Game, player_index: u8, tile_id: u16) {
-    let player = &mut game.players[player_index as u64];
-    player.in_prison_turns = types::DEFAULT_PRISON_TURNS();
 }
 
 // 找最近的医院

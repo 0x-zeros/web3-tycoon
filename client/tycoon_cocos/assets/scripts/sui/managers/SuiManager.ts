@@ -1451,7 +1451,6 @@ export class SuiManager {
             cash: startingCash,
             bankrupt: false,
             in_hospital_turns: 0,
-            in_prison_turns: 0,
             last_tile_id: 65535,  // INVALID_TILE_ID
             next_tile_id: 65535,  // INVALID_TILE_ID
             temple_levels: [],

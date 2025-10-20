@@ -566,7 +566,6 @@ export class QueryService {
                 cash: BigInt(f.cash || 0),
                 bankrupt: Boolean(f.bankrupt),
                 in_hospital_turns: Number(f.in_hospital_turns) || 0,
-                in_prison_turns: Number(f.in_prison_turns) || 0,
                 last_tile_id: Number(f.last_tile_id) || 0,
                 next_tile_id: Number(f.next_tile_id) || 0,
                 temple_levels: f.temple_levels || [],

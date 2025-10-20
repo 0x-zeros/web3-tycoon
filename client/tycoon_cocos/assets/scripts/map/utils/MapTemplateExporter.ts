@@ -16,8 +16,7 @@ import {
     DEFAULT_BUILDING_PRICE_2X2,
     DEFAULT_TILE_BONUS_AMOUNT,
     DEFAULT_TILE_FEE_AMOUNT,
-    DEFAULT_HOSPITAL_TURNS,
-    DEFAULT_PRISON_TURNS
+    DEFAULT_HOSPITAL_TURNS
 } from '../../sui/types/constants';
 import type { GameMap } from '../core/GameMap';
 import type { MapTile } from '../core/MapTile';
@@ -211,8 +210,6 @@ function getDefaultTileSpecial(tileKind: number): bigint {
             return DEFAULT_TILE_FEE_AMOUNT;
         case TileKind.HOSPITAL:
             return DEFAULT_HOSPITAL_TURNS;
-        case TileKind.PRISON:
-            return DEFAULT_PRISON_TURNS;
         default:
             return 0n;
     }

@@ -51,18 +51,18 @@ flavor = "sui"
 
 [env.local]
 chain-id = "c0e5dc96"
-original-published-id = "0xfaf9de71db9fd64d62c924eaaa6ac3efbe4d90e742a6d4ffd0e107861ba42ded"
-latest-published-id = "0xfaf9de71db9fd64d62c924eaaa6ac3efbe4d90e742a6d4ffd0e107861ba42ded"
+original-published-id = "0xf88e67197ba0a8f875e9f4493d4e256d90c83ae444f007b0d3feed09572ed507"
+latest-published-id = "0xf88e67197ba0a8f875e9f4493d4e256d90c83ae444f007b0d3feed09572ed507"
 published-version = "1"
 
 [env.devnet]
 chain-id = "e726a3a8"
-original-published-id = "0xc46a2d3f47fa10e7b840d175c34f2506b4dea29f250ebe49825538e2d9428d8f"
-latest-published-id = "0xc46a2d3f47fa10e7b840d175c34f2506b4dea29f250ebe49825538e2d9428d8f"
+original-published-id = "0x1b460bb7007f7188d677173fd0de401a41939495cd61831e9e16ac4ab303bb4f"
+latest-published-id = "0x1b460bb7007f7188d677173fd0de401a41939495cd61831e9e16ac4ab303bb4f"
 published-version = "1"
 
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0x5ac9a67244cd0d9904a547b074252963cc832c0034bdf880b7c6ba578931652d"
-latest-published-id = "0x5ac9a67244cd0d9904a547b074252963cc832c0034bdf880b7c6ba578931652d"
+original-published-id = "0xf262542ca9fb36e2ccc6daeb1c7e909f6e64e7e9bf0ad52af5eb2a3994ea99bf"
+latest-published-id = "0xf262542ca9fb36e2ccc6daeb1c7e909f6e64e7e9bf0ad52af5eb2a3994ea99bf"
 published-version = "1"

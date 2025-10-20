@@ -4,13 +4,11 @@ module tycoon::types;
 public fun TILE_EMPTY(): u8 { 0 }
 public fun TILE_LOTTERY(): u8 { 1 }
 public fun TILE_HOSPITAL(): u8 { 2 }
-public fun TILE_PRISON(): u8 { 3 }
-public fun TILE_CHANCE(): u8 { 4 }
-public fun TILE_BONUS(): u8 { 5 }
-public fun TILE_FEE(): u8 { 6 }
-public fun TILE_CARD(): u8 { 7 }
-public fun TILE_NEWS(): u8 { 8 }
-public fun TILE_SHOP(): u8 { 10 }
+public fun TILE_CHANCE(): u8 { 3 }
+public fun TILE_BONUS(): u8 { 4 }
+public fun TILE_FEE(): u8 { 5 }
+public fun TILE_CARD(): u8 { 6 }
+public fun TILE_NEWS(): u8 { 7 }
 
 // ===== BuildingType 建筑类型 =====
 // 无类型（1x1建筑 或 2x2未选择类型时使用）

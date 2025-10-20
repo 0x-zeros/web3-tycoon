@@ -2083,11 +2083,6 @@ fun handle_tile_stop_with_collector(
         player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
         stop_type = events::stop_hospital();
         turns_opt = option::some(types::DEFAULT_HOSPITAL_TURNS());
-    } else if (tile_kind == types::TILE_PRISON()) {
-        let player = &mut game.players[player_index as u64];
-        player.in_prison_turns = types::DEFAULT_PRISON_TURNS();
-        stop_type = events::stop_prison();
-        turns_opt = option::some(types::DEFAULT_PRISON_TURNS());
     } else if (tile_kind == types::TILE_CARD()) {
         // 停留时抽卡
         let random_value = generator.generate_u8();
@@ -2111,9 +2106,6 @@ fun handle_tile_stop_with_collector(
         stop_type = events::stop_none();
     } else if (tile_kind == types::TILE_LOTTERY()) {
         // TODO: 实现彩票事件
-        stop_type = events::stop_none();
-    } else if (tile_kind == types::TILE_SHOP()) {
-        // TODO: 实现商店功能
         stop_type = events::stop_none();
     } else if (tile_kind == types::TILE_BONUS()) {
         // 奖励
@@ -3651,14 +3643,12 @@ public fun is_hospital_npc(kind: u8): bool {
 // 检查是否是可停留地块
 public fun is_stoppable_tile(kind: u8): bool {
     kind == types::TILE_HOSPITAL() ||
-    kind == types::TILE_PRISON() ||
     kind == types::TILE_CHANCE() ||
     kind == types::TILE_BONUS() ||
     kind == types::TILE_FEE() ||
     kind == types::TILE_CARD() ||
     kind == types::TILE_NEWS() ||
-    kind == types::TILE_LOTTERY() ||
-    kind == types::TILE_SHOP()
+    kind == types::TILE_LOTTERY()
 }
 
 // 检查是否是可经过触发的地块

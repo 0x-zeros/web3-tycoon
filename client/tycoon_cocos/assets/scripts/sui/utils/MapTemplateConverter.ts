@@ -193,14 +193,14 @@ export function convertMapTemplateToSaveData(
  */
 function getTileTypeId(kind: number): number {
     switch (kind) {
-        case TileKind.EMPTY: return Web3TileType.EMPTY_LAND;
-        case TileKind.LOTTERY: return Web3TileType.LOTTERY;
-        case TileKind.HOSPITAL: return Web3TileType.HOSPITAL;
-        case TileKind.CHANCE: return Web3TileType.CHANCE;
-        case TileKind.BONUS: return Web3TileType.BONUS;
-        case TileKind.FEE: return Web3TileType.FEE;
-        case TileKind.CARD: return Web3TileType.CARD;
-        case TileKind.NEWS: return Web3TileType.NEWS;
+        case TileKind.EMPTY: return Web3TileType.EMPTY_LAND;   // 0
+        case TileKind.LOTTERY: return Web3TileType.LOTTERY;     // 1
+        case TileKind.HOSPITAL: return Web3TileType.HOSPITAL;   // 2
+        case TileKind.CHANCE: return Web3TileType.CHANCE;       // 3
+        case TileKind.BONUS: return Web3TileType.BONUS;         // 4
+        case TileKind.FEE: return Web3TileType.FEE;             // 5
+        case TileKind.CARD: return Web3TileType.CARD;           // 6
+        case TileKind.NEWS: return Web3TileType.NEWS;           // 7
         default:
             console.warn(`[Converter] Unknown tile kind: ${kind}, using EMPTY_LAND`);
             return Web3TileType.EMPTY_LAND;
@@ -212,16 +212,14 @@ function getTileTypeId(kind: number): number {
  */
 function getTileBlockId(kind: number): string {
     switch (kind) {
-        case TileKind.EMPTY: return 'web3:empty_land';
-        case TileKind.LOTTERY: return 'web3:lottery';
-        case TileKind.HOSPITAL: return 'web3:hospital';
-        case TileKind.PRISON: return 'web3:hospital';  // PRISON 暂用 hospital 模型
-        case TileKind.CHANCE: return 'web3:chance';
-        case TileKind.BONUS: return 'web3:bonus';
-        case TileKind.FEE: return 'web3:fee';
-        case TileKind.CARD: return 'web3:card';
-        case TileKind.NEWS: return 'web3:news';
-        case TileKind.SHOP: return 'web3:card';  // SHOP 暂用 card 模型
+        case TileKind.EMPTY: return 'web3:empty_land';     // 0
+        case TileKind.LOTTERY: return 'web3:lottery';       // 1
+        case TileKind.HOSPITAL: return 'web3:hospital';     // 2
+        case TileKind.CHANCE: return 'web3:chance';         // 3
+        case TileKind.BONUS: return 'web3:bonus';           // 4
+        case TileKind.FEE: return 'web3:fee';               // 5
+        case TileKind.CARD: return 'web3:card';             // 6
+        case TileKind.NEWS: return 'web3:news';             // 7
         default:
             console.warn(`[Converter] Unknown tile kind: ${kind}, using empty_land`);
             return 'web3:empty_land';

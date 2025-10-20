@@ -10,13 +10,11 @@ export enum TileKind {
     EMPTY = 0,
     LOTTERY = 1,
     HOSPITAL = 2,
-    PRISON = 3,
-    CHANCE = 4,
-    BONUS = 5,
-    FEE = 6,
-    CARD = 7,
-    NEWS = 8,
-    SHOP = 10
+    CHANCE = 3,
+    BONUS = 4,
+    FEE = 5,
+    CARD = 6,
+    NEWS = 7
 }
 
 // ===== BuildingType 建筑类型 =====

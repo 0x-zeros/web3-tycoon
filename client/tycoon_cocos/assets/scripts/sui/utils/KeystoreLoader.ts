@@ -69,8 +69,8 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
             console.log('  Address:', address);
 
             // Step 4: 检查余额并请求 faucet（如果需要）
-            // 仅在 localnet/devnet/testnet 时检查余额
-            if (network === 'localnet' || network === 'devnet' || network === 'testnet') {
+            // 仅在 localnet/devnet 时检查余额
+            if (network === 'localnet' || network === 'devnet') {
                 await checkBalanceAndRequestFaucet(address, network, rpcUrl);
             }
 
@@ -90,8 +90,8 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
         const address = newKeypair.toSuiAddress();
         console.log('  Generated address:', address);
 
-        // Step 5: Faucet（异步，仅在测试网络）
-        if (network === 'localnet' || network === 'devnet' || network === 'testnet') {
+        // Step 5: Faucet（异步，仅在 localnet/devnet）
+        if (network === 'localnet' || network === 'devnet') {
             console.log('[KeystoreLoader] Step 5: Requesting faucet (async)');
             UINotification.info("正在从水龙头获取测试币...");
 
@@ -250,12 +250,12 @@ export function clearStoredKeypair(): void {
 /**
  * 检查余额，如果少于 10 SUI 则请求 faucet
  * @param address 地址
- * @param network 网络类型
+ * @param network 网络类型（仅支持 localnet/devnet）
  * @param rpcUrl RPC URL
  */
 async function checkBalanceAndRequestFaucet(
     address: string,
-    network: 'localnet' | 'devnet' | 'testnet',
+    network: 'localnet' | 'devnet',
     rpcUrl: string
 ): Promise<void> {
     console.log('[KeystoreLoader] Step 4: Checking balance');

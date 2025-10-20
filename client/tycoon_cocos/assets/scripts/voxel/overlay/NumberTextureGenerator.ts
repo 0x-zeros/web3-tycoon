@@ -218,11 +218,17 @@ export class NumberTextureGenerator {
      * @returns Texture2D
      */
     static getNPCNameTexture(npcName: string): Texture2D {
+        // 根据字数调整字体大小
+        const fontSize = npcName.length === 2 ? 22 : 18;
+
+        // 根据 NPC 类型获取文字颜色
+        const textColor = this.getNPCTextColor(npcName);
+
         return this.getNumberTexture(0, {
             size: 64,
-            fontSize: 20,                 // NPC 名字 2-3 个字
+            fontSize: fontSize,           // 动态字体大小
             bgColor: 'rgba(0, 0, 0, 0)',  // 透明背景
-            textColor: '#FFF',            // 白色文字
+            textColor: textColor,         // 动态文字颜色
             withBorder: true,             // 有边框
             borderRadius: 4,
             customText: npcName
@@ -317,8 +323,27 @@ export class NumberTextureGenerator {
             case 4: return '#2E7D32';     // 奖励（浅绿背景）：深绿，正向提示
             case 5: return '#FF6F00';     // 费用（黄色背景）：深橙，警示但不严肃
             case 6: return '#5E35B1';     // 卡片（白色背景）：紫色，神秘稀有
-            case 7: return '#E3F2FD';     // 新闻（灰色背景）：浅蓝，资讯感
+            case 7: return '#FFD700';     // 新闻（灰色背景）：金黄，醒目
             default: return '#FFFFFF';    // 默认：白色
+        }
+    }
+
+    /**
+     * 获取 NPC 文字颜色（根据 NPC block 背景自适应）
+     *
+     * @param npcName NPC 中文名字
+     * @returns CSS 颜色字符串
+     */
+    private static getNPCTextColor(npcName: string): string {
+        switch (npcName) {
+            case '路障':   return '#FFD700';  // 绿色背景 → 金黄，警示醒目
+            case '炸弹':   return '#FF6F00';  // 深灰背景 → 深橙，危险感
+            case '恶犬':   return '#FFEB3B';  // 棕灰背景 → 亮黄，威胁感
+            case '福神':   return '#4A4A4A';  // 浅蓝背景 → 深灰，清晰
+            case '土地神': return '#4A4A4A';  // 浅蓝背景 → 深灰，清晰
+            case '穷神':   return '#FFD700';  // 深灰背景 → 金黄，醒目
+            case '财神':   return '#4A4A4A';  // 浅紫蓝背景 → 深灰，清晰
+            default:       return '#FFFFFF';  // 默认白色
         }
     }
 }

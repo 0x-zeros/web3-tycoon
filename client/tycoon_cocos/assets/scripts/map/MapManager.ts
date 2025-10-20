@@ -330,7 +330,12 @@ export class MapManager extends Component {
 
         this.log(`链上游戏地图加载成功: ${tempConfig.id}`);
 
-        // 9. 发送地图加载完成事件
+        // 9. 默认显示地块类型 overlay
+        console.log('[MapManager] Showing tile type overlays by default...');
+        await gameMap.showTileTypeOverlays();
+        console.log('[MapManager] Tile type overlays shown');
+
+        // 10. 发送地图加载完成事件
         EventBus.emit(EventTypes.Game.MapLoaded, {
             gameId: gameId,
             mapId: tempConfig.id,

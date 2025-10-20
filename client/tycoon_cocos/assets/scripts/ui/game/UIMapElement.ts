@@ -521,5 +521,8 @@ export class UIMapElement extends UIBase {
             size: size,  // 添加size信息
             category: web3Block?.category || type  // 添加category信息
         });
+
+        // // 选中后自动关闭 UI
+        // this.hide();
     }
 }

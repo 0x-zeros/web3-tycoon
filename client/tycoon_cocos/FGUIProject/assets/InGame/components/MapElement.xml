@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1407,544">
+<component size="1406,519">
   <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="3"/>
   <displayList>
-    <image id="n11_6i1j" name="n11" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1280,544"/>
+    <image id="n11_6i1j" name="n11" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1280,519"/>
     <list id="n0_105vo" name="tiles" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
       <item title="1"/>
@@ -14,7 +14,7 @@
       <item/>
       <item title="地块07"/>
     </list>
-    <list id="n3_105vo" name="objects" xy="0,-1" size="1280,530" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n3_105vo" name="objects" xy="0,-1" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="1"/>
       <item title="object1"/>
       <item title="object2"/>
@@ -27,7 +27,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,524" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="2"/>
       <item title="building 1"/>
       <item/>
@@ -40,7 +40,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,533" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="3"/>
       <item title="decorations 1"/>
       <item/>

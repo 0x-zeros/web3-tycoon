@@ -318,7 +318,7 @@ export class UIEditor extends UIBase {
             this.m_mapElementUI.hide();
             console.log("[UIEditor] MapElement UI hidden");
         } else {
-            this.m_mapElementUI.show();
+            this.m_mapElementUI.show(undefined, false);  // 不全屏显示，避免阻挡整个屏幕
             console.log("[UIEditor] MapElement UI shown");
         }
     }

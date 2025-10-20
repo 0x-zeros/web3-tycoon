@@ -514,7 +514,7 @@ export class BlockRegistry {
         isPlant: false,
         isObstacle: true,
         isDestructable: false,
-        lightLevel: 15,
+        lightLevel: 0,
         hardness: 1.0,
         renderType: BlockRenderType.SOLID,
         properties: {
@@ -531,7 +531,7 @@ export class BlockRegistry {
         isPlant: false,
         isObstacle: true,
         isDestructable: false,
-        lightLevel: 15,
+        lightLevel: 0,
         hardness: 1.0,
         renderType: BlockRenderType.SOLID,
         properties: {

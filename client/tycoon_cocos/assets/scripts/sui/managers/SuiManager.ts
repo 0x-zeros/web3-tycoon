@@ -594,7 +594,7 @@ export class SuiManager {
     }
 
     /**
-     * 跳过回合（监狱/医院）
+     * 跳过回合（医院）
      * @param session GameSession 实例
      * @returns 交易结果
      */

@@ -213,7 +213,7 @@ export class GameTile {
     }
 
     /**
-     * 是否为功能型地块（医院、监狱等）
+     * 是否为功能型地块
      */
     public isFunctionalTile(): boolean {
         return this.kind === TileKind.HOSPITAL ||

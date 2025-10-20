@@ -1015,7 +1015,7 @@ fun try_execute_rent_payment(
     }
 }
 
-// 处在监狱或医院中，跳过回合； 
+// 处在医院中，跳过回合
 entry fun skip_turn(
     game: &mut Game,
     seat: &Seat,
@@ -1713,8 +1713,6 @@ fun is_valid_neighbor(
 //     // 按tile_kind处理功能性tile
 //     if (tile_kind == types::TILE_HOSPITAL()) {
 //         handle_hospital_stop(game, player_index, tile_id);
-//     } else if (tile_kind == types::TILE_PRISON()) {
-//         handle_prison_stop(game, player_index, tile_id);
 //     } else if (tile_kind == types::TILE_CARD()) {
 //         // 停留时也抽卡
 //         let random_value = generator.generate_u8();

@@ -141,7 +141,7 @@ export class UIInGameDice extends UIBase {
         const isMyTurn = session.isMyTurn();
         const myPlayer = session.getMyPlayer();
 
-        // 检查是否在监狱或医院
+        // 检查是否在医院
         const shouldSkip = myPlayer && myPlayer.isInHospital();
 
         // 【调试日志】详细输出状态信息
@@ -158,14 +158,14 @@ export class UIInGameDice extends UIBase {
             btnSkipVisible: isMyTurn && shouldSkip
         });
 
-        // btn_skipTurn: 轮到自己 && 在监狱/医院
+        // btn_skipTurn: 轮到自己 && 在医院
         if (this.m_btn_skipTurn) {
             this.m_btn_skipTurn.visible = isMyTurn && shouldSkip;
             this.m_btn_skipTurn.enabled = isMyTurn && shouldSkip;  // ✅ 同时设置 enabled
             console.log('[UIInGameDice] SkipTurn 按钮:', (isMyTurn && shouldSkip) ? '显示并启用' : '隐藏');
         }
 
-        // dice: 轮到自己 && 不在监狱/医院
+        // dice: 轮到自己 && 不在医院
         this.m_btn_roll.enabled = isMyTurn && !shouldSkip;
 
         console.log('[UIInGameDice] Dice 按钮:', (isMyTurn && !shouldSkip) ? '启用' : '禁用');

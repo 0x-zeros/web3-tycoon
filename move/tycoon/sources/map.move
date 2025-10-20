@@ -55,7 +55,7 @@ public struct BuildingStatic has store, copy, drop {
 // - kind: 地块类型（EMPTY/LOTTERY/HOSPITAL等功能型）
 // - building_id: 关联的建筑ID（NO_BUILDING表示无建筑）
 // - special: 额外参数位，用于功能地块的特殊配置
-//   * 医院/监狱：停留回合数
+//   * 医院：停留回合数
 //   * 罚金/奖励：金额
 //   * 其他特殊效果
 // - w/n/e/s: 西/北/东/南四个方向的邻居地块ID

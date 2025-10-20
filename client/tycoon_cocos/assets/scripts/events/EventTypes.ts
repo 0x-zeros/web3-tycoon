@@ -418,10 +418,6 @@ export const EventTypes = {
         PropertyNFTTransferred: "sui_chain_property_nft_transferred",
 
         // 特殊位置事件
-        /** 进入监狱 */
-        JailEntered: "sui_chain_jail_entered",
-        /** 离开监狱 */
-        JailExited: "sui_chain_jail_exited",
         /** 免费停车场收集 */
         FreeParkingCollected: "sui_chain_free_parking_collected",
 

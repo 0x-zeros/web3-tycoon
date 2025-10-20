@@ -567,7 +567,7 @@ export class BlockRegistry {
         isDestructable: false,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.CUTOUT,
+        renderType: BlockRenderType.SOLID,
         properties: {
             typeId: Web3TileType.NEWS,
             category: 'tile',

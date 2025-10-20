@@ -93,7 +93,7 @@ export interface SkipTurnEvent {
     game: string;
     /** 被跳过的玩家地址 */
     player: string;
-    /** 跳过原因（1=监狱, 2=医院） */
+    /** 跳过原因（2=医院） */
     reason: number;
     /** 剩余天数 */
     remaining_turns: number;

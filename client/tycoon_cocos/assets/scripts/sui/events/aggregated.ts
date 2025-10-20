@@ -101,7 +101,7 @@ export interface StopEffect {
     owner: string | null;
     /** 地产等级 */
     level: number | null;
-    /** 停留回合数（医院、监狱） */
+    /** 停留回合数（医院） */
     turns: number | null;
     /** 获得的卡牌 */
     card_gains: CardDrawItem[];
@@ -228,7 +228,6 @@ export const STOP_TYPE_TEXT: { [key: number]: string } = {
     1: '支付过路费',
     2: '免租通过',
     3: '送往医院',
-    4: '进入监狱',
     5: '获得奖金',
     6: '支付罚款',
     7: '卡片停留',

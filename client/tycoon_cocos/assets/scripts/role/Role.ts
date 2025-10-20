@@ -107,7 +107,6 @@ export abstract class Role {
         this.m_attr.set(RoleAttribute.LEVEL, 1);
         this.m_attr.set(RoleAttribute.VIP_LEVEL, 0);
         this.m_attr.set(RoleAttribute.PROPERTIES_COUNT, 0);
-        this.m_attr.set(RoleAttribute.JAIL_TURNS, 0);
         this.m_attr.set(RoleAttribute.BANKRUPT, 0);
 
         // 清空临时属性
@@ -405,21 +404,12 @@ export abstract class Role {
     public isBankrupt(): boolean {
         return this.getAttr(RoleAttribute.BANKRUPT) > 0;
     }
-    
-    /**
-     * 是否在监狱
-     */
-    public isInJail(): boolean {
-        return this.getAttr(RoleAttribute.JAIL_TURNS) > 0;
-    }
-    
     /**
      * 是否可以移动
      */
     public canMove(): boolean {
-        return this.m_eState === RoleState.IDLE && 
-               !this.isBankrupt() && 
-               !this.isInJail();
+        return this.m_eState === RoleState.IDLE &&
+               !this.isBankrupt();
     }
     
     // ========================= 事件回调（子类可重写） =========================

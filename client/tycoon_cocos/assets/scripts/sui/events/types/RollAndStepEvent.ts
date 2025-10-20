@@ -55,7 +55,7 @@ export interface NpcStepEvent {
 export interface StopEffect {
     tile_id: number;
     tile_kind: number;
-    stop_type: number;  // 0=none, 1=toll, 2=no_rent, 3=hospital, 4=prison, 5=bonus, 6=fee, 7=card_stop, 8=unowned
+    stop_type: number;  // 0=none, 1=toll, 2=no_rent, 3=hospital, 5=bonus, 6=fee, 7=card_stop, 8=unowned
     amount: bigint;
     owner: string | null;
     level: number | null;

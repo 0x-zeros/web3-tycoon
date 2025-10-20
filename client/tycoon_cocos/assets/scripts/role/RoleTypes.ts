@@ -37,7 +37,6 @@ export enum RoleAttribute {
     // 游戏特定属性
     PROPERTIES_COUNT = 10,    // 拥有房产数量
     CARDS_COUNT = 11,         // 拥有卡牌数量
-    JAIL_TURNS = 12,          // 监狱剩余回合
     BANKRUPT = 13,            // 破产状态
     
     MAX = 20            // 最大属性数量
@@ -62,7 +61,6 @@ export enum RoleState {
     IDLE = 'idle',          // 空闲
     MOVING = 'moving',      // 移动中
     THINKING = 'thinking',  // 思考中（AI）
-    JAILED = 'jailed',      // 被监禁
     BANKRUPT = 'bankrupt',  // 破产
     WINNER = 'winner'       // 获胜
 }
@@ -241,7 +239,6 @@ export class RoleTypeUtils {
             case RoleAttribute.LEVEL: return '等级';
             case RoleAttribute.PROPERTIES_COUNT: return '房产数量';
             case RoleAttribute.CARDS_COUNT: return '卡牌数量';
-            case RoleAttribute.JAIL_TURNS: return '监狱回合';
             default: return '未知属性';
         }
     }

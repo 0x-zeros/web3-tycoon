@@ -47,7 +47,6 @@ export interface MapTemplate {
 export enum TileType {
     EMPTY = 0,           // 空地
     PROPERTY = 1,        // 可购买地产
-    JAIL = 2,            // 监狱
     HOSPITAL = 3,        // 医院
     LOTTERY = 4,         // 彩票站
     CHANCE = 5,          // 机会

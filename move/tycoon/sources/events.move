@@ -72,7 +72,7 @@ public struct TurnStartEvent has copy, drop {
 public struct SkipTurnEvent has copy, drop {
     game: ID,
     player: address,
-    reason: u8,            // 1=监狱, 2=医院
+    reason: u8,            // 2=医院
     remaining_turns: u8,   // 剩余天数
     round: u16,
     turn: u8

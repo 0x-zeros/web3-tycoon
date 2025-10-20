@@ -13,7 +13,7 @@
  * @author Web3 Tycoon Team
  */
 
-import { _decorator, Component, Node, Vec3 } from 'cc';
+import { _decorator, Component, Node, Vec3, tween, Tween } from 'cc';
 import { CompositeConfig, BlockComponent, RenderResult } from './CompositeTypes';
 import { CompositeBlockRenderer } from './CompositeBlockRenderer';
 import { BlockOverlayManager } from '../overlay/BlockOverlayManager';
@@ -32,6 +32,9 @@ export class CompositeVoxelActor extends Component {
 
     // ===== 状态 =====
     private _isRendered: boolean = false;
+
+    // ===== 动画管理 =====
+    private _tweens: Tween<any>[] = [];              // 存储所有 tween 动画
 
     // ===== 生命周期 =====
 
@@ -160,7 +163,8 @@ export class CompositeVoxelActor extends Component {
             }
 
             // 3. 渲染 block mesh 和材质
-            const renderSuccess = await CompositeBlockRenderer.renderBlock(node, comp.blockId);
+            const techniqueIndex = comp.techniqueIndex ?? 0;
+            const renderSuccess = await CompositeBlockRenderer.renderBlock(node, comp.blockId, techniqueIndex);
             if (!renderSuccess) {
                 console.warn(`[CompositeVoxelActor] Failed to render block ${comp.blockId}`);
                 node.destroy();
@@ -188,6 +192,9 @@ export class CompositeVoxelActor extends Component {
      * 清理所有节点
      */
     public clear(): void {
+        // 停止所有动画
+        this.stopAllAnimations();
+
         // 清理 overlay 节点（虽然会随 block 节点销毁，但明确清理更安全）
         this._overlayNodes.forEach(node => {
             if (node && node.isValid) {
@@ -265,5 +272,132 @@ export class CompositeVoxelActor extends Component {
         if (this._rootNode) {
             this._rootNode.active = visible;
         }
+    }
+
+    // ===== 动画系统 =====
+
+    /**
+     * 播放漂浮动画
+     * @param amplitude 振幅（默认 0.1）
+     * @param period 周期（默认 2秒）
+     */
+    public playFloatAnimation(amplitude: number = 0.1, period: number = 2): void {
+        const startPos = this.node.position.clone();
+
+        const floatTween = tween(this.node)
+            .repeatForever(
+                tween()
+                    .to(period / 2, {
+                        position: new Vec3(startPos.x, startPos.y + amplitude, startPos.z)
+                    }, { easing: 'sineInOut' })
+                    .to(period / 2, {
+                        position: startPos
+                    }, { easing: 'sineInOut' })
+            )
+            .start();
+
+        this._tweens.push(floatTween);
+    }
+
+    /**
+     * 播放弹跳动画
+     * @param height 弹跳高度（默认 0.15）
+     * @param duration 单次弹跳时长（默认 0.8秒）
+     * @param pause 弹跳间隔停顿（默认 0，无停顿）
+     */
+    public playBounceAnimation(height: number = 0.15, duration: number = 0.8, pause: number = 0): void {
+        const startPos = this.node.position.clone();
+
+        let bounceTween = tween(this.node)
+            .repeatForever(
+                tween()
+                    .to(duration / 2, {
+                        position: new Vec3(startPos.x, startPos.y + height, startPos.z)
+                    }, { easing: 'quadOut' })
+                    .to(duration / 2, {
+                        position: startPos
+                    }, { easing: 'quadIn' })
+                    .delay(pause)
+            )
+            .start();
+
+        this._tweens.push(bounceTween);
+    }
+
+    /**
+     * 播放旋转动画
+     * @param duration 旋转周期（默认 2秒转一圈）
+     * @param axis 旋转轴（默认 Y轴）
+     */
+    public playRotateAnimation(duration: number = 2.0, axis: 'x' | 'y' | 'z' = 'y'): void {
+        const rotation = axis === 'x' ? new Vec3(360, 0, 0) :
+                        axis === 'y' ? new Vec3(0, 360, 0) :
+                        new Vec3(0, 0, 360);
+
+        const rotateTween = tween(this.node)
+            .repeatForever(
+                tween().by(duration, { eulerAngles: rotation })
+            )
+            .start();
+
+        this._tweens.push(rotateTween);
+    }
+
+    /**
+     * 播放左右摇摆动画
+     * @param distance 摆动距离（默认 0.05）
+     * @param period 周期（默认 1.6秒）
+     */
+    public playSwayAnimation(distance: number = 0.05, period: number = 1.6): void {
+        const startPos = this.node.position.clone();
+
+        const swayTween = tween(this.node)
+            .repeatForever(
+                tween()
+                    .to(period / 2, {
+                        position: new Vec3(startPos.x - distance, startPos.y, startPos.z)
+                    }, { easing: 'sineInOut' })
+                    .to(period / 2, {
+                        position: new Vec3(startPos.x + distance, startPos.y, startPos.z)
+                    }, { easing: 'sineInOut' })
+            )
+            .start();
+
+        this._tweens.push(swayTween);
+    }
+
+    /**
+     * 播放呼吸缩放动画
+     * @param scale 缩放幅度（默认 1.05）
+     * @param period 周期（默认 2秒）
+     */
+    public playBreathAnimation(scale: number = 1.05, period: number = 2): void {
+        const startScale = this.node.scale.clone();
+
+        const breathTween = tween(this.node)
+            .repeatForever(
+                tween()
+                    .to(period / 2, {
+                        scale: startScale.clone().multiplyScalar(scale)
+                    }, { easing: 'sineInOut' })
+                    .to(period / 2, {
+                        scale: startScale
+                    }, { easing: 'sineInOut' })
+            )
+            .start();
+
+        this._tweens.push(breathTween);
+    }
+
+    /**
+     * 停止所有动画
+     */
+    public stopAllAnimations(): void {
+        this._tweens.forEach(t => {
+            if (t) {
+                t.stop();
+            }
+        });
+        this._tweens = [];
     }
 }

@@ -1585,18 +1585,18 @@ export class GameMap extends Component {
 
     /**
      * NPC Kind → Block ID 映射（CompositeVoxelActor 使用）
-     * 根据 NPC 类型选择合适的 block 颜色
+     * 直接使用 NpcKind 名称的小写形式
      */
     private getNPCBlockId(npcKind: number): string {
         switch (npcKind) {
-            case NpcKind.BARRIER:     return 'web3:chance';    // 路障：深蓝色（阻碍感）
-            case NpcKind.BOMB:        return 'web3:fee';       // 炸弹：黄色（警示感）
-            case NpcKind.DOG:         return 'web3:news';      // 恶犬：灰色（威胁感）
-            case NpcKind.LAND_GOD:    return 'web3:bonus';     // 土地神：浅绿色（增益感）
-            case NpcKind.WEALTH_GOD:  return 'web3:bonus';     // 财神：浅绿色（增益感）
-            case NpcKind.FORTUNE_GOD: return 'web3:bonus';     // 福神：浅绿色（增益感）
-            case NpcKind.POOR_GOD:    return 'web3:hospital';  // 穷神：绿色（负面但不严重）
-            default:                  return 'web3:empty_land'; // 默认：空地
+            case NpcKind.BARRIER:     return 'web3:barrier';       // 路障
+            case NpcKind.BOMB:        return 'web3:bomb';          // 炸弹
+            case NpcKind.DOG:         return 'web3:dog';           // 恶犬
+            case NpcKind.LAND_GOD:    return 'web3:land_god';      // 土地神
+            case NpcKind.WEALTH_GOD:  return 'web3:wealth_god';    // 财神
+            case NpcKind.FORTUNE_GOD: return 'web3:fortune_god';   // 福神
+            case NpcKind.POOR_GOD:    return 'web3:poor_god';      // 穷神
+            default:                  return 'web3:land_god';      // 默认：土地神
         }
     }
 
@@ -1619,16 +1619,20 @@ export class GameMap extends Component {
             return;
         }
 
-        // 2. 计算世界位置（tile 中心，y=0.25 因为 NPC 高度是 0.5）
-        const position = new Vec3(
-            gameTile.x + 0.5,
-            0.25,  // y=0.25（scale.y=0.5 时，底部在 y=0，顶部在 y=0.5）
-            gameTile.y + 0.5
+        // 2. 计算 NPC 节点位置（block 中心对齐 tile 中心）
+        // Tile: (gridX, 0, gridZ) → (gridX+1, 1, gridZ+1)，中心在 (gridX+0.5, 0.5, gridZ+0.5)
+        // NPC: y = 0.5(tile顶部) + 0.1(偏移) + 1(往上抬高) = 1.6
+        // Cube mesh 中心在原点，所以 npcNode 位置 = block 中心位置
+        const npcPosition = new Vec3(
+            gameTile.x + 0.5,  // tile 中心 X
+            0.8,                // tile 顶部 + 偏移 + 1
+            gameTile.y + 0.5   // tile 中心 Z
         );
 
-        // 3. 创建 NPC 节点
+        // 3. 创建并定位 NPC 节点
         const npcNode = new Node(`NPC_${npc.getKind()}_T${tileId}`);
         npcNode.setParent(this._npcsRoot!);
+        npcNode.setWorldPosition(npcPosition);
 
         // 4. 添加 CompositeVoxelActor 组件
         const { CompositeVoxelActor } = await import('../../voxel/composite/CompositeVoxelActor');
@@ -1644,26 +1648,30 @@ export class GameMap extends Component {
             components: [
                 {
                     blockId: blockId,
-                    position: new Vec3(0, 0, 0),
-                    scale: new Vec3(0.8, 0.5, 0.8),  // 扁平的 NPC
+                    position: new Vec3(0, 0, 0),     // 相对于 CompositeRoot
+                    scale: new Vec3(0.7, 0.3, 0.7),  // 扁平的 NPC
+                    techniqueIndex: 1,                // 使用透明渲染
                     overlays: [
                         {
                             texture: nameTexture,
                             faces: [OverlayFace.UP],
                             layerIndex: 0,
                             inflate: 0.002,
-                            techniqueIndex: 1  // 透明渲染
+                            techniqueIndex: 1  // overlay 透明渲染
                         }
                     ]
                 }
-            ],
-            basePosition: position
+            ]
+            // basePosition 不设置，直接用 npcNode 的 worldPosition
         });
 
         // 7. 存储到索引
         this._npcActors.set(tileId, npcNode);
 
-        // 8. 双向关联（CompositeVoxelActor 可以作为一种 actor，保存到 NPC）
+        // 8. 根据 NPC 类型播放动画
+        this.playNPCAnimation(actor, npc.getKind());
+
+        // 9. 双向关联（CompositeVoxelActor 可以作为一种 actor，保存到 NPC）
         // NPC 需要引用节点以便后续操作
         // TODO: 可以考虑让 NPC 直接引用 npcNode 而不是 PaperActor
 
@@ -1671,8 +1679,55 @@ export class GameMap extends Component {
             kind: npc.getKind(),
             name: npcName,
             blockId: blockId,
-            position: position
+            position: npcPosition
         });
+    }
+
+    /**
+     * 根据 NPC 类型播放动画
+     * @param actor CompositeVoxelActor 组件
+     * @param npcKind NPC 类型
+     */
+    private playNPCAnimation(actor: any, npcKind: number): void {
+        switch (npcKind) {
+            case NpcKind.BOMB:
+                // 炸弹：弹跳 + 旋转（危险不稳定感）
+                actor.playBounceAnimation(0.15, 0.8);
+                actor.playRotateAnimation(2.0);
+                break;
+
+            case NpcKind.DOG:
+                // 恶犬：快速弹跳（躁动感）
+                actor.playBounceAnimation(0.1, 0.4, 0.3);  // 有停顿
+                break;
+
+            case NpcKind.WEALTH_GOD:
+            case NpcKind.FORTUNE_GOD:
+                // 财神/福神：漂浮 + 慢速旋转（优雅神圣感）
+                actor.playFloatAnimation(0.1, 3.0);
+                actor.playRotateAnimation(4.0);
+                break;
+
+            case NpcKind.POOR_GOD:
+                // 穷神：左右摇摆（可怜兮兮）
+                actor.playSwayAnimation(0.05, 1.6);
+                break;
+
+            case NpcKind.BARRIER:
+                // 路障：呼吸缩放（稳定但有存在感）
+                actor.playBreathAnimation(1.05, 2.0);
+                break;
+
+            case NpcKind.LAND_GOD:
+                // 土地神：慢速旋转（平和稳定）
+                actor.playRotateAnimation(5.0);
+                break;
+
+            default:
+                // 默认：轻微漂浮
+                actor.playFloatAnimation(0.05, 2.5);
+                break;
+        }
     }
 
     /**

@@ -32,6 +32,9 @@ export interface BlockComponent {
 
     /** 是否可见（默认 true） */
     visible?: boolean;
+
+    /** 渲染技术索引（0=不透明, 1=透明，默认 0） */
+    techniqueIndex?: number;
 }
 
 /**

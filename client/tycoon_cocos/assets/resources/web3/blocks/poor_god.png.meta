@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "7e356822-acb9-42e5-9d3e-321667ea936e",
+  "uuid": "05054b99-949b-40c9-aa6b-789d4074c84f",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "7e356822-acb9-42e5-9d3e-321667ea936e@6c48a",
-      "displayName": "chance",
+      "uuid": "05054b99-949b-40c9-aa6b-789d4074c84f@6c48a",
+      "displayName": "poor_god",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "7e356822-acb9-42e5-9d3e-321667ea936e",
+        "imageUuidOrDatabaseUri": "05054b99-949b-40c9-aa6b-789d4074c84f",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "7e356822-acb9-42e5-9d3e-321667ea936e@6c48a"
+    "redirect": "05054b99-949b-40c9-aa6b-789d4074c84f@6c48a"
   }
 }

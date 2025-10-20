@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "c4d58428-728c-4c15-a419-0297feb916d6",
+  "uuid": "c4a595fd-b7cd-4239-b23f-7ee31eaac022",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "c4d58428-728c-4c15-a419-0297feb916d6@6c48a",
-      "displayName": "6",
+      "uuid": "c4a595fd-b7cd-4239-b23f-7ee31eaac022@6c48a",
+      "displayName": "fortune_god",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "c4d58428-728c-4c15-a419-0297feb916d6",
+        "imageUuidOrDatabaseUri": "c4a595fd-b7cd-4239-b23f-7ee31eaac022",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "c4d58428-728c-4c15-a419-0297feb916d6@6c48a"
+    "redirect": "c4a595fd-b7cd-4239-b23f-7ee31eaac022@6c48a"
   }
 }

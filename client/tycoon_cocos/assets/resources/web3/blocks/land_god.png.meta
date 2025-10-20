@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "8f0125fb-ed6b-4e47-9809-e350d21a529d",
+  "uuid": "dffba678-94ae-4ff2-864f-3e4fe7be1e67",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "8f0125fb-ed6b-4e47-9809-e350d21a529d@6c48a",
-      "displayName": "4",
+      "uuid": "dffba678-94ae-4ff2-864f-3e4fe7be1e67@6c48a",
+      "displayName": "land_god",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "8f0125fb-ed6b-4e47-9809-e350d21a529d",
+        "imageUuidOrDatabaseUri": "dffba678-94ae-4ff2-864f-3e4fe7be1e67",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "8f0125fb-ed6b-4e47-9809-e350d21a529d@6c48a"
+    "redirect": "dffba678-94ae-4ff2-864f-3e4fe7be1e67@6c48a"
   }
 }

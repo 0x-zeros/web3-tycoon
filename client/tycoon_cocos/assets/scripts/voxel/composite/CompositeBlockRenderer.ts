@@ -22,9 +22,10 @@ export class CompositeBlockRenderer {
      *
      * @param node 目标节点
      * @param blockId Block ID（如 "web3:hospital"）
+     * @param techniqueIndex 渲染技术索引（0=不透明, 1=透明，默认 0）
      * @returns 是否成功
      */
-    public static async renderBlock(node: Node, blockId: string): Promise<boolean> {
+    public static async renderBlock(node: Node, blockId: string, techniqueIndex: number = 0): Promise<boolean> {
         try {
             // 1. 获取 block 信息
             const blockInfo = getWeb3BlockByBlockId(blockId);
@@ -41,7 +42,7 @@ export class CompositeBlockRenderer {
             renderer.mesh = mesh;
 
             // 4. 加载并设置材质
-            const material = await this.createBlockMaterial(blockId);
+            const material = await this.createBlockMaterial(blockId, techniqueIndex);
             if (material) {
                 renderer.material = material;
             }
@@ -73,20 +74,21 @@ export class CompositeBlockRenderer {
      * 获取 cube 顶点位置（24个顶点，每面4个）
      */
     private static getCubePositions(): number[] {
-        // Cube 尺寸 1x1x1，中心在 (0.5, 0.5, 0.5)
+        // Cube 尺寸 1x1x1，中心在 (0, 0, 0)
+        // 与 BlockOverlayManager 坐标系一致（-0.5 ~ 0.5）
         return [
             // Front face (Z+)
-            0, 0, 1,  1, 0, 1,  1, 1, 1,  0, 1, 1,
+            -0.5, -0.5, 0.5,   0.5, -0.5, 0.5,   0.5, 0.5, 0.5,  -0.5, 0.5, 0.5,
             // Back face (Z-)
-            1, 0, 0,  0, 0, 0,  0, 1, 0,  1, 1, 0,
+             0.5, -0.5, -0.5, -0.5, -0.5, -0.5,  -0.5, 0.5, -0.5,  0.5, 0.5, -0.5,
             // Top face (Y+)
-            0, 1, 1,  1, 1, 1,  1, 1, 0,  0, 1, 0,
+            -0.5, 0.5, 0.5,   0.5, 0.5, 0.5,   0.5, 0.5, -0.5,  -0.5, 0.5, -0.5,
             // Bottom face (Y-)
-            0, 0, 0,  1, 0, 0,  1, 0, 1,  0, 0, 1,
+            -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5, -0.5, 0.5,  -0.5, -0.5, 0.5,
             // Right face (X+)
-            1, 0, 1,  1, 0, 0,  1, 1, 0,  1, 1, 1,
+             0.5, -0.5, 0.5,   0.5, -0.5, -0.5,  0.5, 0.5, -0.5,   0.5, 0.5, 0.5,
             // Left face (X-)
-            0, 0, 0,  0, 0, 1,  0, 1, 1,  0, 1, 0
+            -0.5, -0.5, -0.5, -0.5, -0.5, 0.5,  -0.5, 0.5, 0.5,  -0.5, 0.5, -0.5
         ];
     }
 
@@ -152,9 +154,10 @@ export class CompositeBlockRenderer {
      * 创建 block 材质
      *
      * @param blockId Block ID
+     * @param techniqueIndex 渲染技术索引（0=不透明, 1=透明）
      * @returns Material
      */
-    private static async createBlockMaterial(blockId: string): Promise<Material | null> {
+    private static async createBlockMaterial(blockId: string, techniqueIndex: number = 0): Promise<Material | null> {
         try {
             // 1. 加载 shader effect（带缓存）
             const effect = await this.getVoxelEffect();
@@ -174,7 +177,7 @@ export class CompositeBlockRenderer {
             const material = new Material();
             material.initialize({
                 effectAsset: effect,
-                technique: 0  // 0=opaque（不透明）
+                technique: techniqueIndex  // 0=opaque（不透明）, 1=transparent（透明）
             });
 
             // 4. 设置纹理

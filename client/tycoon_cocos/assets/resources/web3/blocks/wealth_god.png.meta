@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "4bc9ca21-bc8f-4d0e-ad26-4cd4e142e979",
+  "uuid": "f2f49b25-720f-48cf-bffe-e73f29489a13",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "4bc9ca21-bc8f-4d0e-ad26-4cd4e142e979@6c48a",
-      "displayName": "3",
+      "uuid": "f2f49b25-720f-48cf-bffe-e73f29489a13@6c48a",
+      "displayName": "wealth_god",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "4bc9ca21-bc8f-4d0e-ad26-4cd4e142e979",
+        "imageUuidOrDatabaseUri": "f2f49b25-720f-48cf-bffe-e73f29489a13",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "4bc9ca21-bc8f-4d0e-ad26-4cd4e142e979@6c48a"
+    "redirect": "f2f49b25-720f-48cf-bffe-e73f29489a13@6c48a"
   }
 }

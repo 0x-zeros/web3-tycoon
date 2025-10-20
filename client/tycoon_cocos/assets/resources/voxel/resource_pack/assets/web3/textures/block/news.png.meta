@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "7c1cccbd-4141-47c2-9810-e44d264b0096",
+  "uuid": "fec8ba43-270a-402a-95b2-57dffe3a2ee5",
   "files": [
     ".json",
     ".png"
@@ -10,7 +10,7 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "7c1cccbd-4141-47c2-9810-e44d264b0096@6c48a",
+      "uuid": "fec8ba43-270a-402a-95b2-57dffe3a2ee5@6c48a",
       "displayName": "news",
       "id": "6c48a",
       "name": "texture",
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "7c1cccbd-4141-47c2-9810-e44d264b0096",
+        "imageUuidOrDatabaseUri": "fec8ba43-270a-402a-95b2-57dffe3a2ee5",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "7c1cccbd-4141-47c2-9810-e44d264b0096@6c48a"
+    "redirect": "fec8ba43-270a-402a-95b2-57dffe3a2ee5@6c48a"
   }
 }

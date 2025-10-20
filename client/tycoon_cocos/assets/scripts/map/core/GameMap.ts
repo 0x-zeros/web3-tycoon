@@ -866,13 +866,13 @@ export class GameMap extends Component {
      * @param owner 新的拥有者索引
      * @param level 新的等级
      */
-    public updateBuildingRender(
+    public async updateBuildingRender(
         buildingId: number,
         x: number,
         y: number,
         owner: number,
         level: number
-    ): void {
+    ): Promise<void> {
         const key = `${x}_${y}`;
 
         // 1. 更新 PaperActor（2D精灵）
@@ -889,16 +889,50 @@ export class GameMap extends Component {
         const session = (this as any)._session;
         const gameBuilding = session?.getBuildingByIndex(buildingId);
 
+        // 使用新的 CompositeVoxelActor 渲染
+        const USE_COMPOSITE_RENDERER = true;
+
         if (actorNode && actorNode.isValid) {
             // Actor 节点已存在，更新渲染
-            const actor = actorNode.getComponent(Actor);
-            if (actor && gameBuilding) {
-                actor.updateBuildingRender(gameBuilding);
+            if (USE_COMPOSITE_RENDERER) {
+                // CompositeVoxelActor：重新配置以更新 overlay
+                const { CompositeVoxelActor } = await import('../../voxel/composite/CompositeVoxelActor');
+                const actor = actorNode.getComponent(CompositeVoxelActor);
+                if (actor && gameBuilding) {
+                    const size = gameBuilding.size;
+                    const scale = size === 1
+                        ? new Vec3(0.8, 0.1, 0.8)
+                        : new Vec3(1.6, 0.1, 1.6);
+
+                    const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(level);
+
+                    await actor.setConfig({
+                        components: [{
+                            blockId: 'web3:empty_land',
+                            position: new Vec3(0, 0, 0),
+                            scale: scale,
+                            techniqueIndex: 1,
+                            overlays: [{
+                                texture: labelTexture,
+                                faces: [OverlayFace.UP],
+                                layerIndex: 0,
+                                inflate: 0.002,
+                                techniqueIndex: 1
+                            }]
+                        }]
+                    });
+                }
+            } else {
+                // PaperActor：调用原更新方法
+                const actor = actorNode.getComponent(Actor);
+                if (actor && gameBuilding) {
+                    actor.updateBuildingRender(gameBuilding);
+                }
             }
         } else if (gameBuilding) {
             // Actor 不存在，创建（无论有主无主）
             const gridPos = new Vec2(x, y);
-            this.createBuildingActor(gameBuilding, gridPos);
+            await this.createBuildingActor(gameBuilding, gridPos);
         }
 
         // 3. 更新注册信息
@@ -916,7 +950,28 @@ export class GameMap extends Component {
      * @param gameBuilding GameBuilding 实例
      * @param gridPos 网格位置
      */
-    private createBuildingActor(gameBuilding: any, gridPos: Vec2): void {
+    /**
+     * 创建 Building Actor（入口方法，根据配置选择渲染方式）
+     * @param gameBuilding Building 逻辑对象
+     * @param gridPos Building 左下角网格位置
+     */
+    private async createBuildingActor(gameBuilding: any, gridPos: Vec2): Promise<void> {
+        // 使用新的 CompositeVoxelActor 渲染
+        const USE_COMPOSITE_RENDERER = true;
+
+        if (USE_COMPOSITE_RENDERER) {
+            await this.renderBuildingWithComposite(gameBuilding, gridPos);
+        } else {
+            await this.renderBuildingWithPaperActor(gameBuilding, gridPos);
+        }
+    }
+
+    /**
+     * 使用 PaperActor 渲染 Building（原方式，保留）
+     * @param gameBuilding Building 逻辑对象
+     * @param gridPos Building 左下角网格位置
+     */
+    private async renderBuildingWithPaperActor(gameBuilding: any, gridPos: Vec2): Promise<void> {
         const key = `${gridPos.x}_${gridPos.y}`;
 
         // 清除已存在的 Actor
@@ -946,7 +1001,7 @@ export class GameMap extends Component {
                 this._buildingActors.set(key, actorNode);
             }
 
-            console.log(`[GameMap] Building Actor 创建完成: ${key}`);
+            console.log(`[GameMap] Building Actor created with PaperActor: ${key}`);
         }
     }
 
@@ -1680,6 +1735,73 @@ export class GameMap extends Component {
             name: npcName,
             blockId: blockId,
             position: npcPosition
+        });
+    }
+
+    /**
+     * 使用 CompositeVoxelActor 渲染 Building（新方式）
+     * @param gameBuilding Building 逻辑对象
+     * @param gridPos Building 左下角网格位置
+     */
+    private async renderBuildingWithComposite(gameBuilding: any, gridPos: Vec2): Promise<void> {
+        // 1. 计算位置和缩放
+        const size = gameBuilding.size;
+        const position = size === 1
+            ? new Vec3(gridPos.x + 0.5, 1.1, gridPos.y + 0.5)  // 1x1 中心
+            : new Vec3(gridPos.x + 1, 1.1, gridPos.y + 1);     // 2x2 中心（4个tile的中心）
+
+        const scale = size === 1
+            ? new Vec3(0.8, 0.1, 0.8)    // 1x1
+            : new Vec3(1.6, 0.1, 1.6);   // 2x2（0.8 × 2 = 1.6）
+
+        // 2. 创建节点
+        const buildingNode = new Node(`B_${size}x${size}_${gridPos.x}_${gridPos.y}`);
+        buildingNode.setParent(this._buildingsRoot!);
+        buildingNode.setWorldPosition(position);
+
+        // 3. 添加 CompositeVoxelActor 组件
+        const { CompositeVoxelActor } = await import('../../voxel/composite/CompositeVoxelActor');
+        const actor = buildingNode.addComponent(CompositeVoxelActor);
+
+        // 4. 生成标签纹理（根据 level）
+        const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(gameBuilding.level);
+
+        // 5. 配置并渲染
+        await actor.setConfig({
+            components: [{
+                blockId: 'web3:building_1x1',  // 使用统一的浅色 block
+                position: new Vec3(0, 0, 0),
+                scale: scale,
+                techniqueIndex: 1,  // 透明渲染
+                overlays: [{
+                    texture: labelTexture,
+                    faces: [OverlayFace.UP],
+                    layerIndex: 0,
+                    inflate: 0.002,
+                    techniqueIndex: 1
+                }]
+            }]
+        });
+
+        // 6. 存储索引
+        const key = `${gridPos.x}_${gridPos.y}`;
+        if (size === 2) {
+            // 2x2: 所有格子都指向同一个 actor
+            for (let dx = 0; dx < 2; dx++) {
+                for (let dz = 0; dz < 2; dz++) {
+                    const occupiedKey = `${gridPos.x + dx}_${gridPos.y + dz}`;
+                    this._buildingActors.set(occupiedKey, buildingNode);
+                }
+            }
+        } else {
+            this._buildingActors.set(key, buildingNode);
+        }
+
+        console.log(`[GameMap] Rendered Building with CompositeVoxelActor at ${key}:`, {
+            size: size,
+            level: gameBuilding.level,
+            position: position,
+            scale: scale
         });
     }
 

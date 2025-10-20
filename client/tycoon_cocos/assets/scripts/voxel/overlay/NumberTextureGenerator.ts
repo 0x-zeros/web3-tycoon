@@ -346,5 +346,41 @@ export class NumberTextureGenerator {
             default:       return '#FFFFFF';  // 默认白色
         }
     }
+
+    /**
+     * 生成建筑标签纹理（空地/等级）
+     *
+     * @param level 建筑等级（0-5）
+     * @returns Texture2D
+     */
+    static getBuildingLabelTexture(level: number): Texture2D {
+        const text = this.getBuildingLevelText(level);
+
+        return this.getNumberTexture(0, {
+            size: 64,
+            fontSize: 22,
+            bgColor: 'rgba(0, 0, 0, 0)',  // 透明背景
+            textColor: '#FFD700',          // 金黄色，醒目
+            withBorder: true,
+            borderRadius: 4,
+            customText: text
+        });
+    }
+
+    /**
+     * 获取建筑等级文字
+     *
+     * @param level 建筑等级
+     * @returns 等级文字
+     */
+    private static getBuildingLevelText(level: number): string {
+        if (level === 0) {
+            return '空地';
+        } else if (level >= 1 && level <= 5) {
+            return `${level}级`;
+        } else {
+            return '未知';
+        }
+    }
 }
 

@@ -4,10 +4,11 @@
     <graph id="n11_mumq" name="n11" xy="0,0" size="1920,1080" type="rect" lineSize="0" fillColor="#ffa4ceda">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
+    <image id="n17_mrxi" name="n17" src="mrxid" fileName="images/logo_deco.png" xy="86,42"/>
+    <image id="n20_mrxi" name="n20" src="mrxic" fileName="images/logo512.png" xy="1344,28" visible="false" rotation="17"/>
     <component id="n8_mumq" name="btn_start" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="801,778" size="364,130">
       <Button title="开始游戏"/>
     </component>
-    <image id="n17_mrxi" name="n17" src="mrxid" fileName="images/logo_deco.png" xy="86,42"/>
-    <image id="n20_mrxi" name="n20" src="mrxic" fileName="images/logo512.png" xy="1344,28" rotation="17"/>
+    <richtext id="n22_12ec4" name="tip" xy="469,594" size="898,138" fontSize="30" color="#ffffff" autoSize="none" text="Tip:  testnet没有sui的话可以切换devnet，并使用faucet获取。&#xA;"/>
   </displayList>
 </component>

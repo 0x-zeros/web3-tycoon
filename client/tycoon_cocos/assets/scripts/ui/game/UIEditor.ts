@@ -34,6 +34,9 @@ export class UIEditor extends UIBase {
     /** 显示ID按钮 */
     private m_btn_showIds: fgui.GButton;
 
+    /** 显示地块类型按钮 */
+    private m_btn_showTileType: fgui.GButton;
+
     /** 计算建筑入口按钮 */
     private m_btn_calcBuildingEntrance: fgui.GButton;
 
@@ -42,6 +45,9 @@ export class UIEditor extends UIBase {
 
     /** ID显示状态 */
     private _isShowingIds: boolean = false;
+
+    /** 地块类型显示状态 */
+    private _isShowingTileTypes: boolean = false;
 
     /** 当前选中的tile显示 */
     private m_tile: fgui.GComponent;
@@ -77,6 +83,7 @@ export class UIEditor extends UIBase {
         this.m_btn_download = this.getChild('btn_download') as fgui.GButton;
         this.m_btn_assignId = this.getChild('btn_assignId') as fgui.GButton;
         this.m_btn_showIds = this.getChild('btn_showIds') as fgui.GButton;
+        this.m_btn_showTileType = this.getChild('btn_showTileType') as fgui.GButton;
         this.m_btn_calcBuildingEntrance = this.getChild('btn_calcBuildingEntrance') as fgui.GButton;
         this.m_btn_toMoveMap = this.getChild('btn_toMoveMap') as fgui.GButton;
 
@@ -126,6 +133,9 @@ export class UIEditor extends UIBase {
         if (this.m_btn_showIds) {
             this.m_btn_showIds.onClick(this._onShowIdsClick, this);
         }
+        if (this.m_btn_showTileType) {
+            this.m_btn_showTileType.onClick(this._onShowTileTypeClick, this);
+        }
         if (this.m_btn_calcBuildingEntrance) {
             this.m_btn_calcBuildingEntrance.onClick(this._onCalcBuildingEntranceClick, this);
         }
@@ -166,6 +176,9 @@ export class UIEditor extends UIBase {
         if (this.m_btn_showIds) {
             this.m_btn_showIds.offClick(this._onShowIdsClick, this);
         }
+        if (this.m_btn_showTileType) {
+            this.m_btn_showTileType.offClick(this._onShowTileTypeClick, this);
+        }
         if (this.m_btn_calcBuildingEntrance) {
             this.m_btn_calcBuildingEntrance.offClick(this._onCalcBuildingEntranceClick, this);
         }
@@ -202,12 +215,19 @@ export class UIEditor extends UIBase {
             this.m_btn_showIds.title = "显示ID";
         }
 
-        // 确保ID标签被隐藏
+        // 初始化地块类型显示状态为隐藏
+        this._isShowingTileTypes = false;
+        if (this.m_btn_showTileType) {
+            this.m_btn_showTileType.title = "显示类型";
+        }
+
+        // 确保ID标签和地块类型被隐藏
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
                 mapInfo.component.hideIds();
+                mapInfo.component.clearTileTypeOverlays();
             }
         }
     }
@@ -218,12 +238,13 @@ export class UIEditor extends UIBase {
     protected onHide(): void {
         console.log("[UIEditor] Hiding editor UI");
 
-        // 清理ID标签并重置状态
+        // 清理ID标签和地块类型并重置状态
         const mapManager = MapManager.getInstance();
         if (mapManager) {
             const mapInfo = mapManager.getCurrentMapInfo();
             if (mapInfo && mapInfo.component) {
                 mapInfo.component.hideIds();
+                mapInfo.component.clearTileTypeOverlays();
             }
         }
 
@@ -231,6 +252,11 @@ export class UIEditor extends UIBase {
         this._isShowingIds = false;
         if (this.m_btn_showIds) {
             this.m_btn_showIds.title = "显示ID";
+        }
+
+        this._isShowingTileTypes = false;
+        if (this.m_btn_showTileType) {
+            this.m_btn_showTileType.title = "显示类型";
         }
     }
     
@@ -727,6 +753,40 @@ export class UIEditor extends UIBase {
                 }
 
                 console.log(`[UIEditor] IDs ${this._isShowingIds ? 'shown' : 'hidden'} (3D Overlay only)`);
+            }
+        }
+    }
+
+    /**
+     * 显示/隐藏地块类型按钮点击事件
+     */
+    private async _onShowTileTypeClick(): Promise<void> {
+        console.log("[UIEditor] Show tile type button clicked");
+        const mapManager = MapManager.getInstance();
+        if (mapManager) {
+            const mapInfo = mapManager.getCurrentMapInfo();
+            if (mapInfo && mapInfo.component) {
+                this._isShowingTileTypes = !this._isShowingTileTypes;
+
+                if (this._isShowingTileTypes) {
+                    // 显示地块类型
+                    await mapInfo.component.showTileTypeOverlays();
+
+                    // 更新按钮文本
+                    if (this.m_btn_showTileType) {
+                        this.m_btn_showTileType.title = "隐藏类型";
+                    }
+                } else {
+                    // 隐藏地块类型
+                    mapInfo.component.clearTileTypeOverlays();
+
+                    // 更新按钮文本
+                    if (this.m_btn_showTileType) {
+                        this.m_btn_showTileType.title = "显示类型";
+                    }
+                }
+
+                console.log(`[UIEditor] Tile types ${this._isShowingTileTypes ? 'shown' : 'hidden'}`);
             }
         }
     }

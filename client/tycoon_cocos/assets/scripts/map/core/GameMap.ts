@@ -2987,6 +2987,60 @@ export class GameMap extends Component {
     }
 
     /**
+     * 显示地块类型 Overlay（Layer 5）
+     * 为非空地的 tile 添加类型文字标签
+     */
+    public async showTileTypeOverlays(): Promise<void> {
+        console.log('[GameMap] Showing tile type overlays...');
+
+        // 清除旧的地块类型 overlay
+        this.clearTileTypeOverlays();
+
+        // 为所有非空地 tile 添加类型 overlay
+        for (const tile of this._tiles) {
+            const typeId = tile.getTypeId();
+
+            // 跳过空地（typeId === 0）
+            if (typeId === 0 || tile.getTileId() === 65535) {
+                continue;
+            }
+
+            const pos = tile.getGridPosition();
+
+            // 生成地块类型纹理
+            const typeTexture = NumberTextureGenerator.getTileTypeTexture(typeId);
+
+            await this.addTileOverlay(new Vec2(pos.x, pos.y), {
+                texture: typeTexture,
+                faces: [OverlayFace.UP],
+                inflate: 0.0025,  // 在 Layer 0/1 之上
+                layerIndex: 5,
+                techniqueIndex: 1  // 透明渲染
+            });
+        }
+
+        console.log('[GameMap] Tile type overlays created');
+    }
+
+    /**
+     * 清除地块类型 Overlay（Layer 5）
+     */
+    public clearTileTypeOverlays(): void {
+        console.log('[GameMap] Clearing tile type overlays...');
+
+        // 清除所有 Layer 5 的 overlay
+        this._tileOverlays.forEach((overlays, key) => {
+            const overlayNode = overlays.get(5);
+            if (overlayNode && overlayNode.isValid) {
+                overlayNode.destroy();
+                overlays.delete(5);
+            }
+        });
+
+        console.log('[GameMap] Tile type overlays cleared');
+    }
+
+    /**
      * 隐藏ID标签（2D UI Label方式）
      */
     public hideIds(): void {

@@ -1,28 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="280,512">
+<component size="280,883">
   <displayList>
-    <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,279" size="230,50">
+    <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,261" size="230,50">
       <Button title="地图元素"/>
     </component>
     <text id="n2_105vo" name="n2" xy="2,2" size="263,51" alpha="0.8" fontSize="18" color="#ffffff" align="center" vAlign="middle" text="- F1: 切换到45度Isometric视角&#xA; - F2: 切换到俯视Top-Down视角"/>
-    <component id="n3_9pk1" name="btn_toMoveMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,612" size="248,50">
-      <Button title="发布Move地图"/>
+    <component id="n3_9pk1" name="btn_toMoveMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="17,583" size="250,92">
+      <Button title="发布sui地图" selectedTitle="编辑好地图以后点击发布到sui上"/>
     </component>
-    <component id="n4_w84m" name="btn_calcBuildingEntrance" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="31,544" size="230,50">
+    <component id="n4_w84m" name="btn_calcBuildingEntrance" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,511" size="230,50">
       <Button title="计算建筑入口"/>
     </component>
-    <component id="n5_w84m" name="btn_download" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,338" size="230,50">
+    <component id="n5_w84m" name="btn_download" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="29,763" size="230,50">
       <Button title="下载地图"/>
     </component>
-    <component id="n6_w84m" name="btn_clearAll" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="28,725" size="230,50" visible="false">
+    <component id="n6_w84m" name="btn_clearAll" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,822" size="230,50" visible="false">
       <Button title="清除地图(!!!)"/>
     </component>
-    <component id="n8_w84m" name="btn_assignId" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="31,422" size="230,50">
+    <component id="n8_w84m" name="btn_assignId" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,398" size="230,50">
       <Button title="编号"/>
     </component>
-    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="31,477" size="230,50">
+    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,453" size="230,50">
       <Button title="显示编号"/>
     </component>
     <component id="n10_pn5r" name="tile" src="pn5rou" fileName="components/Tile.xml" xy="32,48" size="210,210" aspect="true"/>
+    <component id="n11_12ec4" name="btn_showTileType" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="29,317" size="230,50">
+      <Button title="显示类型"/>
+    </component>
   </displayList>
 </component>

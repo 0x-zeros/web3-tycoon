@@ -209,5 +209,68 @@ export class NumberTextureGenerator {
             customText: letter
         });
     }
+
+    /**
+     * 获取地块类型纹理
+     * 根据 Web3TileType 生成带类型名称和颜色的纹理
+     *
+     * @param typeId Web3TileType 枚举值
+     * @returns Texture2D
+     */
+    static getTileTypeTexture(typeId: number): Texture2D {
+        // 获取类型名称和颜色
+        const typeName = this.getTileTypeName(typeId);
+        const bgColor = this.getTileTypeColor(typeId);
+
+        return this.getNumberTexture(0, {
+            size: 64,
+            fontSize: 22,  // 中文2个字，字体稍小
+            bgColor: bgColor,
+            textColor: '#FFF',  // 白色文字
+            withBorder: true,
+            borderRadius: 4,
+            customText: typeName
+        });
+    }
+
+    /**
+     * 获取地块类型名称
+     *
+     * @param typeId Web3TileType
+     * @returns 中文名称
+     */
+    private static getTileTypeName(typeId: number): string {
+        switch (typeId) {
+            case 0: return '空地';
+            case 1: return '乐透';
+            case 2: return '医院';
+            case 3: return '机会';
+            case 4: return '奖励';
+            case 5: return '费用';
+            case 6: return '卡片';
+            case 7: return '新闻';
+            default: return '未知';
+        }
+    }
+
+    /**
+     * 获取地块类型背景颜色（从贴图颜色提取，半透明）
+     *
+     * @param typeId Web3TileType
+     * @returns CSS rgba 颜色字符串
+     */
+    private static getTileTypeColor(typeId: number): string {
+        switch (typeId) {
+            case 0: return 'rgba(128, 128, 128, 0.7)';   // 空地：灰色（但不会显示）
+            case 1: return 'rgba(230, 230, 230, 0.7)';   // 乐透：白色/浅色
+            case 2: return 'rgba(60, 150, 60, 0.7)';     // 医院：绿色
+            case 3: return 'rgba(50, 80, 130, 0.7)';     // 机会：深蓝色
+            case 4: return 'rgba(180, 250, 180, 0.7)';   // 奖励：浅绿色
+            case 5: return 'rgba(230, 200, 80, 0.7)';    // 费用：黄色
+            case 6: return 'rgba(230, 230, 230, 0.7)';   // 卡片：白色/浅色
+            case 7: return 'rgba(100, 100, 100, 0.7)';   // 新闻：灰色
+            default: return 'rgba(255, 255, 255, 0.7)';  // 默认：白色
+        }
+    }
 }
 

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+
+  <title>Cocos Creator | web3-tycoon walrus</title>
+
+  <!--http://www.html5rocks.com/en/mobile/mobifying/-->
+  <meta name="viewport"
+        content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1,minimal-ui=true"/>
+
+  <!--https://developer.apple.com/library/safari/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html-->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- force webkit on 360 -->
+  <meta name="renderer" content="webkit"/>
+  <meta name="force-rendering" content="webkit"/>
+  <!-- force edge on IE -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <meta name="msapplication-tap-highlight" content="no">
+
+  <!-- force full screen on some browser -->
+  <meta name="full-screen" content="yes"/>
+  <meta name="x5-fullscreen" content="true"/>
+  <meta name="360-fullscreen" content="true"/>
+
+  <!--fix fireball/issues/3568 -->
+  <!--<meta name="browsermode" content="application">-->
+  <meta name="x5-page-mode" content="app">
+
+  <!--<link rel="apple-touch-icon" href=".png" />-->
+  <!--<link rel="apple-touch-icon-precomposed" href=".png" />-->
+
+  <link rel="stylesheet" type="text/css" href="style.02f4a.css"/>
+
+  <!-- 预加载 Boot Splash logo（最高优先级，减少首次加载延迟） -->
+  <link rel="preload" href="./logo.3c750.png" as="image">
+
+  <!-- Sui SDK (System.register 格式，必须在 main.js 之前加载) -->
+  </head>
+<body>
+  <!-- ============================================ -->
+  <!-- Boot Splash - 静态海报，覆盖启动黑屏 -->
+  <!-- logo.png 为外部文件，通过 preload 提示浏览器优先加载 -->
+  <!-- 优点：index.html 小，logo 可缓存，Walrus 友好 -->
+  <!-- ============================================ -->
+  <div id="boot-splash" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#a8c5d1;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity 0.8s ease-out;">
+    <img src="./logo.3c750.png" alt="Web3 Tycoon" style="max-width:60%;max-height:60%;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.3));">
+  </div>
+  <script>
+    window.hideBootSplash=function(){var s=document.getElementById('boot-splash');if(s){console.log('[BootSplash] Hiding...');s.style.opacity='0';setTimeout(function(){s.style.display='none';s.remove();console.log('[BootSplash] Removed');},800);}};
+  </script>
+  <!-- ============================================ -->
+
+  <div id="GameDiv" cc_exact_fit_screen="true">
+      <div id="Cocos3dGameContainer">
+        <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="99"></canvas>
+      </div>
+    </div>
+  
+
+<!-- Polyfills bundle. -->
+
+<script src="src/polyfills.bundle.5adbf.js" charset="utf-8"> </script>
+
+
+<!-- SystemJS support. -->
+<script src="src/system.bundle.543e6.js" charset="utf-8"> </script>
+
+<!-- Import map -->
+<script src="src/import-map.ad357.json" type="systemjs-importmap" charset="utf-8"> </script>
+
+<script>
+    // Sui SDK (System.register 格式，必须在应用入口 index.js 之前加载)
+    System.import('./libs/sui.system.js')
+      .then(() => System.import('./index.d17e5.js'))
+      .catch(console.error)
+</script>
+
+</body>
+</html>

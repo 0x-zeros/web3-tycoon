@@ -5,10 +5,12 @@
 library/
 temp/
 local/
-# 忽略其他 build 产物，但 web-mobile 完全保留（部署需要）
+# 忽略其他 build 产物，但 web-mobile 和 web-walrus 完全保留（部署需要）
 build/*
 !build/web-mobile/
 !build/web-mobile/**
+!build/web-walrus/
+!build/web-walrus/**
 profiles/
 # native 规则已删除，避免影响 build/web-mobile/remote/resources/native/
 #//////////////////////////

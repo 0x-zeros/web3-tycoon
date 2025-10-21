@@ -350,6 +350,13 @@ export class UIWallet extends UIBase {
             item.onClick(() => this._onWalletItemClick(wallet), this);
         }
 
+        // 绑定关闭按钮
+        const btnClose = this.m_walletListComponent.getChild("btn_close") as fgui.GButton;
+        if (btnClose) {
+            btnClose.onClick(this._closeWalletList, this);
+            console.log('[UIWallet] Close button bound for WalletList');
+        }
+
         // 添加到POPUP层并居中显示
         // 动态导入 UIManager（避免循环依赖）
         const { UIManager } = await import("../core/UIManager");

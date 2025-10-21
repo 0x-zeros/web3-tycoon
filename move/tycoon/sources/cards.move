@@ -281,19 +281,6 @@ public(package) fun register_card_for_admin(
     register_card_internal(registry, kind, name, description, target_type, value, rarity);
 }
 
-// 更新掉落配置（package内部，由tycoon模块的admin函数调用）
-public(package) fun update_drop_config_for_admin(
-    config: &mut DropConfig,
-    tile_type: u8,
-    rule: DropRule
-) {
-    if (table::contains(&config.tile_drops, tile_type)) {
-        *table::borrow_mut(&mut config.tile_drops, tile_type) = rule;
-    } else {
-        table::add(&mut config.tile_drops, tile_type, rule);
-    };
-}
-
 // ===== Card Management Functions 卡牌管理函数 =====
 
 // 给玩家发卡

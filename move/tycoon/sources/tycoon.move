@@ -119,11 +119,6 @@ fun create_admin_cap(ctx: &mut TxContext) {
     transfer::public_transfer(admin_cap, ctx.sender());
 }
 
-/// 验证管理员权限
-public fun verify_admin_cap(_admin: &AdminCap): bool {
-    true
-}
-
 // 错误码
 const EInvalidSchemaVersion: u64 = 3021;
 
@@ -178,20 +173,6 @@ entry fun admin_register_card(
     );
 }
 
-/// 更新掉落配置（需要AdminCap）
-public fun admin_update_drop_config(
-    game_data: &mut GameData,
-    tile_type: u8,
-    rule: cards::DropRule,
-    _admin: &AdminCap
-) {
-    cards::update_drop_config_for_admin(
-        &mut game_data.drop_config,
-        tile_type,
-        rule
-    );
-}
-
 // ===== Game Configuration Constants 游戏配置常量 =====
 
 // 起始现金配置
@@ -210,21 +191,6 @@ const MIN_MAX_ROUNDS: u8 = 10;
 const MAX_MAX_ROUNDS: u8 = 200;
 
 // ===== GameData Accessor Functions 访问器函数 =====
-
-/// 获取地图注册表
-public(package) fun get_map_registry(game_data: &GameData): &map::MapRegistry {
-    &game_data.map_registry
-}
-
-/// 获取卡牌注册表
-public(package) fun get_card_registry(game_data: &GameData): &cards::CardRegistry {
-    &game_data.card_registry
-}
-
-/// 获取掉落配置
-public(package) fun get_drop_config(game_data: &GameData): &cards::DropConfig {
-    &game_data.drop_config
-}
 
 /// 获取起始资金
 public(package) fun get_starting_cash(game_data: &GameData): u64 {
@@ -305,26 +271,10 @@ public(package) fun validate_max_rounds(value: u8): u8 {
 }
 
 /// 获取默认起始现金
-public fun get_default_starting_cash(): u64 { DEFAULT_STARTING_CASH }
+public(package) fun get_default_starting_cash(): u64 { DEFAULT_STARTING_CASH }
 
 /// 获取默认物价提升天数
-public fun get_default_price_rise_days(): u8 { DEFAULT_PRICE_RISE_DAYS }
-
-/// 获取默认最大回合数
-public fun get_default_max_rounds(): u8 { DEFAULT_MAX_ROUNDS }
-
-// ===== Mutable Accessor Functions 可变访问器函数 =====
-
-/// 获取可变的地图注册表（用于测试）
-public(package) fun borrow_map_registry_mut(game_data: &mut GameData): &mut map::MapRegistry {
-    &mut game_data.map_registry
-}
-
-
-/// 获取可变的卡牌注册表
-public(package) fun borrow_card_registry_mut(game_data: &mut GameData): &mut cards::CardRegistry {
-    &mut game_data.card_registry
-}
+public(package) fun get_default_price_rise_days(): u8 { DEFAULT_PRICE_RISE_DAYS }
 
 // ===== Admin Functions 管理员函数 =====
 

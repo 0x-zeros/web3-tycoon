@@ -61,21 +61,21 @@ async function main() {
     console.log('账户余额:', balance.totalBalance, 'MIST');
     console.log('');
 
-    // 4. 查询Scallop MarketCoin对象
+    // 4. 查询Scallop USDC (sUSDC)对象
     console.log('========================================');
-    console.log('查询Scallop MarketCoin对象...');
+    console.log('查询Scallop USDC (sUSDC)对象...');
     console.log('========================================\n');
 
     const marketCoins = await queryScallopMarketCoins(client, address);
 
     if (marketCoins.length === 0) {
-        console.log('⚠️  未发现Scallop MarketCoin对象');
-        console.log('提示：请先在Scallop协议中存款以获取MarketCoin');
+        console.log('⚠️  未发现Scallop USDC对象');
+        console.log('提示：请先在Scallop协议中存入USDC以获取sUSDC');
         console.log('');
     } else {
-        console.log(`✅ 发现 ${marketCoins.length} 个MarketCoin对象\n`);
+        console.log(`✅ 发现 ${marketCoins.length} 个sUSDC对象\n`);
 
-        // 5. 验证每个MarketCoin
+        // 5. 验证每个sUSDC
         for (let i = 0; i < marketCoins.length; i++) {
             const coin = marketCoins[i];
             await testVerifyDefiCoin(client, keypair, coin, i + 1);
@@ -104,12 +104,19 @@ async function main() {
 // ========== 辅助函数 ==========
 
 /**
- * 查询用户持有的Scallop MarketCoin对象
+ * 查询用户持有的Scallop USDC (sUSDC)对象
  */
 async function queryScallopMarketCoins(client: SuiClient, address: string) {
     try {
+        // Scallop USDC存款凭证的完整类型
+        const SCALLOP_USDC_TYPE =
+            '0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC';
+
         const response = await client.getOwnedObjects({
             owner: address,
+            filter: {
+                StructType: SCALLOP_USDC_TYPE,  // 精确匹配
+            },
             options: {
                 showType: true,
                 showContent: true,
@@ -117,23 +124,13 @@ async function queryScallopMarketCoins(client: SuiClient, address: string) {
             },
         });
 
-        // 过滤出MarketCoin对象
-        const marketCoins = response.data.filter((obj: any) => {
-            const type = obj.data?.type;
-            if (!type) return false;
-
-            // 检查是否包含Scallop的MarketCoin标识
-            return (
-                type.includes(SCALLOP_PACKAGE) &&
-                type.includes('::reserve::MarketCoin')
-            );
-        });
+        const marketCoins = response.data;
 
         // 打印找到的对象
         marketCoins.forEach((coin: any, index: number) => {
-            console.log(`MarketCoin #${index + 1}:`);
+            console.log(`Scallop USDC (sUSDC) #${index + 1}:`);
             console.log(`  对象ID: ${coin.data.objectId}`);
-            console.log(`  类型: ${coin.data.type}`);
+            console.log(`  类型: SCALLOP_USDC`);
 
             // 尝试获取余额信息
             if (coin.data.content && 'fields' in coin.data.content) {
@@ -162,7 +159,7 @@ async function testVerifyDefiCoin(
     index: number
 ) {
     console.log(`----------------------------------------`);
-    console.log(`测试 #${index}: 验证MarketCoin`);
+    console.log(`测试 #${index}: 验证Scallop USDC`);
     console.log(`----------------------------------------`);
 
     const objectId = coinObj.data.objectId;

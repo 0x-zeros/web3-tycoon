@@ -24,17 +24,23 @@ DeFi Verifier 是一个用于验证用户在Sui生态DeFi协议中存款的Move�
 ## 已支持的协议
 
 ### ✅ Scallop Protocol
-- **MarketCoin<USDC>** - USDC存款凭证
-- **MarketCoin<SUI>** - SUI存款凭证
-- **MarketCoin<USDT>** - USDT存款凭证
+- **SCALLOP_USDC (sUSDC)** - USDC存款凭证
 
 验证逻辑：
-- Package地址：`0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`
-- 模块标识：`::reserve::MarketCoin`
-- 资产类型：`::usdc::USDC`, `::sui::SUI`, `::usdt::USDT`
+- 完整类型：`0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC`
+- 验证方式：精确类型匹配
+- 架构：对象所有权模式（用户持有Coin对象）
+
+### ✅ Navi Protocol
+- **USDC存款** - 通过Storage查询
+
+验证逻辑：
+- Package：`0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f`
+- Storage：`0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe`
+- Asset ID：`10` (USDC)
+- 架构：中心化账簿模式（查询共享Storage）
 
 ### 🚧 待实现
-- **Navi Protocol** - nToken系列
 - **Bucket Protocol** - sUSDB等
 
 ## 使用方式
@@ -116,31 +122,41 @@ defi_verifier/
 
 ## 测试
 
+### 本地测试限制
+
+⚠️ **重要**：由于Navi Protocol使用native实现的Storage模块，`sui move test`无法运行。
+
 ```bash
-# 运行所有测试
-sui move test
+# 编译验证代码正确性
+sui move build
 
-# 运行特定测试
-sui move test --filter test_verify_scallop_usdc
-
-# 查看测试覆盖率
-sui move test --coverage
+# ❌ 本地测试不可用（Navi Storage是native实现）
+# sui move test  # 会失败：UNEXPECTED_VERIFIER_ERROR
 ```
+
+### 主网测试（推荐）
+
+使用CLI工具在主网进行真实测试：
+
+```bash
+cd ../cli
+npm run test:defi
+```
+
+这会使用`devInspectTransactionBlock`进行只读测试，不消耗gas。
 
 ### 测试用例覆盖
 
-✅ 10个测试全部通过：
+包含8个单元测试（需在主网运行）：
 
-1. **test_scallop_market_coin_usdc** - MarketCoin类型识别
-2. **test_verify_scallop_usdc_valid** - USDC有效存款
-3. **test_verify_scallop_zero_balance** - 零余额返回0
-4. **test_verify_non_scallop** - 非Scallop类型返回0
-5. **test_verify_scallop_sui** - SUI支持
-6. **test_verify_scallop_usdt** - USDT支持
-7. **test_verify_wrong_package** - 错误package地址
-8. **test_verify_wrong_module** - 错误模块名
-9. **test_verify_unsupported_asset** - 不支持的资产
-10. **test_string_contains_basic** - 字符串匹配基础
+1. **test_verify_scallop_usdc_valid** - Scallop USDC有效存款
+2. **test_verify_scallop_zero_balance** - 零余额返回0
+3. **test_verify_non_scallop** - 非Scallop类型返回0
+4. **test_verify_wrong_package** - 错误package地址
+5. **test_verify_wrong_module** - 错误模块名
+6. **test_verify_scallop_sui_not_supported** - SUI不再支持
+7. **test_get_scallop_type** - 类型字符串获取
+8. **test_navi_usdc_asset_id** - Navi asset ID验证
 
 ## 技术要点
 

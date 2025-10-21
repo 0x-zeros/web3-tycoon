@@ -8,8 +8,8 @@ DeFi存款验证工具 - Sui主网专用
 
 ### 支持的协议
 
-- ✅ **Scallop Protocol** - MarketCoin（USDC, SUI, USDT等）
-- 🚧 Navi Protocol - nToken系列（待实现）
+- ✅ **Scallop Protocol** - SCALLOP_USDC (sUSDC)
+- ✅ **Navi Protocol** - USDC存款（通过Storage查询）
 - 🚧 Bucket Protocol - sUSDB等（待实现）
 
 ### 核心功能
@@ -133,17 +133,18 @@ cli/
 - ✅ 读取keystore
 - ✅ 显示账户余额
 
-### 2. MarketCoin查询
-- ✅ 查询所有Scallop MarketCoin
+### 2. Scallop USDC查询
+- ✅ 查询所有Scallop USDC (sUSDC)对象
 - ✅ 显示对象详情（ID、类型、余额）
+- ✅ 验证sUSDC返回1（有效存款）
 
-### 3. DeFi验证
-- ✅ 验证MarketCoin返回1（有效存款）
-- ✅ 验证普通Coin返回0（无效）
+### 3. Navi USDC验证
+- ✅ 调用verify_navi_usdc检测USDC存款
+- ✅ 调用verify_navi_any检测任意资产
 
 ### 4. 边界情况
-- ✅ 账户没有MarketCoin
-- ✅ 余额为0的MarketCoin
+- ✅ 验证普通SUI Coin返回0
+- ✅ 账户没有DeFi存款的情况
 
 ## 开发
 
@@ -173,11 +174,17 @@ sui client publish --gas-budget 500000000
 
 ### 2. 测试账户准备
 
-如果账户没有Scallop存款，可以：
+如果账户没有DeFi存款，可以：
 
+**Scallop**:
 1. 访问 [Scallop App](https://scallop.io/)
-2. 连接钱包并在主网存入USDC/SUI/USDT
-3. 获得MarketCoin后再运行测试
+2. 连接钱包并在主网存入USDC
+3. 获得sUSDC后再运行测试
+
+**Navi**:
+1. 访问 [Navi App](https://naviprotocol.io/)
+2. 连接钱包并在主网供应(Supply) USDC
+3. 存款成功后再运行测试
 
 ### 3. Gas费用
 

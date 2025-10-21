@@ -1039,39 +1039,6 @@ entry fun skip_turn(
     advance_turn(game, game_data, map, r, ctx);
 }
 
-// // 结束回合，暂时没有使用，现在的游戏设计用不到这个一个，所以去掉entry, 不然调用
-// fun end_turn(
-//     game: &mut Game,
-//     seat: &Seat,
-//     game_data: &GameData,
-//     map: &map::MapTemplate,
-//     r: &Random,
-//     ctx: &mut TxContext
-// ) {
-//     validate_map(game, map);
-//     validate_seat_and_turn(game, seat);
-
-//     // 验证没有待决策
-//     assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
-
-//     let player_addr = seat.player;
-//     let player_index = seat.player_index;
-
-//     // 清理回合状态
-//     clean_turn_state(game, player_index);
-
-//     // 发出结束回合事件
-//     events::emit_end_turn_event(
-//         game.id.to_inner(),
-//         player_addr,
-//         (game.round as u16),
-//         (game.turn as u8)
-//     );
-
-//     // 推进回合
-//     advance_turn(game, game_data, map, r, ctx);
-// }
-
 // 购买建筑
 entry fun buy_building(
     game: &mut Game,
@@ -1659,91 +1626,6 @@ fun is_valid_neighbor(
     next == map::tile_s(tile)
 }
 
-// UNUSED: handle_tile_pass - 已被 handle_tile_stop_with_collector 替代
-// fun handle_tile_pass(
-//     game: &mut Game,
-//     player_index: u8,
-//     tile_id: u16,
-//     game_data: &GameData,
-//     generator: &mut RandomGenerator
-// ) {
-//     let map_registry = tycoon::get_map_registry(game_data);
-//     // TODO: 需要传入map参数: let template = map::get_template(map_registry, game.template_id);
-//     // TODO: 需要传入map参数: let tile = map::get_tile(template, tile_id);
-//     let tile_kind = map::tile_kind(tile);
-//
-//     // 只有卡片格和彩票格在经过时触发（固定行为）
-//     if (is_passable_trigger(tile_kind)) {
-//         if (tile_kind == types::TILE_CARD()) {
-//             // 抽卡
-//             let random_value = generator.generate_u8();
-//             let (card_kind, count) = cards::draw_card_on_pass(random_value);
-//             let player = &mut game.players[player_index as u64];
-//             cards::give_card_to_player(&mut player.cards, card_kind, count);
-//         } else if (tile_kind == types::TILE_LOTTERY()) {
-//             // 彩票逻辑（简化）
-//             // TODO: 实现彩票系统
-//         };
-//     }
-// }
-
-// UNUSED: handle_tile_stop - 已被 handle_tile_stop_with_collector 替代
-// fun handle_tile_stop(
-//     game: &mut Game,
-//     player_index: u8,
-//     tile_id: u16,
-//     game_data: &GameData,
-//     generator: &mut RandomGenerator
-// ) {
-//     let map_registry = tycoon::get_map_registry(game_data);
-//     // TODO: 需要传入map参数: let template = map::get_template(map_registry, game.template_id);
-//     // TODO: 需要传入map参数: let tile = map::get_tile(template, tile_id);
-//     let tile_kind = map::tile_kind(tile);
-//     let player_addr = (&game.players[player_index as u64]).owner;
-//
-//     // 先检查是否有建筑
-//     let building_id = map::tile_building_id(tile);
-//     if (building_id != map::no_building()) {
-//         // 有建筑：处理建筑逻辑（购买/升级/租金）
-//         handle_building_stop(game, player_index, tile_id, tile, game_data);
-//         // 有建筑的tile不再有其他功能
-//         return
-//     };
-//
-//     // 按tile_kind处理功能性tile
-//     if (tile_kind == types::TILE_HOSPITAL()) {
-//         handle_hospital_stop(game, player_index, tile_id);
-//     } else if (tile_kind == types::TILE_CARD()) {
-//         // 停留时也抽卡
-//         let random_value = generator.generate_u8();
-//         let (card_kind, count) = cards::draw_card_on_stop(random_value);
-//         let player = &mut game.players[player_index as u64];
-//         cards::give_card_to_player(&mut player.cards, card_kind, count);
-//     } else if (tile_kind == types::TILE_CHANCE()) {
-//         // TODO: 实现机会事件
-//     } else if (tile_kind == types::TILE_BONUS()) {
-//         // 奖励
-//         let base_bonus = map::tile_special(tile);
-//         let price_index = calculate_price_index(game);
-//         let bonus = base_bonus * price_index;  // 应用物价指数
-//         let player = &mut game.players[player_index as u64];
-//         player.cash = player.cash + bonus;
-//     } else if (tile_kind == types::TILE_FEE()) {
-//         // 罚款
-//         let base_fee = map::tile_special(tile);
-//         let price_index = calculate_price_index(game);
-//         let fee = base_fee * price_index;  // 应用物价指数
-//         let player = &mut game.players[player_index as u64];
-//         if (player.cash >= fee) {
-//             player.cash = player.cash - fee;
-//         } else {
-//             player.cash = 0;
-//             // TODO: 处理破产
-//         };
-//     }
-//     // 其他地块类型...
-// }
-
 // 处理停留地块（带事件收集器）
 fun handle_tile_stop_with_collector(
     game: &mut Game,
@@ -2176,70 +2058,6 @@ fun handle_tile_stop_with_collector(
     )
 }
 
-// UNUSED: handle_building_stop - 已被 handle_tile_stop_with_collector 中的逻辑替代
-// fun handle_building_stop(
-//     game: &mut Game,
-//     player_index: u8,
-//     tile_id: u16,
-//     tile_static: &map::TileStatic,
-//     game_data: &GameData
-// ) {
-//     let map_registry = tycoon::get_map_registry(game_data);
-//     // TODO: 需要传入map参数: let template = map::get_template(map_registry, game.template_id);
-//     let player_addr = (&game.players[player_index as u64]).owner;
-//
-//     // 获取building_id
-//     let building_id = map::tile_building_id(tile_static);
-//     if (building_id == map::no_building()) {
-//         return  // 非建筑tile
-//     };
-//
-//     let building =&game.buildings[building_id as u64];
-//
-//     if (building.owner == NO_OWNER) {
-//         // 无主建筑 - 可以购买
-//         // TODO: 实现购买逻辑（需要用户确认）
-//     } else {
-//         let owner_index = building.owner;
-//         if (owner_index != player_index) {
-//             // 需要支付过路费
-//             let level = building.level;
-//             // TODO: 需要传入map参数: let toll = calculate_toll(game, tile_id, template, game_data);
-//
-//             let player = &mut game.players[player_index as u64];
-//
-//             // 检查免租
-//             let has_rent_free = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
-//
-//             if (has_rent_free) {
-//                 // 免租
-//                 return
-//             };
-//
-//             // 支付过路贩
-//             let actual_toll = if (player.cash >= toll) {
-//                 player.cash = player.cash - toll;
-//                 toll
-//             } else {
-//                 // 现金不足 - 破产
-//                 let paid = player.cash;
-//                 player.cash = 0;
-//                 paid
-//             };
-//
-//             // 给房主加钱
-//             let owner_player = &mut game.players[owner_index as u64];
-//             owner_player.cash = owner_player.cash + actual_toll;
-//
-//             // 如果支付不足，处理破产
-//             if (actual_toll < toll) {
-//                 let owner_addr = owner_player.owner;
-//                 handle_bankruptcy(game, game_data, player_addr, option::some(owner_addr));
-//             };
-//         }
-//     }
-// }
-
 // 处理医院停留
 fun handle_hospital_stop(game: &mut Game, player_index: u8, tile_id: u16) {
     let player = &mut game.players[player_index as u64];
@@ -2264,18 +2082,6 @@ fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: 
     player.pos = hospital_tile;
     player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
 }
-
-// UNUSED: send_to_hospital - 未被调用
-// fun send_to_hospital(game: &mut Game, player_index: u8, map: &map::MapTemplate, _game_data: &GameData) {
-//     let hospital_ids = map::get_hospital_ids(map);
-//
-//     if (!hospital_ids.is_empty()) {
-//         let hospital_tile = hospital_ids[0];
-//         let player = &mut game.players[player_index as u64];
-//         player.pos = hospital_tile;
-//         player.in_hospital_turns = types::DEFAULT_HOSPITAL_TURNS();
-//     }
-// }
 
 // 处理破产
 // 处理玩家破产的完整流程
@@ -2881,7 +2687,6 @@ fun get_round(game: &Game): u16 { game.round }
 // 获取轮内回合
 fun get_turn_in_round(game: &Game): u8 { game.turn }
 
-// ===== Public Query Functions 公共查询函数 =====
 
 // 获取Seat的player地址
 fun get_seat_player(seat: &Seat): address { seat.player }

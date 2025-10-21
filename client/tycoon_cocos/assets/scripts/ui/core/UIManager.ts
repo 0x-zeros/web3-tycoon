@@ -22,6 +22,8 @@ import { UIWallet } from "../game/UIWallet";
 import { UIGameConfig } from "../game/UIGameConfig";
 import { UICommonSetting } from "../game/UICommonSetting";
 import { UICommonLayout } from "../game/UICommonLayout";
+import { UIGameEnd } from "../game/UIGameEnd";
+import { UIBankruptcy } from "../game/UIBankruptcy";
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
@@ -854,6 +856,8 @@ export class UIManager {
             UIManager.instance.registerInGameUI(UIManager.PRELOAD_PACKAGES[3]);
             UIManager.instance.registerMessageBoxUI(); // 注册MessageBox
             UIManager.instance.registerNotificationUI(); // 注册Notification
+            UIManager.instance.registerGameEndUI(); // 注册GameEnd
+            UIManager.instance.registerBankruptcyUI(); // 注册Bankruptcy
             // GameConfig 不再单独注册，作为 CommonLayout 的子组件管理
 
             // 4. 显示Notification（全局通知中心，始终显示）
@@ -956,6 +960,32 @@ export class UIManager {
             isWindow: false,
             layer: UILayer.NOTIFICATION
         }, UINotification);
+    }
+
+    /**
+     * 便捷注册方法 - 注册游戏结束UI
+     */
+    public registerGameEndUI(packageName: string = "InGame", componentName: string = "GameEnd"): void {
+        this.registerUI<UIGameEnd>("GameEnd", {
+            packageName,
+            componentName,
+            cache: false,
+            isWindow: false,
+            layer: UILayer.MODAL
+        }, UIGameEnd);
+    }
+
+    /**
+     * 便捷注册方法 - 注册破产通知UI
+     */
+    public registerBankruptcyUI(packageName: string = "InGame", componentName: string = "Bankruptcy"): void {
+        this.registerUI<UIBankruptcy>("Bankruptcy", {
+            packageName,
+            componentName,
+            cache: false,
+            isWindow: false,
+            layer: UILayer.NOTIFICATION
+        }, UIBankruptcy);
     }
 
     /**

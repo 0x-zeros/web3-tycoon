@@ -2,37 +2,23 @@
   "maps": [
     {
       "id": "map",
-      "name": "经典地图",
+      "name": "web3_city",
       "prefabPath": "scene/classic_map",
       "previewImagePath": "images/maps/default_preview",
       "type": "classic"
     },
     {
-      "id": "carnival",
-      "name": "狂欢节",
-      "prefabPath": "scene/carnival",
-      "previewImagePath": "images/maps/carnival",
-      "type": "classic"
-    },
-    {
-      "id": "web3_city",
-      "name": "Web3 城市",
-      "prefabPath": "scene/web3_city",
-      "previewImagePath": "images/maps/web3_city",
-      "type": "classic"
-    },
-    {
       "id": "crypto_island",
-      "name": "加密岛屿",
+      "name": "加密岛屿(未开放)",
       "prefabPath": "scene/crypto_island",
       "previewImagePath": "images/maps/crypto_island",
       "type": "brawl"
     },
     {
       "id": "defi_plaza",
-      "name": "DeFi 广场",
+      "name": "DeFi广场(未开放)",
       "prefabPath": "scene/defi_plaza",
-      "previewImagePath": "images/maps/default_preview",
+      "previewImagePath": "images/maps/defi_plaza",
       "type": "classic"
     }
   ]

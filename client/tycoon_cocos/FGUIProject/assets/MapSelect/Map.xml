@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1280,768">
-  <controller name="category" pages="0,game_id,1,map_id,2,map_json" selected="0"/>
+  <controller name="category" pages="0,game_id,1,map_id,2,map_json" selected="2"/>
   <displayList>
     <list id="n0_105vo" name="game_id" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56jpseuo3" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
@@ -24,27 +24,21 @@
       <item/>
       <item/>
     </list>
-    <list id="n5_ez89" name="map_json" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56j105vo1" autoClearItems="true">
+    <list id="n5_ez89" name="map_json" xy="0,0" size="1066,563" layout="flow_hz" overflow="scroll" lineGap="20" colGap="20" defaultItem="ui://8joqc56j105vo1" autoClearItems="true">
       <gearDisplay controller="category" pages="2"/>
       <item title="building 1"/>
       <item/>
       <item/>
       <item/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
-      <item/>
     </list>
     <component id="n6_ez89" name="btn_game_id" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="4,-110" size="380,100">
-      <Button checked="true" title="Game 列表" controller="category" page="0"/>
+      <Button title="Game 列表" controller="category" page="0"/>
     </component>
     <component id="n7_ez89" name="btn_map_id" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="386,-110" size="380,100">
       <Button title="Map 列表" controller="category" page="1"/>
     </component>
     <component id="n8_ez89" name="btn_map_json" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="768,-110" size="380,100">
-      <Button title="客户端地图" controller="category" page="2"/>
+      <Button checked="true" title="客户端地图" controller="category" page="2"/>
     </component>
     <component id="n11_pseu" name="btn_joinGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,803" size="378,76" visible="false">
       <gearDisplay controller="category" pages="0"/>

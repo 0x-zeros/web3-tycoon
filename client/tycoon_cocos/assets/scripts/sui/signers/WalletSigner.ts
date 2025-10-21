@@ -62,6 +62,13 @@ export class WalletSigner implements SignerProvider {
 
         } catch (error) {
             console.error('[WalletSigner] Transaction failed:', error);
+
+            // 检测常见的用户操作错误
+            const errorMsg = error?.message || String(error);
+            if (errorMsg.includes('invalid') && errorMsg.includes('0x0000')) {
+                throw new Error('交易失败：请等待钱包完全加载后再点击确认');
+            }
+
             throw error;
         }
     }

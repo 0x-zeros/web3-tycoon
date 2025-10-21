@@ -14,6 +14,7 @@ import { loadWalletStandard, loadSuiClient } from '../../sui/loader';
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
 import { SuiEnvConfigManager } from "../../config/SuiEnvConfigManager";
+import { FaucetManager } from "../../sui/utils/FaucetManager";
 
 
 const { ccclass } = _decorator;
@@ -39,6 +40,7 @@ export class UIWallet extends UIBase {
     private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
     private m_btn_balance:fgui.GButton | null = null;  // 余额按钮
+    private m_btn_faucet:fgui.GButton | null = null;   // Faucet 按钮
     private m_txt_chain:fgui.GTextField | null = null;  // 链名称显示
 
     // Controller控制disconnected/connected状态
@@ -78,6 +80,7 @@ export class UIWallet extends UIBase {
         this.m_btn_connect = this.getButton("btn_connect");
         this.m_btn_disconnect = this.getButton("btn_disconnect");
         this.m_btn_balance = this.getButton("btn_balance");
+        this.m_btn_faucet = this.getButton("btn_faucet");
         this.m_txt_chain = this.getText("chain");
 
         // 获取controller
@@ -93,6 +96,9 @@ export class UIWallet extends UIBase {
         if (this.m_btn_disconnect) {
             this.m_btn_disconnect.visible = false;
         }
+
+        // btn_faucet初始可见性（根据网络和签名器类型）
+        this._updateFaucetButtonVisibility();
     }
     
     /**
@@ -114,6 +120,10 @@ export class UIWallet extends UIBase {
 
         if (this.m_btn_balance) {
             this.m_btn_balance.onClick(this._onBalanceClick, this);
+        }
+
+        if (this.m_btn_faucet) {
+            this.m_btn_faucet.onClick(this._onFaucetClick, this);
         }
 
         // 监听 SUI 余额变化
@@ -149,6 +159,10 @@ export class UIWallet extends UIBase {
 
         if (this.m_btn_balance) {
             this.m_btn_balance.offClick(this._onBalanceClick, this);
+        }
+
+        if (this.m_btn_faucet) {
+            this.m_btn_faucet.offClick(this._onFaucetClick, this);
         }
 
         // 清理WalletList
@@ -705,6 +719,63 @@ export class UIWallet extends UIBase {
     }
 
     /**
+     * Faucet 按钮点击事件 - 手动请求测试币
+     */
+    private async _onFaucetClick(): Promise<void> {
+        console.log('[UIWallet] Faucet button clicked');
+
+        // 获取当前地址
+        const address = SuiManager.instance.currentAddress;
+        if (!address) {
+            console.warn('[UIWallet] No address available');
+            UINotification.warning("请先连接钱包");
+            return;
+        }
+
+        // 获取当前网络
+        const network = SuiManager.instance.config?.network;
+        if (!network) {
+            console.warn('[UIWallet] No network configured');
+            UINotification.warning("网络配置错误");
+            return;
+        }
+
+        // 检查网络是否支持 faucet
+        if (network !== 'localnet' && network !== 'devnet') {
+            console.warn('[UIWallet] Faucet not supported for network:', network);
+            UINotification.warning(`${network} 不支持 faucet`);
+            return;
+        }
+
+        // 调用 FaucetManager 请求 faucet（统一入口）
+        try {
+            await FaucetManager.instance.requestFaucet(address, network);
+        } catch (error) {
+            console.error('[UIWallet] Faucet request failed:', error);
+        }
+    }
+
+    /**
+     * 更新 Faucet 按钮可见性
+     * 仅在 localnet/devnet + keypair 模式时显示
+     */
+    private _updateFaucetButtonVisibility(): void {
+        if (!this.m_btn_faucet) return;
+
+        const network = SuiManager.instance?.config?.network;
+        const signerType = SuiManager.instance?.getSignerType();
+
+        // 仅在 localnet/devnet + keypair 时显示
+        const shouldShow = (network === 'localnet' || network === 'devnet') && signerType === 'keypair';
+
+        this.m_btn_faucet.visible = shouldShow;
+
+        console.log('[UIWallet] Faucet button visibility:', shouldShow);
+        console.log('  Network:', network);
+        console.log('  Signer type:', signerType);
+    }
+
+    /**
      * Keypair 连接回调（开发模式）
      */
     private _onKeypairConnected(connected: boolean): void {
@@ -744,6 +815,9 @@ export class UIWallet extends UIBase {
 
         // 更新 chain 显示
         this._updateChainDisplay();
+
+        // 更新 faucet 按钮可见性
+        this._updateFaucetButtonVisibility();
 
         // 主动获取并显示余额（修复初始化时序问题）
         const currentBalance = Blackboard.instance.get<bigint>("sui_balance");
@@ -840,6 +914,9 @@ export class UIWallet extends UIBase {
             }
         }
 
+        // 5. 更新 faucet 按钮可见性
+        this._updateFaucetButtonVisibility();
+
         console.log('[UIWallet] Wallet UI updated after network change');
     }
 
@@ -878,6 +955,9 @@ export class UIWallet extends UIBase {
                     }
 
                     this._updateChainDisplay();
+
+                    // 更新 faucet 按钮可见性
+                    this._updateFaucetButtonVisibility();
 
                     // 主动获取并显示余额（修复初始化时序问题）
                     const currentBalance = Blackboard.instance.get<bigint>("sui_balance");

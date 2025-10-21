@@ -13,5 +13,8 @@
       <item/>
       <item/>
     </list>
+    <component id="n3_6i1j" name="btn_close" src="mumqlc" fileName="components/Button1.xml" xy="322,4" size="186,64">
+      <Button title="关闭"/>
+    </component>
   </displayList>
 </component>

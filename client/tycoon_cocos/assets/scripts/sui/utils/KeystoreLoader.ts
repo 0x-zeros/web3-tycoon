@@ -9,11 +9,11 @@
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { loadEd25519 } from '../loader';
 import { encryptWithPassword, decryptWithPassword } from './CryptoUtils';
-import { requestSuiFromFaucet } from './FaucetUtils';
 import { UINotification } from '../../ui/utils/UINotification';
 import { KeystoreConfig } from './KeystoreConfig';
 import { SuiEnvConfigManager } from '../../config/SuiEnvConfigManager';
 import { getNetworkRpcUrl, NetworkType } from '../config/SuiConfig';
+import { FaucetManager } from './FaucetManager';
 
 /**
  * 加载或生成 Keypair（自动处理 faucet 和加密存储）
@@ -93,17 +93,10 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
         // Step 5: Faucet（异步，仅在 localnet/devnet）
         if (network === 'localnet' || network === 'devnet') {
             console.log('[KeystoreLoader] Step 5: Requesting faucet (async)');
-            UINotification.info("正在从水龙头获取测试币...");
 
-            requestSuiFromFaucet(address, network).then(success => {
-                console.log('[KeystoreLoader] Faucet callback, success:', success);
-                if (success) {
-                    UINotification.success("测试币获取成功");
-                } else {
-                    UINotification.warning("测试币获取失败");
-                }
-            }).catch(error => {
-                console.error('[KeystoreLoader] Faucet callback error:', error);
+            // 使用 FaucetManager 统一请求（包含失败限制和通知）
+            FaucetManager.instance.requestFaucet(address, network).catch(error => {
+                console.error('[KeystoreLoader] Faucet request error:', error);
             });
         }
 
@@ -281,14 +274,10 @@ async function checkBalanceAndRequestFaucet(
         // 少于 10 SUI 则请求 faucet
         if (balance < 10_000_000_000n) {
             console.log('[KeystoreLoader] Balance too low (< 10 SUI), requesting faucet');
-            UINotification.warning(`余额不足（${balanceInSui.toFixed(4)} SUI），正在请求测试币...`);
+            console.log(`  Current balance: ${balanceInSui.toFixed(4)} SUI`);
 
-            const success = await requestSuiFromFaucet(address, network);
-            if (success) {
-                UINotification.success("测试币获取成功");
-            } else {
-                UINotification.warning("测试币获取失败，请手动获取");
-            }
+            // 使用 FaucetManager 统一请求（包含失败限制和通知）
+            await FaucetManager.instance.requestFaucet(address, network);
         } else {
             console.log('[KeystoreLoader] Balance sufficient (>= 10 SUI)');
         }

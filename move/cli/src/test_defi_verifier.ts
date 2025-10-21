@@ -50,8 +50,16 @@ async function main() {
 
     // 1. 获取keypair
     const keypair = get_keypair_from_keystore();
-    const address = keypair.getPublicKey().toSuiAddress();
-    console.log('钱包地址:', address);
+    const keystoreAddress = keypair.getPublicKey().toSuiAddress();
+
+    // 使用命令行参数指定测试地址，默认使用keystore地址
+    const testAddress = process.argv[2];
+    const address = testAddress || keystoreAddress;
+
+    console.log('Keystore地址:', keystoreAddress);
+    if (testAddress) {
+        console.log('测试地址（指定）:', testAddress);
+    }
 
     // 2. 连接主网
     const client = new SuiClient({ url: suiRpcUrl });
@@ -87,7 +95,7 @@ async function main() {
     console.log('测试Navi Protocol USDC存款验证');
     console.log('========================================\n');
 
-    await testVerifyNaviDeposit(client, keypair);
+    await testVerifyNaviDeposit(client, keypair, address);
 
     // 7. 测试边界情况：普通SUI Coin应该返回0
     console.log('========================================');
@@ -112,33 +120,20 @@ async function queryScallopMarketCoins(client: SuiClient, address: string) {
         const SCALLOP_USDC_TYPE =
             '0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC';
 
-        const response = await client.getOwnedObjects({
-            owner: address,
-            filter: {
-                StructType: SCALLOP_USDC_TYPE,  // 精确匹配
-            },
-            options: {
-                showType: true,
-                showContent: true,
-                showDisplay: true,
-            },
-        });
+        // 使用getAllCoins查询（更可靠）
+        const allCoins = await client.getAllCoins({ owner: address });
 
-        const marketCoins = response.data;
+        // 过滤Scallop USDC
+        const marketCoins = allCoins.data.filter(
+            (coin: any) => coin.coinType === SCALLOP_USDC_TYPE
+        );
 
         // 打印找到的对象
         marketCoins.forEach((coin: any, index: number) => {
             console.log(`Scallop USDC (sUSDC) #${index + 1}:`);
-            console.log(`  对象ID: ${coin.data.objectId}`);
+            console.log(`  对象ID: ${coin.coinObjectId}`);
             console.log(`  类型: SCALLOP_USDC`);
-
-            // 尝试获取余额信息
-            if (coin.data.content && 'fields' in coin.data.content) {
-                const fields = coin.data.content.fields as any;
-                if (fields.balance) {
-                    console.log(`  余额: ${fields.balance}`);
-                }
-            }
+            console.log(`  余额: ${coin.balance}`);
             console.log('');
         });
 
@@ -162,8 +157,8 @@ async function testVerifyDefiCoin(
     console.log(`测试 #${index}: 验证Scallop USDC`);
     console.log(`----------------------------------------`);
 
-    const objectId = coinObj.data.objectId;
-    const coinType = coinObj.data.type;
+    const objectId = coinObj.coinObjectId;
+    const coinType = coinObj.coinType;
 
     console.log('对象ID:', objectId);
     console.log('类型:', coinType);
@@ -173,14 +168,8 @@ async function testVerifyDefiCoin(
         // 构造PTB调用verify_defi_coin
         const tx = new Transaction();
 
-        // 提取泛型参数（MarketCoin的完整类型）
-        // 例如: 0x...::reserve::MarketCoin<0x...::usdc::USDC>
-        const typeArg = coinType.split('::coin::Coin<')[1]?.replace('>', '');
-
-        if (!typeArg) {
-            console.log('❌ 无法解析类型参数');
-            return;
-        }
+        // Scallop USDC的类型就是完整类型，不需要解析
+        const typeArg = coinType;
 
         console.log('泛型参数:', typeArg);
 
@@ -312,7 +301,8 @@ async function testVerifyNormalCoin(
  */
 async function testVerifyNaviDeposit(
     client: SuiClient,
-    keypair: Ed25519Keypair
+    keypair: Ed25519Keypair,
+    testAddress: string
 ) {
     console.log('测试方式：verify_navi_usdc');
     console.log('Storage ID:', NAVI_STORAGE_ID);
@@ -329,10 +319,10 @@ async function testVerifyNaviDeposit(
             ],
         });
 
-        // 使用devInspect进行只读调用
-        tx.setSender(keypair.getPublicKey().toSuiAddress());
+        // 使用devInspect进行只读调用（使用测试地址）
+        tx.setSender(testAddress);
         const dryRunResult = await client.devInspectTransactionBlock({
-            sender: keypair.getPublicKey().toSuiAddress(),
+            sender: testAddress,
             transactionBlock: tx,
         });
 
@@ -378,9 +368,9 @@ async function testVerifyNaviDeposit(
             arguments: [tx.object(NAVI_STORAGE_ID)],
         });
 
-        tx.setSender(keypair.getPublicKey().toSuiAddress());
+        tx.setSender(testAddress);
         const dryRunResult = await client.devInspectTransactionBlock({
-            sender: keypair.getPublicKey().toSuiAddress(),
+            sender: testAddress,
             transactionBlock: tx,
         });
 

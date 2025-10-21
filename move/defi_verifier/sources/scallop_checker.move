@@ -12,8 +12,9 @@ module defi_verifier::scallop_checker {
 
     /// Scallop USDC存款凭证类型（sUSDC）
     /// 来源：Scallop官网 + 用户交易确认
+    /// 注意：type_name返回的格式没有0x前缀
     const SCALLOP_USDC_TYPE: vector<u8> =
-        b"0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC";
+        b"854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC";
 
     // ====== 公共接口 ======
 
@@ -42,11 +43,16 @@ module defi_verifier::scallop_checker {
         }
     }
 
-    // ====== 测试辅助函数 ======
+    // ====== 辅助函数 ======
+
+    /// 获取SCALLOP_USDC类型字符串（用于调试）
+    public fun get_scallop_usdc_type(): String {
+        ascii::string(SCALLOP_USDC_TYPE)
+    }
 
     #[test_only]
     /// 测试用：获取SCALLOP_USDC类型字符串
     public fun test_get_scallop_usdc_type(): String {
-        ascii::string(SCALLOP_USDC_TYPE)
+        get_scallop_usdc_type()
     }
 }

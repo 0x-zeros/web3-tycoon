@@ -21,27 +21,27 @@ DeFi Verifier 是一个用于验证用户在Sui生态DeFi协议中存款的Move�
 - 白名单维护在各checker内部
 - 不影响现有代码
 
-## 已支持的协议
+## 已部署配置（Sui Mainnet）
 
-### ✅ Scallop Protocol
-- **SCALLOP_USDC (sUSDC)** - USDC存款凭证
+### DeFi Verifier
+- **Package ID**: `0x74d8b5609fa69f7b61b427ee58babaaba09b44adef47f412ad51ad50dfe6cc60`
+- **状态**: ✅ 已部署并测试通过
 
-验证逻辑：
-- 完整类型：`0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC`
-- 验证方式：精确类型匹配
-- 架构：对象所有权模式（用户持有Coin对象）
+### 支持的协议
 
-### ✅ Navi Protocol
-- **USDC存款** - 通过Storage查询
+#### ✅ Scallop Protocol - SCALLOP_USDC
+- **类型**: `0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC`
+- **接口**: `verify_defi_coin<T>(coin: &Coin<T>)`
+- **架构**: 对象所有权（用户持有sUSDC Coin）
+- **测试**: ✅ 通过
 
-验证逻辑：
-- Package：`0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f`
-- Storage：`0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe`
-- Asset ID：`10` (USDC)
-- 架构：中心化账簿模式（查询共享Storage）
-
-### 🚧 待实现
-- **Bucket Protocol** - sUSDB等
+#### ✅ Navi Protocol - USDC存款
+- **Package**: `0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f`
+- **Storage**: `0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe`
+- **Asset ID**: `10` (USDC)
+- **接口**: `verify_navi_usdc(storage, ctx)`
+- **架构**: 中心化账簿（余额记录在Storage）
+- **测试**: ✅ 通过
 
 ## 使用方式
 
@@ -122,182 +122,83 @@ defi_verifier/
 
 ## 测试
 
-### 本地测试限制
-
-⚠️ **重要**：由于Navi Protocol使用native实现的Storage模块，`sui move test`无法运行。
-
-```bash
-# 编译验证代码正确性
-sui move build
-
-# ❌ 本地测试不可用（Navi Storage是native实现）
-# sui move test  # 会失败：UNEXPECTED_VERIFIER_ERROR
-```
-
-### 主网测试（推荐）
-
-使用CLI工具在主网进行真实测试：
+### 主网测试（已通过）
 
 ```bash
 cd ../cli
-npm run test:defi
+npm run test:defi <测试地址>
 ```
 
-这会使用`devInspectTransactionBlock`进行只读测试，不消耗gas。
+使用`devInspectTransactionBlock`进行只读测试，不消耗gas。
 
-### 测试用例覆盖
+### 测试结果
 
-包含8个单元测试（需在主网运行）：
+✅ **所有功能测试通过**：
+- Scallop USDC验证：返回1（有效存款）
+- Navi USDC验证：返回1（有效存款）
+- Navi任意资产验证：返回1
+- 普通SUI Coin：返回0（正确）
 
-1. **test_verify_scallop_usdc_valid** - Scallop USDC有效存款
-2. **test_verify_scallop_zero_balance** - 零余额返回0
-3. **test_verify_non_scallop** - 非Scallop类型返回0
-4. **test_verify_wrong_package** - 错误package地址
-5. **test_verify_wrong_module** - 错误模块名
-6. **test_verify_scallop_sui_not_supported** - SUI不再支持
-7. **test_get_scallop_type** - 类型字符串获取
-8. **test_navi_usdc_asset_id** - Navi asset ID验证
+### 注意事项
 
-## 技术要点
+⚠️ 由于Navi使用native实现，`sui move test`无法运行本地单元测试。
+所有验证需要在主网环境测试。
 
-### 1. 类型检查机制
+## 关键技术要点
 
-使用`std::type_name`获取类型的字符串表示：
-```move
-let type_name = type_name::with_defining_ids<CoinType>();
-let type_str = type_name::into_string(type_name);
-// 例如: "0xefe8b36d...::reserve::MarketCoin<0xabc::usdc::USDC>"
-```
+### 1. type_name格式
+- `type_name::into_string()`返回**不带`0x`前缀**的ASCII字符串
+- 示例：`854950aa...::scallop_usdc::SCALLOP_USDC`（注意无0x）
 
-### 2. 字符串匹配
+### 2. 两种验证架构
+- **Scallop**: 对象所有权，检查`Coin<T>`类型
+- **Navi**: 中心化账簿，查询`Storage`
 
-自实现字符串包含检查（因Move标准库未提供）：
-```move
-fun string_contains(haystack: &String, needle: &String): bool {
-    // 朴素字符串匹配算法 O(n*m)
-    // 足够简单有效，无需复杂算法
-}
-```
+### 3. 返回值约定
+- `0`: 无存款或无效类型
+- `1`: 有USDC存款
+- `2+`: 预留扩展
 
-### 3. ASCII vs UTF-8
-
-- `type_name::into_string()` 返回 `std::ascii::String`
-- 所有checker统一使用`ascii::String`避免类型转换
-
-### 4. 可见性设计
-
-- `public fun verify_defi_coin<T>()` - 唯一对外接口
-- `public(package) fun check()` - Checker内部函数
-- `fun string_contains()` - 私有辅助函数
-
-## 添加新协议支持
-
-### 步骤1：创建checker模块
+## 游戏集成示例
 
 ```move
-// sources/new_protocol_checker.move
-module defi_verifier::new_protocol_checker {
-    use std::ascii::String;
+module tycoon::game {
+    use defi_verifier::defi_verifier;
+    use lending_core::storage::Storage as NaviStorage;
+    use sui::coin::Coin;
 
-    const PROTOCOL_PACKAGE: vector<u8> = b"0x...";
-    const TOKEN_MODULE: vector<u8> = b"::module::Token";
-
-    public(package) fun check(type_str: &String, balance: u64): u8 {
-        if (balance == 0) { return 0 };
-        if (is_valid_type(type_str)) { return 1 };
-        0
+    /// Scallop奖励：验证sUSDC Coin
+    public entry fun claim_scallop_reward<T>(
+        coin: &Coin<T>,
+        game_state: &mut GameState,
+        ctx: &mut TxContext
+    ) {
+        let score = defi_verifier::verify_defi_coin(coin);
+        if (score > 0) {
+            mint_reward(ctx.sender(), score, ctx);
+        }
     }
 
-    fun is_valid_type(type_str: &String): bool {
-        // 实现类型检查逻辑
+    /// Navi奖励：验证Storage中的USDC余额
+    public entry fun claim_navi_reward(
+        navi_storage: &mut NaviStorage,
+        game_state: &mut GameState,
+        ctx: &mut TxContext
+    ) {
+        let score = defi_verifier::verify_navi_usdc(navi_storage, ctx);
+        if (score > 0) {
+            mint_reward(ctx.sender(), score, ctx);
+        }
     }
 }
-```
 
-### 步骤2：集成到主接口
+## 部署记录
 
-```move
-// sources/defi_verifier.move
-use defi_verifier::new_protocol_checker;
-
-public fun verify_defi_coin<CoinType>(coin: &Coin<CoinType>): u8 {
-    // ...
-    let new_score = new_protocol_checker::check(&type_str, balance);
-    score = max(score, new_score);
-    // ...
-}
-```
-
-### 步骤3：添加测试
-
-```move
-// tests/defi_verifier_tests.move
-#[test]
-fun test_verify_new_protocol() {
-    let type_str = ascii::string(b"0x...::module::Token<...>");
-    let score = defi_verifier::test_verify_type_string(type_str, 100);
-    assert!(score == 1, 0);
-}
-```
-
-## 注意事项
-
-### 1. PTB层需要类型
-
-虽然Move代码层面实现了解耦，但Sui的PTB（Programmable Transaction Block）在构造交易时**必须指定完整类型参数**。这是Sui Move的技术限制，无法避免。
-
-前端需要：
-- 知道用户持有的DeFi对象类型（通过RPC查询）
-- 在`typeArguments`中传入完整类型字符串
-
-### 2. 字符串匹配性能
-
-当前使用朴素字符串匹配算法 O(n*m)，对于类型名（通常<200字符）完全够用。如果未来需要优化，可以考虑：
-- KMP算法
-- 哈希匹配
-- 前缀树
-
-### 3. 白名单维护
-
-Package地址硬编码在各checker模块中。如果协议升级导致地址变更，需要：
-- 更新常量
-- 重新部署defi_verifier包
-- 或使用动态配置（需要额外的Registry机制）
-
-## 未来扩展方向
-
-### 1. 动态配置
-
-添加Registry机制，支持运行时更新白名单：
-```move
-struct WhitelistRegistry {
-    protocols: vector<ProtocolConfig>
-}
-```
-
-### 2. 分数系统
-
-基于存款金额返回不同分数：
-- 1: 有存款
-- 2: 中等金额（如 >100 USDC）
-- 3: 大额存款（如 >1000 USDC）
-
-### 3. 组合验证
-
-支持"至少持有N个协议存款"等复杂逻辑：
-```move
-public fun verify_multiple(coins: vector<&Coin<?>>) : u8
-```
-
-## License
-
-MIT
-
-## 贡献
-
-欢迎提交PR添加新协议支持！
+- **初次部署**: 2025-10-21
+- **当前版本**: v1.0
+- **测试网络**: Sui Mainnet
+- **测试状态**: ✅ Scallop + Navi 全部通过
 
 ---
 
-**Created by**: Claude Code
-**Date**: 2025-10-21
+**Created by**: Web3 Tycoon Team

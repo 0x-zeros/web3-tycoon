@@ -148,6 +148,14 @@ module defi_verifier::defi_verifier {
         navi_checker::check_any_asset(navi_storage, user)
     }
 
+    // ====== 调试辅助函数 ======
+
+    /// 调试：获取CoinType的type_name字符串（用于排查类型匹配问题）
+    public fun debug_get_type_name<CoinType>(coin: &Coin<CoinType>): std::ascii::String {
+        let type_name = type_name::with_defining_ids<CoinType>();
+        type_name::into_string(type_name)
+    }
+
     // ====== 测试辅助函数 ======
 
     #[test_only]

@@ -1,12 +1,17 @@
 {
   "headers": {
+    "/assets/*": {
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
     "/index.html": {
+      "Cache-Control": "no-cache",
       "Cross-Origin-Embedder-Policy": "require-corp",
       "Cross-Origin-Opener-Policy": "same-origin"
     }
   },
   "routes": {
-    "/*": "/index.html"
+    "/": "/index.html"
   },
   "metadata": {
     "link": null,
@@ -15,6 +20,6 @@
     "project_url": null,
     "creator": null
   },
-  "site_name": "My Walrus Site",
+  "site_name": "web3-tycoon",
   "object_id": "0x56828518ba909a3147fa8bcf85a0255078edee19290421ad98de8d21665e8e7d"
 }

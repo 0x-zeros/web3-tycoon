@@ -1,16 +1,13 @@
 module tycoon::cards;
 
-use std::option::{Self, Option};
 use sui::table::{Self, Table};
 use sui::transfer;
-use sui::object::{Self, UID, ID};
-use sui::tx_context::{Self, TxContext};
+use sui::object::{Self, UID};
+use sui::tx_context::TxContext;
 use tycoon::types;
 
 // ===== Errors =====
-const ECardNotOwned: u64 = 5001;
 const EHandLimit: u64 = 5002;
-const EInvalidCardTarget: u64 = 5003;
 
 // ===== CardEntry 卡牌条目 =====
 //
@@ -27,9 +24,7 @@ public struct CardEntry has store, copy, drop {
 }
 
 // CardEntry accessor functions
-public fun card_entry_kind(entry: &CardEntry): u8 { entry.kind }
-public fun card_entry_count(entry: &CardEntry): u8 { entry.count }
-public fun new_card_entry(kind: u8, count: u8): CardEntry { CardEntry { kind, count } }
+public(package) fun new_card_entry(kind: u8, count: u8): CardEntry { CardEntry { kind, count } }
 
 // ===== Card Definition 卡牌元数据 =====
 // 这是卡牌的元数据定义，不是玩家拥有的卡牌实例
@@ -66,20 +61,10 @@ public struct DropRule has store, drop {
     quantity: u64               // 掉落数量
 }
 
-// ===== Card Effects Context 卡牌效果上下文 =====
-public struct CardEffectContext {
-    game_id: ID,
-    player: address,
-    turn: u64,
-    target_player: Option<address>,
-    target_tile: Option<u64>
-}
-
 // ===== Card Target Types 目标类型常量 =====
-public fun target_none(): u8 { 0 }
-public fun target_player(): u8 { 1 }
-public fun target_tile(): u8 { 2 }
-public fun target_player_or_tile(): u8 { 3 }
+fun target_none(): u8 { 0 }
+fun target_player(): u8 { 1 }
+fun target_tile(): u8 { 2 }
 
 // ===== Card Catalog Functions 卡牌目录函数 =====
 
@@ -309,23 +294,10 @@ public(package) fun update_drop_config_for_admin(
     };
 }
 
-// ===== Query Functions 查询函数 =====
-
-// 获取卡牌信息
-public fun get_card(registry: &CardRegistry, kind: u8): &Card {
-    assert!((kind as u64) < registry.cards.length(), ECardNotOwned);
-    &registry.cards[kind as u64]
-}
-
-// 检查卡牌是否存在
-public fun has_card(registry: &CardRegistry, kind: u8): bool {
-    (kind as u64) < registry.cards.length()
-}
-
 // ===== Card Management Functions 卡牌管理函数 =====
 
 // 给玩家发卡
-public fun give_card_to_player(
+public(package) fun give_card_to_player(
     player_cards: &mut vector<CardEntry>,
     kind: u8,
     count: u8
@@ -350,7 +322,7 @@ public fun give_card_to_player(
 }
 
 // 检查玩家是否有卡
-public fun player_has_card(
+public(package) fun player_has_card(
     player_cards: &vector<CardEntry>,
     kind: u8
 ): bool {
@@ -368,7 +340,7 @@ public fun player_has_card(
 }
 
 // 获取玩家卡牌数量
-public fun get_player_card_count(
+public(package) fun get_player_card_count(
     player_cards: &vector<CardEntry>,
     kind: u8
 ): u8 {
@@ -386,7 +358,7 @@ public fun get_player_card_count(
 }
 
 // 使用玩家的卡牌
-public fun use_player_card(
+public(package) fun use_player_card(
     player_cards: &mut vector<CardEntry>,
     kind: u8
 ): bool {
@@ -404,47 +376,10 @@ public fun use_player_card(
     false
 }
 
-// ===== Card Effect Functions 卡牌效果函数 =====
-//todo 没有用到？
-// 应用遥控骰效果
-public fun apply_move_control(dice_value: u8): u8 {
-    // 返回指定的骰子值
-    dice_value
-}
-
-// 检查是否可以放置NPC
-public fun can_place_npc(
-    npc_on_tile: bool
-): bool {
-    // 仅限制同一地块不可重复放置
-    !npc_on_tile
-}
-
-// 验证卡牌使用目标
-public fun validate_card_target(
-    card: &Card,
-    target_player: Option<address>,
-    target_tile: Option<u64>
-): bool {
-    let target_type = card.target_type;
-
-    if (target_type == target_none()) {
-        option::is_none(&target_player) && option::is_none(&target_tile)
-    } else if (target_type == target_player()) {
-        option::is_some(&target_player) && option::is_none(&target_tile)
-    } else if (target_type == target_tile()) {
-        option::is_none(&target_player) && option::is_some(&target_tile)
-    } else if (target_type == target_player_or_tile()) {
-        option::is_some(&target_player) || option::is_some(&target_tile)
-    } else {
-        false
-    }
-}
-
 // ===== Card Drawing Functions 抽卡函数 =====
 
 // 计算应该抽取的卡牌种类（使用预生成的随机值）
-public fun determine_card_draw(random_value: u8): u8 {
+fun determine_card_draw(random_value: u8): u8 {
     // 简单的随机卡牌选择
     let card_types = vector[
         types::CARD_MOVE_CTRL(),
@@ -461,107 +396,13 @@ public fun determine_card_draw(random_value: u8): u8 {
 }
 
 // 经过卡牌格时抽卡
-public fun draw_card_on_pass(random_value: u8): (u8, u8) {
+public(package) fun draw_card_on_pass(random_value: u8): (u8, u8) {
     let card_kind = determine_card_draw(random_value);
     (card_kind, 1)  // 经过时抽1张
 }
 
 // 停留卡牌格时抽卡
-public fun draw_card_on_stop(random_value: u8): (u8, u8) {
+public(package) fun draw_card_on_stop(random_value: u8): (u8, u8) {
     let card_kind = determine_card_draw(random_value);
     (card_kind, 2)  // 停留时抽2张
-}
-
-// ===== Card Effect Application 卡牌效果应用 =====
-
-// 创建卡牌效果上下文
-public fun create_effect_context(
-    game_id: ID,
-    player: address,
-    turn: u64,
-    target_player: Option<address>,
-    target_tile: Option<u64>
-): CardEffectContext {
-    CardEffectContext {
-        game_id,
-        player,
-        turn,
-        target_player,
-        target_tile
-    }
-}
-
-// 获取卡牌效果持续时间
-public fun get_card_duration(card: &Card, current_turn: u64): Option<u64> {
-    if (card.kind == types::CARD_RENT_FREE() || card.kind == types::CARD_FREEZE()) {
-        option::some(current_turn + card.value)
-    } else {
-        option::none()
-    }
-}
-
-// 检查卡牌是否需要目标
-public fun card_needs_target(kind: u8, registry: &CardRegistry): bool {
-    if (has_card(registry, kind)) {
-        let card = get_card(registry, kind);
-        card.target_type != target_none()
-    } else {
-        false
-    }
-}
-
-// ===== Helper Functions 辅助函数 =====
-
-//todo 利用函数导出struct数据
-// #[test_only]
-// public use fun game_board as Game.board;
-
-// #[test_only]
-// public fun game_board(game: &Game): vector<u8> {
-//     game.board
-// }
-
-// 获取卡牌名称
-public fun get_card_name(card: &Card): &vector<u8> {
-    &card.name
-}
-
-// 获取卡牌描述
-public fun get_card_description(card: &Card): &vector<u8> {
-    &card.description
-}
-
-// 获取卡牌种类
-public fun get_card_kind(card: &Card): u8 {
-    card.kind
-}
-
-// 获取卡牌值
-public fun get_card_value(card: &Card): u64 {
-    card.value
-}
-
-// 获取卡牌目标类型
-public fun get_card_target_type(card: &Card): u8 {
-    card.target_type
-}
-
-// 计算手牌总数
-public fun count_total_cards(player_cards: &vector<CardEntry>): u64 {
-    let mut total = 0;
-    let mut i = 0;
-    let len = player_cards.length();
-
-    while (i < len) {
-        let entry = &player_cards[i];
-        total = total + (entry.count as u64);
-        i = i + 1;
-    };
-
-    total
-}
-
-// 检查手牌是否达到上限
-public fun is_hand_full(player_cards: &vector<CardEntry>, max_cards: u64): bool {
-    count_total_cards(player_cards) >= max_cards
 }

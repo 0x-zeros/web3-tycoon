@@ -132,36 +132,7 @@ public(package) fun create_registry_internal(ctx: &mut TxContext): MapRegistry {
     }
 }
 
-// ===== Public Functions 公共函数 =====
-
-
-// 获取所有模板 ID（索引）
-public fun get_template_ids(registry: &MapRegistry): &vector<ID> {
-    &registry.templates
-}
-
 // ===== Template Creation Functions 模板创建函数 =====
-
-// 创建地块静态信息（使用默认导航值）
-public fun new_tile_static(
-    x: u8,
-    y: u8,
-    kind: u8,
-    building_id: u16,  // NO_BUILDING 表示无建筑
-    special: u64
-): TileStatic {
-    TileStatic {
-        x,
-        y,
-        kind,
-        building_id,
-        special,
-        w: INVALID_TILE_ID,           // 使用无效值表示无邻居
-        n: INVALID_TILE_ID,
-        e: INVALID_TILE_ID,
-        s: INVALID_TILE_ID
-    }
-}
 
 // 创建建筑静态信息
 fun new_building_static(
@@ -318,62 +289,16 @@ public(package) fun publish_map_from_bcs(
     (map_id, tile_count, building_count)
 }
 
-
-
-// 设置west方向邻居
-public fun set_w(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    if (neighbor_id != INVALID_TILE_ID) {
-        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
-        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
-    };
-    let tile = &mut template.tiles_static[tile_id as u64];
-    tile.w = neighbor_id;
-}
-
-// 设置north方向邻居
-public fun set_n(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    if (neighbor_id != INVALID_TILE_ID) {
-        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
-        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
-    };
-    let tile = &mut template.tiles_static[tile_id as u64];
-    tile.n = neighbor_id;
-}
-
-// 设置east方向邻居
-public fun set_e(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    if (neighbor_id != INVALID_TILE_ID) {
-        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
-        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
-    };
-    let tile = &mut template.tiles_static[tile_id as u64];
-    tile.e = neighbor_id;
-}
-
-// 设置south方向邻居
-public fun set_s(template: &mut MapTemplate, tile_id: u16, neighbor_id: u16) {
-    assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
-    if (neighbor_id != INVALID_TILE_ID) {
-        assert!(neighbor_id <= MAX_TILE_ID, ETileIdTooLarge);
-        assert!((neighbor_id as u64) < template.tiles_static.length(), ETargetTileNotExist);
-    };
-    let tile = &mut template.tiles_static[tile_id as u64];
-    tile.s = neighbor_id;
-}
-
 // ===== Template Query Functions 模板查询函数 =====
 
 // 获取地块信息
-public fun get_tile(template: &MapTemplate, tile_id: u16): &TileStatic {
+public(package) fun get_tile(template: &MapTemplate, tile_id: u16): &TileStatic {
     assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
     &template.tiles_static[tile_id as u64]
 }
 
 // 获取所有有效邻居（!=INVALID_TILE_ID）
-public fun get_valid_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
+public(package) fun get_valid_neighbors(template: &MapTemplate, tile_id: u16): vector<u16> {
     assert!((tile_id as u64) < template.tiles_static.length(), ENoSuchTile);
     let tile = &template.tiles_static[tile_id as u64];
     let mut neighbors = vector[];
@@ -394,81 +319,54 @@ public fun get_valid_neighbors(template: &MapTemplate, tile_id: u16): vector<u16
     neighbors
 }
 
-// 检查地块是否存在
-public fun has_tile(template: &MapTemplate, tile_id: u16): bool {
-    (tile_id as u64) < template.tiles_static.length()
-}
-
 // 获取医院地块ID列表
-public fun get_hospital_ids(template: &MapTemplate): vector<u16> {
+public(package) fun get_hospital_ids(template: &MapTemplate): vector<u16> {
     template.hospital_ids
 }
 
 // 检查地块是否可以放置NPC
-public fun can_place_npc_on_tile(tile_kind: u8): bool {
+public(package) fun can_place_npc_on_tile(tile_kind: u8): bool {
     tile_kind == types::TILE_EMPTY()
 }
 
 // 获取地块总数
-public fun get_tile_count(template: &MapTemplate): u64 {
+public(package) fun get_tile_count(template: &MapTemplate): u64 {
     template.tiles_static.length()
 }
 
 // 获取建筑总数
-public fun get_building_count(template: &MapTemplate): u64 {
+public(package) fun get_building_count(template: &MapTemplate): u64 {
     template.buildings_static.length()
 }
 
 // 获取 map 的对象 ID
-public fun get_map_id(template: &MapTemplate): ID {
+public(package) fun get_map_id(template: &MapTemplate): ID {
     object::uid_to_inner(&template.id)
 }
 
-// 获取 schema 版本
-public fun get_schema_version(template: &MapTemplate): u8 {
-    template.schema_version
-}
-
 // ===== TileStatic Accessors 地块访问器 =====
-public fun tile_x(tile: &TileStatic): u8 { tile.x }
-public fun tile_y(tile: &TileStatic): u8 { tile.y }
-public fun tile_kind(tile: &TileStatic): u8 { tile.kind }
-public fun tile_building_id(tile: &TileStatic): u16 { tile.building_id }
-public fun tile_special(tile: &TileStatic): u64 { tile.special }
-public fun tile_w(tile: &TileStatic): u16 { tile.w }
-public fun tile_n(tile: &TileStatic): u16 { tile.n }
-public fun tile_e(tile: &TileStatic): u16 { tile.e }
-public fun tile_s(tile: &TileStatic): u16 { tile.s }
+public(package) fun tile_kind(tile: &TileStatic): u8 { tile.kind }
+public(package) fun tile_building_id(tile: &TileStatic): u16 { tile.building_id }
+public(package) fun tile_special(tile: &TileStatic): u64 { tile.special }
+public(package) fun tile_w(tile: &TileStatic): u16 { tile.w }
+public(package) fun tile_n(tile: &TileStatic): u16 { tile.n }
+public(package) fun tile_e(tile: &TileStatic): u16 { tile.e }
+public(package) fun tile_s(tile: &TileStatic): u16 { tile.s }
 
 // BuildingStatic 访问器函数
-public fun building_size(building: &BuildingStatic): u8 { building.size }
-public fun building_price(building: &BuildingStatic): u64 { building.price }
-public fun building_chain_prev_id(building: &BuildingStatic): u16 { building.chain_prev_id }
-public fun building_chain_next_id(building: &BuildingStatic): u16 { building.chain_next_id }
-
-// 添加建筑到模板
-public fun add_building_to_template(
-    template: &mut MapTemplate,
-    building: BuildingStatic
-): u16 {
-    let building_id = template.buildings_static.length() as u16;
-    template.buildings_static.push_back(building);
-    building_id
-}
+public(package) fun building_size(building: &BuildingStatic): u8 { building.size }
+public(package) fun building_price(building: &BuildingStatic): u64 { building.price }
+public(package) fun building_chain_prev_id(building: &BuildingStatic): u16 { building.chain_prev_id }
+public(package) fun building_chain_next_id(building: &BuildingStatic): u16 { building.chain_next_id }
 
 // 获取建筑信息
-public fun get_building(template: &MapTemplate, building_id: u16): &BuildingStatic {
+public(package) fun get_building(template: &MapTemplate, building_id: u16): &BuildingStatic {
     assert!((building_id as u64) < template.buildings_static.length(), 0);
     &template.buildings_static[building_id as u64]
 }
 
-// 检查tile是否有关联的building
-public fun tile_has_building(tile: &TileStatic): bool {
-    tile.building_id != NO_BUILDING
-}
-
 // 导出常量供其他模块使用
-public fun no_building(): u16 { NO_BUILDING }
+public(package) fun no_building(): u16 { NO_BUILDING }
 
 
 

@@ -1,17 +1,18 @@
-# Cloudflare Pages CDN 配置指南
+# Cloudflare Pages Web Walrus 部署配置指南
 
-本文档介绍如何配置 Cloudflare Pages 作为 Web3 Tycoon 的 CDN 服务，托管 `remote` 资源文件夹。
+本文档介绍如何配置 Cloudflare Pages 部署 Web3 Tycoon 的 Web Walrus 版本，提供独立访问入口和 CDN 资源服务。
 
 ## 架构说明
 
 Web3 Tycoon 使用双版本构建策略：
 
 - **Web Mobile 版本** (`build/web-mobile`)：主版本，通过 Cloudflare Pages 部署完整应用
-- **Web Walrus 版本** (`build/web-walrus`)：Walrus 去中心化存储版本
-  - 本地资源（不含 `remote`）→ 部署到 Walrus
-  - 远程资源（`remote` 文件夹）→ 部署到 Cloudflare Pages CDN
+- **Web Walrus 版本** (`build/web-walrus`)：完整部署到 Cloudflare Pages
+  - 可作为独立入口访问和测试：`https://cdn.web3tycoon.com/`
+  - `remote` 文件夹作为 CDN 资源：`https://cdn.web3tycoon.com/remote/`
+  - 同时也可以部署到 Walrus 去中心化存储（可选）
 
-CDN 域名：`https://cdn.web3tycoon.com`
+**域名**：`https://cdn.web3tycoon.com`
 
 ## 前置准备
 
@@ -97,17 +98,17 @@ TTL：自动
 
 ### 自动部署（推荐）
 
-当以下条件满足时，GitHub Actions 会自动触发 CDN 部署：
+当以下条件满足时，GitHub Actions 会自动触发 Web Walrus 部署：
 
 1. **推送到 `main` 或 `dev` 分支**
-2. **修改了 `client/tycoon_cocos/build/web-walrus/remote/**` 路径下的文件**
+2. **修改了 `client/tycoon_cocos/build/web-walrus/**` 路径下的任何文件**
 
 部署 workflow 位置：`.github/workflows/deploy-cdn.yml`
 
 ### 手动部署
 
 1. 访问 [Actions 页面](../../actions)
-2. 选择 "Deploy CDN to Cloudflare Pages"
+2. 选择 "Deploy Web Walrus to Cloudflare Pages"
 3. 点击 "Run workflow"
 4. 选择分支（`main` 或 `dev`）
 5. 点击 "Run workflow" 确认
@@ -123,9 +124,9 @@ npm install -g wrangler
 # 登录
 wrangler login
 
-# 部署
-cd client/tycoon_cocos/build/web-walrus
-wrangler pages deploy remote --project-name=web3-tycoon-cdn
+# 部署整个 web-walrus 目录
+cd client/tycoon_cocos/build
+wrangler pages deploy web-walrus --project-name=web3-tycoon-cdn
 ```
 
 ## 资源访问路径
@@ -135,12 +136,22 @@ wrangler pages deploy remote --project-name=web3-tycoon-cdn
 ### 生产环境（main 分支）
 
 ```
-CDN 域名：https://cdn.web3tycoon.com
+入口域名：https://cdn.web3tycoon.com
+Cloudflare Pages 域名：https://web3-tycoon-cdn.pages.dev
 
-资源路径示例：
-- https://cdn.web3tycoon.com/assets/texture.png
-- https://cdn.web3tycoon.com/audio/bgm.mp3
-- https://cdn.web3tycoon.com/models/character.gltf
+访问路径示例：
+1. 应用入口：
+   - https://cdn.web3tycoon.com/
+   - https://cdn.web3tycoon.com/index.html
+
+2. CDN 资源（remote 文件夹）：
+   - https://cdn.web3tycoon.com/remote/assets/texture.png
+   - https://cdn.web3tycoon.com/remote/audio/bgm.mp3
+   - https://cdn.web3tycoon.com/remote/models/character.gltf
+
+3. 本地资源：
+   - https://cdn.web3tycoon.com/assets/...
+   - https://cdn.web3tycoon.com/cocos-js/...
 ```
 
 ### 预览环境（dev 分支）
@@ -149,7 +160,11 @@ CDN 域名：https://cdn.web3tycoon.com
 预览 URL：https://<commit-sha>.web3-tycoon-cdn.pages.dev
 
 例如：
-- https://abc123def.web3-tycoon-cdn.pages.dev/assets/texture.png
+1. 应用入口：
+   - https://abc123def.web3-tycoon-cdn.pages.dev/
+
+2. CDN 资源：
+   - https://abc123def.web3-tycoon-cdn.pages.dev/remote/assets/texture.png
 ```
 
 ## 在 Cocos Creator 中配置 CDN
@@ -167,12 +182,13 @@ export class ResourceConfig {
             return './remote';
         } else {
             // 生产环境：使用 CDN
-            return 'https://cdn.web3tycoon.com';
+            return 'https://cdn.web3tycoon.com/remote';
         }
     })();
 
     // 加载远程资源
     static getRemoteUrl(path: string): string {
+        // path 不应该包含 'remote' 前缀
         return `${this.CDN_BASE_URL}/${path}`;
     }
 }
@@ -181,8 +197,10 @@ export class ResourceConfig {
 使用示例：
 
 ```typescript
-// 加载远程纹理
+// 加载远程纹理（注意：path 不包含 remote 前缀）
 const url = ResourceConfig.getRemoteUrl('assets/texture.png');
+// 实际 URL: https://cdn.web3tycoon.com/remote/assets/texture.png
+
 resources.load(url, Texture2D, (err, texture) => {
     if (err) {
         console.error('加载远程资源失败:', err);
@@ -192,6 +210,37 @@ resources.load(url, Texture2D, (err, texture) => {
 });
 ```
 
+## 测试 Web Walrus 入口
+
+部署完成后，可以通过以下方式测试应用入口：
+
+### 1. 访问入口页面
+
+```bash
+# 生产环境
+open https://cdn.web3tycoon.com
+
+# 预览环境（替换 commit-sha）
+open https://<commit-sha>.web3-tycoon-cdn.pages.dev
+```
+
+### 2. 验证 CDN 资源加载
+
+打开浏览器开发者工具：
+1. 访问 `https://cdn.web3tycoon.com`
+2. 打开 Network 面板
+3. 刷新页面
+4. 检查 `remote/` 路径下的资源是否正确加载
+
+### 3. 对比两个版本
+
+| 特性 | Web Mobile | Web Walrus |
+|-----|-----------|-----------|
+| 部署位置 | Cloudflare Pages | Cloudflare Pages |
+| 入口 URL | `web3tycoon.com` | `cdn.web3tycoon.com` |
+| Remote 资源 | 本地或 CDN | CDN (`/remote/`) |
+| 用途 | 主要版本 | 测试 + CDN |
+
 ## 性能优化建议
 
 ### 1. 启用缓存头
@@ -199,16 +248,23 @@ resources.load(url, Texture2D, (err, texture) => {
 在 Pages 项目根目录创建 `_headers` 文件（可选）：
 
 ```
-/*
+# 远程资源缓存（长期缓存）
+/remote/*
   Cache-Control: public, max-age=31536000, immutable
   Access-Control-Allow-Origin: *
 
-/index.html
+# HTML 文件（不缓存）
+/*.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# 其他静态资源（中期缓存）
+/assets/*
+  Cache-Control: public, max-age=86400
+  Access-Control-Allow-Origin: *
 ```
 
-**注意**：由于我们只部署 `remote` 文件夹，这个文件应该放在：
-`client/tycoon_cocos/build/web-walrus/remote/_headers`
+**注意**：这个文件应该放在：
+`client/tycoon_cocos/build/web-walrus/_headers`
 
 ### 2. 压缩优化
 
@@ -230,7 +286,7 @@ Cloudflare 自动压缩以下格式：
 在 HTML 中添加 `<link rel="preload">`（如果需要）：
 
 ```html
-<link rel="preload" href="https://cdn.web3tycoon.com/assets/critical-texture.png" as="image">
+<link rel="preload" href="https://cdn.web3tycoon.com/remote/assets/critical-texture.png" as="image">
 ```
 
 ## 监控和调试
@@ -253,16 +309,19 @@ Cloudflare 自动压缩以下格式：
    - 响应时间
    - 热门资源
 
-### 测试 CDN 可用性
+### 测试可用性
 
 ```bash
 # 测试 DNS 解析
 nslookup cdn.web3tycoon.com
 
-# 测试 HTTP 访问
+# 测试入口页面
 curl -I https://cdn.web3tycoon.com
 
-# 测试特定资源
+# 测试 CDN 资源
+curl -I https://cdn.web3tycoon.com/remote/assets/test.png
+
+# 测试本地资源
 curl -I https://cdn.web3tycoon.com/assets/test.png
 ```
 
@@ -271,10 +330,11 @@ curl -I https://cdn.web3tycoon.com/assets/test.png
 ### Q: 部署后资源 404
 
 **A**: 检查以下几点：
-1. 确认 `remote` 文件夹存在且有内容
+1. 确认 `web-walrus` 文件夹存在且有内容
 2. 检查 GitHub Actions 日志，确认部署成功
 3. 等待 DNS 传播（最多 24 小时，通常几分钟）
 4. 检查文件路径是否正确（区分大小写）
+5. CDN 资源路径必须包含 `/remote/` 前缀
 
 ### Q: 自定义域名 SSL 证书错误
 

@@ -353,9 +353,9 @@ export class SuiManager {
 
         const result = await this._signer!.signAndExecuteTransaction(tx, this._client!);
 
-        // ✅ 等待交易被完全索引（确保 effects 可读，修复 testnet 误报失败）
+        // ✅ 等待交易被完全索引（确保 objectChanges 完整）
         console.log('[SuiManager] Waiting for transaction to be indexed...');
-        await this._client!.waitForTransaction({
+        const indexedResult = await this._client!.waitForTransaction({
             digest: result.digest,
             options: {
                 showEffects: true,
@@ -367,12 +367,12 @@ export class SuiManager {
         console.log('[SuiManager] Transaction indexed');
 
         this._log('[SuiManager] Transaction executed', {
-            digest: result.digest,
-            status: result.effects?.status?.status
+            digest: indexedResult.digest,
+            status: indexedResult.effects?.status?.status
         });
 
         // ✅ 提取并附加 gas 消耗信息
-        const gasUsed = result.effects?.gasUsed;
+        const gasUsed = indexedResult.effects?.gasUsed;
         if (gasUsed) {
             const totalGas = BigInt(gasUsed.computationCost) +
                             BigInt(gasUsed.storageCost) -
@@ -381,8 +381,8 @@ export class SuiManager {
 
             console.log('[SuiManager] Gas used:', gasSui.toFixed(6), 'SUI');
 
-            // 附加 gas 信息到 result（供调用者使用）
-            (result as any)._gasInfo = {
+            // 附加 gas 信息到 indexedResult（供调用者使用）
+            (indexedResult as any)._gasInfo = {
                 totalGas,
                 gasSui: gasSui.toFixed(6) + ' SUI',
                 computationCost: gasUsed.computationCost,
@@ -392,13 +392,13 @@ export class SuiManager {
         }
 
         // 交易成功后，异步刷新余额（不阻塞）
-        if (result.effects?.status?.status === 'success') {
+        if (indexedResult.effects?.status?.status === 'success') {
             this._refreshBalanceAsync().catch(error => {
                 console.error('[SuiManager] Failed to refresh balance after tx:', error);
             });
         }
 
-        return result;
+        return indexedResult;
     }
 
     // ============ 游戏交互 API ============
@@ -426,8 +426,9 @@ export class SuiManager {
         const result = await this.signAndExecuteTransaction(tx);
 
         // 解析结果
-        const gameId = this._extractObjectId(result, 'Game');
-        const seatId = this._extractObjectId(result, 'Seat');
+        const packageId = this._config!.packageId;
+        const gameId = this._extractObjectId(result, `${packageId}::game::Game`);
+        const seatId = this._extractObjectId(result, `${packageId}::game::Seat`);
 
         const response = {
             gameId,
@@ -462,7 +463,7 @@ export class SuiManager {
         const result = await this.signAndExecuteTransaction(tx);
 
         // 解析结果
-        const seatId = this._extractObjectId(result, 'Seat');
+        const seatId = this._extractObjectId(result, `${this._config!.packageId}::game::Seat`);
         const playerIndex = this._extractPlayerIndex(result);
 
         // 保存当前座位
@@ -1016,7 +1017,7 @@ export class SuiManager {
     private _extractObjectId(result: SuiTransactionBlockResponse, objectType: string): string {
         const changes = result.objectChanges || [];
         for (const change of changes) {
-            if (change.type === 'created' && change.objectType?.includes(objectType)) {
+            if (change.type === 'created' && change.objectType === objectType) {
                 return (change as any).objectId;
             }
         }

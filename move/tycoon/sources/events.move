@@ -78,14 +78,6 @@ public struct SkipTurnEvent has copy, drop {
     turn: u8
 }
 
-// 回合结束事件
-public struct EndTurnEvent has copy, drop {
-    game: ID,
-    player: address,
-    round: u16,
-    turn_in_round: u8
-}
-
 // 轮次结束事件
 public struct RoundEndedEvent has copy, drop {
     game: ID,           // 游戏 ID
@@ -365,20 +357,6 @@ public(package) fun emit_skip_turn_event(
     });
 }
 
-public(package) fun emit_end_turn_event(
-    game_id: ID,
-    player: address,
-    round: u16,
-    turn_in_round: u8
-) {
-    event::emit(EndTurnEvent {
-        game: game_id,
-        player,
-        round,
-        turn_in_round
-    });
-}
-
 public(package) fun emit_round_ended_event(
     game_id: ID,
     round: u16,
@@ -621,29 +599,29 @@ public(package) fun emit_roll_and_step_action_event_with_choices(
 
 
 // NPC操作常量获取函数
-public fun npc_action_spawn(): u8 { NPC_ACTION_SPAWN }
-public fun npc_action_remove(): u8 { NPC_ACTION_REMOVE }
-public fun npc_action_hit(): u8 { NPC_ACTION_HIT }
+public(package) fun npc_action_spawn(): u8 { NPC_ACTION_SPAWN }
+public(package) fun npc_action_remove(): u8 { NPC_ACTION_REMOVE }
+public(package) fun npc_action_hit(): u8 { NPC_ACTION_HIT }
 
 // NPC结果常量获取函数
-public fun npc_result_none(): u8 { NPC_RESULT_NONE }
-public fun npc_result_send_hospital(): u8 { NPC_RESULT_SEND_HOSPITAL }
-public fun npc_result_barrier_stop(): u8 { NPC_RESULT_BARRIER_STOP }
+public(package) fun npc_result_none(): u8 { NPC_RESULT_NONE }
+public(package) fun npc_result_send_hospital(): u8 { NPC_RESULT_SEND_HOSPITAL }
+public(package) fun npc_result_barrier_stop(): u8 { NPC_RESULT_BARRIER_STOP }
 
 // 停留类型常量获取函数
-public fun stop_none(): u8 { STOP_NONE }
-public fun stop_building_toll(): u8 { STOP_BUILDING_TOLL }
-public fun stop_building_no_rent(): u8 { STOP_BUILDING_NO_RENT }
-public fun stop_hospital(): u8 { STOP_HOSPITAL }
-public fun stop_bonus(): u8 { STOP_BONUS }
-public fun stop_fee(): u8 { STOP_FEE }
-public fun stop_card_stop(): u8 { STOP_CARD_STOP }
-public fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
+public(package) fun stop_none(): u8 { STOP_NONE }
+public(package) fun stop_building_toll(): u8 { STOP_BUILDING_TOLL }
+public(package) fun stop_building_no_rent(): u8 { STOP_BUILDING_NO_RENT }
+public(package) fun stop_hospital(): u8 { STOP_HOSPITAL }
+public(package) fun stop_bonus(): u8 { STOP_BONUS }
+public(package) fun stop_fee(): u8 { STOP_FEE }
+public(package) fun stop_card_stop(): u8 { STOP_CARD_STOP }
+public(package) fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
 
 // ===== Admin Event Emitters 管理事件发射函数 =====
 
 /// 发射地图模板发布事件
-public fun emit_map_template_published_event(
+public(package) fun emit_map_template_published_event(
     template_id: ID,
     publisher: address,
     tile_count: u64,
@@ -658,7 +636,7 @@ public fun emit_map_template_published_event(
 }
 
 /// 发射注册表创建事件
-public fun emit_registry_created_event(
+public(package) fun emit_registry_created_event(
     registry_id: ID,
     creator: address
 ) {
@@ -669,7 +647,7 @@ public fun emit_registry_created_event(
 }
 
 /// 发射GameData创建事件
-public fun emit_game_data_created_event(data_id: ID) {
+public(package) fun emit_game_data_created_event(data_id: ID) {
     event::emit(GameDataCreatedEvent { data_id });
 }
 

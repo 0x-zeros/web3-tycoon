@@ -165,31 +165,6 @@ export class GameInteraction {
     }
 
     /**
-     * 构建结束回合的交易
-     * 对应Move: public entry fun end_turn
-     */
-    buildEndTurnTx(
-        gameId: string,
-        seatId: string,
-        mapTemplateId: string
-    ): Transaction {
-        const tx = new Transaction_!();
-
-        tx.moveCall({
-            target: `${this.packageId}::game::end_turn`,
-            arguments: [
-                tx.object(gameId),
-                tx.object(seatId),
-                tx.object(this.gameDataId),
-                tx.object(mapTemplateId),
-                tx.object(this.randomObjectId)  // random
-            ]
-        });
-
-        return tx;
-    }
-
-    /**
      * 构建跳过建筑决策的交易
      * 对应Move: public entry fun skip_building_decision
      */

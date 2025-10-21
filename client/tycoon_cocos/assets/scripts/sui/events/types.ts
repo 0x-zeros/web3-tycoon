@@ -104,21 +104,6 @@ export interface SkipTurnEvent {
 }
 
 /**
- * 回合结束事件
- * 对应Move: struct EndTurnEvent
- */
-export interface EndTurnEvent {
-    /** 游戏ID */
-    game: string;
-    /** 玩家地址 */
-    player: string;
-    /** 当前轮次 */
-    round: number;
-    /** 轮内回合 */
-    turn_in_round: number;
-}
-
-/**
  * 轮次结束事件
  * 对应Move: struct RoundEndedEvent
  */
@@ -225,7 +210,6 @@ export enum EventType {
     // 回合管理
     TURN_START = 'TurnStartEvent',
     SKIP_TURN = 'SkipTurnEvent',
-    END_TURN = 'EndTurnEvent',
     ROUND_ENDED = 'RoundEndedEvent',
 
     // 经济事件
@@ -251,7 +235,6 @@ export type GameEvent =
     | GameEndedEvent
     | TurnStartEvent
     | SkipTurnEvent
-    | EndTurnEvent
     | RoundEndedEvent
     | BankruptEvent
     | BuildingDecisionEvent

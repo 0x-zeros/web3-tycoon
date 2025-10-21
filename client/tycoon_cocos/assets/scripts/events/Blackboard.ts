@@ -350,7 +350,12 @@ export class Blackboard extends EventTarget {
 
         for (const config of item.watchers) {
             try {
-                config.watcher(newValue, oldValue, key);
+                // 使用 config.target 绑定 this 上下文
+                if (config.target) {
+                    config.watcher.call(config.target, newValue, oldValue, key);
+                } else {
+                    config.watcher(newValue, oldValue, key);
+                }
             } catch (e) {
                 error(`[Blackboard] Error in watcher for ${key}:`, e);
             }

@@ -6,7 +6,6 @@ use sui::object::ID;
 
 // ===== Admin Events 管理事件 =====
 
-// 地图模板发布事件
 public struct MapTemplatePublishedEvent has copy, drop {
     template_id: ID,
     publisher: address,
@@ -14,34 +13,29 @@ public struct MapTemplatePublishedEvent has copy, drop {
     building_count: u64
 }
 
-// 注册表创建事件
 public struct RegistryCreatedEvent has copy, drop {
     registry_id: ID,
     creator: address
 }
 
-// GameData创建事件
 public struct GameDataCreatedEvent has copy, drop {
     data_id: ID
 }
 
 // ===== Game Events 游戏事件 =====
 
-// 游戏创建事件
 public struct GameCreatedEvent has copy, drop {
     game: ID,
     creator: address,
     template_map_id: ID
 }
 
-// 玩家加入事件
 public struct PlayerJoinedEvent has copy, drop {
     game: ID,
     player: address,
     player_index: u8
 }
 
-// 游戏开始事件
 public struct GameStartedEvent has copy, drop {
     game: ID,
     template_map_id: ID,
@@ -49,18 +43,16 @@ public struct GameStartedEvent has copy, drop {
     starting_player: address
 }
 
-// 游戏结束事件
 public struct GameEndedEvent has copy, drop {
     game: ID,
-    winner: option::Option<address>,//todo 改为所有玩家排名
+    winner: option::Option<address>,
     round: u16,
     turn_in_round: u8,
     reason: u8  // 0=正常结束, 1=达到最大回合数, 2=只剩一个玩家
 }
- 
+
 // ===== Turn Events 回合事件 =====
 
-// 回合开始事件
 public struct TurnStartEvent has copy, drop {
     game: ID,
     player: address,
@@ -68,27 +60,24 @@ public struct TurnStartEvent has copy, drop {
     turn_in_round: u8
 }
 
-// 跳过回合事件
 public struct SkipTurnEvent has copy, drop {
     game: ID,
     player: address,
-    reason: u8,            // 2=医院
-    remaining_turns: u8,   // 剩余天数
+    reason: u8,
+    remaining_turns: u8,
     round: u16,
     turn: u8
 }
 
-// 轮次结束事件
 public struct RoundEndedEvent has copy, drop {
-    game: ID,           // 游戏 ID
-    round: u16,         // 刚结束的轮次
-    npc_kind: u8,       // 新生成的NPC类型（0表示没有生成）
-    tile_id: u16        // NPC放置的地块ID（npc_kind为0时无意义）
+    game: ID,
+    round: u16,
+    npc_kind: u8,
+    tile_id: u16
 }
 
 // ===== Economy Events 经济事件 =====
 
-// 破产事件
 public struct BankruptEvent has copy, drop {
     game: ID,
     player: address,
@@ -98,26 +87,23 @@ public struct BankruptEvent has copy, drop {
 
 // ===== Decision Events 决策事件 =====
 
-// 建筑决策事件（购买或升级）
 public struct BuildingDecisionEvent has copy, drop {
     game: ID,
     player: address,
     round: u16,
     turn: u8,
-    auto_decision: bool,       // true=自动决策，false=手动决策
-    decision: BuildingDecisionInfo  // ✅ 决策详情
+    auto_decision: bool,
+    decision: BuildingDecisionInfo
 }
 
-// 租金决策事件
 public struct RentDecisionEvent has copy, drop {
     game: ID,
     round: u16,
     turn: u8,
-    auto_decision: bool,       // true=自动决策，false=手动决策
-    decision: RentDecisionInfo      // ✅ 决策详情
+    auto_decision: bool,
+    decision: RentDecisionInfo
 }
 
-// 跳过决策事件
 public struct DecisionSkippedEvent has copy, drop {
     game: ID,
     player: address,
@@ -128,7 +114,6 @@ public struct DecisionSkippedEvent has copy, drop {
 }
 
 // ===== Aggregated Event Constants 聚合事件常量 =====
-
 
 // NPC操作常量
 const NPC_ACTION_SPAWN: u8 = 1;
@@ -148,20 +133,18 @@ const STOP_HOSPITAL: u8 = 3;
 const STOP_BONUS: u8 = 5;
 const STOP_FEE: u8 = 6;
 const STOP_CARD_STOP: u8 = 7;
-const STOP_BUILDING_UNOWNED: u8 = 8;  // 无主建筑（可购买）
+const STOP_BUILDING_UNOWNED: u8 = 8;
 
 // ===== Aggregated Event Data Types 聚合事件数据类型 =====
 
-// 现金变动项
 public struct CashDelta has copy, drop, store {
     player: address,
     is_debit: bool,
     amount: u64,
-    reason: u8,  // 1=toll, 2=buy, 3=upgrade, 4=bonus, 5=fee, 6=card
+    reason: u8,
     details: u16
 }
 
-// 卡牌获取项
 public struct CardDrawItem has copy, drop, store {
     tile_id: u16,
     kind: u8,
@@ -169,33 +152,29 @@ public struct CardDrawItem has copy, drop, store {
     is_pass: bool
 }
 
-// NPC变更项
 public struct NpcChangeItem has copy, drop, store {
     tile_id: u16,
     kind: u8,
-    action: u8,  // NPC_ACTION_*
+    action: u8,
     consumed: bool
 }
 
-// Buff变更项
 public struct BuffChangeItem has copy, drop, store {
-    buff_type: u8,  // 使用types模块的buff类型常量
+    buff_type: u8,
     target: address,
-    last_active_round: option::Option<u16>  // 最后激活回合（包含）
+    last_active_round: option::Option<u16>
 }
 
-// NPC步骤事件
 public struct NpcStepEvent has copy, drop, store {
-    tile_id: u16,        // 遇到 NPC 的地块ID
-    kind: u8,            // NPC 类型（路障/炸弹/狗）
-    result: u8,          // 交互结果（送医院/停止移动等）
-    consumed: bool,      // NPC 是否被消耗
-    result_tile: option::Option<u16>  // 结果地块（如送医院的目标地块）
+    tile_id: u16,
+    kind: u8,
+    result: u8,
+    consumed: bool,
+    result_tile: option::Option<u16>
 }
 
-// 建筑决策信息（用于事件和StopEffect）
 public struct BuildingDecisionInfo has copy, drop, store {
-    decision_type: u8,    // 1=购买, 2=升级
+    decision_type: u8,
     building_id: u16,
     tile_id: u16,
     amount: u64,
@@ -203,68 +182,63 @@ public struct BuildingDecisionInfo has copy, drop, store {
     building_type: u8
 }
 
-// 租金决策信息（用于事件和StopEffect）
 public struct RentDecisionInfo has copy, drop, store {
-    payer: address,       // 支付者
-    owner: address,       // 所有者
+    payer: address,
+    owner: address,
     building_id: u16,
     tile_id: u16,
     rent_amount: u64,
     used_rent_free: bool
 }
 
-// 停留效果
 public struct StopEffect has copy, drop, store {
     tile_id: u16,
     tile_kind: u8,
-    stop_type: u8,  // STOP_*
+    stop_type: u8,
     amount: u64,
     owner: option::Option<address>,
     level: option::Option<u8>,
     turns: option::Option<u8>,
     card_gains: vector<CardDrawItem>,
-    pending_decision: u8,      // 待决策类型
-    decision_tile: u16,         // 相关的地块ID
-    decision_amount: u64,       // 相关金额
-    building_decision: option::Option<BuildingDecisionInfo>,  // 建筑决策信息（自动决策时）
-    rent_decision: option::Option<RentDecisionInfo>           // 租金决策信息（自动决策时）
+    pending_decision: u8,
+    decision_tile: u16,
+    decision_amount: u64,
+    building_decision: option::Option<BuildingDecisionInfo>,
+    rent_decision: option::Option<RentDecisionInfo>
 }
 
-// 步骤效果
 public struct StepEffect has copy, drop, store {
     step_index: u8,
     from_tile: u16,
     to_tile: u16,
-    remaining_steps: u8, //服务端逻辑上不是必须字段，但对客户端展示，回放等有价值
+    remaining_steps: u8,
     pass_draws: vector<CardDrawItem>,
     npc_event: option::Option<NpcStepEvent>,
     stop_effect: option::Option<StopEffect>
 }
 
-// 使用卡牌操作聚合事件
 public struct UseCardActionEvent has copy, drop {
     game: ID,
     player: address,
     round: u16,
     turn_in_round: u8,
     kind: u8,
-    params: vector<u16>,  // 统一参数：玩家索引、地块ID、骰子值等
+    params: vector<u16>,
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
     cash_changes: vector<CashDelta>
 }
 
-// 掷骰移动操作聚合事件
 public struct RollAndStepActionEvent has copy, drop {
     game: ID,
     player: address,
     round: u16,
     turn_in_round: u8,
     dice: u8,
-    path_choices: vector<u16>,  // 分叉选择序列（新增）
+    path_choices: vector<u16>,
     from: u16,
     steps: vector<StepEffect>,
-    cash_changes: vector<CashDelta>,//todo casedelta 也应该放到stepeffect里？
+    cash_changes: vector<CashDelta>,
     end_pos: u16
 }
 
@@ -373,7 +347,6 @@ public(package) fun emit_round_ended_event(
 
 // ===== Aggregated Event Constructor Functions 聚合事件构造函数 =====
 
-// 构造现金变动项
 public(package) fun make_cash_delta(
     player: address,
     is_debit: bool,
@@ -390,7 +363,6 @@ public(package) fun make_cash_delta(
     }
 }
 
-// 构造卡牌获取项
 public(package) fun make_card_draw_item(
     tile_id: u16,
     kind: u8,
@@ -405,7 +377,6 @@ public(package) fun make_card_draw_item(
     }
 }
 
-// 构造NPC变更项
 public(package) fun make_npc_change(
     tile_id: u16,
     kind: u8,
@@ -420,7 +391,6 @@ public(package) fun make_npc_change(
     }
 }
 
-// 构造Buff变更项
 public(package) fun make_buff_change(
     buff_type: u8,
     target: address,
@@ -433,7 +403,6 @@ public(package) fun make_buff_change(
     }
 }
 
-// 构造NPC步骤事件
 public(package) fun make_npc_step_event(
     tile_id: u16,
     kind: u8,
@@ -450,7 +419,6 @@ public(package) fun make_npc_step_event(
     }
 }
 
-// 构造建筑决策信息
 public(package) fun make_building_decision_info(
     decision_type: u8,
     building_id: u16,
@@ -469,7 +437,6 @@ public(package) fun make_building_decision_info(
     }
 }
 
-// 构造租金决策信息
 public(package) fun make_rent_decision_info(
     payer: address,
     owner: address,
@@ -488,7 +455,6 @@ public(package) fun make_rent_decision_info(
     }
 }
 
-// 构造停留效果
 public(package) fun make_stop_effect(
     tile_id: u16,
     tile_kind: u8,
@@ -521,7 +487,6 @@ public(package) fun make_stop_effect(
     }
 }
 
-// 构造步骤效果
 public(package) fun make_step_effect(
     step_index: u8,
     from_tile: u16,
@@ -542,14 +507,13 @@ public(package) fun make_step_effect(
     }
 }
 
-// 发射使用卡牌聚合事件
 public(package) fun emit_use_card_action_event(
     game_id: ID,
     player: address,
     round: u16,
     turn_in_round: u8,
     kind: u8,
-    params: vector<u16>,  // 统一参数
+    params: vector<u16>,
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
     cash_changes: vector<CashDelta>
@@ -567,7 +531,6 @@ public(package) fun emit_use_card_action_event(
     });
 }
 
-// 发射掷骰移动聚合事件（带路径选择）
 public(package) fun emit_roll_and_step_action_event_with_choices(
     game_id: ID,
     player: address,
@@ -597,18 +560,14 @@ public(package) fun emit_roll_and_step_action_event_with_choices(
 
 // ===== Aggregated Event Constant Getters 聚合事件常量获取函数 =====
 
-
-// NPC操作常量获取函数
 public(package) fun npc_action_spawn(): u8 { NPC_ACTION_SPAWN }
 public(package) fun npc_action_remove(): u8 { NPC_ACTION_REMOVE }
 public(package) fun npc_action_hit(): u8 { NPC_ACTION_HIT }
 
-// NPC结果常量获取函数
 public(package) fun npc_result_none(): u8 { NPC_RESULT_NONE }
 public(package) fun npc_result_send_hospital(): u8 { NPC_RESULT_SEND_HOSPITAL }
 public(package) fun npc_result_barrier_stop(): u8 { NPC_RESULT_BARRIER_STOP }
 
-// 停留类型常量获取函数
 public(package) fun stop_none(): u8 { STOP_NONE }
 public(package) fun stop_building_toll(): u8 { STOP_BUILDING_TOLL }
 public(package) fun stop_building_no_rent(): u8 { STOP_BUILDING_NO_RENT }
@@ -620,7 +579,6 @@ public(package) fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
 
 // ===== Admin Event Emitters 管理事件发射函数 =====
 
-/// 发射地图模板发布事件
 public(package) fun emit_map_template_published_event(
     template_id: ID,
     publisher: address,
@@ -635,7 +593,6 @@ public(package) fun emit_map_template_published_event(
     });
 }
 
-/// 发射注册表创建事件
 public(package) fun emit_registry_created_event(
     registry_id: ID,
     creator: address
@@ -646,14 +603,12 @@ public(package) fun emit_registry_created_event(
     });
 }
 
-/// 发射GameData创建事件
 public(package) fun emit_game_data_created_event(data_id: ID) {
     event::emit(GameDataCreatedEvent { data_id });
 }
 
 // ===== Decision Event Emitters 决策事件发射函数 =====
 
-/// 发射建筑决策事件
 public(package) fun emit_building_decision_event(
     game_id: ID,
     player: address,
@@ -672,7 +627,6 @@ public(package) fun emit_building_decision_event(
     });
 }
 
-/// 发射租金决策事件
 public(package) fun emit_rent_decision_event(
     game_id: ID,
     round: u16,
@@ -689,7 +643,6 @@ public(package) fun emit_rent_decision_event(
     });
 }
 
-/// 发射跳过决策事件
 public(package) fun emit_decision_skipped_event(
     game_id: ID,
     player: address,
@@ -707,5 +660,4 @@ public(package) fun emit_decision_skipped_event(
         turn
     });
 }
-
 

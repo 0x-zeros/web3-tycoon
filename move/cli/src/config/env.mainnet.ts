@@ -1,6 +1,6 @@
 const env = {
     // DeFi Verifier Package ID（部署后需要更新）
-    defiVerifierPackageId: '0x0', // TODO: 部署defi_verifier后更新此地址
+    defiVerifierPackageId: '0xd50a32ae860628d7f941e2b00dcb993661b2b2c87c2e4c3c0141422bc358528e', // TODO: 部署defi_verifier后更新此地址
 
     // Scallop Protocol Package ID（主网地址）
     scallopPackageId:

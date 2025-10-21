@@ -127,3 +127,11 @@ dependencies = [
 compiler-version = "1.57.2"
 edition = "2024.beta"
 flavor = "sui"
+
+[env]
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0xd50a32ae860628d7f941e2b00dcb993661b2b2c87c2e4c3c0141422bc358528e"
+latest-published-id = "0xd50a32ae860628d7f941e2b00dcb993661b2b2c87c2e4c3c0141422bc358528e"
+published-version = "1"

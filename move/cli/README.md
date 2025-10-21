@@ -1,154 +1,209 @@
-# Web3 Tycoon Move CLI
+# DeFi Verifier Test CLI
 
-这是一个用于 Web3 Tycoon 游戏的 TypeScript CLI 工具，提供了与 Sui 区块链交互的功能。
+DeFi存款验证工具 - Sui主网专用
 
-## 🚀 功能特性
+## 功能
 
-- **多网络支持**: 支持 localnet、devnet、testnet、mainnet
-- **游戏功能**: 掷骰子、铸造代币、游戏交互
-- **Sui 集成**: 完整的 Sui SDK 集成
-- **类型安全**: 完整的 TypeScript 支持
+用于测试Sui主网上的DeFi存款验证功能，检测用户是否持有支持的DeFi协议存款凭证。
 
-## 📁 项目结构
+### 支持的协议
 
-```
-move/cli/
-├── package.json          # 项目配置
-├── tsconfig.json         # TypeScript 配置
-├── src/
-│   ├── index.ts          # 主入口文件
-│   ├── config/           # 网络配置
-│   │   ├── config.ts     # 配置管理
-│   │   ├── env.localnet.ts
-│   │   ├── env.devnet.ts
-│   │   ├── env.testnet.ts
-│   │   └── env.mainnet.ts
-│   ├── utils/            # 工具函数
-│   │   ├── sui_utils.ts  # Sui 相关工具
-│   │   ├── constants.ts  # 常量定义
-│   │   └── index.ts      # 工具导出
-│   ├── mint_coin.ts      # 铸造代币功能
-│   ├── roll_the_dice.ts  # 掷骰子游戏
-│   └── simple_roll.ts    # 简单掷骰子
-└── README.md
-```
+- ✅ **Scallop Protocol** - MarketCoin（USDC, SUI, USDT等）
+- 🚧 Navi Protocol - nToken系列（待实现）
+- 🚧 Bucket Protocol - sUSDB等（待实现）
 
-## 🛠️ 安装和设置
+### 核心功能
 
-### 1. 安装依赖
+1. **自动查询**：扫描用户地址的Scallop MarketCoin对象
+2. **智能验证**：调用defi_verifier合约验证DeFi存款
+3. **详细报告**：显示对象ID、类型、余额、验证分数
+4. **边界测试**：验证普通Coin（如SUI）应该返回0
+
+## 安装
 
 ```bash
-cd move/cli
 npm install
 ```
 
-### 2. 配置 Sui 钱包
+## 使用方法
 
-确保你的 Sui 钱包已配置：
+### 前置条件
+
+1. **Sui Keystore**：确保 `~/.sui/sui_config/sui.keystore` 存在
+2. **主网账户**：账户需要有一些SUI用于查询
+3. **DeFi存款**（可选）：如果要测试成功案例，需要在Scallop等协议中有存款
+
+### 运行测试
 
 ```bash
-# 检查钱包状态
-sui client active-address
-
-# 如果还没有钱包，创建一个
-sui client new-address ed25519
+npm run test:defi
 ```
 
-### 3. 编译项目
+### 配置
+
+在 `src/config/env.mainnet.ts` 中配置：
+
+```typescript
+const env = {
+    // DeFi Verifier Package ID（部署后更新）
+    defiVerifierPackageId: '0x...',
+
+    // Scallop Protocol Package ID
+    scallopPackageId: '0xefe8b36d...',
+};
+```
+
+## 输出示例
+
+```
+========================================
+DeFi Verifier 测试工具 (Sui Mainnet)
+========================================
+
+网络配置:
+  RPC URL: https://fullnode.mainnet.sui.io:443
+  DeFi Verifier Package: 0x...
+  Scallop Package: 0xefe8b36d...
+
+钱包地址: 0x123...
+账户余额: 1000000000 MIST
+
+========================================
+查询Scallop MarketCoin对象...
+========================================
+
+✅ 发现 2 个MarketCoin对象
+
+MarketCoin #1:
+  对象ID: 0xabc...
+  类型: 0xefe8b36d...::reserve::MarketCoin<0x...::usdc::USDC>
+  余额: 100000000
+
+----------------------------------------
+测试 #1: 验证MarketCoin
+----------------------------------------
+对象ID: 0xabc...
+类型: 0xefe8b36d...::reserve::MarketCoin<0x...::usdc::USDC>
+
+泛型参数: 0xefe8b36d...::reserve::MarketCoin<0x...::usdc::USDC>
+调用结果:
+  状态: success
+  验证分数: 1
+  ✅ 验证成功！这是有效的DeFi存款
+
+========================================
+边界测试：验证普通SUI Coin
+========================================
+
+测试对象: 0xdef...
+类型: 0x2::sui::SUI
+余额: 1000000000
+
+调用结果:
+  状态: success
+  验证分数: 0
+  ✅ 正确！普通SUI Coin返回0（不是DeFi存款）
+
+========================================
+测试完成！
+========================================
+```
+
+## 项目结构
+
+```
+cli/
+├── src/
+│   ├── test_defi_verifier.ts    # 主测试脚本
+│   ├── config/
+│   │   ├── config.ts            # 主网配置
+│   │   └── env.mainnet.ts       # 主网环境变量
+│   └── utils/
+│       ├── sui_utils.ts         # Sui工具函数
+│       └── index.ts             # 工具导出
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+## 测试用例
+
+### 1. 基础测试
+- ✅ 连接Sui主网
+- ✅ 读取keystore
+- ✅ 显示账户余额
+
+### 2. MarketCoin查询
+- ✅ 查询所有Scallop MarketCoin
+- ✅ 显示对象详情（ID、类型、余额）
+
+### 3. DeFi验证
+- ✅ 验证MarketCoin返回1（有效存款）
+- ✅ 验证普通Coin返回0（无效）
+
+### 4. 边界情况
+- ✅ 账户没有MarketCoin
+- ✅ 余额为0的MarketCoin
+
+## 开发
+
+### 编译
 
 ```bash
 npm run build
 ```
 
-## 🎮 使用方法
+### 添加新协议支持
 
-### 基本命令
+1. 在 `env.mainnet.ts` 添加新协议的package ID
+2. 在 `test_defi_verifier.ts` 添加查询和验证逻辑
+3. 运行测试验证
 
-```bash
-# 运行主程序
-npm start [network]
+## 注意事项
 
-# 铸造代币
-npm run mint_coin [network]
+### 1. DeFi Verifier部署
 
-# 掷骰子游戏
-npm run roll_the_dice [network]
-
-# 简单掷骰子
-npm run simple_roll [network]
-```
-
-### 网络参数
-
-- `localnet` - 本地网络 (默认)
-- `devnet` - 开发网络
-- `testnet` - 测试网络
-- `mainnet` - 主网络
-
-### 示例
+当前defi_verifier还未部署到主网。部署步骤：
 
 ```bash
-# 在本地网络运行掷骰子游戏
-npm run roll_the_dice localnet
-
-# 在开发网络铸造代币
-npm run mint_coin devnet
-
-# 运行主程序
-npm start testnet
+cd move/defi_verifier
+sui client publish --gas-budget 500000000
+# 获取package ID后更新到env.mainnet.ts
 ```
 
-## 🔧 配置说明
+### 2. 测试账户准备
 
-### 网络配置
+如果账户没有Scallop存款，可以：
 
-每个网络都有对应的配置文件：
+1. 访问 [Scallop App](https://scallop.io/)
+2. 连接钱包并在主网存入USDC/SUI/USDT
+3. 获得MarketCoin后再运行测试
 
-- `env.localnet.ts` - 本地网络配置
-- `env.devnet.ts` - 开发网络配置
-- `env.testnet.ts` - 测试网络配置
-- `env.mainnet.ts` - 主网络配置
+### 3. Gas费用
 
-### 环境变量
+- 查询操作（`getOwnedObjects`等）：免费
+- `devInspectTransactionBlock`：免费（只读调用）
+- 不需要实际执行交易，不消耗gas
 
-可以通过环境变量覆盖配置：
+## 技术栈
 
-```bash
-export PACKAGE_ID="your_package_id"
-export TREASURY_CAP="your_treasury_cap"
-```
+- **TypeScript**: 类型安全的开发体验
+- **@mysten/sui**: Sui TypeScript SDK v1.38.0
+- **ts-node**: 直接运行TypeScript
+- **Node.js**: v18+
 
-## 📝 开发说明
+## License
 
-### 添加新功能
+MIT
 
-1. 在 `src/` 目录下创建新的 TypeScript 文件
-2. 在 `package.json` 中添加对应的脚本
-3. 更新 `src/utils/` 中的工具函数
+## 相关链接
 
-### 调试
+- [Sui Documentation](https://docs.sui.io/)
+- [Scallop Protocol](https://scallop.io/)
+- [Sui Explorer](https://suivision.xyz/)
+- [DeFi Verifier源码](../defi_verifier/)
 
-```bash
-# 使用 ts-node 直接运行
-npx ts-node src/your_script.ts localnet
+---
 
-# 启用详细日志
-DEBUG=* npm start localnet
-```
-
-## 🚨 注意事项
-
-1. **钱包安全**: 确保你的私钥安全，不要提交到版本控制
-2. **网络配置**: 确保网络配置正确，特别是合约地址
-3. **Gas 费用**: 注意 Gas 费用，建议先在测试网络测试
-4. **版本兼容**: 确保 Sui SDK 版本与网络兼容
-
-## 🔗 相关链接
-
-- [Sui 官方文档](https://docs.sui.io/)
-- [Sui TypeScript SDK](https://sdk.mystenlabs.com/typescript)
-- [Web3 Tycoon 项目](https://github.com/your-repo/web3-tycoon)
-
-## 📄 许可证
-
-ISC License
+**Created by**: Web3 Tycoon Team
+**Last Updated**: 2025-10-21

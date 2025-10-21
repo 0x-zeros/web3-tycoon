@@ -9,12 +9,14 @@
 ///
 /// 支持的协议：
 /// - Scallop: MarketCoin<USDC/SUI/USDT>（已实现）
-/// - Navi: nToken系列（待实现）
+/// - Navi: USDC存款（已实现）
 /// - Bucket: sUSDB等（待实现）
 module defi_verifier::defi_verifier {
     use sui::coin::Coin;
     use std::type_name;
     use defi_verifier::scallop_checker;
+    use defi_verifier::navi_checker;
+    use lending_core::storage::Storage as NaviStorage;
 
     // ====== 返回值约定 ======
 
@@ -89,12 +91,79 @@ module defi_verifier::defi_verifier {
         if (a > b) { a } else { b }
     }
 
+    // ====== Navi协议验证接口 ======
+
+    /// 验证用户在Navi Protocol的USDC存款
+    ///
+    /// 注意：由于Navi使用中心化账簿模式，需要传入Storage对象
+    ///
+    /// # 参数
+    /// - navi_storage: Navi的Storage共享对象引用
+    /// - ctx: 交易上下文（用于获取调用者地址）
+    ///
+    /// # 返回值
+    /// - 0: 无USDC存款
+    /// - 1: 有USDC存款
+    ///
+    /// # 示例
+    /// ```move
+    /// // 游戏模块调用
+    /// use defi_verifier::defi_verifier;
+    ///
+    /// public entry fun claim_navi_reward(
+    ///     navi_storage: &mut NaviStorage,
+    ///     game_state: &mut GameState,
+    ///     ctx: &mut TxContext
+    /// ) {
+    ///     let score = defi_verifier::verify_navi_usdc(navi_storage, ctx);
+    ///     if (score > 0) {
+    ///         // 发放奖励
+    ///     }
+    /// }
+    /// ```
+    public fun verify_navi_usdc(
+        navi_storage: &mut NaviStorage,
+        ctx: &TxContext
+    ): u8 {
+        let user = ctx.sender();
+        navi_checker::check_usdc(navi_storage, user)
+    }
+
+    /// 验证用户在Navi Protocol的任意资产存款
+    ///
+    /// 检查用户是否在Navi中有任何资产的存款（不限于USDC）
+    ///
+    /// # 参数
+    /// - navi_storage: Navi的Storage共享对象引用
+    /// - ctx: 交易上下文
+    ///
+    /// # 返回值
+    /// - 0: 无任何资产存款
+    /// - 1: 至少有一种资产存款
+    public fun verify_navi_any(
+        navi_storage: &mut NaviStorage,
+        ctx: &TxContext
+    ): u8 {
+        let user = ctx.sender();
+        navi_checker::check_any_asset(navi_storage, user)
+    }
+
     // ====== 测试辅助函数 ======
 
     #[test_only]
-    /// 测试用：直接传入类型字符串验证
-    public fun test_verify_type_string(type_str: std::ascii::String, balance: u64): u8 {
+    /// 测试用：Scallop类型字符串验证
+    public fun test_verify_scallop_type(type_str: std::ascii::String, balance: u64): u8 {
         scallop_checker::check(&type_str, balance)
+    }
+
+    #[test_only]
+    /// 测试用：Navi资产验证
+    public fun test_verify_navi_asset(
+        storage: &mut NaviStorage,
+        asset_id: u8,
+        user: address
+    ): u8 {
+        navi_checker::test_check_asset(storage, asset_id, user)
     }
 }
 

@@ -18,6 +18,11 @@ export interface NetworkConfig {
         explorer_suiscan: (id: string) => string;
         defiVerifierPackageId: string;
         scallopPackageId: string;
+        naviPackageId: string;
+        naviStorageId: string;
+        naviAssetIds: {
+            USDC: number;
+        };
     };
 }
 

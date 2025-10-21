@@ -28,6 +28,11 @@ const DEFI_VERIFIER_PACKAGE = networkConfig.variables.defiVerifierPackageId;
 // Scallop Protocol Package（用于识别MarketCoin）
 const SCALLOP_PACKAGE = networkConfig.variables.scallopPackageId;
 
+// Navi Protocol配置
+const NAVI_PACKAGE = networkConfig.variables.naviPackageId;
+const NAVI_STORAGE_ID = networkConfig.variables.naviStorageId;
+const NAVI_ASSET_USDC = networkConfig.variables.naviAssetIds.USDC;
+
 // ========== 主函数 ==========
 
 async function main() {
@@ -39,6 +44,8 @@ async function main() {
     console.log('  RPC URL:', suiRpcUrl);
     console.log('  DeFi Verifier Package:', DEFI_VERIFIER_PACKAGE);
     console.log('  Scallop Package:', SCALLOP_PACKAGE);
+    console.log('  Navi Package:', NAVI_PACKAGE);
+    console.log('  Navi Storage:', NAVI_STORAGE_ID);
     console.log('');
 
     // 1. 获取keypair
@@ -75,7 +82,14 @@ async function main() {
         }
     }
 
-    // 6. 测试边界情况：普通SUI Coin应该返回0
+    // 6. 测试Navi USDC存款验证
+    console.log('========================================');
+    console.log('测试Navi Protocol USDC存款验证');
+    console.log('========================================\n');
+
+    await testVerifyNaviDeposit(client, keypair);
+
+    // 7. 测试边界情况：普通SUI Coin应该返回0
     console.log('========================================');
     console.log('边界测试：验证普通SUI Coin');
     console.log('========================================\n');
@@ -292,6 +306,105 @@ async function testVerifyNormalCoin(
         console.log('');
     } catch (error) {
         console.error('❌ 测试失败:', error);
+        console.log('');
+    }
+}
+
+/**
+ * 测试验证Navi USDC存款
+ */
+async function testVerifyNaviDeposit(
+    client: SuiClient,
+    keypair: Ed25519Keypair
+) {
+    console.log('测试方式：verify_navi_usdc');
+    console.log('Storage ID:', NAVI_STORAGE_ID);
+    console.log('');
+
+    try {
+        // 构造PTB调用verify_navi_usdc
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${DEFI_VERIFIER_PACKAGE}::defi_verifier::verify_navi_usdc`,
+            arguments: [
+                tx.object(NAVI_STORAGE_ID), // Navi Storage共享对象
+            ],
+        });
+
+        // 使用devInspect进行只读调用
+        tx.setSender(keypair.getPublicKey().toSuiAddress());
+        const dryRunResult = await client.devInspectTransactionBlock({
+            sender: keypair.getPublicKey().toSuiAddress(),
+            transactionBlock: tx,
+        });
+
+        console.log('调用结果:');
+        console.log('  状态:', dryRunResult.effects.status.status);
+
+        // 解析返回值
+        if (dryRunResult.results && dryRunResult.results.length > 0) {
+            const returnValues = dryRunResult.results[0].returnValues;
+            if (returnValues && returnValues.length > 0) {
+                const scoreBytes = returnValues[0][0];
+                const score = scoreBytes[0]; // u8的值
+                console.log('  验证分数:', score);
+
+                if (score === 1) {
+                    console.log('  ✅ 验证成功！用户在Navi有USDC存款');
+                } else if (score === 0) {
+                    console.log('  ℹ️  用户在Navi无USDC存款');
+                } else {
+                    console.log(`  🌟 验证成功（特殊分数: ${score}）`);
+                }
+            }
+        }
+
+        // 打印错误信息（如果有）
+        if (dryRunResult.effects.status.status === 'failure') {
+            console.log('  错误详情:', dryRunResult.effects.status.error);
+        }
+
+        console.log('');
+    } catch (error) {
+        console.error('❌ Navi验证失败:', error);
+        console.log('');
+    }
+
+    // 同时测试verify_navi_any（检测任意资产）
+    console.log('测试方式：verify_navi_any（检测任意资产）');
+    try {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${DEFI_VERIFIER_PACKAGE}::defi_verifier::verify_navi_any`,
+            arguments: [tx.object(NAVI_STORAGE_ID)],
+        });
+
+        tx.setSender(keypair.getPublicKey().toSuiAddress());
+        const dryRunResult = await client.devInspectTransactionBlock({
+            sender: keypair.getPublicKey().toSuiAddress(),
+            transactionBlock: tx,
+        });
+
+        if (dryRunResult.results && dryRunResult.results.length > 0) {
+            const returnValues = dryRunResult.results[0].returnValues;
+            if (returnValues && returnValues.length > 0) {
+                const scoreBytes = returnValues[0][0];
+                const score = scoreBytes[0];
+                console.log('  验证分数（任意资产）:', score);
+
+                if (score === 1) {
+                    console.log('  ✅ 用户在Navi有资产存款（任意类型）');
+                } else {
+                    console.log('  ℹ️  用户在Navi无任何资产存款');
+                }
+            }
+        }
+
+        console.log('');
+    } catch (error) {
+        console.error('❌ Navi任意资产验证失败:', error);
         console.log('');
     }
 }

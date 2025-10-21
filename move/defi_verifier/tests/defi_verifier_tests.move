@@ -31,7 +31,7 @@ module defi_verifier::defi_verifier_tests {
         );
 
         // 余额 > 0 应该返回 1
-        let score = defi_verifier::test_verify_type_string(type_str, 100);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 100);
         assert!(score == 1, 0);
     }
 
@@ -43,7 +43,7 @@ module defi_verifier::defi_verifier_tests {
         );
 
         // 余额为0应该返回0
-        let score = defi_verifier::test_verify_type_string(type_str, 0);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 0);
         assert!(score == 0, 0);
     }
 
@@ -54,7 +54,7 @@ module defi_verifier::defi_verifier_tests {
             b"0x1234567890::some_other_protocol::Token<0xabc::usdc::USDC>"
         );
 
-        let score = defi_verifier::test_verify_type_string(type_str, 100);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 100);
         assert!(score == 0, 0);
     }
 
@@ -65,7 +65,7 @@ module defi_verifier::defi_verifier_tests {
             b"0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0x2::sui::SUI>"
         );
 
-        let score = defi_verifier::test_verify_type_string(type_str, 1000);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 1000);
         assert!(score == 1, 0);
     }
 
@@ -76,7 +76,7 @@ module defi_verifier::defi_verifier_tests {
             b"0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0xdef::usdt::USDT>"
         );
 
-        let score = defi_verifier::test_verify_type_string(type_str, 500);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 500);
         assert!(score == 1, 0);
     }
 
@@ -87,7 +87,7 @@ module defi_verifier::defi_verifier_tests {
             b"0x0000000000000000000000000000000000000000000000000000000000000000::reserve::MarketCoin<0xabc::usdc::USDC>"
         );
 
-        let score = defi_verifier::test_verify_type_string(type_str, 100);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 100);
         assert!(score == 0, 0);
     }
 
@@ -98,7 +98,7 @@ module defi_verifier::defi_verifier_tests {
             b"0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::wrong_module::SomeToken<0xabc::usdc::USDC>"
         );
 
-        let score = defi_verifier::test_verify_type_string(type_str, 100);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 100);
         assert!(score == 0, 0);
     }
 
@@ -109,7 +109,7 @@ module defi_verifier::defi_verifier_tests {
             b"0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0xabc::btc::BTC>"
         );
 
-        let score = defi_verifier::test_verify_type_string(type_str, 100);
+        let score = defi_verifier::test_verify_scallop_type(type_str, 100);
         assert!(score == 0, 0);
     }
 

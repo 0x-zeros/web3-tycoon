@@ -52,11 +52,11 @@
       <gearDisplay controller="category" pages="2"/>
       <Button title="编辑地图"/>
     </component>
-    <component id="n14_pseu" name="btn_loadFromLocalStorage" src="ja0uoli" fileName="components/Button3.xml" pkg="82r0pzop" xy="869,806" scale="0.3,0.3">
+    <component id="n14_pseu" name="btn_loadFromLocalStorage" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="866,810" size="206,195" scale="0.3,0.3">
       <gearDisplay controller="category" pages="2"/>
       <Button checked="true"/>
     </component>
-    <text id="n15_pseu" name="n15" xy="957,859" size="463,61" fontSize="30" color="#ffffff" autoSize="none" text="优先从浏览器localStorage加载">
+    <text id="n15_pseu" name="n15" xy="935,806" size="463,61" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="优先从浏览器localStorage加载">
       <gearDisplay controller="category" pages="2"/>
     </text>
   </displayList>

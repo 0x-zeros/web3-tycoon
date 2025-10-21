@@ -2876,37 +2876,37 @@ fun clean_expired_npcs(_game: &mut Game) {
 // 获取全局回合号
 
 // 获取当前轮次
-public fun get_round(game: &Game): u16 { game.round }
+fun get_round(game: &Game): u16 { game.round }
 
 // 获取轮内回合
-public fun get_turn_in_round(game: &Game): u8 { game.turn }
+fun get_turn_in_round(game: &Game): u8 { game.turn }
 
 // ===== Public Query Functions 公共查询函数 =====
 
 // 获取Seat的player地址
-public fun get_seat_player(seat: &Seat): address { seat.player }
+fun get_seat_player(seat: &Seat): address { seat.player }
 
-public fun get_game_status(game: &Game): u8 { game.status }
+fun get_game_status(game: &Game): u8 { game.status }
 // 获取当前轮和回合
 // 返回: (轮次, 轮内回合)
-public fun get_current_turn(game: &Game): (u16, u8) {
+fun get_current_turn(game: &Game): (u16, u8) {
     (game.round, game.turn)
 }
-public fun get_active_player_index(game: &Game): u8 { game.active_idx }
-public fun get_player_count(game: &Game): u64 { game.players.length() }
-public fun get_template_map_id(game: &Game): ID { game.template_map_id }
+fun get_active_player_index(game: &Game): u8 { game.active_idx }
+fun get_player_count(game: &Game): u64 { game.players.length() }
+fun get_template_map_id(game: &Game): ID { game.template_map_id }
 
-public fun get_player_position(game: &Game, player: address): u16 {
+fun get_player_position(game: &Game, player: address): u16 {
     let player_index = find_player_index(game, player);
     game.players[player_index as u64].pos
 }
 
-public fun get_player_cash(game: &Game, player: address): u64 {
+fun get_player_cash(game: &Game, player: address): u64 {
     let player_index = find_player_index(game, player);
     game.players[player_index as u64].cash
 }
 
-public fun is_tile_owned(game: &Game, map: &map::MapTemplate, _game_data: &GameData, tile_id: u16): bool {
+fun is_tile_owned(game: &Game, map: &map::MapTemplate, _game_data: &GameData, tile_id: u16): bool {
     // 获取tile对应的building_id
     let tile_static = map::get_tile(map, tile_id);
     let building_id = map::tile_building_id(tile_static);
@@ -2918,7 +2918,7 @@ public fun is_tile_owned(game: &Game, map: &map::MapTemplate, _game_data: &GameD
     (game.buildings[building_id as u64].owner != NO_OWNER)
 }
 
-public fun get_tile_owner(game: &Game, map: &map::MapTemplate, _game_data: &GameData, tile_id: u16): address {
+fun get_tile_owner(game: &Game, map: &map::MapTemplate, _game_data: &GameData, tile_id: u16): address {
     // 获取tile对应的building_id
     let tile_static = map::get_tile(map, tile_id);
     let building_id = map::tile_building_id(tile_static);
@@ -2931,7 +2931,7 @@ public fun get_tile_owner(game: &Game, map: &map::MapTemplate, _game_data: &Game
     game.players[owner_index as u64].owner
 }
 
-public fun get_tile_level(game: &Game, map: &map::MapTemplate, _game_data: &GameData, tile_id: u16): u8 {
+fun get_tile_level(game: &Game, map: &map::MapTemplate, _game_data: &GameData, tile_id: u16): u8 {
     // 获取tile对应的building_id
     let tile_static = map::get_tile(map, tile_id);
     let building_id = map::tile_building_id(tile_static);
@@ -2943,7 +2943,7 @@ public fun get_tile_level(game: &Game, map: &map::MapTemplate, _game_data: &Game
     game.buildings[building_id as u64].level
 }
 
-public fun is_player_bankrupt(game: &Game, player: address): bool {
+fun is_player_bankrupt(game: &Game, player: address): bool {
     let mut i = 0;
     while (i < game.players.length()) {
         let p = &game.players[i];
@@ -2955,7 +2955,7 @@ public fun is_player_bankrupt(game: &Game, player: address): bool {
     false
 }
 
-public fun get_player_card_count(game: &Game, player: address, kind: u8): u8 {
+fun get_player_card_count(game: &Game, player: address, kind: u8): u8 {
     let mut i = 0;
     while (i < game.players.length()) {
         let player_data = &game.players[i];
@@ -3165,7 +3165,7 @@ fun random_spawn_tile(
 // 2. 如果该NPC不在冷却，尝试放置
 // 3. 如果在冷却或无法放置，直接返回（注意：没有可用地块时不设置冷却）
 // 注意：使用传入的RandomGenerator，符合一个交易一个generator的最佳实践
-public(package) fun spawn_random_npc(
+fun spawn_random_npc(
     game: &mut Game,
     template: &MapTemplate,
     gen: &mut RandomGenerator
@@ -3273,22 +3273,13 @@ fun validate_map(game: &Game, map: &map::MapTemplate) {
     assert!(map_id == game.template_map_id, EMapMismatch);
 }
 
-// Building 访问器（供map模块的get_chain_buildings使用）
-public fun building_owner(building: &Building): u8 {
-    building.owner
-}
-
-public fun no_owner(): u8 {
-    NO_OWNER
-}
-
 /// 获取连街的所有建筑ID
 /// 条件：1x1建筑 + 同owner + 中间无间隔
 /// @param game 游戏实例（需要buildings数据）
 /// @param building_id 起始建筑ID
 /// @param template 地图模板（需要chain关系）
 /// @returns 连街的所有建筑ID（至少包含自己）
-public fun get_chain_buildings(
+fun get_chain_buildings(
     game: &Game,
     template: &map::MapTemplate,
     building_id: u16
@@ -3435,7 +3426,7 @@ fun calculate_temple_bonus(
 /// 2. 逐building计算：base_rent = P × mL[L] × I
 /// 3. 土地庙加成：owner拥有土地庙则全局加成
 /// 4. 连街求和；非连街返回单个
-public fun calculate_toll(
+fun calculate_toll(
     game: &Game,
     landing_tile_id: u16,
     template: &MapTemplate,
@@ -3529,7 +3520,7 @@ fun calculate_price_factor(game: &Game): u64 {
 /// 计算建筑购买/升级价格（统一版本，根据size自动选择价格表）
 /// 小建筑(1x1): 购地价公式：(P + 级别加价) × F / 100
 /// 大建筑(2x2): 使用大建筑价格表 × F / 100
-public fun calculate_building_price(
+fun calculate_building_price(
     building_static: &map::BuildingStatic,  // 建筑静态信息
     building: &Building,  // 建筑动态信息（需要访问building_type）
     current_level: u8, // 当前等级
@@ -3616,28 +3607,7 @@ public fun calculate_building_price(
     }
 }
 
-// 检查是否是NPC类型
-public fun is_npc(kind: u8): bool {
-    kind == types::NPC_BARRIER() || kind == types::NPC_BOMB() || kind == types::NPC_DOG()
-}
-
 // 检查是否是会送医院的NPC
-public fun is_hospital_npc(kind: u8): bool {
+fun is_hospital_npc(kind: u8): bool {
     kind == types::NPC_BOMB() || kind == types::NPC_DOG()
-}
-
-// 检查是否是可停留地块
-public fun is_stoppable_tile(kind: u8): bool {
-    kind == types::TILE_HOSPITAL() ||
-    kind == types::TILE_CHANCE() ||
-    kind == types::TILE_BONUS() ||
-    kind == types::TILE_FEE() ||
-    kind == types::TILE_CARD() ||
-    kind == types::TILE_NEWS() ||
-    kind == types::TILE_LOTTERY()
-}
-
-// 检查是否是可经过触发的地块
-public fun is_passable_trigger(kind: u8): bool {
-    kind == types::TILE_CARD() || kind == types::TILE_LOTTERY()
 }

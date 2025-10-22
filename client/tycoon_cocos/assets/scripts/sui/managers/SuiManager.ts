@@ -2051,15 +2051,22 @@ export class SuiManager {
 
             // 6. 构造返回结果
             let message = '';
+
+            // 计算总倍数（乘法叠加）
+            let naviMult = protocols.includes('Navi') ? 1.5 : 1.0;
+            let scallopMult = protocols.includes('Scallop') ? 1.5 : 1.0;
+            let totalMult = naviMult * scallopMult;
+            const multText = totalMult === 2.25 ? '2.25x (1.5 × 1.5)' :
+                             totalMult === 1.5 ? '1.5x' : '1.0x';
+
             if (alreadyActivated) {
-                // 已激活过，说明之前获得过奖励
-                const protocolDetails = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x收益加成`).join('\n');
-                message = `DeFi奖励状态\n\n以下协议已激活：\n${protocolDetails}\n\n提示：每个协议只能激活一次`;
+                // 已激活过
+                const protocolList = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x`).join('\n');
+                message = `DeFi奖励状态\n\n以下协议已激活：\n${protocolList}\n\n当前BONUS奖励倍数：${multText}\n（停留BONUS地块时生效）\n\n提示：每个协议只能激活一次`;
             } else if (totalCash > 0) {
                 // 首次激活成功
-                const protocolDetails = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x收益加成`).join('\n');
-                const totalMultiplier = protocols.length === 2 ? '2.25x' : '1.5x';  // 两个buff叠加
-                message = `DeFi奖励激活成功！\n\n获得奖励：\n${protocolDetails}\n\n总计：\n• +${totalCash} Cash\n• ${totalMultiplier} 收益倍数`;
+                const protocolList = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x`).join('\n');
+                message = `DeFi奖励激活成功！\n\n获得奖励：\n${protocolList}\n\n总计：\n• +${totalCash} Cash (立即)\n• ${multText} BONUS奖励倍数\n\n效果：停留BONUS地块时\n奖励金额 × ${multText}`;
             } else {
                 message = 'DeFi奖励激活成功';
             }

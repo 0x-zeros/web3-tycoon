@@ -20,7 +20,7 @@ lending_core = { git = "https://github.com/naviprotocol/protocol-interface.git",
 # Override = { local = "../conflicting/version", override = true }
 
 [addresses]
-defi_verifier = "0x0"
+defi_verifier = "0x2377de485d8fc4d4f0e8e2e93f36b02ea30c6e3118a2af86b5839984867f14ce"
 
 # Navi Protocol主网包地址
 navi = "0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f"

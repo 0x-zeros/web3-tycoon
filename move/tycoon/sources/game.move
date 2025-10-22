@@ -1606,9 +1606,13 @@ fun handle_tile_stop_with_collector(
     } else if (tile_kind == types::TILE_BONUS()) {
         let base_bonus = map::tile_special(tile);
         let price_index = calculate_price_index(game);
-        let bonus = base_bonus * price_index;
+        let bonus_before_defi = base_bonus * price_index;
 
+        // 应用DeFi收益倍数（Navi × Scallop = 1.5 × 1.5 = 2.25x）
         let player = &mut game.players[player_index as u64];
+        let defi_multiplier = calculate_defi_income_multiplier(player, game.round);
+        let bonus = (bonus_before_defi * defi_multiplier) / 100;
+
         player.cash = player.cash + bonus;
 
         cash_changes.push_back( events::make_cash_delta(
@@ -2056,6 +2060,38 @@ fun has_defi_buff(player: &Player, buff_kind: u8): bool {
         i = i + 1;
     };
     false
+}
+
+/// 计算DeFi收益倍数
+///
+/// 根据玩家持有的DeFi buff计算收益倍数（乘法叠加）
+///
+/// # 倍数计算
+/// - 无buff: 100 (1.0x)
+/// - 有Navi: 150 (1.5x)
+/// - 有Scallop: 150 (1.5x)
+/// - 都有: 225 (1.5 × 1.5 = 2.25x)
+///
+/// # 参数
+/// - player: 玩家对象
+/// - current_round: 当前回合（用于检查buff是否激活）
+///
+/// # 返回值
+/// 倍数（100为基准）
+fun calculate_defi_income_multiplier(player: &Player, current_round: u16): u64 {
+    let mut multiplier = 100;  // 基础1.0x
+
+    // Navi buff：× 1.5
+    if (is_buff_active(player, types::BUFF_NAVI_INCOME_BOOST(), current_round)) {
+        multiplier = (multiplier * 150) / 100;
+    };
+
+    // Scallop buff：× 1.5
+    if (is_buff_active(player, types::BUFF_SCALLOP_INCOME_BOOST(), current_round)) {
+        multiplier = (multiplier * 150) / 100;
+    };
+
+    multiplier
 }
 
 /// 应用DeFi奖励（public(package)，由defi_rewards模块调用）

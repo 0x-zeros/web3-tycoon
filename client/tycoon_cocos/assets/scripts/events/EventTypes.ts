@@ -162,7 +162,15 @@ export const EventTypes = {
         /** 回合变化（玩家切换） */
         TurnChanged: "game_turn_changed",
         /** 建筑变化（owner/level更新） */
-        BuildingChanged: "game_building_changed"
+        BuildingChanged: "game_building_changed",
+
+        // DeFi奖励事件
+        /** 请求领取DeFi奖励 */
+        ClaimDefiReward: "game_claim_defi_reward",
+        /** DeFi奖励激活成功 */
+        DefiRewardActivated: "game_defi_reward_activated",
+        /** DeFi奖励失败 */
+        DefiRewardFailed: "game_defi_reward_failed"
     },
 
     /** 地产相关事件 */
@@ -197,6 +205,8 @@ export const EventTypes = {
         LevelUp: "player_level_up",
         /** 掷骰子 */
         DiceRolled: "player_dice_rolled",
+        /** 玩家数据更新 */
+        DataUpdated: "player_data_updated",
         /** 玩家移动 */
         Moved: "player_moved",
         /** 卡牌变化 */

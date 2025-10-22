@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1920,1080" opaque="false">
-  <controller name="mode" pages="0,play,1,editor" selected="1"/>
+  <controller name="mode" pages="0,play,1,editor" selected="0"/>
   <displayList>
     <component id="n0_ue83" name="cards" src="mumq6" fileName="components/CardList.xml" xy="286,869" scale="0.8,0.8">
       <gearDisplay controller="mode" pages="0"/>
@@ -39,6 +39,9 @@
     </component>
     <component id="n13_mrxi" name="playSetting" src="f49aov" fileName="components/PlaySetting.xml" xy="528,211" visible="false">
       <relation target="" sidePair="center-center,middle-middle"/>
+    </component>
+    <component id="n14_nxs8" name="btn_defiReward" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="259,5" size="272,92">
+      <Button title="defi奖励"/>
     </component>
   </displayList>
 </component>

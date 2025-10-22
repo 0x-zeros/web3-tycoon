@@ -44,6 +44,7 @@ export class UIInGame extends UIBase {
     private _pauseBtn: fgui.GButton | null = null;
     private _settingsBtn: fgui.GButton | null = null;
     private _bagBtn: fgui.GButton | null = null;
+    private _defiRewardBtn: fgui.GButton | null = null;
 
     // ================ 其他 ================
     private _gameTimerID: number | null = null;
@@ -166,6 +167,7 @@ export class UIInGame extends UIBase {
         this._pauseBtn = this.getButton("btnPause");
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
+        this._defiRewardBtn = this.getButton("btn_defiReward");
 
         // 初始化时主动设置一次 mode 控制器（防止错过 EditModeChanged 事件）
         this.updateModeController();
@@ -207,6 +209,10 @@ export class UIInGame extends UIBase {
             this._bagBtn.onClick(this._onBagClick, this);
         }
 
+        if (this._defiRewardBtn) {
+            this._defiRewardBtn.onClick(this._onDefiRewardClick, this);
+        }
+
         // 监听游戏事件
         EventBus.on(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
@@ -232,6 +238,10 @@ export class UIInGame extends UIBase {
 
         if (this._bagBtn) {
             this._bagBtn.offClick(this._onBagClick, this);
+        }
+
+        if (this._defiRewardBtn) {
+            this._defiRewardBtn.offClick(this._onDefiRewardClick, this);
         }
 
         EventBus.off(EventTypes.Game.GamePause, this._onGamePause, this);
@@ -346,6 +356,30 @@ export class UIInGame extends UIBase {
         EventBus.emit(EventTypes.UI.OpenBag, {
             source: "in_game_ui"
         });
+    }
+
+    /**
+     * DeFi奖励按钮点击
+     *
+     * 触发DeFi奖励领取流程（Navi + Scallop）
+     */
+    private _onDefiRewardClick(): void {
+        console.log("[UIInGame] DeFi Reward button clicked");
+
+        // 禁用按钮，防止重复点击
+        if (this._defiRewardBtn) {
+            this._defiRewardBtn.enabled = false;
+        }
+
+        // 发送领取DeFi奖励事件
+        // 实际的区块链交互由GameSession或SuiManager处理
+        EventBus.emit(EventTypes.Game.ClaimDefiReward, {
+            source: "ui_ingame",
+            timestamp: Date.now()
+        });
+
+        // 显示提示（可选）
+        console.log("[UIInGame] DeFi奖励请求已发送");
     }
 
     /**

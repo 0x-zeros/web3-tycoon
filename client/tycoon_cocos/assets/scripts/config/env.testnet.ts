@@ -1,11 +1,11 @@
 /**
  * Sui区块链环境配置
- * 自动生成于: 2025-10-20 18:39:46
+ * 自动生成于: 2025-10-22 17:05:04
  */
 export const SuiEnvConfig = {
-    packageId: '0xf262542ca9fb36e2ccc6daeb1c7e909f6e64e7e9bf0ad52af5eb2a3994ea99bf',
-    upgradeCap: '0x84bb59da051053988b0f85e1b533465a3fb91970ad6f9f6371ca52519ca44828',
-    adminCap: '0xbc99357ff1ed60d6e59d8c4379693d8f10ca0596d74595246ecd55436bbce8de',
-    gameData: '0x51d967b201c5a798c57fc264e5796182556346565101a7f7a2abc9a9ae4be5d9',
+    packageId: '0x21b0b76b1b4e17f0779a7b6c30e46729c85292ba2f7bd440e3c43a01fda09a68',
+    upgradeCap: '0xdaa0a4692dbbe8527fd64bcf3c9e80da9873db9ff892fa4fcb7986b0dd1747ab',
+    adminCap: '0x0e9c91eb0e6007987dabd848c17d741965b38184e2f648026429eae82aefd5f7',
+    gameData: '0x02fadcef4e8e539b944471aa420996d3fb9dbb59b42aa65b9f4b4b1174b4ee13',
     network: 'testnet'
 };

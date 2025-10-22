@@ -2059,16 +2059,21 @@ export class SuiManager {
             const multText = totalMult === 2.25 ? '2.25x (1.5 × 1.5)' :
                              totalMult === 1.5 ? '1.5x' : '1.0x';
 
+            // 协议链接
+            const links = '\n\n━━━━━━━━━━━━━━━━\n• Navi: https://app.naviprotocol.io/\n• Scallop: https://app.scallop.io/';
+
             if (alreadyActivated) {
-                // 已激活过
-                const protocolList = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x`).join('\n');
-                message = `DeFi奖励状态\n\n以下协议已激活：\n${protocolList}\n\n当前BONUS奖励倍数：${multText}\n（停留BONUS地块时生效）\n\n提示：每个协议只能激活一次`;
+                // 之前已经领取过
+                const protocolList = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x BONUS奖励倍数`).join('\n');
+                const multFormula = protocols.length === 2 ? '1.5 × 1.5' : '1.5';
+                message = `DeFi奖励已领取过\n\n您之前已领取：\n${protocolList}\n\n效果：停留BONUS地块时\n奖励金额倍数 ${multFormula}${links}`;
             } else if (totalCash > 0) {
-                // 首次激活成功
-                const protocolList = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x`).join('\n');
-                message = `DeFi奖励激活成功！\n\n获得奖励：\n${protocolList}\n\n总计：\n• +${totalCash} Cash (立即)\n• ${multText} BONUS奖励倍数\n\n效果：停留BONUS地块时\n奖励金额 × ${multText}`;
+                // 刚刚领取成功
+                const protocolList = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x BONUS奖励倍数`).join('\n');
+                const multFormula = protocols.length === 2 ? '1.5 × 1.5' : '1.5';
+                message = `DeFi奖励领取成功！\n\n获得奖励：\n${protocolList}\n\n效果：停留BONUS地块时\n奖励金额倍数 ${multFormula}${links}`;
             } else {
-                message = 'DeFi奖励激活成功';
+                message = 'DeFi奖励领取成功';
             }
 
             console.log('[SuiManager] 准备返回结果:');
@@ -2089,8 +2094,9 @@ export class SuiManager {
 
             // 解析错误信息
             let message = 'DeFi奖励激活失败';
-            if (error.message?.includes('未发现DeFi存款')) {
-                message = '未检测到DeFi存款\n请先在Scallop或Navi存入USDC';
+            if (error.message?.includes('ENoNaviDeposit') || error.message?.includes('未发现')) {
+                // Navi验证失败（链上检查），说明真的没存款
+                message = '未检测到DeFi存款\n\n请先在以下协议存入USDC：\n━━━━━━━━━━━━━━━━\n• Navi Protocol:\n  https://app.naviprotocol.io/\n\n• Scallop Protocol:\n  https://app.scallop.io/\n━━━━━━━━━━━━━━━━\n\n存入后返回游戏点击此按钮';
             } else if (error.message?.includes('EPlayerNotInGame')) {
                 message = '请先加入游戏';
             } else if (error.message) {

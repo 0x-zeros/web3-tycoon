@@ -92,57 +92,48 @@ export class DefiRewardInteraction {
         const tx = new Transaction_!();
         const protocols: string[] = [];
 
-        // 检查存款状态
+        // 检查两个协议的存款状态
         const status = await this.checkDefiDeposits(userAddress);
 
-        // 构造Navi奖励调用
-        if (status.hasNaviDeposit) {
-            console.log('[DefiReward] 检测到Navi存款，添加验证+激活调用');
+        console.log('[DefiReward] 存款检查结果:');
+        console.log('  Navi:', status.hasNaviDeposit);
+        console.log('  Scallop:', status.hasScallopDeposit);
 
-            // 验证Navi存款 → 返回NaviProof热土豆
+        // 根据检查结果构造PTB
+        if (status.hasNaviDeposit) {
+            console.log('[DefiReward] 添加Navi验证+激活');
+
             const naviProof = tx.moveCall({
                 target: `${DefiVerifierConfig.packageId}::defi_verifier::verify_navi_with_proof`,
                 arguments: [tx.object(NaviConfig.storageId)]
             });
 
-            // 消费热土豆，激活Navi奖励
             tx.moveCall({
                 target: `${this.tycoonPackageId}::defi_rewards::activate_navi_reward`,
-                arguments: [
-                    tx.object(gameId),
-                    naviProof  // 热土豆result
-                ]
+                arguments: [tx.object(gameId), naviProof]
             });
 
             protocols.push('Navi');
         }
 
-        // 构造Scallop奖励调用
         if (status.hasScallopDeposit && status.scallopCoinId) {
-            console.log('[DefiReward] 检测到Scallop存款，添加验证+激活调用');
-            console.log('  Scallop Coin ID:', status.scallopCoinId);
-            console.log('  Type:', ScallopConfig.usdcType);
+            console.log('[DefiReward] 添加Scallop验证+激活');
 
-            // 验证Scallop存款 → 返回ScallopProof热土豆
             const scallopProof = tx.moveCall({
                 target: `${DefiVerifierConfig.packageId}::defi_verifier::verify_scallop_with_proof`,
                 arguments: [tx.object(status.scallopCoinId)],
                 typeArguments: [ScallopConfig.usdcType]
             });
 
-            // 消费热土豆，激活Scallop奖励
             tx.moveCall({
                 target: `${this.tycoonPackageId}::defi_rewards::activate_scallop_reward`,
-                arguments: [
-                    tx.object(gameId),
-                    scallopProof
-                ]
+                arguments: [tx.object(gameId), scallopProof]
             });
 
             protocols.push('Scallop');
         }
 
-        // 检查是否有任何存款
+        // 两个都没有才抛出错误
         if (protocols.length === 0) {
             throw new Error('未发现DeFi存款（Navi或Scallop的USDC）');
         }

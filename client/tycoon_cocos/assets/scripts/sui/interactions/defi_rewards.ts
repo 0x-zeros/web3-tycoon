@@ -120,6 +120,8 @@ export class DefiRewardInteraction {
         // 构造Scallop奖励调用
         if (status.hasScallopDeposit && status.scallopCoinId) {
             console.log('[DefiReward] 检测到Scallop存款，添加验证+激活调用');
+            console.log('  Scallop Coin ID:', status.scallopCoinId);
+            console.log('  Type:', ScallopConfig.usdcType);
 
             // 验证Scallop存款 → 返回ScallopProof热土豆
             const scallopProof = tx.moveCall({
@@ -196,18 +198,32 @@ export class DefiRewardInteraction {
         coinId?: string;
     }> {
         try {
-            const coins = await this.client.getAllCoins({
+            // 使用getCoins而非getAllCoins，指定coinType
+            const coins = await this.client.getCoins({
                 owner: userAddress,
-                coinType: ScallopConfig.usdcType
+                coinType: ScallopConfig.usdcType,
+                limit: 10  // 查询最多10个
             });
 
-            if (coins.data.length > 0 && coins.data[0].balance !== '0') {
-                return {
-                    hasDeposit: true,
-                    coinId: coins.data[0].coinObjectId
-                };
+            console.log('[DefiReward] Scallop查询结果:', coins.data.length, '个coin');
+
+            // 遍历找到余额>0的coin
+            for (const coin of coins.data) {
+                console.log('  检查Coin ID:', coin.coinObjectId);
+                console.log('    Balance:', coin.balance);
+                console.log('    Type:', coin.coinType);
+
+                // 验证类型完全匹配
+                if (coin.coinType === ScallopConfig.usdcType && coin.balance !== '0') {
+                    console.log('  ✅ 找到有效的Scallop USDC');
+                    return {
+                        hasDeposit: true,
+                        coinId: coin.coinObjectId
+                    };
+                }
             }
 
+            console.log('  ℹ️ 未找到有效的Scallop USDC');
             return { hasDeposit: false };
         } catch (error) {
             console.warn('[DefiReward] Scallop检查失败:', error);

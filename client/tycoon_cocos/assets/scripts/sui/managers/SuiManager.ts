@@ -1996,9 +1996,12 @@ export class SuiManager {
 
             // 3. 解析events
             const events = txResult.events || [];
+            console.log('[SuiManager] 交易events总数:', events.length);
+
             const rewardEvents = events.filter((e: any) =>
                 e.type.includes('::defi_rewards::DefiRewardActivated')
             );
+            console.log('[SuiManager] DeFi奖励events:', rewardEvents.length);
 
             // 4. 提取奖励信息
             let totalCash = 0;
@@ -2006,7 +2009,10 @@ export class SuiManager {
             const protocols: string[] = [];
 
             for (const event of rewardEvents) {
+                console.log('[SuiManager] 处理event:', event.type);
                 const json = event.parsedJson as any;
+                console.log('  Event内容:', json);
+
                 totalCash += json.cash_rewarded || 0;
 
                 // 解码protocol（vector<u8> → string）
@@ -2019,26 +2025,49 @@ export class SuiManager {
                 }
             }
 
+            console.log('[SuiManager] 解析结果: cash=' + totalCash + ', protocols=' + protocols);
+
             // 5. 更新玩家cash（像rollAndStep一样）
             if (totalCash > 0) {
-                const myPlayer = session.getMyPlayer();
-                if (myPlayer) {
-                    const oldCash = myPlayer.getCash();
-                    const newCash = oldCash + totalCash;
-                    myPlayer.setCash(newCash);  // 自动触发EventTypes.Player.CashChange
-                    console.log(`[SuiManager] 玩家cash更新: ${oldCash} +${totalCash} → ${newCash}`);
+                try {
+                    const myPlayer = session.getMyPlayer();
+                    if (myPlayer) {
+                        const oldCash = myPlayer.getCash();  // BigInt
+                        console.log('[SuiManager] oldCash类型:', typeof oldCash, 'value:', oldCash);
+                        console.log('[SuiManager] totalCash类型:', typeof totalCash, 'value:', totalCash);
+
+                        const newCash = oldCash + BigInt(totalCash);  // 转换为BigInt
+                        console.log('[SuiManager] newCash类型:', typeof newCash, 'value:', newCash);
+
+                        myPlayer.setCash(newCash);  // 自动触发EventTypes.Player.CashChange
+                        console.log(`[SuiManager] ✅ 玩家cash更新成功: ${oldCash} +${totalCash} → ${newCash}`);
+                    }
+                } catch (cashError: any) {
+                    console.error('[SuiManager] Cash更新失败:', cashError);
+                    console.error('  Error详情:', cashError.message);
+                    // 即使cash更新失败，也继续返回结果
                 }
             }
 
             // 6. 构造返回结果
             let message = '';
             if (alreadyActivated) {
-                message = 'DeFi奖励已激活过';
+                // 已激活过，说明之前获得过奖励
+                const protocolDetails = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x收益加成`).join('\n');
+                message = `DeFi奖励状态\n\n以下协议已激活：\n${protocolDetails}\n\n提示：每个协议只能激活一次`;
             } else if (totalCash > 0) {
-                message = `DeFi奖励激活成功！\n+${totalCash} Cash\n+1.5x收益加成\n协议：${protocols.join(', ')}`;
+                // 首次激活成功
+                const protocolDetails = protocols.map(p => `  • ${p}: 2000 Cash + 1.5x收益加成`).join('\n');
+                const totalMultiplier = protocols.length === 2 ? '2.25x' : '1.5x';  // 两个buff叠加
+                message = `DeFi奖励激活成功！\n\n获得奖励：\n${protocolDetails}\n\n总计：\n• +${totalCash} Cash\n• ${totalMultiplier} 收益倍数`;
             } else {
                 message = 'DeFi奖励激活成功';
             }
+
+            console.log('[SuiManager] 准备返回结果:');
+            console.log('  success:', true);
+            console.log('  message:', message);
+            console.log('  alreadyActivated:', alreadyActivated);
 
             return {
                 success: true,

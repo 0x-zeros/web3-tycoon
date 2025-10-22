@@ -379,23 +379,33 @@ export class UIInGame extends UIBase {
             }
 
             // 直接调用SuiManager
+            console.log('[UIInGame] 调用SuiManager.activateDefiRewards');
             const { SuiManager } = await import('../../sui/managers/SuiManager');
             const result = await SuiManager.instance.activateDefiRewards(session);
 
-            // 显示结果MessageBox
-            const { UIMessage, MessageBoxIcon } = await import('../utils/UIMessage');
+            console.log('[UIInGame] 收到结果:', result);
+            console.log('  success:', result.success);
+            console.log('  message:', result.message);
+
+            // 显示结果MessageBox（使用静态方法）
+            const { UIMessage } = await import('../utils/UIMessage');
+
             if (result.success) {
-                UIMessage.instance?.show(result.message, MessageBoxIcon.Success);
+                console.log('[UIInGame] 显示成功消息:', result.message);
+                await UIMessage.success(result.message);
             } else {
-                UIMessage.instance?.show(result.message, MessageBoxIcon.Error);
+                console.log('[UIInGame] 显示失败消息:', result.message);
+                await UIMessage.error(result.message);
             }
+
+            console.log('[UIInGame] MessageBox显示完成');
 
         } catch (error: any) {
             console.error('[UIInGame] DeFi奖励失败:', error);
 
             // 显示错误
-            const { UIMessage, MessageBoxIcon } = await import('../utils/UIMessage');
-            UIMessage.instance?.show(error.message || 'DeFi奖励激活失败', MessageBoxIcon.Error);
+            const { UIMessage } = await import('../utils/UIMessage');
+            await UIMessage.error(error.message || 'DeFi奖励激活失败');
 
         } finally {
             // 恢复按钮

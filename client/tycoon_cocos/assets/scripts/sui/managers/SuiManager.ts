@@ -17,6 +17,7 @@ import { RpcConfigManager } from '../config/RpcConfigManager';
 import { SignerProvider, WalletSigner, KeypairSigner } from '../signers';
 import { TycoonGameClient, initInteractions, initGameInteraction } from '../interactions';
 import { MapAdminInteraction, initMapAdminInteraction } from '../interactions/mapAdmin';
+import { DefiRewardInteraction, initDefiRewardInteraction } from '../interactions/defi_rewards';
 import { QueryService, GameListItem, AssetService, DataPollingService } from '../services';
 import { TycoonEventIndexer } from '../events/indexer';
 import { EventType, type GameCreatedEvent } from '../events/types';
@@ -64,6 +65,7 @@ export class SuiManager {
     private _signer: SignerProvider | null = null;
     private _gameClient: TycoonGameClient | null = null;
     private _mapAdmin: MapAdminInteraction | null = null;
+    private _defiRewardInteraction: DefiRewardInteraction | null = null;
     private _queryService: QueryService | null = null;
     private _assetService: AssetService | null = null;
     private _pollingService: DataPollingService | null = null;
@@ -140,6 +142,7 @@ export class SuiManager {
         await initInteractions();
         await initGameInteraction();
         await initMapAdminInteraction();
+        await initDefiRewardInteraction();
 
         // 动态加载并创建 Sui Client
         // 优先使用：自定义 RPC > config.rpcUrl > 默认网络 RPC
@@ -160,6 +163,12 @@ export class SuiManager {
             this._client,
             config.packageId,
             config.gameDataId
+        );
+
+        // 创建 DefiRewardInteraction
+        this._defiRewardInteraction = new DefiRewardInteraction(
+            this._client,
+            config.packageId
         );
 
         // 创建 QueryService
@@ -1938,6 +1947,128 @@ export class SuiManager {
         console.log('[SuiManager] ======================================');
         console.log('[SuiManager] 重新初始化完成');
         console.log('[SuiManager] ======================================');
+    }
+
+    // ============ DeFi奖励功能 ============
+
+    /**
+     * 激活DeFi奖励
+     *
+     * 流程：
+     * 1. 检查Navi和Scallop的USDC存款
+     * 2. 构造PTB验证并激活奖励
+     * 3. 签名执行交易
+     * 4. 解析events更新玩家cash
+     * 5. 返回结果（用于显示MessageBox）
+     *
+     * @param session 当前游戏会话
+     * @returns 奖励激活结果
+     */
+    public async activateDefiRewards(session: any): Promise<{
+        success: boolean;
+        txHash: string;
+        cashRewarded: number;
+        protocols: string[];
+        message: string;
+    }> {
+        this._ensureInitialized();
+
+        const gameId = session.getGameId();
+        const userAddress = this._signer!.getAddress();
+
+        console.log('[SuiManager] 激活DeFi奖励');
+        console.log('  Game ID:', gameId);
+        console.log('  User:', userAddress);
+
+        try {
+            // 1. 构造交易
+            const result = await this._defiRewardInteraction!.buildActivateDefiRewardsTx(
+                gameId,
+                userAddress
+            );
+
+            console.log('[SuiManager] DeFi PTB构造完成，协议:', result.protocols);
+
+            // 2. 签名并执行
+            const txResult = await this.signAndExecuteTransaction(result.tx);
+
+            console.log('[SuiManager] 交易成功:', txResult.digest);
+
+            // 3. 解析events
+            const events = txResult.events || [];
+            const rewardEvents = events.filter((e: any) =>
+                e.type.includes('::defi_rewards::DefiRewardActivated')
+            );
+
+            // 4. 提取奖励信息
+            let totalCash = 0;
+            let alreadyActivated = false;
+            const protocols: string[] = [];
+
+            for (const event of rewardEvents) {
+                const json = event.parsedJson as any;
+                totalCash += json.cash_rewarded || 0;
+
+                // 解码protocol（vector<u8> → string）
+                const protocolBytes = json.protocol;
+                const protocolName = new TextDecoder().decode(new Uint8Array(protocolBytes));
+                protocols.push(protocolName);
+
+                if (json.already_activated) {
+                    alreadyActivated = true;
+                }
+            }
+
+            // 5. 更新玩家cash（像rollAndStep一样）
+            if (totalCash > 0) {
+                const myPlayer = session.getMyPlayer();
+                if (myPlayer) {
+                    const oldCash = myPlayer.getCash();
+                    const newCash = oldCash + totalCash;
+                    myPlayer.setCash(newCash);  // 自动触发EventTypes.Player.CashChange
+                    console.log(`[SuiManager] 玩家cash更新: ${oldCash} +${totalCash} → ${newCash}`);
+                }
+            }
+
+            // 6. 构造返回结果
+            let message = '';
+            if (alreadyActivated) {
+                message = 'DeFi奖励已激活过';
+            } else if (totalCash > 0) {
+                message = `DeFi奖励激活成功！\n+${totalCash} Cash\n+1.5x收益加成\n协议：${protocols.join(', ')}`;
+            } else {
+                message = 'DeFi奖励激活成功';
+            }
+
+            return {
+                success: true,
+                txHash: txResult.digest,
+                cashRewarded: totalCash,
+                protocols,
+                message
+            };
+
+        } catch (error: any) {
+            console.error('[SuiManager] DeFi奖励激活失败:', error);
+
+            // 解析错误信息
+            let message = 'DeFi奖励激活失败';
+            if (error.message?.includes('未发现DeFi存款')) {
+                message = '未检测到DeFi存款\n请先在Scallop或Navi存入USDC';
+            } else if (error.message?.includes('EPlayerNotInGame')) {
+                message = '请先加入游戏';
+            } else if (error.message) {
+                message = `激活失败：${error.message}`;
+            }
+
+            return {
+                success: false,
+                txHash: '',
+                cashRewarded: 0,
+                protocols: [],
+                message
+            };
+        }
     }
 }
 

@@ -21,6 +21,7 @@ defi_verifier = { local = "../defi_verifier", override = true }
 
 [addresses]
 tycoon = "0x0"
+defi_verifier = "0x2377de485d8fc4d4f0e8e2e93f36b02ea30c6e3118a2af86b5839984867f14ce"
 
 # Named addresses will be accessible in Move as `@name`. They're also exported:
 # for example, `std = "0x1"` is exported by the Standard Library.

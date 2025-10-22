@@ -9,7 +9,7 @@
  */
 export const DefiVerifierConfig = {
     /** DeFi Verifier Package ID（主网） */
-    packageId: '0x74d8b5609fa69f7b61b427ee58babaaba09b44adef47f412ad51ad50dfe6cc60',
+    packageId: '0x2377de485d8fc4d4f0e8e2e93f36b02ea30c6e3118a2af86b5839984867f14ce',
 } as const;
 
 /**

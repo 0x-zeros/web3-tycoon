@@ -2,7 +2,7 @@
 
 [move]
 version = 3
-manifest_digest = "7575BC95CF755B7179F6C30BF408E8BC96CC28B31F1939556F447EB44620F966"
+manifest_digest = "38CF14C34BBE04FEF339323290856FD7291A37235721D443518AC0D5108923B1"
 deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -127,8 +127,6 @@ dependencies = [
   { id = "supra_utils", name = "supra_utils" },
 ]
 
-[env]
-
 [[move.package]]
 id = "utils"
 source = { git = "https://github.com/naviprotocol/protocol-interface.git", rev = "main", subdir = "utils" }
@@ -141,6 +139,8 @@ dependencies = [
 compiler-version = "1.57.2"
 edition = "2024.beta"
 flavor = "sui"
+
+[env]
 
 [env.local]
 chain-id = "c0e5dc96"
@@ -158,4 +158,10 @@ published-version = "1"
 chain-id = "4c78adac"
 original-published-id = "0xf262542ca9fb36e2ccc6daeb1c7e909f6e64e7e9bf0ad52af5eb2a3994ea99bf"
 latest-published-id = "0xf262542ca9fb36e2ccc6daeb1c7e909f6e64e7e9bf0ad52af5eb2a3994ea99bf"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0x053de4482b5c3d56361eede036dcb8211ee5a5ad7429f6a141b791cbcb7ed376"
+latest-published-id = "0x053de4482b5c3d56361eede036dcb8211ee5a5ad7429f6a141b791cbcb7ed376"
 published-version = "1"

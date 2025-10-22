@@ -361,9 +361,9 @@ export class UIInGame extends UIBase {
     /**
      * DeFi奖励按钮点击
      *
-     * 触发DeFi奖励领取流程（Navi + Scallop）
+     * 直接调用SuiManager激活DeFi奖励（Navi + Scallop）
      */
-    private _onDefiRewardClick(): void {
+    private async _onDefiRewardClick(): Promise<void> {
         console.log("[UIInGame] DeFi Reward button clicked");
 
         // 禁用按钮，防止重复点击
@@ -371,15 +371,38 @@ export class UIInGame extends UIBase {
             this._defiRewardBtn.enabled = false;
         }
 
-        // 发送领取DeFi奖励事件
-        // 实际的区块链交互由GameSession或SuiManager处理
-        EventBus.emit(EventTypes.Game.ClaimDefiReward, {
-            source: "ui_ingame",
-            timestamp: Date.now()
-        });
+        try {
+            // 获取GameSession
+            const session = Blackboard.instance.get('currentGameSession');
+            if (!session) {
+                throw new Error('游戏未开始');
+            }
 
-        // 显示提示（可选）
-        console.log("[UIInGame] DeFi奖励请求已发送");
+            // 直接调用SuiManager
+            const { SuiManager } = await import('../../sui/managers/SuiManager');
+            const result = await SuiManager.instance.activateDefiRewards(session);
+
+            // 显示结果MessageBox
+            const { UIMessage, MessageBoxIcon } = await import('../utils/UIMessage');
+            if (result.success) {
+                UIMessage.instance?.show(result.message, MessageBoxIcon.Success);
+            } else {
+                UIMessage.instance?.show(result.message, MessageBoxIcon.Error);
+            }
+
+        } catch (error: any) {
+            console.error('[UIInGame] DeFi奖励失败:', error);
+
+            // 显示错误
+            const { UIMessage, MessageBoxIcon } = await import('../utils/UIMessage');
+            UIMessage.instance?.show(error.message || 'DeFi奖励激活失败', MessageBoxIcon.Error);
+
+        } finally {
+            // 恢复按钮
+            if (this._defiRewardBtn) {
+                this._defiRewardBtn.enabled = true;
+            }
+        }
     }
 
     /**

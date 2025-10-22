@@ -37,14 +37,10 @@ const STORAGE_KEY = 'sui_wallet_connection';
 export class UIWallet extends UIBase {
 
     private m_btn_wallet:fgui.GButton;
-    private m_btn_connect:fgui.GButton;
     private m_btn_disconnect:fgui.GButton;
     private m_btn_balance:fgui.GButton | null = null;  // 余额按钮
     private m_btn_faucet:fgui.GButton | null = null;   // Faucet 按钮
     private m_txt_chain:fgui.GTextField | null = null;  // 链名称显示
-
-    // Controller控制disconnected/connected状态
-    private m_controller: fgui.Controller | null = null;
 
     // 当前连接的钱包和账户
     private m_connectedWallet: Wallet | null = null;
@@ -77,17 +73,10 @@ export class UIWallet extends UIBase {
      */
     private _setupComponents(): void {
         this.m_btn_wallet = this.getButton("btn_wallet");
-        this.m_btn_connect = this.getButton("btn_connect");
         this.m_btn_disconnect = this.getButton("btn_disconnect");
         this.m_btn_balance = this.getButton("btn_balance");
         this.m_btn_faucet = this.getButton("btn_faucet");
         this.m_txt_chain = this.getText("chain");
-
-        // 获取controller
-        this.m_controller = this.getController("wallet");
-        if (!this.m_controller) {
-            console.error("[UIWallet] Controller 'wallet' not found");
-        }
 
         // 设置 chain 显示
         this._updateChainDisplay();
@@ -108,10 +97,6 @@ export class UIWallet extends UIBase {
         // 绑定按钮点击事件
         if (this.m_btn_wallet) {
             this.m_btn_wallet.onClick(this._onWalletClick, this);
-        }
-
-        if (this.m_btn_connect) {
-            this.m_btn_connect.onClick(this._onConnectClick, this);
         }
 
         if (this.m_btn_disconnect) {
@@ -143,14 +128,9 @@ export class UIWallet extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
-
         // 解绑按钮点击事件
         if (this.m_btn_wallet) {
             this.m_btn_wallet.offClick(this._onWalletClick, this);
-        }
-
-        if (this.m_btn_connect) {
-            this.m_btn_connect.offClick(this._onConnectClick, this);
         }
 
         if (this.m_btn_disconnect) {
@@ -178,16 +158,6 @@ export class UIWallet extends UIBase {
         super.unbindEvents();
     }
 
-    private async _onConnectClick(): Promise<void> {
-        console.log("[UIWallet] Connect clicked");
-
-        const suiWallets = await this.getSuiWallets();
-
-        // 创建并显示WalletList（异步）
-        this._showWalletList(suiWallets).catch(error => {
-            console.error("[UIWallet] Failed to show wallet list:", error);
-        });
-    }
 
     /**
      * 断开连接点击事件
@@ -219,14 +189,14 @@ export class UIWallet extends UIBase {
             SuiManager.instance.clearSigner();
             console.log('[UIWallet] SuiManager signer cleared');
 
-            // 清除余额显示
-            if (this.m_btn_balance) {
-                this.m_btn_balance.title = "";
+            // 更新 btn_wallet 显示为 "Connect"
+            if (this.m_btn_wallet) {
+                this.m_btn_wallet.title = "Connect";
             }
 
-            // 切换controller状态为disconnected
-            if (this.m_controller) {
-                this.m_controller.selectedIndex = 0;
+            // 清除余额显示为 "sui 0"
+            if (this.m_btn_balance) {
+                this.m_btn_balance.title = "sui 0";
             }
 
             // 隐藏disconnect按钮
@@ -246,26 +216,31 @@ export class UIWallet extends UIBase {
     /**
      * 钱包点击事件
      */
-    private _onWalletClick(): void {
+    private async _onWalletClick(): Promise<void> {
         console.log("[UIWallet] Wallet clicked");
 
-        if (!this.m_controller) {
-            console.error("[UIWallet] Controller not initialized");
-            return;
-        }
-
-        // Keypair 模式：不允许操作（开发模式自动连接）
+        // 1. Keypair 模式：不处理
         if (this._isKeypairMode) {
-            console.log('[UIWallet] Keypair mode: no disconnect allowed');
+            console.log('[UIWallet] Keypair mode: no action');
             return;
         }
 
-        // Wallet 模式：toggle disconnect 按钮
-        if (this.m_controller.selectedIndex === 1) {
-            if (this.m_btn_disconnect) {
-                this.m_btn_disconnect.visible = !this.m_btn_disconnect.visible;
-                console.log(`[UIWallet] Toggle disconnect button to ${this.m_btn_disconnect.visible ? 'visible' : 'hidden'}`);
+        // 2. Wallet 模式未连接：显示钱包列表
+        if (!this.m_connectedWallet) {
+            console.log('[UIWallet] No wallet connected, showing wallet list');
+            try {
+                const suiWallets = await this.getSuiWallets();
+                await this._showWalletList(suiWallets);
+            } catch (error) {
+                console.error("[UIWallet] Failed to show wallet list:", error);
             }
+            return;
+        }
+
+        // 3. Wallet 模式已连接：切换 disconnect 按钮
+        if (this.m_btn_disconnect) {
+            this.m_btn_disconnect.visible = !this.m_btn_disconnect.visible;
+            console.log(`[UIWallet] Toggle disconnect button to ${this.m_btn_disconnect.visible ? 'visible' : 'hidden'}`);
         }
     }
 
@@ -437,11 +412,6 @@ export class UIWallet extends UIBase {
             this.m_connectedWallet = wallet;
             this.m_connectedAccount = account;
 
-            // 切换controller状态为connected
-            if (this.m_controller) {
-                this.m_controller.selectedIndex = 1;
-            }
-
             // 设置btn_wallet的title为缩略地址
             if (this.m_btn_wallet) {
                 this.m_btn_wallet.title = this._shortenAddress(account.address);
@@ -485,16 +455,10 @@ export class UIWallet extends UIBase {
      * 尝试自动连接钱包（从localStorage恢复）
      */
     private async _tryAutoConnect(): Promise<void> {
-        if (!this.m_controller) {
-            console.error('[UIWallet] Controller not initialized');
-            return;
-        }
-
         // 从localStorage读取连接信息
         const savedConnection = this._loadConnection();
         if (!savedConnection) {
-            console.log('[UIWallet] No saved connection, set to disconnected state');
-            this.m_controller.selectedIndex = 0; // disconnected
+            console.log('[UIWallet] No saved connection');
             return;
         }
 
@@ -509,7 +473,6 @@ export class UIWallet extends UIBase {
             if (!targetWallet) {
                 console.log(`[UIWallet] Saved wallet '${savedConnection.walletName}' not found`);
                 this._clearConnection();
-                this.m_controller.selectedIndex = 0; // disconnected
                 return;
             }
 
@@ -518,7 +481,6 @@ export class UIWallet extends UIBase {
             if (!connectFeature || typeof connectFeature.connect !== 'function') {
                 console.error('[UIWallet] Wallet does not support standard:connect');
                 this._clearConnection();
-                this.m_controller.selectedIndex = 0;
                 return;
             }
 
@@ -531,14 +493,12 @@ export class UIWallet extends UIBase {
             if (!targetAccount) {
                 console.log(`[UIWallet] Saved account '${savedConnection.accountAddress}' not found in accounts`);
                 this._clearConnection();
-                this.m_controller.selectedIndex = 0; // disconnected
                 return;
             }
 
             // 自动连接成功
             this.m_connectedWallet = targetWallet;
             this.m_connectedAccount = targetAccount;
-            this.m_controller.selectedIndex = 1; // connected
 
             // 更新UI
             if (this.m_btn_wallet) {
@@ -566,7 +526,6 @@ export class UIWallet extends UIBase {
         } catch (error) {
             console.error('[UIWallet] Auto-connect failed:', error);
             this._clearConnection();
-            this.m_controller.selectedIndex = 0; // disconnected
         }
     }
 
@@ -805,11 +764,6 @@ export class UIWallet extends UIBase {
             return;
         }
 
-        // 更新 UI 状态（切换到 connected）
-        if (this.m_controller) {
-            this.m_controller.selectedIndex = 1;
-        }
-
         // 设置地址显示
         if (this.m_btn_wallet) {
             this.m_btn_wallet.title = this._shortenAddress(address);
@@ -876,38 +830,33 @@ export class UIWallet extends UIBase {
         this.m_connectedWallet = null;
         this.m_connectedAccount = null;
 
-        // 3. 重置 UI 状态
-        if (this.m_controller) {
-            // 检查新的 signer 状态
-            const signerType = SuiManager.instance.getSignerType();
-            const address = SuiManager.instance.currentAddress;
+        // 3. 检查新的 signer 状态并更新 UI
+        const signerType = SuiManager.instance.getSignerType();
+        const address = SuiManager.instance.currentAddress;
 
-            if (signerType === 'keypair' && address) {
-                // Keypair 模式已连接
-                this._isKeypairMode = true;
-                this.m_controller.selectedIndex = 1;  // connected
+        if (signerType === 'keypair' && address) {
+            // Keypair 模式已连接
+            this._isKeypairMode = true;
 
-                if (this.m_btn_wallet) {
-                    this.m_btn_wallet.title = this._shortenAddress(address);
-                }
-
-                console.log('[UIWallet] Keypair mode detected after network change');
-            } else {
-                // Wallet 模式，未连接
-                this._isKeypairMode = false;
-                this.m_controller.selectedIndex = 0;  // disconnected
-
-                if (this.m_btn_wallet) {
-                    this.m_btn_wallet.title = "Connect";
-                }
-
-                console.log('[UIWallet] Wallet mode, disconnected');
+            if (this.m_btn_wallet) {
+                this.m_btn_wallet.title = this._shortenAddress(address);
             }
 
-            // 更新 disconnect 按钮可见性
-            if (this.m_btn_disconnect) {
-                this.m_btn_disconnect.visible = false;
+            console.log('[UIWallet] Keypair mode detected after network change');
+        } else {
+            // Wallet 模式，未连接
+            this._isKeypairMode = false;
+
+            if (this.m_btn_wallet) {
+                this.m_btn_wallet.title = "Connect";
             }
+
+            console.log('[UIWallet] Wallet mode, disconnected');
+        }
+
+        // 更新 disconnect 按钮可见性
+        if (this.m_btn_disconnect) {
+            this.m_btn_disconnect.visible = false;
         }
 
         // 4. 更新余额显示
@@ -949,10 +898,6 @@ export class UIWallet extends UIBase {
                     this.m_connectedAccount = null;
 
                     // 更新 UI
-                    if (this.m_controller) {
-                        this.m_controller.selectedIndex = 1;
-                    }
-
                     if (this.m_btn_wallet) {
                         this.m_btn_wallet.title = this._shortenAddress(address);
                     }

@@ -831,7 +831,7 @@ entry fun buy_building(
     let base_price = map::building_price(building_static);
     assert!(base_price > 0, EInvalidPrice);
     let price_index = calculate_price_index(game);
-    let price = (base_price * price_index);
+    let price = ((base_price as u128) * (price_index as u128)) as u64;
     assert!(player.cash > price, EInsufficientCash);
 
     let (success, _cash_delta_opt) = try_execute_buy_building(
@@ -1329,7 +1329,7 @@ fun handle_tile_stop_with_collector(
         if (building.owner == NO_OWNER) {
                 let base_price = map::building_price(building_static);
                 let price_index = calculate_price_index(game);
-                let price = base_price * price_index;
+                let price = ((base_price as u128) * (price_index as u128)) as u64;
 
                 if (auto_buy) {
                     let (success, cash_delta_opt) = try_execute_buy_building(
@@ -1611,7 +1611,7 @@ fun handle_tile_stop_with_collector(
         // 应用DeFi收益倍数（Navi × Scallop = 1.5 × 1.5 = 2.25x）
         let player = &mut game.players[player_index as u64];
         let defi_multiplier = calculate_defi_income_multiplier(player, game.round);
-        let bonus = (bonus_before_defi * defi_multiplier) / 100;
+        let bonus = (((bonus_before_defi as u128) * (defi_multiplier as u128)) / 100) as u64;
 
         player.cash = player.cash + bonus;
 
@@ -2671,7 +2671,7 @@ fun calculate_single_tile_rent(
         100
     };
 
-    (price * multiplier * price_index) / 10000
+    (((price as u128) * (multiplier as u128) * (price_index as u128)) / 10000) as u64
 }
 
 /// 计算土地庙加成（分别相加模式）
@@ -2689,7 +2689,8 @@ fun calculate_temple_bonus(
         let level = temple_levels[i];
         if (level > 0 && (level as u64) <= temple_multipliers.length()) {
             let multiplier = temple_multipliers[(level - 1) as u64];
-            bonus = bonus + (base_rent * multiplier) / 100;
+            let temple_bonus = (((base_rent as u128) * (multiplier as u128)) / 100) as u64;
+            bonus = bonus + temple_bonus;
         };
         i = i + 1;
     };
@@ -2811,9 +2812,9 @@ fun calculate_building_price(
             return 0
         };
 
-        let current_total = ((base_price + current_cost) * price_factor) / 10000;
+        let current_total = ((((base_price + current_cost) as u128) * (price_factor as u128)) / 10000) as u64;
 
-        let target_total = ((base_price + target_cost) * price_factor) / 10000;
+        let target_total = ((((base_price + target_cost) as u128) * (price_factor as u128)) / 10000) as u64;
 
         if (target_total > current_total) {
             target_total - current_total
@@ -2848,7 +2849,7 @@ fun calculate_building_price(
             target_cost
         };
 
-        (upgrade_diff * price_factor) / 10000
+        (((upgrade_diff as u128) * (price_factor as u128)) / 10000) as u64
     } else {
         0
     }

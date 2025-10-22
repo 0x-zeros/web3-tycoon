@@ -18,7 +18,7 @@
     <component id="n11_pseu" name="btn_balance" src="pseuolp" fileName="components/Button12.xml" xy="5,52" size="320,54">
       <Button title="sui 0"/>
     </component>
-    <component id="n12_6i1j" name="btn_faucet" src="nev8olo" fileName="components/Button11.xml" xy="8,264" size="320,66" visible="false">
+    <component id="n12_6i1j" name="btn_faucet" src="nev8olo" fileName="components/Button11.xml" xy="8,264" size="320,66">
       <gearDisplay controller="wallet" pages="1"/>
       <Button title="获取测试SUI"/>
     </component>

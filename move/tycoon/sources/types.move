@@ -55,6 +55,12 @@ public(package) fun BUFF_RENT_FREE(): u8 { 3 }
 public(package) fun BUFF_LAND_BLESSING(): u8 { 4 }
 public(package) fun BUFF_FORTUNE(): u8 { 5 }
 
+// 6-199: 预留给card及其他
+
+// DeFi奖励Buff（从200开始）
+public(package) fun BUFF_NAVI_INCOME_BOOST(): u8 { 200 }
+public(package) fun BUFF_SCALLOP_INCOME_BOOST(): u8 { 201 }
+
 // ===== GameStatus =====
 public(package) fun STATUS_READY(): u8 { 0 }
 public(package) fun STATUS_ACTIVE(): u8 { 1 }

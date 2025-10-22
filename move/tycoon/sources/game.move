@@ -981,7 +981,7 @@ fun clear_decision_state(game: &mut Game) {
     game.decision_amount = 0;
 }
 
-fun find_player_index(game: &Game, player_addr: address): u8 {
+public(package) fun find_player_index(game: &Game, player_addr: address): u8 {
     let mut i = 0;
     while (i < game.players.length()) {
         let player = &game.players[i];
@@ -991,6 +991,11 @@ fun find_player_index(game: &Game, player_addr: address): u8 {
         i = i + 1;
     };
     abort EPlayerNotFound
+}
+
+/// 获取Game的UID引用（用于获取对象ID等）
+public(package) fun game_uid(game: &Game): &UID {
+    &game.id
 }
 
 fun validate_seat_and_turn(game: &Game, seat: &Seat) {
@@ -2036,6 +2041,64 @@ fun is_buff_active(player: &Player, kind: u8, current_round: u16): bool {
         i = i + 1;
     };
     false
+}
+
+// 检查玩家是否已有指定的DeFi buff（不考虑回合）
+//
+// 用于DeFi奖励防重复检查
+fun has_defi_buff(player: &Player, buff_kind: u8): bool {
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        let buff = player.buffs[i];
+        if (buff.kind == buff_kind) {
+            return true
+        };
+        i = i + 1;
+    };
+    false
+}
+
+/// 应用DeFi奖励（public(package)，由defi_rewards模块调用）
+///
+/// 功能：
+/// 1. 检查是否已有该协议的buff（防重复）
+/// 2. 发放2000 cash
+/// 3. 添加永久1.5x收益加成buff
+///
+/// # 参数
+/// - game: 游戏对象
+/// - player_index: 玩家索引
+/// - buff_kind: BUFF_NAVI_INCOME_BOOST 或 BUFF_SCALLOP_INCOME_BOOST
+///
+/// # 返回值
+/// - true: 首次激活，已发放奖励
+/// - false: 已有该buff，未重复发放
+public(package) fun apply_defi_reward(
+    game: &mut Game,
+    player_index: u8,
+    buff_kind: u8,
+    _ctx: &TxContext
+): bool {
+    let player = &mut game.players[player_index as u64];
+
+    // 检查是否已有该协议的buff
+    if (has_defi_buff(player, buff_kind)) {
+        return false  // 已激活过，不重复发放
+    };
+
+    // 1. 立即发放2000 cash
+    player.cash = player.cash + 2000;
+
+    // 2. 添加永久收益加成buff
+    let buff = BuffEntry {
+        kind: buff_kind,  // BUFF_NAVI_INCOME_BOOST 或 BUFF_SCALLOP_INCOME_BOOST
+        last_active_round: 9999,  // 永久生效（9999回合）
+        value: 150,  // 1.5x倍数
+        spawn_index: 0xFFFF,  // 非tile来源
+    };
+    player.buffs.push_back(buff);
+
+    true  // 首次激活成功
 }
 
 // 获取激活buff的数值载荷

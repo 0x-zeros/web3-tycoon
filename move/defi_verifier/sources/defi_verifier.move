@@ -16,6 +16,7 @@ module defi_verifier::defi_verifier {
     use std::type_name;
     use defi_verifier::scallop_checker;
     use defi_verifier::navi_checker;
+    use defi_verifier::defi_proof;
     use lending_core::storage::Storage as NaviStorage;
 
     // ====== 返回值约定 ======
@@ -147,6 +148,61 @@ module defi_verifier::defi_verifier {
         let user = ctx.sender();
         navi_checker::check_any_asset(navi_storage, user)
     }
+
+    // ====== 热土豆凭证接口 ======
+
+    /// 验证Navi存款并返回凭证
+    ///
+    /// 如果验证失败（无存款），交易abort
+    /// 验证成功返回NaviProof热土豆，必须在同一PTB中消费
+    ///
+    /// # 参数
+    /// - navi_storage: Navi的Storage共享对象
+    /// - ctx: 交易上下文
+    ///
+    /// # 返回值
+    /// NaviProof热土豆
+    ///
+    /// # 错误
+    /// - ENoNaviDeposit: 用户在Navi无USDC存款
+    public fun verify_navi_with_proof(
+        navi_storage: &mut NaviStorage,
+        ctx: &TxContext
+    ): defi_proof::NaviProof {
+        let user = ctx.sender();
+        let score = navi_checker::check_usdc(navi_storage, user);
+
+        assert!(score > 0, ENoNaviDeposit);
+
+        defi_proof::create_navi_proof()
+    }
+
+    /// 验证Scallop存款并返回凭证
+    ///
+    /// # 参数
+    /// - coin: 用户持有的Coin对象
+    /// - ctx: 交易上下文
+    ///
+    /// # 返回值
+    /// ScallopProof热土豆
+    ///
+    /// # 错误
+    /// - ENoScallopDeposit: 不是SCALLOP_USDC或余额为0
+    public fun verify_scallop_with_proof<CoinType>(
+        coin: &Coin<CoinType>,
+        _ctx: &TxContext
+    ): defi_proof::ScallopProof {
+        let score = verify_defi_coin(coin);
+
+        assert!(score > 0, ENoScallopDeposit);
+
+        defi_proof::create_scallop_proof()
+    }
+
+    // ====== 错误码 ======
+
+    const ENoNaviDeposit: u64 = 100;
+    const ENoScallopDeposit: u64 = 101;
 
     // ====== 调试辅助函数 ======
 

@@ -206,7 +206,7 @@ export class UISuiConfig extends UIBase {
 
     /**
      * OK 按钮点击 - 检测变化并应用
-     * 独立处理 env 切换和 useKeypair 切换
+     * 独立处理 env 切换、useKeypair 切换、keypair 配置变化
      */
     private async onOkClick(): Promise<void> {
         console.log('[UISuiConfig] OK clicked');
@@ -225,8 +225,25 @@ export class UISuiConfig extends UIBase {
             const envChanged = newEnv !== currentConfig.network;
             const signerChanged = newSignerType !== currentConfig.signerType;
 
-            // 没有变化，直接关闭
-            if (!envChanged && !signerChanged) {
+            // 检测 keypair 配置变化（仅在当前和新配置都是 keypair 模式时）
+            let keypairConfigChanged = false;
+            if (newUseKeypair && currentConfig.signerType === 'keypair') {
+                const newStorageKey = this.input_storageKey?.text.trim() || '';
+                const newPassword = this.input_password?.text || '';
+                const currentStorageKey = KeystoreConfig.instance.getStorageKey();
+                const currentPassword = KeystoreConfig.instance.getPassword();
+
+                keypairConfigChanged = newStorageKey !== currentStorageKey || newPassword !== currentPassword;
+
+                if (keypairConfigChanged) {
+                    console.log('[UISuiConfig] Keypair config changed:');
+                    console.log('  Storage key:', currentStorageKey, '→', newStorageKey);
+                    console.log('  Password changed:', newPassword !== currentPassword);
+                }
+            }
+
+            // 没有任何变化，直接关闭
+            if (!envChanged && !signerChanged && !keypairConfigChanged) {
                 console.log('[UISuiConfig] No changes detected');
                 this.panel.visible = false;
                 return;
@@ -240,6 +257,11 @@ export class UISuiConfig extends UIBase {
             // ✅ 独立处理 2: useKeypair 切换（影响小，只换 signer）
             else if (signerChanged) {
                 console.log('[UISuiConfig] Signer changed:', currentConfig.signerType, '→', newSignerType);
+                await this.handleSignerChange(newUseKeypair);
+            }
+            // ✅ 独立处理 3: keypair 配置变化（storageKey 或 password 变化）
+            else if (keypairConfigChanged) {
+                console.log('[UISuiConfig] Keypair config changed (signer type unchanged)');
                 await this.handleSignerChange(newUseKeypair);
             }
 

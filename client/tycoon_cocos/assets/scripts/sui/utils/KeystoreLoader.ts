@@ -241,6 +241,103 @@ export function clearStoredKeypair(): void {
 }
 
 /**
+ * 使用指定密码加载 keypair（不修改 KeystoreConfig）
+ * @param storageKey 存储键（如 'dev0', 'dev1'）
+ * @param password 密码
+ * @param network 网络类型
+ * @returns Ed25519Keypair，如果不存在则返回 null
+ */
+export async function loadKeypairWithPassword(
+    storageKey: string,
+    password: string,
+    network: NetworkType
+): Promise<Ed25519Keypair | null> {
+    const fullStorageKey = `web3_tycoon_sui_${storageKey}`;
+    console.log('[KeystoreLoader] loadKeypairWithPassword: START');
+    console.log('  Storage key:', fullStorageKey);
+    console.log('  Network:', network);
+
+    try {
+        // 检查 localStorage
+        const encryptedData = localStorage.getItem(fullStorageKey);
+        if (!encryptedData) {
+            console.log('[KeystoreLoader] No keypair found for this storage key');
+            return null;
+        }
+
+        console.log('  Encrypted data exists, length:', encryptedData.length);
+
+        // 解密
+        console.log('[KeystoreLoader] Decrypting with provided password');
+        const privateKeyBase64 = await decryptWithPassword(encryptedData, password);
+        console.log('  Decryption successful');
+
+        // 解析 keypair
+        const keypair = await parseKeypairFromBase64(privateKeyBase64);
+        const address = keypair.toSuiAddress();
+        console.log('  Loaded address:', address);
+
+        // 检查余额（如果是 localnet/devnet）
+        if (network === 'localnet' || network === 'devnet') {
+            const rpcUrl = getNetworkRpcUrl(network);
+            await checkBalanceAndRequestFaucet(address, network, rpcUrl);
+        }
+
+        console.log('[KeystoreLoader] loadKeypairWithPassword: SUCCESS');
+        return keypair;
+
+    } catch (error) {
+        console.error('[KeystoreLoader] loadKeypairWithPassword: FAILED');
+        console.error('  Error:', error);
+        throw error;
+    }
+}
+
+/**
+ * 使用指定密码保存 keypair（不修改 KeystoreConfig）
+ * @param keypair Ed25519Keypair
+ * @param storageKey 存储键（如 'dev0', 'dev1'）
+ * @param password 密码
+ */
+export async function saveKeypairWithPassword(
+    keypair: Ed25519Keypair,
+    storageKey: string,
+    password: string
+): Promise<void> {
+    const fullStorageKey = `web3_tycoon_sui_${storageKey}`;
+    console.log('[KeystoreLoader] saveKeypairWithPassword: START');
+    console.log('  Storage key:', fullStorageKey);
+    console.log('  Address:', keypair.toSuiAddress());
+
+    try {
+        // 导出私钥
+        const privateKeyBase64 = exportKeypairToBase64(keypair);
+        console.log('  Exported private key, length:', privateKeyBase64.length);
+
+        // 加密
+        const encrypted = await encryptWithPassword(privateKeyBase64, password);
+        console.log('  Encrypted, length:', encrypted.length);
+
+        // 保存
+        localStorage.setItem(fullStorageKey, encrypted);
+        console.log('  Saved to localStorage');
+
+        // 验证
+        const saved = localStorage.getItem(fullStorageKey);
+        if (saved !== encrypted) {
+            throw new Error('Save verification failed');
+        }
+
+        console.log('[KeystoreLoader] saveKeypairWithPassword: SUCCESS');
+
+    } catch (error) {
+        console.error('[KeystoreLoader] saveKeypairWithPassword: FAILED');
+        console.error('  Error:', error);
+        throw error;
+    }
+}
+
+/**
  * 检查余额，如果少于 10 SUI 则请求 faucet
  * @param address 地址
  * @param network 网络类型（仅支持 localnet/devnet）

@@ -26,6 +26,7 @@ import { SuiEnvConfigManager } from '../../config/SuiEnvConfigManager';
 import { KeystoreConfig } from '../../sui/utils/KeystoreConfig';
 import { UINotification } from '../utils/UINotification';
 import { NetworkType } from '../../sui/config/SuiConfig';
+import { loadKeypairWithPassword, saveKeypairWithPassword } from '../../sui/utils/KeystoreLoader';
 
 const { ccclass } = _decorator;
 
@@ -326,19 +327,89 @@ export class UISuiConfig extends UIBase {
     private async handleSignerChange(useKeypair: boolean): Promise<void> {
         if (useKeypair) {
             // 切换到 keypair
-            const storageKey = this.input_storageKey?.text.trim() || '';
-            const password = this.input_password?.text || '';
+            const newStorageKey = this.input_storageKey?.text.trim() || '';
+            const newPassword = this.input_password?.text || '';
 
-            if (!storageKey || !password) {
+            if (!newStorageKey || !newPassword) {
                 UINotification.warning('请填写 Storage Key 和 Password');
                 return;
             }
 
-            // 应用配置
-            KeystoreConfig.instance.applyConfig(storageKey, password);
+            // 读取当前配置
+            const oldStorageKey = KeystoreConfig.instance.getStorageKey();
+            const oldPassword = KeystoreConfig.instance.getPassword();
+            const network = SuiManager.instance.config.network as NetworkType;
 
-            // 重新加载 keypair
-            UINotification.info("正在加载密钥...");
+            const storageKeyChanged = newStorageKey !== oldStorageKey;
+            const passwordChanged = newPassword !== oldPassword;
+
+            console.log('[UISuiConfig] Keypair change detection:');
+            console.log('  Storage key changed:', storageKeyChanged, `(${oldStorageKey} → ${newStorageKey})`);
+            console.log('  Password changed:', passwordChanged);
+
+            // ✅ 场景 3: 同时修改 storageKey 和 password
+            if (storageKeyChanged && passwordChanged) {
+                console.log('[UISuiConfig] Scenario 3: Both storage key and password changed');
+                UINotification.info("正在加载密钥...");
+
+                try {
+                    // 1. 尝试用旧 password 加载新 storageKey
+                    let keypair = await loadKeypairWithPassword(newStorageKey, oldPassword, network);
+
+                    if (keypair) {
+                        // 加载成功，用新 password 重新加密保存
+                        console.log('[UISuiConfig] Keypair loaded, re-encrypting with new password');
+                        await saveKeypairWithPassword(keypair, newStorageKey, newPassword);
+                        UINotification.info("已用新密码重新加密");
+                    } else {
+                        // 不存在，尝试用新 password 加载（可能之前就用新密码保存的）
+                        console.log('[UISuiConfig] Keypair not found with old password, trying new password');
+                        keypair = await loadKeypairWithPassword(newStorageKey, newPassword, network);
+
+                        if (!keypair) {
+                            // 仍不存在，创建新 keypair（会在 reloadKeypair 中自动创建）
+                            console.log('[UISuiConfig] Keypair not found, will create new one');
+                        }
+                    }
+                } catch (error) {
+                    console.error('[UISuiConfig] Failed to load/re-encrypt keypair:', error);
+                    // 继续执行，reloadKeypair 会处理创建新 keypair
+                }
+            }
+            // ✅ 场景 2: 只修改 password
+            else if (passwordChanged) {
+                console.log('[UISuiConfig] Scenario 2: Only password changed');
+                UINotification.info("正在重新加密密钥...");
+
+                try {
+                    // 1. 用旧 password 加载当前 storageKey
+                    const keypair = await loadKeypairWithPassword(oldStorageKey, oldPassword, network);
+
+                    if (!keypair) {
+                        throw new Error('无法加载现有密钥');
+                    }
+
+                    // 2. 用新 password 重新加密保存到相同 storageKey
+                    await saveKeypairWithPassword(keypair, oldStorageKey, newPassword);
+                    console.log('[UISuiConfig] Keypair re-encrypted successfully');
+                    UINotification.success("密码已更新");
+
+                } catch (error) {
+                    console.error('[UISuiConfig] Failed to re-encrypt keypair:', error);
+                    UINotification.error("密码更新失败：无法加载现有密钥");
+                    return;
+                }
+            }
+            // ✅ 场景 1: 只修改 storageKey（或首次切换到 keypair）
+            else {
+                console.log('[UISuiConfig] Scenario 1: Only storage key changed (or first time)');
+                UINotification.info("正在加载密钥...");
+            }
+
+            // 应用配置到 KeystoreConfig
+            KeystoreConfig.instance.applyConfig(newStorageKey, newPassword);
+
+            // 重新加载 keypair（会使用新的 KeystoreConfig）
             const addressChanged = await SuiManager.instance.reloadKeypair();
 
             if (addressChanged) {

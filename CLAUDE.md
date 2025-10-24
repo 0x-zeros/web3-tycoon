@@ -82,7 +82,13 @@ The project uses a sophisticated component-based architecture with voxel renderi
 ```typescript
 // Core Managers (Singleton pattern)
 core/
-├── GameInitializer.ts      // Phased initialization system
+├── GameInitializer.ts      // Phased initialization system with lifecycle management
+└── GameSession.ts          // Game session state and lifecycle tracking
+
+config/
+├── ConfigLoader.ts         // JSON configuration loading system
+├── GameSettings.ts         // Game settings and constants
+└── SuiEnvConfigManager.ts  // Sui network environment configuration
 
 map/
 ├── MapManager.ts           // Dynamic map loading with MapConfig
@@ -119,14 +125,17 @@ card/
 └── cards/                  // Individual card implementations
 
 sui/
+├── managers/SuiManager.ts  // Main Sui integration manager
 ├── types/                  // TypeScript types matching Move contracts
 ├── events/                 // Event indexing and processing
 ├── interactions/           // Contract interaction wrappers
-└── pathfinding/            // BFS pathfinding for game board
+├── pathfinding/            // BFS pathfinding for game board
+└── utils/                  // Keystore, crypto, error translation
 
 events/
 ├── EventBus.ts             // Global event system (composite pattern)
-└── Blackboard.ts           // Shared state management
+├── EventTypes.ts           // Centralized event type definitions
+└── Blackboard.ts           // Shared state management (key-value store)
 
 skill/
 └── SkillManager.ts         // Skill system management
@@ -318,7 +327,7 @@ web3-tycoon/
 - **Git Commits**: Chinese format `类型(范围): 简洁描述`
 - **Communication**: Always use Chinese when talking to users
 - **File Naming**: English with kebab_case
-- **TypeScript**: Target ES2015, strict mode off
+- **TypeScript**: Target ES2020, strict mode off, allowSyntheticDefaultImports enabled
 - **Move**: Follow Sui Move best practices
 
 ### FairyGUI Integration
@@ -357,14 +366,27 @@ web3-tycoon/
 
 ## Development Workflow
 
-1. **Primary Development**: Open `client/tycoon_cocos` in Cocos Creator 3.8.7
-2. **Contract Development**: Edit Move files in `move/tycoon/sources/`, run tests frequently
-3. **Voxel Editing**: Use map editor mode with UIEditor interface
-4. **UI Design**: Edit in FGUIProject, export to resources/ui/
-5. **Asset Generation**: Use asset-generator for new textures/sprites
-6. **Testing**:
-   - Client: Use Creator preview, check console for debug logs
-   - Contracts: Run `sui move test` in move/tycoon/
+### Game Initialization Sequence
+The game follows a phased initialization managed by GameInitializer:
+
+1. **CONFIG_LOADING**: Load JSON configurations via ConfigLoader
+2. **MANAGERS_INIT**: Initialize core managers (MapManager, RoleManager, UIManager, SuiManager)
+3. **SYSTEMS_INIT**: Initialize subsystems (EventBus, Blackboard, GameSession)
+4. **GAME_READY**: Game ready for interaction
+
+All managers follow singleton pattern and are accessed via static `getInstance()`.
+
+### Primary Development Workflow
+1. **Cocos Creator GUI**: Open `client/tycoon_cocos` in Cocos Creator 3.8.7 (REQUIRED for builds)
+2. **TypeScript Editing**: Use any IDE, but asset management must be done in Creator
+3. **Contract Development**: Edit Move files in `move/tycoon/sources/`, run `sui move test` frequently
+4. **Voxel Editing**: Use map editor mode via UIEditor interface (toggle in-game)
+5. **UI Design**: Edit in FGUIProject using FairyGUI editor, export to `resources/ui/`
+6. **Asset Generation**: Use `tools/asset-generator` for AIGC texture generation
+7. **Testing**:
+   - Client: Use Creator preview (F5), check console for debug logs
+   - Contracts: Run `sui move test` or `sui move test --filter <name>` in `move/tycoon/`
+   - Type checking: `npx tsc -p client/tycoon_cocos/tsconfig.json --noEmit`
 
 ## Current Implementation Status
 
@@ -395,29 +417,64 @@ web3-tycoon/
 
 ## Notes for Claude Code
 
+### Communication and Style
 - **请使用中文和用户对话** - Always communicate in Chinese
-- **Focus on client development** - Client is the primary deliverable
-- **Voxel system is core** - Not just UI, but fundamental to gameplay
-- **Time is critical** - 黑客松项目，避免过度设计
+- **Keep commits concise** - Simple Chinese descriptions using format `类型(范围): 简洁描述`
 - **Don't auto-commit** - User will review and commit manually
-- **Keep commits concise** - Simple Chinese descriptions
+
+### Development Priorities
+- **Focus on client development** - Client is the primary deliverable
+- **Time is critical** - 黑客松项目，避免过度设计，只实现核心功能
 - **Bug fixes**: 尽量使用KISS原则
 - **Refactoring**: 不需要向后兼容，以保持设计架构最优为优先
-- **Move contracts**: See move/tycoon/CLAUDE.md for contract-specific guidance
-- **Move 2024 Edition语法规范**:
+- 生成代码时，没有我的指示，不要添加多余的fallback机制，让错误能够早点可见
+
+### Cocos Creator Specifics
+- **Asset Management**: MUST be done through Cocos Creator GUI, not file system operations
+- **TypeScript Target**: DO NOT modify `tsconfig.json` target (ES2020) - Cocos Creator has specific requirements
+- **Library/Temp Folders**: Never edit `library/` or `temp/` - these are auto-generated
+- **资源加载**: Use `resources.load()` callback style (no `loadAsync()`), wrap in Promise if needed
+
+### Voxel System Guidelines
+- **Voxel system is core** - Not just UI, but fundamental to gameplay
+- **Resource pack independence**: web3 resource pack is fully self-contained, no minecraft dependencies
+- **Overlay system**: Use `BlockOverlayManager` with faces parameter, layerIndex for z-ordering
+- **Node naming**: Follow conventions - Tiles: `T_x_z`, Buildings: `B_size_x_z`
+- **Colliders**: All BoxCollider xz scale = 1, adjust y for flat (0.1) vs cubic (1) volumes
+
+### Move Contract Development
+- **See move/tycoon/CLAUDE.md** for detailed contract-specific guidance
+- **Move 2024 Edition syntax**:
   - Vector: 使用新语法 `v[i]` 索引、`.push_back()` 方法
   - Table: 保持函数式调用 `table::borrow()` 以示区分
   - Option: 需要前缀 `option::some()`, `option::none()`
   - 复杂类型优先使用引用避免复制
 - **Random in Move**: 一个交易使用一个 RandomGenerator，避免多次创建
-- 生成代码时，没有我的指示，不要添加多余的fallback机制，让错误能够早点可见
-- 不要修改cocos的TypeScript的target，因为cocos不支持
-- **Sui Integration**:
-  - TypeScript types in `sui/types/` mirror Move contract structures
-  - Event processing via `sui/events/indexer.ts` with cursor-based polling
-  - Contract interactions wrapped in `sui/interactions/`
-  - Pathfinding logic matches Move contract's BFS implementation
-- **Additional Resources**: See AGENTS.md for repository guidelines and conventions
+- **Tile/Property separation**: Tiles are pure navigation nodes, Properties are economic entities
+
+### Sui Integration
+- **TypeScript types** in `sui/types/` mirror Move contract structures exactly
+- **Event processing** via `sui/events/` with cursor-based polling
+- **Contract interactions** wrapped in `sui/interactions/` for type safety
+- **Pathfinding logic** matches Move contract's BFS implementation to save gas
+- **Keystore**: Use `KeystoreConfig` and `CryptoUtils` for password-protected keypair storage
+
+### Architecture Patterns
+- **Singleton managers**: All managers use `getInstance()` pattern
+- **Event-driven**: Use EventBus for cross-component communication
+- **Phased initialization**: GameInitializer manages startup sequence
+- **State management**: Blackboard for shared game state (key-value store)
+
+### Debugging Tips
+- **Console logs**: Use `console.log('[ManagerName]', ...)` with component prefix
+- **Event debugging**: EventBus has built-in logging capabilities
+- **Camera debugging**: CameraDebugger component for camera state visualization
+- **Voxel debugging**: Use overlay system to visualize tile/building IDs and relationships
+
+### Additional Resources
+- **AGENTS.md**: Repository guidelines and conventions
+- **client/tycoon_cocos/CLAUDE.md**: Client-specific detailed guidance
+- **move/tycoon/CLAUDE.md**: Move contract development guidelines
 
 ## 关键架构决策记录
 

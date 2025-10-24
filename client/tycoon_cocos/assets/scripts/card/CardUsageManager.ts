@@ -152,13 +152,18 @@ export class CardUsageManager {
         selectedTile: number
     ): Promise<number[]> {
         const session = GameInitializer.getInstance()?.getGameSession();
-        const gameData = session?.getGameData();
-        if (!gameData?.mapTemplate) {
-            console.error('[CardUsageManager] 无法获取地图模板');
+        if (!session) {
+            console.error('[CardUsageManager] GameSession未初始化');
             return [];
         }
 
-        const graph = new MapGraph(gameData.mapTemplate);
+        const mapTemplate = session.getMapTemplate();
+        if (!mapTemplate) {
+            console.error('[CardUsageManager] MapTemplate未初始化');
+            return [];
+        }
+
+        const graph = new MapGraph(mapTemplate);
         const pathfinder = new BFSPathfinder(graph);
 
         if (card.isRemoteControlCard()) {
@@ -217,11 +222,13 @@ export class CardUsageManager {
         if (!session) throw new Error('游戏会话未初始化');
 
         const gameId = session.getGameId();
-        const seatId = session.getMySeatId();
+        const mySeat = session.getMySeat();
 
-        if (!gameId || !seatId) {
+        if (!gameId || !mySeat) {
             throw new Error('缺少游戏或座位信息');
         }
+
+        const seatId = mySeat.id;
 
         console.log('[CardUsageManager] 调用use_card合约:', {
             gameId,

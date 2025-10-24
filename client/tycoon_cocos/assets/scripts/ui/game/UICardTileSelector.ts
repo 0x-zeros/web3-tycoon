@@ -73,14 +73,19 @@ export class UICardTileSelector {
      */
     private calculateReachableTiles(card: Card, startPos: number): number[] {
         const session = GameInitializer.getInstance()?.getGameSession();
-        const gameData = session?.getGameData();
-        if (!gameData?.mapTemplate) {
-            console.error('[UICardTileSelector] 无法获取地图模板');
+        if (!session) {
+            console.error('[UICardTileSelector] GameSession未初始化');
+            return [];
+        }
+
+        const mapTemplate = session.getMapTemplate();
+        if (!mapTemplate) {
+            console.error('[UICardTileSelector] MapTemplate未初始化');
             return [];
         }
 
         const maxRange = card.getMaxRange();
-        const graph = new MapGraph(gameData.mapTemplate);
+        const graph = new MapGraph(mapTemplate);
         const pathfinder = new BFSPathfinder(graph);
 
         // 使用BFS计算可达范围

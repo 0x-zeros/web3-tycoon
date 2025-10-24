@@ -100,7 +100,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         types::CARD_MOVE_CTRL(),
         b"Move Control",
         b"Control your next dice roll",
-        target_none(),
+        target_tile(),
         3,
         0
     );

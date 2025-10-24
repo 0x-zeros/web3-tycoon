@@ -945,9 +945,16 @@ entry fun upgrade_building(
 
 fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Player {
     let mut initial_cards = vector[];
-    initial_cards.push_back(cards::new_card_entry(types::CARD_MOVE_CTRL(), 1));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_BARRIER(), 1));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_CLEANSE(), 1));
+    //for debug
+    initial_cards.push_back(cards::new_card_entry(types::CARD_MOVE_CTRL(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_BARRIER(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_BOMB(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_RENT_FREE(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_FREEZE(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_DOG(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_CLEANSE(), 2));
+    initial_cards.push_back(cards::new_card_entry(types::CARD_TURN(), 2));
+
 
     Player {
         owner,

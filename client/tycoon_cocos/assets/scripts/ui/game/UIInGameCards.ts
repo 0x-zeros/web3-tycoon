@@ -164,6 +164,25 @@ export class UIInGameCards extends UIBase {
         if (count) {
             count.text = `x${cardEntry.count}`;
         }
+
+        // === 添加点击事件 ===
+        item.onClick(async () => {
+            try {
+                // 动态导入避免循环依赖
+                const { Card } = await import('../../card/Card');
+                const { CardUsageManager } = await import('../../card/CardUsageManager');
+
+                // 创建Card实例
+                const card = Card.fromEntry(cardEntry.kind, cardEntry.count);
+
+                console.log(`[UIInGameCards] 点击卡片: ${card.name}`);
+
+                // 调用CardUsageManager
+                await CardUsageManager.instance.useCard(card);
+            } catch (error: any) {
+                console.error('[UIInGameCards] 使用卡片失败:', error);
+            }
+        });
     }
 
     /**

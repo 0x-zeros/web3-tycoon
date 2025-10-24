@@ -245,3 +245,12 @@ metrics/
 
 # Walrus tools - ignore large binary files only
 client/tools/walrus/site-builder
+
+# Experiments folder - ignore build artifacts and dependencies
+experiments/*/target/
+experiments/*/pkg/
+experiments/*/node_modules/
+experiments/*/dist/
+experiments/*/*.wasm
+experiments/*/.cache/
+experiments/*/package-lock.json

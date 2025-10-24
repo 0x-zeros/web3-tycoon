@@ -44,5 +44,8 @@
       <gearDisplay controller="mode" pages="0"/>
       <Button title="defi奖励"/>
     </component>
+    <component id="n16_t5u9" name="playerSelect" src="t5u9p5" fileName="PlayerSelect.xml" xy="371,266">
+      <relation target="" sidePair="center-center,middle-middle"/>
+    </component>
   </displayList>
 </component>

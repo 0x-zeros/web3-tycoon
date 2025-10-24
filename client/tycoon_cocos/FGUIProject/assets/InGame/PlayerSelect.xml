@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1160,520">
+  <displayList>
+    <list id="n0_n6n6" name="list" xy="24,120" size="1104,256" layout="row" scroll="horizontal" colGap="20" defaultItem="ui://8z385pimt5u9p4" autoClearItems="true">
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+    </list>
+    <text id="n1_n6n6" name="title" xy="270,11" size="601,74" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="请选择卡牌要使用在哪个玩家身上" input="true"/>
+    <component id="n2_n6n6" name="btn_ok" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="872,422" size="248,74">
+      <Button title="使用"/>
+    </component>
+    <component id="n3_n6n6" name="btn_cancel" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="24,422" size="248,74">
+      <Button title="取消"/>
+    </component>
+  </displayList>
+</component>

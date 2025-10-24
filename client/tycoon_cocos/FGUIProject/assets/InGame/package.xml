@@ -26,6 +26,8 @@
     <component id="n6n6p0" name="PlayerBuff.xml" path="/components/"/>
     <component id="b9csp2" name="Bankruptcy.xml" path="/" exported="true"/>
     <component id="b9csp3" name="GameEnd.xml" path="/" exported="true"/>
+    <component id="t5u9p4" name="Player.xml" path="/components/"/>
+    <component id="t5u9p5" name="PlayerSelect.xml" path="/" exported="true"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

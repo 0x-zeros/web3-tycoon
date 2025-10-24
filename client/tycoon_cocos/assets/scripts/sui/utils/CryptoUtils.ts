@@ -186,6 +186,36 @@ export async function decryptWithPassword(ciphertext: string, password: string):
     } catch (error) {
         console.error('[CryptoUtils] Decrypt: FAILED');
         console.error('  Error:', error);
+        console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+
+        // 判断错误类型，给出明确提示
+        if (error instanceof Error) {
+            const errorName = error.name;
+            const errorMsg = error.message;
+
+            console.error('  Error name:', errorName);
+            console.error('  Error message:', errorMsg);
+
+            // OperationError 通常表示密码错误（AES-GCM 解密失败）
+            if (errorName === 'OperationError') {
+                const passwordError = new Error('密码错误：无法解密数据。请检查密码是否正确。');
+                passwordError.name = 'PasswordError';
+                console.error('[CryptoUtils] → 解密失败，很可能是密码不正确');
+                console.error('[CryptoUtils] → 提示：请通过 Sui 配置界面修改密码');
+                throw passwordError;
+            }
+
+            // 其他错误（如 Base64 解码失败）可能是数据损坏
+            if (errorMsg.includes('atob') || errorMsg.includes('base64')) {
+                const dataError = new Error('数据损坏：存储的加密数据格式错误。');
+                dataError.name = 'DataCorruptionError';
+                console.error('[CryptoUtils] → 数据格式错误，可能已损坏');
+                console.error('[CryptoUtils] → 提示：可能需要清除本地数据');
+                throw dataError;
+            }
+        }
+
+        // 未知错误，原样抛出
         throw error;
     }
 }

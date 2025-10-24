@@ -58,6 +58,12 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
 
             // Step 2: 解密
             console.log('[KeystoreLoader] Step 2: Decrypting');
+            console.log('  Using password config:', {
+                storageKey: config.getStorageKey(),
+                hasPassword: !!password,
+                passwordLength: password.length
+            });
+
             const privateKeyBase64 = await decryptWithPassword(encryptedData, password);
             console.log('  Decryption successful');
             console.log('  Decrypted data length:', privateKeyBase64.length);
@@ -140,11 +146,57 @@ export async function loadKeypairFromKeystore(): Promise<Ed25519Keypair> {
         console.error('='.repeat(60));
         console.error('[KeystoreLoader] === ERROR ===');
         console.error('  Error:', error);
-        console.error('  Error message:', (error as Error).message);
-        console.error('  Error stack:', (error as Error).stack);
-        console.error('='.repeat(60));
 
-        UINotification.error(`密钥加载失败: ${error}`);
+        if (error instanceof Error) {
+            console.error('  Error name:', error.name);
+            console.error('  Error message:', error.message);
+            console.error('  Error stack:', error.stack);
+
+            // 密码错误的特殊处理
+            if (error.name === 'PasswordError') {
+                console.error('');
+                console.error('⚠️  密码验证失败！');
+                console.error('━'.repeat(60));
+                console.error('当前配置:');
+                console.error('  Storage Key:', config.getStorageKey());
+                console.error('  Full Storage Key:', storageKey);
+                console.error('  Password Length:', password.length);
+                console.error('');
+                console.error('解决方案:');
+                console.error('  1. 打开 Sui 配置界面（点击右上角 ENV 按钮）');
+                console.error('  2. 输入正确的 Password');
+                console.error('  3. 点击 OK 保存');
+                console.error('');
+                console.error('  或者，清除本地数据重新开始:');
+                console.error(`  localStorage.removeItem('${storageKey}')`);
+                console.error('━'.repeat(60));
+
+                UINotification.error(`密码错误：无法解密密钥\n\n请通过 Sui 配置修改密码\n或清除本地数据重新生成`);
+            }
+            // 数据损坏的特殊处理
+            else if (error.name === 'DataCorruptionError') {
+                console.error('');
+                console.error('⚠️  数据损坏！');
+                console.error('━'.repeat(60));
+                console.error('存储的加密数据可能已损坏');
+                console.error('');
+                console.error('解决方案:');
+                console.error('  清除本地数据:');
+                console.error(`  localStorage.removeItem('${storageKey}')`);
+                console.error('  然后刷新页面重新生成密钥');
+                console.error('━'.repeat(60));
+
+                UINotification.error(`数据损坏：加密数据格式错误\n\n请清除本地数据后重新生成`);
+            }
+            // 其他错误
+            else {
+                UINotification.error(`密钥加载失败：${error.message}`);
+            }
+        } else {
+            UINotification.error(`密钥加载失败: ${error}`);
+        }
+
+        console.error('='.repeat(60));
         throw error;
     }
 }

@@ -350,31 +350,13 @@ export class UISuiConfig extends UIBase {
             // ✅ 场景 3: 同时修改 storageKey 和 password
             if (storageKeyChanged && passwordChanged) {
                 console.log('[UISuiConfig] Scenario 3: Both storage key and password changed');
-                UINotification.info("正在加载密钥...");
+                console.log('  Old:', { storageKey: oldStorageKey, passwordLength: oldPassword.length });
+                console.log('  New:', { storageKey: newStorageKey, passwordLength: newPassword.length });
 
-                try {
-                    // 1. 尝试用旧 password 加载新 storageKey
-                    let keypair = await loadKeypairWithPassword(newStorageKey, oldPassword, network);
-
-                    if (keypair) {
-                        // 加载成功，用新 password 重新加密保存
-                        console.log('[UISuiConfig] Keypair loaded, re-encrypting with new password');
-                        await saveKeypairWithPassword(keypair, newStorageKey, newPassword);
-                        UINotification.info("已用新密码重新加密");
-                    } else {
-                        // 不存在，尝试用新 password 加载（可能之前就用新密码保存的）
-                        console.log('[UISuiConfig] Keypair not found with old password, trying new password');
-                        keypair = await loadKeypairWithPassword(newStorageKey, newPassword, network);
-
-                        if (!keypair) {
-                            // 仍不存在，创建新 keypair（会在 reloadKeypair 中自动创建）
-                            console.log('[UISuiConfig] Keypair not found, will create new one');
-                        }
-                    }
-                } catch (error) {
-                    console.error('[UISuiConfig] Failed to load/re-encrypt keypair:', error);
-                    // 继续执行，reloadKeypair 会处理创建新 keypair
-                }
+                // 简化逻辑：直接应用新配置，让 reloadKeypair() 处理
+                // - 如果新 storageKey 存在且密码正确 → 加载成功
+                // - 如果新 storageKey 不存在或密码错误 → 创建新 keypair（用新密码加密）
+                UINotification.info("正在切换账号...");
             }
             // ✅ 场景 2: 只修改 password
             else if (passwordChanged) {
@@ -386,7 +368,7 @@ export class UISuiConfig extends UIBase {
                     const keypair = await loadKeypairWithPassword(oldStorageKey, oldPassword, network);
 
                     if (!keypair) {
-                        throw new Error('无法加载现有密钥');
+                        throw new Error('无法加载现有密钥（storageKey 不存在）');
                     }
 
                     // 2. 用新 password 重新加密保存到相同 storageKey
@@ -396,7 +378,15 @@ export class UISuiConfig extends UIBase {
 
                 } catch (error) {
                     console.error('[UISuiConfig] Failed to re-encrypt keypair:', error);
-                    UINotification.error("密码更新失败：无法加载现有密钥");
+
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+
+                    // 如果是密码错误
+                    if (error instanceof Error && error.name === 'PasswordError') {
+                        UINotification.error(`密码更新失败：\n\n旧密码不正确，无法解密现有密钥\n\n提示：如果忘记旧密码，请清除本地数据重新生成`);
+                    } else {
+                        UINotification.error(`密码更新失败：${errorMsg}`);
+                    }
                     return;
                 }
             }

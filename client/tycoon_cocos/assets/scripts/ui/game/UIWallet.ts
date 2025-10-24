@@ -625,6 +625,9 @@ export class UIWallet extends UIBase {
         if (this.m_btn_balance) {
             this.m_btn_balance.title = this._formatBalance(balance);
         }
+
+        // 余额变化时，更新 faucet 按钮可见性（余额 < 10 SUI 才显示）
+        this._updateFaucetButtonVisibility(balance);
     }
 
     /**
@@ -723,22 +726,34 @@ export class UIWallet extends UIBase {
 
     /**
      * 更新 Faucet 按钮可见性
-     * 仅在 localnet/devnet + keypair 模式时显示
+     * 仅在 localnet/devnet + keypair 模式 + 余额 < 10 SUI 时显示
+     * @param balance 可选的余额参数，如果未传入则从 Blackboard 读取
      */
-    private _updateFaucetButtonVisibility(): void {
+    private _updateFaucetButtonVisibility(balance?: bigint): void {
         if (!this.m_btn_faucet) return;
 
         const network = SuiManager.instance?.config?.network;
         const signerType = SuiManager.instance?.getSignerType();
 
-        // 仅在 localnet/devnet + keypair 时显示
-        const shouldShow = (network === 'localnet' || network === 'devnet') && signerType === 'keypair';
+        // 获取余额（如果未传入，从 Blackboard 读取）
+        const currentBalance = balance ?? Blackboard.instance.get<bigint>("sui_balance") ?? 0n;
+
+        // 三个条件都满足才显示：
+        // 1. 网络为 localnet 或 devnet
+        // 2. 签名器类型为 keypair
+        // 3. 余额小于 10 SUI (10_000_000_000 MIST)
+        const shouldShow =
+            (network === 'localnet' || network === 'devnet') &&
+            signerType === 'keypair' &&
+            currentBalance < 10_000_000_000n;
 
         this.m_btn_faucet.visible = shouldShow;
 
         console.log('[UIWallet] Faucet button visibility:', shouldShow);
         console.log('  Network:', network);
         console.log('  Signer type:', signerType);
+        console.log('  Balance:', currentBalance, `(${Number(currentBalance) / 1_000_000_000} SUI)`);
+        console.log('  Balance < 10 SUI:', currentBalance < 10_000_000_000n);
     }
 
     /**

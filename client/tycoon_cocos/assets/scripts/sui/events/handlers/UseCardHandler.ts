@@ -210,3 +210,10 @@ export class UseCardHandler {
         }
     }
 }
+
+// 导出单例访问器
+export const useCardHandler = {
+    get instance(): UseCardHandler {
+        return UseCardHandler.getInstance();
+    }
+};

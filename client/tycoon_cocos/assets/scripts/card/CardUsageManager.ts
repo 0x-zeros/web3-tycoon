@@ -53,6 +53,18 @@ export class CardUsageManager {
             return;
         }
 
+        // 检查是否已掷骰
+        if (session.hasRolled && session.hasRolled()) {
+            await UIMessage.warning('本回合已掷骰，无法使用卡片');
+            return;
+        }
+
+        // 检查是否有待决策
+        if (session.getPendingDecision()) {
+            await UIMessage.warning('有待决策事项，请先处理');
+            return;
+        }
+
         try {
             console.log(`[CardUsageManager] 使用卡片: ${card.name} (kind=${card.kind})`);
 
@@ -92,7 +104,7 @@ export class CardUsageManager {
             return;
         }
 
-        const currentPos = myPlayer.pos;
+        const currentPos = myPlayer.getPos();
         console.log(`[CardUsageManager] 当前玩家位置: ${currentPos}`);
 
         // 显示tile选择界面
@@ -168,7 +180,6 @@ export class CardUsageManager {
 
         if (card.isRemoteControlCard()) {
             // 遥控骰子: params = [target_player_index, dice1, dice2, ...]
-            // 简化版：使用一个骰子，值为实际步数
             const myPlayerIndex = session?.getMyPlayerIndex() || 0;
 
             // 计算路径
@@ -184,9 +195,11 @@ export class CardUsageManager {
             const steps = pathInfo.distance;
             console.log(`[CardUsageManager] 遥控骰子: 距离=${steps}步`);
 
-            // TODO: 可能需要分解为多个骰子（1-6的组合）
-            // 这里简化为单个骰子
-            return [myPlayerIndex, steps];
+            // 拆分为多个骰子值（每个1-6）
+            const diceValues = this.splitIntoDiceValues(steps);
+            console.log(`[CardUsageManager] 遥控骰子: 骰子值=${diceValues}`);
+
+            return [myPlayerIndex, ...diceValues];
 
         } else if (card.isCleanseCard()) {
             // 净化卡: params = [tile1, tile2, ..., tile10]
@@ -223,9 +236,10 @@ export class CardUsageManager {
 
         const gameId = session.getGameId();
         const mySeat = session.getMySeat();
+        const mapTemplateId = session.getTemplateMapId();
 
-        if (!gameId || !mySeat) {
-            throw new Error('缺少游戏或座位信息');
+        if (!gameId || !mySeat || !mapTemplateId) {
+            throw new Error('缺少游戏、座位或地图信息');
         }
 
         const seatId = mySeat.id;
@@ -233,13 +247,14 @@ export class CardUsageManager {
         console.log('[CardUsageManager] 调用use_card合约:', {
             gameId,
             seatId,
+            mapTemplateId,
             kind,
             params
         });
 
         // 动态导入CardInteraction
         const { CardInteraction } = await import('../sui/interactions/CardInteraction');
-        const result = await CardInteraction.useCard(gameId, seatId, kind, params);
+        const result = await CardInteraction.useCard(gameId, seatId, mapTemplateId, kind, params);
 
         if (result.success) {
             await UIMessage.success('卡片使用成功');
@@ -249,5 +264,26 @@ export class CardUsageManager {
         } else {
             throw new Error(result.message || '交易失败');
         }
+    }
+
+    /**
+     * 将步数拆分为多个骰子值（每个1-6）
+     * 用于遥控骰子参数构建
+     */
+    private splitIntoDiceValues(steps: number): number[] {
+        const dice: number[] = [];
+        let remaining = steps;
+
+        while (remaining > 0) {
+            if (remaining >= 6) {
+                dice.push(6);
+                remaining -= 6;
+            } else {
+                dice.push(remaining);
+                remaining = 0;
+            }
+        }
+
+        return dice;
     }
 }

@@ -210,7 +210,23 @@ export class UICardTileSelector {
         resolve: (tile: number | null) => void
     ): void {
         const handler = (event: any) => {
-            const tileId = event.tileId;
+            // 从 GroundClicked 事件获取 gridIndex
+            const gridIndex = event.gridIndex; // { x: number, y: number }
+
+            // 从 grid 坐标转换到 tileId
+            const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+            if (!gameMap) {
+                console.warn('[UICardTileSelector] 无法获取GameMap');
+                return;
+            }
+
+            const mapTile = gameMap.getTileAt(gridIndex.x, gridIndex.y);
+            if (!mapTile) {
+                console.log(`[UICardTileSelector] Grid (${gridIndex.x}, ${gridIndex.y}) 没有tile`);
+                return;
+            }
+
+            const tileId = mapTile.getTileId();
 
             if (!tileIds.includes(tileId)) {
                 console.log(`[UICardTileSelector] 点击了不可选的tile: ${tileId}`);
@@ -221,11 +237,11 @@ export class UICardTileSelector {
 
             // 单选模式：直接返回
             this.cleanup();
-            EventBus.off(EventTypes.Map.TileClicked, handler);
+            EventBus.off(EventTypes.Game.GroundClicked, handler);
             resolve(tileId);
         };
 
-        EventBus.on(EventTypes.Map.TileClicked, handler);
+        EventBus.on(EventTypes.Game.GroundClicked, handler);
 
         // 添加取消按钮监听（ESC键）
         const cancelHandler = (event: KeyboardEvent) => {
@@ -233,7 +249,7 @@ export class UICardTileSelector {
                 console.log('[UICardTileSelector] 用户取消选择（ESC）');
                 window.removeEventListener('keydown', cancelHandler);
                 this.cleanup();
-                EventBus.off(EventTypes.Map.TileClicked, handler);
+                EventBus.off(EventTypes.Game.GroundClicked, handler);
                 resolve(null);
             }
         };

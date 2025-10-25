@@ -19,8 +19,8 @@ const CARD_CONFIGS: CardConfig[] = [
     { kind: 2, name: '炸弹卡', description: '在地块上放置炸弹', targetType: 2, value: 0, rarity: 1, iconPath: 'web3/cards/bomb' },
     { kind: 3, name: '免租卡', description: '本回合避免支付租金', targetType: 0, value: 1, rarity: 1, iconPath: 'web3/cards/rent_free' },
     { kind: 4, name: '冰冻卡', description: '冻结一个玩家一回合', targetType: 1, value: 1, rarity: 2, iconPath: 'web3/cards/freeze' },
-    { kind: 5, name: '恶犬卡', description: '在地块上放置恶犬', targetType: 2, value: 0, rarity: 1, iconPath: 'web3/cards/dog' },
-    { kind: 6, name: '净化卡', description: '清除一段路上的所有NPC', targetType: 2, value: 0, rarity: 0, iconPath: 'web3/cards/cleanse' },  // ✅ 单向延伸逻辑
+    { kind: 5, name: '狗狗卡', description: '在地块上放置恶犬', targetType: 2, value: 0, rarity: 1, iconPath: 'web3/cards/dog' },
+    { kind: 6, name: '机器娃娃', description: '清除一段路上的所有NPC', targetType: 2, value: 0, rarity: 0, iconPath: 'web3/cards/cleanse' },  // ✅ 单向延伸逻辑
     { kind: 7, name: '转向卡', description: '改变移动方向', targetType: 0, value: 0, rarity: 0, iconPath: 'web3/cards/turn' }
 ];
 

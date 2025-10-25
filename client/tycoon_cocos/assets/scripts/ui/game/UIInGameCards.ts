@@ -148,7 +148,9 @@ export class UIInGameCards extends UIBase {
                     spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
                     icon.texture = spriteFrame;
                 } else {
-                    console.warn(`[UIInGameCards] Failed to load card texture: ${texturePath}`);
+                    console.warn(`[UIInGameCards] 卡牌贴图未找到: ${texturePath}，使用默认图标`);
+                    // 清空贴图，避免显示错误图标
+                    icon.url = null;
                 }
             });
         }

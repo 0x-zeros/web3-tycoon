@@ -39,6 +39,7 @@ export class CardInteraction {
     static async useCard(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         cardKind: number,
         params: number[]
     ): Promise<TransactionResult> {
@@ -46,14 +47,15 @@ export class CardInteraction {
             console.log('[CardInteraction] 调用use_card:', {
                 gameId,
                 seatId,
+                mapTemplateId,
                 cardKind,
                 params
             });
 
-            const tx = this.buildUseCardTransaction(gameId, seatId, cardKind, params);
+            const tx = this.buildUseCardTransaction(gameId, seatId, mapTemplateId, cardKind, params);
 
             // 执行交易
-            const result = await SuiManager.instance.executeTransaction(tx);
+            const result = await SuiManager.instance.signAndExecuteTransaction(tx);
 
             console.log('[CardInteraction] 交易成功:', result.digest);
 
@@ -77,6 +79,7 @@ export class CardInteraction {
     private static buildUseCardTransaction(
         gameId: string,
         seatId: string,
+        mapTemplateId: string,
         cardKind: number,
         params: number[]
     ): Transaction {
@@ -90,10 +93,9 @@ export class CardInteraction {
         // 获取必要的对象
         const packageId = config.packageId;
         const gameDataId = config.gameDataId;
-        const mapTemplateId = config.currentMapTemplateId;
 
-        if (!packageId || !gameDataId || !mapTemplateId) {
-            throw new Error('缺少必要的配置: packageId, gameDataId, mapTemplateId');
+        if (!packageId || !gameDataId) {
+            throw new Error('缺少必要的配置: packageId, gameDataId');
         }
 
         console.log('[CardInteraction] 构建交易:', {

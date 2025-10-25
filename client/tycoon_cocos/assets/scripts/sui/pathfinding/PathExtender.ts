@@ -74,14 +74,14 @@ export class PathExtender {
 
         // 3. 从目标点继续单向延伸
         const remainingSteps = totalSteps - distanceToTarget;
-        const direction = this.calculateDirection(
+        const directionType = this.calculateDirectionType(
             pathToTarget[pathToTarget.length - 2],
             targetTile
         );
 
         const extendedPath = this.extendInDirection(
             targetTile,
-            direction,
+            directionType,
             remainingSteps,
             new Set(pathToTarget) // 避免回头
         );
@@ -103,19 +103,10 @@ export class PathExtender {
     }
 
     /**
-     * 计算从prevTile到currentTile的方向
+     * 计算从prevTile到currentTile的方向类型
      */
-    private calculateDirection(prevTile: number, currentTile: number): string {
-        const neighbors = this.graph.getNeighbors(BigInt(prevTile));
-        const currentBigInt = BigInt(currentTile);
-
-        for (const [dir, neighborId] of neighbors) {
-            if (neighborId === currentBigInt) {
-                return dir;
-            }
-        }
-
-        return 'unknown';
+    private calculateDirectionType(prevTile: number, currentTile: number): 'cw' | 'ccw' | 'adj' | null {
+        return this.graph.getMoveType(BigInt(prevTile), BigInt(currentTile));
     }
 
     /**
@@ -123,43 +114,75 @@ export class PathExtender {
      */
     private extendInDirection(
         startTile: number,
-        direction: string,
+        directionType: 'cw' | 'ccw' | 'adj' | null,
         steps: number,
         visited: Set<number>
     ): PathExtensionResult {
         const path: number[] = [startTile];
         let currentTile = startTile;
+        let currentDirType = directionType;
 
         for (let i = 0; i < steps; i++) {
-            const neighbors = this.graph.getNeighbors(BigInt(currentTile));
+            // 获取当前tile的信息（从MapGraph的template）
+            const tileInfo = (this.graph as any).template.tiles.get(BigInt(currentTile));
+            if (!tileInfo) {
+                return {
+                    fullPath: path,
+                    success: false,
+                    error: `Tile ${currentTile} 不存在`
+                };
+            }
 
-            // 尝试沿相同方向前进
             let nextTile: bigint | null = null;
 
-            if (neighbors.has(direction)) {
-                nextTile = neighbors.get(direction)!;
-            } else {
-                // 如果原方向不可达，检查是否只有唯一的其他方向
-                const availableDirections = Array.from(neighbors.entries())
-                    .filter(([_, tileId]) => !visited.has(Number(tileId)));
-
-                if (availableDirections.length === 1) {
-                    // 唯一方向，继续前进
-                    nextTile = availableDirections[0][1];
-                    direction = availableDirections[0][0]; // 更新方向
-                } else if (availableDirections.length === 0) {
+            // 根据方向类型选择下一个tile
+            if (currentDirType === 'cw') {
+                // 顺时针方向
+                nextTile = tileInfo.cw_next;
+                if (nextTile === BigInt(0xFFFFFFFF) || nextTile === BigInt(65535)) {
                     return {
                         fullPath: path,
                         success: false,
-                        error: '路径已到尽头'
+                        error: '顺时针方向已到尽头'
+                    };
+                }
+            } else if (currentDirType === 'ccw') {
+                // 逆时针方向
+                nextTile = tileInfo.ccw_next;
+                if (nextTile === BigInt(0xFFFFFFFF) || nextTile === BigInt(65535)) {
+                    return {
+                        fullPath: path,
+                        success: false,
+                        error: '逆时针方向已到尽头'
+                    };
+                }
+            } else if (currentDirType === 'adj') {
+                // 邻接方向：只有一个未访问邻居时才继续
+                const unvisitedAdj = tileInfo.adj.filter(
+                    (adjId: bigint) => !visited.has(Number(adjId))
+                );
+
+                if (unvisitedAdj.length === 1) {
+                    nextTile = unvisitedAdj[0];
+                } else if (unvisitedAdj.length === 0) {
+                    return {
+                        fullPath: path,
+                        success: false,
+                        error: '路径已到尽头（adj无可达邻居）'
                     };
                 } else {
                     return {
                         fullPath: path,
                         success: false,
-                        error: '遇到分叉路口，无法确定方向'
+                        error: '遇到分叉路口（多个adj邻居），无法确定方向'
                     };
                 }
+            } else {
+                return {
+                    fullPath: path,
+                    success: false,
+                    error: '无法确定移动方向'
+                };
             }
 
             const nextTileNum = Number(nextTile);
@@ -175,6 +198,8 @@ export class PathExtender {
 
             path.push(nextTileNum);
             visited.add(nextTileNum);
+
+            // 更新当前tile（方向类型保持不变，沿同一方向延伸）
             currentTile = nextTileNum;
         }
 

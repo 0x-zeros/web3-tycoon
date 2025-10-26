@@ -10,5 +10,11 @@ export default defineConfig({
   worker: {
     format: 'es',
     plugins: () => [wasm(), topLevelAwait()]
+  },
+  server: {
+    fs: {
+      // 允许访问上级目录，以便加载 rust-hello-wasm/pkg 中的 WASM 文件
+      allow: ['..']
+    }
   }
 });

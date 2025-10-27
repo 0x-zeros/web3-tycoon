@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,600">
+  <displayList>
+    <component id="n0_n3qe" name="btn_main" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="44,443">
+      <Button title="主线程测试"/>
+    </component>
+    <component id="n1_n3qe" name="btn_worker" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="513,443">
+      <Button title="worker测试"/>
+    </component>
+    <text id="n2_n3qe" name="title" xy="45,35" size="718,374" fontSize="30" color="#ffffff" autoSize="none" text="测试结果"/>
+  </displayList>
+</component>

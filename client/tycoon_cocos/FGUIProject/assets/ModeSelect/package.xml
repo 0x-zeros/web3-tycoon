@@ -7,6 +7,7 @@
     <component id="pseu9" name="LoadingProgressBar.xml" path="/components/"/>
     <image id="mrxic" name="logo512.png" path="/images/"/>
     <image id="mrxid" name="logo_deco.png" path="/images/"/>
+    <component id="n3qee" name="wasm_worker_test.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

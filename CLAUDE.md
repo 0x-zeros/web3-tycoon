@@ -513,3 +513,4 @@ All managers follow singleton pattern and are accessed via static `getInstance()
 - NPC/Decoration: `(1, 0.1, 1)` - 扁平，用于点击
 - Object: `(1, 1, 1)` - 立体
 - 修改完以后不需要帮我stage，我会check以后自己操作
+- 在我没有明确要求的情况下，一般不需要生成md文档

@@ -10,6 +10,5 @@
       <Button title="开始游戏"/>
     </component>
     <richtext id="n22_12ec4" name="tip" xy="469,594" size="898,138" visible="false" fontSize="30" color="#ffffff" autoSize="none" text="Tip:  如果没有安装钱包的话，切换到devnet的keypair模式也能进行游戏&#xA;"/>
-    <component id="n23_n3qe" name="wasm_worker_test" src="n3qee" fileName="components/wasm_worker_test.xml" xy="881,22"/>
   </displayList>
 </component>

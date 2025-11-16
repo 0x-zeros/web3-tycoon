@@ -1272,6 +1272,14 @@ export class SuiManager {
             return;
         }
 
+        // ✅ 检查是否已注册，避免重复监听
+        // _gameEventHandlers 是 Map<EventType, EventCallback>，每个 EventType 只有一个 callback
+        // 如果 size > 0 说明已注册，_unregisterGameEventListeners() 会 clear() 这个 Map
+        if (this._gameEventHandlers.size > 0) {
+            console.warn('[SuiManager] Game events already registered, skipping');
+            return;
+        }
+
         // ✅ 获取当前游戏 ID
         const session = Blackboard.instance.get<any>("currentGameSession");
         if (session) {
@@ -1295,8 +1303,8 @@ export class SuiManager {
             console.log('[SuiManager] RollAndStepActionEvent from chain:', event.data);
             await rollAndStepHandler.instance.handleEvent(event);
         };
-        this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, rollAndStepCallback);
-        this._gameEventHandlers.set(EventType.ROLL_AND_STEP_ACTION, rollAndStepCallback);
+        this._eventIndexer.on<RollAndStepActionEvent>(EventType.ROLL_AND_STEP_ACTION, rollAndStepCallback);// 真正注册到 Indexer
+        this._gameEventHandlers.set(EventType.ROLL_AND_STEP_ACTION, rollAndStepCallback); // 保存引用，用于取消注册
 
         // 2. BuildingDecision 事件
         const buildingDecisionCallback: EventCallback<BuildingDecisionEvent> = async (event) => {

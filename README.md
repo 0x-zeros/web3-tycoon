@@ -15,7 +15,9 @@
 
 🌐 **在线体验**: [www.web3tycoon.com](https://www.web3tycoon.com) | [Walrus 去中心化版本](https://web3tycoon.wal.app/)
 
-## 🎯 项目概述
+> **注意**: 已部署版本可能与当前仓库代码不一致，部署更新存在延迟。
+
+##  项目概述
 
 Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游玩法与 Sui 区块链技术深度融合。所有游戏逻辑运行在 Move 智能合约中，确保公平透明。玩家在 Web3 主题的虚拟世界中投资地产、收集卡牌、预测价格、体验 DeFi 机制，在游戏中学习区块链知识。
 
@@ -57,7 +59,7 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - 📦 [项目结构](docs/project-structure.md) - 文件组织与代码规范
 
 
-## 🎯 技术亮点
+## 技术亮点
 
 ### 完全链上的 3D 游戏
 - **所有游戏逻辑在链上**：Move 智能合约实现完整游戏规则
@@ -77,16 +79,16 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - Cloudflare Pages（全球 CDN + 自动部署）
 - Walrus Sites（去中心化存储备份）
 
-## 🏆 项目状态
+## 项目状态
 
-✅ **已完成**
+**已完成**
 - Move 智能合约（地产、卡牌、Buff、随机数）
 - 事件驱动架构（聚合事件 + 状态同步）
 - 3D 客户端（Cocos Creator + 体素渲染）
 - 地图编辑器 (玩家可以自己编辑地图发布)
 - 双重部署（Cloudflare Pages + Walrus Sites）
 
-🚧 **进行中/TODO**
+**进行中/TODO**
 - 美术资源，UI资源，场景，动画等
 - AIGC 资源
 - 更多卡牌和建筑功能
@@ -94,11 +96,6 @@ Web3 Tycoon 是一款 **完全链上的 3D 大富翁游戏**，将经典桌游�
 - defi，价格预测玩法的集成
 - 安全事故，各种暴跌（1011，312）等加入新闻玩法
 
-## 🤝 参与贡献
-
-欢迎参与项目开发！可以通过 GitHub Issues 报告 Bug、提出功能建议或提交代码改进。
-
-详细开发规范请参考：[项目结构文档](docs/project-structure.md)
 
 ## 📄 许可证
 
@@ -110,11 +107,10 @@ Apache-2.0 License
 
 <img src="assets/images/logo_deco.png" alt="Web3 Tycoon" width="400"/>
 
-**在游戏中学习 Web3，在 DeFi 中获得乐趣！**
+**在游戏中学习 Web3！**
 
 [开始游戏](https://www.web3tycoon.com) • [Walrus 去中心化版本](https://web3tycoon.wal.app/) • [查看文档](docs/) • [智能合约](move/tycoon/)
 
-Made with ❤️ by Web3 Tycoon Team
 
 **License**: Apache-2.0
 

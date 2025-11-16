@@ -1,12 +1,12 @@
 /**
  * 资产查询服务
- * 封装玩家资产查询逻辑（Coins、NFTs、DeFi 资产等）
+ * 封装玩家资产查询逻辑（Coins、NFTs 等）
  */
 
 // 使用 import type 避免打包（SuiClient 由调用者提供）
 import type { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
 import type { Seat } from '../types/game';
-import type { MapTemplateNFT, DeFiAssets, CoinInfo } from '../types/assets';
+import type { MapTemplateNFT, CoinInfo } from '../types/assets';
 
 /**
  * 资产服务类
@@ -123,82 +123,6 @@ export class AssetService {
 
         console.log('[AssetService] Map Template NFTs query not implemented yet');
         return [];
-    }
-
-    // ============ DeFi 资产查询（预留）============
-
-    /**
-     * 获取 DeFi 相关资产
-     * @param address 钱包地址
-     * @returns DeFi 资产信息
-     */
-    async getDeFiAssets(address: string): Promise<DeFiAssets> {
-        console.log('[AssetService] DeFi assets query not implemented yet');
-
-        // TODO: 集成 Bucket Protocol
-        // 用途：去中心化数据存储、地图模板存储
-        // const bucketAssets = await this._getBucketAssets(address);
-
-        // TODO: 集成 Scallop Protocol
-        // 用途：借贷协议、地产抵押借贷功能
-        // const scallopAssets = await this._getScallopAssets(address);
-
-        // TODO: 集成 Navi Protocol
-        // 用途：流动性挖矿、质押奖励系统
-        // const naviAssets = await this._getNaviAssets(address);
-
-        return {
-            bucketAssets: undefined,
-            scallopAssets: undefined,
-            naviAssets: undefined
-        };
-    }
-
-    /**
-     * 获取 Bucket Protocol 资产（预留）
-     * @param address 钱包地址
-     */
-    private async _getBucketAssets(address: string): Promise<any> {
-        // TODO: 实现 Bucket Protocol 资产查询
-        // 参考：https://bucket.io/docs
-        //
-        // 可能包括：
-        // - 存储空间余额
-        // - 存储凭证 NFT
-        // - 已上传的地图模板数据
-        return null;
-    }
-
-    /**
-     * 获取 Scallop Protocol 资产（预留）
-     * @param address 钱包地址
-     */
-    private async _getScallopAssets(address: string): Promise<any> {
-        // TODO: 实现 Scallop Protocol 资产查询
-        // 参考：https://scallop.io/docs
-        //
-        // 可能包括：
-        // - 存款资产（sTokens）
-        // - 借款资产
-        // - 抵押品（地产 NFT）
-        // - 健康因子
-        return null;
-    }
-
-    /**
-     * 获取 Navi Protocol 资产（预留）
-     * @param address 钱包地址
-     */
-    private async _getNaviAssets(address: string): Promise<any> {
-        // TODO: 实现 Navi Protocol 资产查询
-        // 参考：https://naviprotocol.io/docs
-        //
-        // 可能包括：
-        // - 质押的 LP Token
-        // - 待领取奖励
-        // - 流动性挖矿收益
-        // - veNAVI 治理代币
-        return null;
     }
 
     // ============ 私有辅助方法 ============

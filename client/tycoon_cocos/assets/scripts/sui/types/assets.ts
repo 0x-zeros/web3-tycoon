@@ -34,54 +34,6 @@ export interface CoinInfo {
 }
 
 /**
- * DeFi 资产信息（预留）
- */
-export interface DeFiAssets {
-    /**
-     * Bucket Protocol 相关资产
-     * 用途：去中心化数据存储、地图模板存储
-     * 预留字段：
-     * - bucketBalance: 在 Bucket 中存储的数据量
-     * - storageNFTs: 存储凭证 NFT
-     */
-    bucketAssets?: {
-        // TODO: 定义 Bucket Protocol 资产结构
-        balance?: bigint;
-        storageNFTs?: any[];
-    };
-
-    /**
-     * Scallop Protocol 相关资产
-     * 用途：借贷协议、地产抵押借贷
-     * 预留字段：
-     * - deposits: 存款资产
-     * - borrows: 借款资产
-     * - collateral: 抵押品
-     */
-    scallopAssets?: {
-        // TODO: 定义 Scallop Protocol 资产结构
-        deposits?: any[];
-        borrows?: any[];
-        collateral?: any[];
-    };
-
-    /**
-     * Navi Protocol 相关资产
-     * 用途：流动性挖矿、质押奖励
-     * 预留字段：
-     * - stakedAmount: 质押数量
-     * - rewards: 待领取奖励
-     * - lpTokens: LP Token 余额
-     */
-    naviAssets?: {
-        // TODO: 定义 Navi Protocol 资产结构
-        stakedAmount?: bigint;
-        rewards?: bigint;
-        lpTokens?: any[];
-    };
-}
-
-/**
  * 玩家资产管理类
  * 统一管理玩家的所有链上资产
  */
@@ -95,22 +47,17 @@ export class PlayerAssets {
     /** 拥有的 Map Template NFTs */
     private _mapTemplateNFTs: MapTemplateNFT[];
 
-    /** DeFi 相关资产 */
-    private _defiAssets: DeFiAssets;
-
     /** 缓存时间戳 */
     private _timestamp: number;
 
     constructor(
         suiBalance: bigint = 0n,
         seats: Seat[] = [],
-        mapTemplateNFTs: MapTemplateNFT[] = [],
-        defiAssets: DeFiAssets = {}
+        mapTemplateNFTs: MapTemplateNFT[] = []
     ) {
         this._suiBalance = suiBalance;
         this._seats = seats;
         this._mapTemplateNFTs = mapTemplateNFTs;
-        this._defiAssets = defiAssets;
         this._timestamp = Date.now();
     }
 
@@ -126,10 +73,6 @@ export class PlayerAssets {
 
     public get mapTemplateNFTs(): MapTemplateNFT[] {
         return this._mapTemplateNFTs;
-    }
-
-    public get defiAssets(): DeFiAssets {
-        return this._defiAssets;
     }
 
     public get timestamp(): number {

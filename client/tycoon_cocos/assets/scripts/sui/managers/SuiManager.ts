@@ -1679,17 +1679,14 @@ export class SuiManager {
                 this._assetService!.getSuiBalance(this._currentAddress),
                 this._assetService!.getPlayerSeats(this._currentAddress)
                 // 预留：Map Template NFTs
-                // this._assetService!.getMapTemplateNFTs(this._currentAddress),
-                // 预留：DeFi 资产
-                // this._assetService!.getDeFiAssets(this._currentAddress)
+                // this._assetService!.getMapTemplateNFTs(this._currentAddress)
             ]);
 
             // 更新缓存为 PlayerAssets 类实例
             this._playerAssets = new PlayerAssets(
                 balance,
                 seats,
-                [],  // mapTemplateNFTs
-                {}   // defiAssets
+                []  // mapTemplateNFTs
             );
 
             console.log('[SuiManager] Player assets loaded', {

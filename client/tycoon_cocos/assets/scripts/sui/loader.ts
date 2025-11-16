@@ -3,6 +3,8 @@
  * 从预打包的 sui.system.js 加载（System.register 格式）
  */
 
+import { EDITOR } from 'cc/env';
+
 // ============ 类型导入（不会被打包） ============
 
 import type * as SuiClientTypes from '@mysten/sui/client';
@@ -26,13 +28,35 @@ async function loadSuiModule(): Promise<any> {
         return suiModule;
     }
 
-    // 统一使用相对路径（Preview 和 Build 都适用，避免子路径部署问题）
-    const modulePath = './libs/sui.system.js';
+    if (EDITOR) {
+        // Editor Preview: 使用 node_modules 的 npm 包
+        console.log('[SuiLoader] Editor mode: loading from node_modules');
+        const suiClient = await import('@mysten/sui/client');
+        const suiTx = await import('@mysten/sui/transactions');
+        const suiBcs = await import('@mysten/sui/bcs');
+        const suiEd25519 = await import('@mysten/sui/keypairs/ed25519');
+        const walletStandard = await import('@mysten/wallet-standard');
+        const suiUtils = await import('@mysten/sui/utils');
+        const suiFaucet = await import('@mysten/sui/faucet');
 
-    console.log('[SuiLoader] Loading sui.system.js from:', modulePath);
-    suiModule = await (window as any).System.import(modulePath);
+        // 合并所有模块导出
+        suiModule = {
+            ...suiClient,
+            ...suiTx,
+            ...suiBcs,
+            ...suiEd25519,
+            ...walletStandard,
+            ...suiUtils,
+            ...suiFaucet
+        };
+    } else {
+        // Browser Preview / Build: 使用打包的 sui.system.js
+        const modulePath = './libs/sui.system.js';
+        console.log('[SuiLoader] Browser mode: loading from:', modulePath);
+        suiModule = await (window as any).System.import(modulePath);
+    }
+
     console.log('[SuiLoader] Sui SDK loaded successfully');
-
     return suiModule;
 }
 

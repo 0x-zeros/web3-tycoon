@@ -44,10 +44,6 @@ export class UIInGame extends UIBase {
     private _pauseBtn: fgui.GButton | null = null;
     private _settingsBtn: fgui.GButton | null = null;
     private _bagBtn: fgui.GButton | null = null;
-    private _defiRewardBtn: fgui.GButton | null = null;
-
-    // ================ DeFi按钮状态 ================
-    private _currentNetwork: string = '';
 
     // ================ 其他 ================
     private _gameTimerID: number | null = null;
@@ -170,10 +166,6 @@ export class UIInGame extends UIBase {
         this._pauseBtn = this.getButton("btnPause");
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
-        this._defiRewardBtn = this.getButton("btn_defiReward");
-
-        // 初始化DeFi奖励按钮
-        this._initDefiRewardButton();
 
         // 初始化时主动设置一次 mode 控制器（防止错过 EditModeChanged 事件）
         this.updateModeController();
@@ -215,10 +207,6 @@ export class UIInGame extends UIBase {
             this._bagBtn.onClick(this._onBagClick, this);
         }
 
-        if (this._defiRewardBtn) {
-            this._defiRewardBtn.onClick(this._onDefiRewardClick, this);
-        }
-
         // 监听游戏事件
         EventBus.on(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.on(EventTypes.Game.GameResume, this._onGameResume, this);
@@ -228,9 +216,6 @@ export class UIInGame extends UIBase {
 
         // 监听待决策事件
         EventBus.on(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
-
-        // 监听回合变化，更新DeFi按钮状态
-        EventBus.on(EventTypes.Game.TurnChanged, this._updateDefiRewardButtonState, this);
     }
 
     /**
@@ -249,10 +234,6 @@ export class UIInGame extends UIBase {
             this._bagBtn.offClick(this._onBagClick, this);
         }
 
-        if (this._defiRewardBtn) {
-            this._defiRewardBtn.offClick(this._onDefiRewardClick, this);
-        }
-
         EventBus.off(EventTypes.Game.GamePause, this._onGamePause, this);
         EventBus.off(EventTypes.Game.GameResume, this._onGameResume, this);
         EventBus.off(EventTypes.Map.EditModeChanged, this._onEditModeChanged, this);
@@ -261,9 +242,6 @@ export class UIInGame extends UIBase {
 
         // 移除待决策事件监听
         EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
-
-        // 移除DeFi按钮状态监听
-        EventBus.off(EventTypes.Game.TurnChanged, this._updateDefiRewardButtonState, this);
 
         super.unbindEvents();
     }
@@ -368,63 +346,6 @@ export class UIInGame extends UIBase {
         EventBus.emit(EventTypes.UI.OpenBag, {
             source: "in_game_ui"
         });
-    }
-
-    /**
-     * DeFi奖励按钮点击
-     *
-     * 直接调用SuiManager激活DeFi奖励（Navi + Scallop）
-     */
-    private async _onDefiRewardClick(): Promise<void> {
-        console.log("[UIInGame] DeFi Reward button clicked");
-
-        // 禁用按钮，防止重复点击
-        if (this._defiRewardBtn) {
-            this._defiRewardBtn.enabled = false;
-        }
-
-        try {
-            // 获取GameSession
-            const session = Blackboard.instance.get('currentGameSession');
-            if (!session) {
-                throw new Error('游戏未开始');
-            }
-
-            // 直接调用SuiManager
-            console.log('[UIInGame] 调用SuiManager.activateDefiRewards');
-            const { SuiManager } = await import('../../sui/managers/SuiManager');
-            const result = await SuiManager.instance.activateDefiRewards(session);
-
-            console.log('[UIInGame] 收到结果:', result);
-            console.log('  success:', result.success);
-            console.log('  message:', result.message);
-
-            // 显示结果MessageBox（使用静态方法）
-            const { UIMessage } = await import('../utils/UIMessage');
-
-            if (result.success) {
-                console.log('[UIInGame] 显示成功消息:', result.message);
-                await UIMessage.success(result.message);
-            } else {
-                console.log('[UIInGame] 显示失败消息:', result.message);
-                await UIMessage.error(result.message);
-            }
-
-            console.log('[UIInGame] MessageBox显示完成');
-
-        } catch (error: any) {
-            console.error('[UIInGame] DeFi奖励失败:', error);
-
-            // 显示错误
-            const { UIMessage } = await import('../utils/UIMessage');
-            await UIMessage.error(error.message || 'DeFi奖励激活失败');
-
-        } finally {
-            // 恢复按钮
-            if (this._defiRewardBtn) {
-                this._defiRewardBtn.enabled = true;
-            }
-        }
     }
 
     /**
@@ -555,65 +476,6 @@ export class UIInGame extends UIBase {
             }
         }
         // 如果还没初始化完成，什么都不做（等待 onShow 中的主动查询）
-    }
-
-    /**
-     * 初始化DeFi奖励按钮
-     * 根据网络类型决定是否显示
-     */
-    private async _initDefiRewardButton(): Promise<void> {
-        if (!this._defiRewardBtn) {
-            console.log('[UIInGame] DeFi奖励按钮不存在');
-            return;
-        }
-
-        // 获取当前网络
-        const { SuiManager } = await import('../../sui/managers/SuiManager');
-        const config = SuiManager.instance?.config;
-        this._currentNetwork = config?.network || '';
-
-        // 只在mainnet显示
-        const isMainnet = this._currentNetwork === 'mainnet';
-        this._defiRewardBtn.visible = isMainnet;
-
-        console.log('[UIInGame] DeFi奖励按钮初始化:');
-        console.log('  网络:', this._currentNetwork);
-        console.log('  显示:', isMainnet);
-
-        if (!isMainnet) {
-            console.log('[UIInGame] 非主网环境，隐藏DeFi奖励按钮');
-        }
-    }
-
-    /**
-     * 更新DeFi奖励按钮状态
-     * 只有active player才能点击
-     */
-    private _updateDefiRewardButtonState(): void {
-        if (!this._defiRewardBtn || !this._defiRewardBtn.visible) {
-            return;  // 按钮不存在或隐藏，跳过
-        }
-
-        const session = Blackboard.instance.get('currentGameSession');
-        if (!session) {
-            this._defiRewardBtn.enabled = false;
-            return;
-        }
-
-        const myPlayer = session.getMyPlayer();
-        const activePlayer = session.getActivePlayer();
-
-        // 是否为active player
-        const isActivePlayer = myPlayer && activePlayer &&
-                               myPlayer.owner === activePlayer.owner;
-
-        this._defiRewardBtn.enabled = isActivePlayer;
-
-        console.log('[UIInGame] DeFi按钮状态更新:');
-        console.log('  我的地址:', myPlayer?.owner);
-        console.log('  Active地址:', activePlayer?.owner);
-        console.log('  是否Active:', isActivePlayer);
-        console.log('  按钮状态:', this._defiRewardBtn.enabled ? 'enabled' : 'disabled');
     }
 
     /**

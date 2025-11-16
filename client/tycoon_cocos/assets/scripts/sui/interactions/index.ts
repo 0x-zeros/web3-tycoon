@@ -3,7 +3,6 @@
  */
 
 export * from './game';
-export * from './defi_rewards';
 
 // 使用 import type 避免打包
 import type { SuiClient } from '@mysten/sui/client';

@@ -162,15 +162,7 @@ export const EventTypes = {
         /** 回合变化（玩家切换） */
         TurnChanged: "game_turn_changed",
         /** 建筑变化（owner/level更新） */
-        BuildingChanged: "game_building_changed",
-
-        // DeFi奖励事件
-        /** 请求领取DeFi奖励 */
-        ClaimDefiReward: "game_claim_defi_reward",
-        /** DeFi奖励激活成功 */
-        DefiRewardActivated: "game_defi_reward_activated",
-        /** DeFi奖励失败 */
-        DefiRewardFailed: "game_defi_reward_failed"
+        BuildingChanged: "game_building_changed"
     },
 
     /** 地产相关事件 */

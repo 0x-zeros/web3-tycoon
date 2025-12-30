@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="192,48" extention="Slider">
+  <displayList>
+    <image id="n0_y9h6" name="n0" src="pseuonf" fileName="kenney_ui-pack/Grey/bar_round_gloss_large.png" pkg="82r0pzop" xy="0,0" size="192,48">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <image id="n1_y9h6" name="bar" src="pseuosp" fileName="kenney_ui-pack/Blue/bar_round_gloss_large.png" pkg="82r0pzop" xy="3,0" size="185,48"/>
+    <text id="n2_y9h6" name="title" xy="0,14" size="192,16" fontSize="12" align="center" autoSize="none" text="">
+      <relation target="" sidePair="width-width"/>
+    </text>
+    <component id="n3_y9h6" name="grip" src="y9h6ob" fileName="components/ParamSlider_grip.xml" xy="164,0">
+      <relation target="n1_y9h6" sidePair="right-right"/>
+    </component>
+  </displayList>
+  <Slider/>
+</component>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="48,48" extention="Button">
+  <Button/>
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver"/>
+  <displayList>
+    <image id="n0_y9h6" pkg="82r0pzop" src="pseuosl" name="n0" xy="0,0"/>
+  </displayList>
+</component>

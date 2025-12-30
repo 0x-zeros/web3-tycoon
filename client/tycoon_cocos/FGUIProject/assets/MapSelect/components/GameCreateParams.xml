@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1024,600">
+  <controller name="max_rounds" pages="0,infinite,1,limited" selected="0"/>
+  <displayList>
+    <graph id="n2_qh36" name="bg" xy="511,300" pivot="0.5,0.5" anchor="true" size="1024,600" type="rect" fillColor="#ff6699cc">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,487" size="218,62">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="创建游戏"/>
+    </component>
+    <text id="n8_qh36" name="starting_cash" xy="857,79" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="100000"/>
+    <text id="n6_qh36" name="starting_cash_desc" xy="32,79" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="初始现金："/>
+    <text id="n7_qh36" name="price_rise_days_desc" xy="32,144" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="物价提升天数："/>
+    <text id="n20_y9h6" name="max_rounds_desc" xy="32,276" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="天数限制：">
+      <gearDisplay controller="max_rounds" pages="1"/>
+    </text>
+    <component id="n21_y9h6" name="slider_starting_cash" src="y9h6oc" fileName="components/ParamSlider.xml" xy="289,76" size="524,48">
+      <Slider value="50" max="100"/>
+    </component>
+    <text id="n22_y9h6" name="max_rounds" xy="858,275" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="100000">
+      <gearDisplay controller="max_rounds" pages="1"/>
+    </text>
+    <component id="n23_y9h6" name="slider_max_rounds" src="y9h6oc" fileName="components/ParamSlider.xml" xy="290,272" size="524,48">
+      <gearDisplay controller="max_rounds" pages="1"/>
+      <Slider value="50" max="100"/>
+    </component>
+    <text id="n24_y9h6" name="price_rise_days" xy="856,144" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="100000"/>
+    <component id="n25_y9h6" name="slider_price_rise_days" src="y9h6oc" fileName="components/ParamSlider.xml" xy="288,141" size="524,48">
+      <Slider value="50" max="100"/>
+    </component>
+    <text id="n26_y9h6" name="n26" xy="32,210" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="游戏时间："/>
+    <component id="n27_y9h6" name="btn_max_rounds_mode" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="324,206">
+      <Button checked="true" controller="max_rounds" page="0"/>
+    </component>
+    <text id="n29_y9h6" name="n29" xy="387,214" size="99,39" fontSize="22" color="#ffffff" autoSize="none" text="无限期"/>
+  </displayList>
+</component>

@@ -7,7 +7,7 @@
     <component id="pseuo3" name="Game.xml" path="/components/"/>
     <component id="pseuo4" name="Map.xml" path="/components/"/>
     <component id="qh36o5" name="GameDetail.xml" path="/" exported="true"/>
-    <component id="y9h6o6" name="GameCreateParams.xml" path="/components/"/>
+    <component id="y9h6o6" name="GameCreateParams.xml" path="/" exported="true"/>
     <component id="y9h6ob" name="ParamSlider_grip.xml" path="/components/"/>
     <component id="y9h6oc" name="ParamSlider.xml" path="/components/"/>
   </resources>

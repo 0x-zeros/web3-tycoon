@@ -95,6 +95,10 @@ export const EventTypes = {
         RoundEnded: "game_round_ended",
         /** 显示游戏详情 */
         ShowGameDetail: "game_show_game_detail",
+        /** 显示游戏创建参数配置界面 */
+        ShowGameCreateParams: "game_show_game_create_params",
+        /** 使用参数创建游戏 */
+        CreateGameWithParams: "game_create_game_with_params",
 
         // GameSession 相关事件
         /** GameSession 加载完成 */

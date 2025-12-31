@@ -5,6 +5,7 @@ import { UIGameList } from "./map-select/UIGameList";
 import { UIMapList } from "./map-select/UIMapList";
 import { UIMapAssetList } from "./map-select/UIMapAssetList";
 import { UIGameDetail } from "./map-select/UIGameDetail";
+import { UIGameCreateParams } from "./map-select/UIGameCreateParams";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { SuiManager } from "../../sui/managers/SuiManager";
@@ -26,6 +27,9 @@ export class UIMapSelect extends UIBase {
     // GameDetail 组件容器
     private m_gameDetailComponent: fgui.GComponent;
 
+    // GameCreateParams 组件容器
+    private m_gameCreateParamsComponent: fgui.GComponent;
+
     // Controller（在 data 组件中）
     private m_categoryController: fgui.Controller;
 
@@ -34,6 +38,7 @@ export class UIMapSelect extends UIBase {
     private m_mapListUI: UIMapList;
     private m_mapAssetListUI: UIMapAssetList;
     private m_gameDetailUI: UIGameDetail;
+    private m_gameCreateParamsUI: UIGameCreateParams;
 
     /**
      * 初始化回调
@@ -60,6 +65,16 @@ export class UIMapSelect extends UIBase {
 
         if (!this.m_gameDetailComponent) {
             console.error('[UIMapSelect] gameDetail component not found');
+        }
+
+        // 获取 gameCreateParams 组件
+        this.m_gameCreateParamsComponent = this.getChild('gameCreateParams').asCom;
+
+        if (!this.m_gameCreateParamsComponent) {
+            console.error('[UIMapSelect] gameCreateParams component not found');
+        } else {
+            // 默认隐藏
+            this.m_gameCreateParamsComponent.visible = false;
         }
 
         // 获取 controller（在 data 组件中）
@@ -98,6 +113,12 @@ export class UIMapSelect extends UIBase {
         this.m_gameDetailUI.setPanel(this.m_gameDetailComponent);
         this.m_gameDetailUI.setParentUI(this);
 
+        // 子模块 5: UIGameCreateParams（游戏参数配置）
+        this.m_gameCreateParamsUI = this.m_gameCreateParamsComponent.node.addComponent(UIGameCreateParams);
+        this.m_gameCreateParamsUI.setUIName("GameCreateParams");
+        this.m_gameCreateParamsUI.setPanel(this.m_gameCreateParamsComponent);
+        this.m_gameCreateParamsUI.setParentUI(this);
+
         console.log('[UIMapSelect] Sub-modules initialized');
     }
 
@@ -116,6 +137,9 @@ export class UIMapSelect extends UIBase {
 
         // 监听显示游戏详情事件（由 UIGameList 触发）
         EventBus.on(EventTypes.Game.ShowGameDetail, this._onShowGameDetail, this);
+
+        // 监听显示游戏创建参数配置事件（由 UIMapList 触发）
+        EventBus.on(EventTypes.Game.ShowGameCreateParams, this._onShowGameCreateParams, this);
     }
 
     /**
@@ -126,6 +150,7 @@ export class UIMapSelect extends UIBase {
         EventBus.off(EventTypes.Game.GameStart, this._onGameStart, this);
         EventBus.off(EventTypes.Move.GameCreated, this._onMoveGameCreated, this);
         EventBus.off(EventTypes.Game.ShowGameDetail, this._onShowGameDetail, this);
+        EventBus.off(EventTypes.Game.ShowGameCreateParams, this._onShowGameCreateParams, this);
         super.unbindEvents();
     }
 
@@ -295,6 +320,40 @@ export class UIMapSelect extends UIBase {
         const showTransition = this.getTransition("showAnim");
         if (showTransition) {
             showTransition.play();
+        }
+    }
+
+    /**
+     * 显示游戏创建参数配置界面
+     */
+    private _onShowGameCreateParams(data: { mapTemplateId: string }): void {
+        console.log('[UIMapSelect] ShowGameCreateParams event received');
+        console.log('  Map Template ID:', data.mapTemplateId);
+
+        if (this.m_gameCreateParamsComponent) {
+            // 隐藏GameDetail（如果正在显示）
+            if (this.m_gameDetailComponent) {
+                this.m_gameDetailComponent.visible = false;
+            }
+
+            // 显示参数配置界面
+            this.m_gameCreateParamsComponent.visible = true;
+            this.m_gameCreateParamsUI.showWithParams(data.mapTemplateId);
+        }
+    }
+
+    /**
+     * 返回到主面板（隐藏所有模态界面）
+     */
+    public showMainPanel(): void {
+        console.log('[UIMapSelect] Showing main panel');
+
+        if (this.m_gameDetailComponent) {
+            this.m_gameDetailComponent.visible = false;
+        }
+
+        if (this.m_gameCreateParamsComponent) {
+            this.m_gameCreateParamsComponent.visible = false;
         }
     }
 }

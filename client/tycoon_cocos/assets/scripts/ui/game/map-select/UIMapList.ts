@@ -9,6 +9,7 @@
  */
 
 import { UIBase } from "../../core/UIBase";
+import { UIManager } from "../../core/UIManager";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
 import { EventBus } from "../../../events/EventBus";
@@ -60,6 +61,9 @@ export class UIMapList extends UIBase {
 
         // 监听地图模板发布事件（实时更新列表）
         EventBus.on(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
+
+        // 监听创建游戏参数确认事件
+        EventBus.on(EventTypes.Game.CreateGameWithParams, this._onCreateGameWithParams, this);
     }
 
     /**
@@ -68,6 +72,7 @@ export class UIMapList extends UIBase {
     protected unbindEvents(): void {
         this.m_btn_createGame?.offClick(this._onCreateGameClick, this);
         EventBus.off(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
+        EventBus.off(EventTypes.Game.CreateGameWithParams, this._onCreateGameWithParams, this);
         super.unbindEvents();
     }
 
@@ -165,7 +170,7 @@ export class UIMapList extends UIBase {
     /**
      * 创建游戏按钮点击
      */
-    private async _onCreateGameClick(): Promise<void> {
+    private _onCreateGameClick(): void {
         console.log('[UIMapList] Create game clicked');
 
         if (this._selectedTemplateId === null) {
@@ -173,12 +178,10 @@ export class UIMapList extends UIBase {
             return;
         }
 
-        try {
-            // ✅ 直接调用（template_id 已是 string 类型）
-            await SuiManager.instance.createGameWithTemplate(this._selectedTemplateId);
-        } catch (error) {
-            // 错误已在 createGameWithTemplate 中处理
-        }
+        // 发送事件，让UIMapSelect显示参数配置界面
+        EventBus.emit(EventTypes.Game.ShowGameCreateParams, {
+            mapTemplateId: this._selectedTemplateId
+        });
     }
 
     /**
@@ -222,5 +225,51 @@ export class UIMapList extends UIBase {
         console.log('[UIMapList] MapTemplatePublished event received');
         console.log('  Template ID:', eventData.template_id);
         this.refresh();  // 刷新列表
+    }
+
+    /**
+     * 使用参数创建游戏（由UIGameCreateParams触发）
+     */
+    private async _onCreateGameWithParams(data: {
+        templateMapId: string;
+        startingCash: bigint;
+        priceRiseDays: number;
+        maxRounds: number;
+    }): Promise<void> {
+        console.log('[UIMapList] CreateGameWithParams event received');
+        console.log('  Parameters:', {
+            ...data,
+            startingCash: data.startingCash.toString()  // BigInt需要转为string才能log
+        });
+
+        try {
+            // 调用SuiManager创建游戏，传入用户配置的参数
+            const result = await SuiManager.instance.createGameWithTemplate(
+                data.templateMapId,
+                {
+                    startingCash: data.startingCash,
+                    priceRiseDays: data.priceRiseDays,
+                    maxRounds: data.maxRounds
+                }
+            );
+
+            console.log('[UIMapList] 游戏创建成功:', result);
+
+            // 显示成功消息
+            UIManager.showMessageBox(
+                '成功',
+                `游戏创建成功！\n游戏ID: ${result.gameId}\n座位ID: ${result.seatId}`,
+                '确定'
+            );
+
+            // 等待EventIndexer收到GameCreatedEvent后，会自动显示GameDetail
+        } catch (error) {
+            console.error('[UIMapList] 创建游戏失败:', error);
+            UIManager.showMessageBox(
+                '错误',
+                `创建游戏失败: ${error.message}`,
+                '确定'
+            );
+        }
     }
 }

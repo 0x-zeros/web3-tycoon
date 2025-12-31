@@ -131,8 +131,22 @@ export const INVALID_TILE_ID = 65535; // 无效tile_id（u16 max）
 
 // ===== 默认配置 =====
 export const DEFAULT_MAX_PLAYERS = 4;
-export const DEFAULT_MAX_ROUNDS = 100;
 export const DEFAULT_HOSPITAL_TURNS = 2;
+
+// ===== 游戏配置 - starting_cash（初始现金） =====
+export const DEFAULT_STARTING_CASH = 100000n;
+export const MIN_STARTING_CASH = 10000n;
+export const MAX_STARTING_CASH = 500000n;
+
+// ===== 游戏配置 - price_rise_days（物价提升天数） =====
+export const DEFAULT_PRICE_RISE_DAYS = 15;
+export const MIN_PRICE_RISE_DAYS = 1;
+export const MAX_PRICE_RISE_DAYS = 100;
+
+// ===== 游戏配置 - max_rounds（最大回合数，0表示无限期） =====
+export const DEFAULT_MAX_ROUNDS = 50;
+export const MIN_MAX_ROUNDS = 10;
+export const MAX_MAX_ROUNDS = 200;
 
 // ===== 默认数值配置（编辑器初始值，可微调） =====
 

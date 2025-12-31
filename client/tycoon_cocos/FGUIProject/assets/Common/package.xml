@@ -79,7 +79,7 @@
     <image id="pseuonc" name="bar_round_gloss_large_r.png" path="/kenney_ui-pack/Grey/"/>
     <image id="pseuond" name="bar_round_gloss_large_m.png" path="/kenney_ui-pack/Grey/"/>
     <image id="pseuone" name="bar_round_gloss_large_l.png" path="/kenney_ui-pack/Grey/"/>
-    <image id="pseuonf" name="bar_round_gloss_large.png" path="/kenney_ui-pack/Grey/" scale="9grid" scale9grid="48,12,96,24"/>
+    <image id="pseuonf" name="bar_round_gloss_large.png" path="/kenney_ui-pack/Grey/" exported="true" scale="9grid" scale9grid="48,12,96,24"/>
     <image id="pseuong" name="crosshair_color_d.png" path="/kenney_ui-pack/Green/"/>
     <image id="pseuonh" name="crosshair_color_c.png" path="/kenney_ui-pack/Green/"/>
     <image id="pseuoni" name="crosshair_color_b.png" path="/kenney_ui-pack/Green/"/>
@@ -265,11 +265,11 @@
     <image id="pseuosi" name="bar_round_gloss_small_m.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuosj" name="bar_round_gloss_small_l.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuosk" name="bar_round_gloss_small.png" path="/kenney_ui-pack/Blue/"/>
-    <image id="pseuosl" name="bar_round_gloss_large_square.png" path="/kenney_ui-pack/Blue/"/>
+    <image id="pseuosl" name="bar_round_gloss_large_square.png" path="/kenney_ui-pack/Blue/" exported="true"/>
     <image id="pseuosm" name="bar_round_gloss_large_r.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuosn" name="bar_round_gloss_large_m.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuoso" name="bar_round_gloss_large_l.png" path="/kenney_ui-pack/Blue/"/>
-    <image id="pseuosp" name="bar_round_gloss_large.png" path="/kenney_ui-pack/Blue/" scale="9grid" scale9grid="48,12,96,24"/>
+    <image id="pseuosp" name="bar_round_gloss_large.png" path="/kenney_ui-pack/Blue/" exported="true" scale="9grid" scale9grid="48,12,96,24"/>
     <image id="pseuosq" name="bar_round_small_square.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuosr" name="bar_square_gloss_large.png" path="/kenney_ui-pack/Blue/"/>
     <image id="pseuoss" name="bar_square_gloss_large_l.png" path="/kenney_ui-pack/Blue/"/>

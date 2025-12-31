@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1024,600">
+<component size="1024,471">
   <controller name="max_rounds" pages="0,infinite,1,limited" selected="0"/>
   <displayList>
-    <graph id="n2_qh36" name="bg" xy="511,300" pivot="0.5,0.5" anchor="true" size="1024,600" type="rect" fillColor="#ff6699cc">
+    <graph id="n2_qh36" name="bg" xy="511,235" pivot="0.5,0.5" anchor="true" size="1024,471" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="763,487" size="218,62">
+    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="763,358" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="创建游戏"/>
     </component>
@@ -31,10 +31,10 @@
     </component>
     <text id="n26_y9h6" name="n26" xy="32,210" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="游戏时间："/>
     <component id="n27_y9h6" name="btn_max_rounds_mode" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="324,206">
-      <Button checked="true" controller="max_rounds" page="0"/>
+      <Button checked="true"/>
     </component>
     <text id="n29_y9h6" name="n29" xy="387,214" size="99,39" fontSize="22" color="#ffffff" autoSize="none" text="无限期"/>
-    <component id="n30_hysa" name="btn_cancel" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="40,487" size="218,62">
+    <component id="n30_hysa" name="btn_cancel" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="40,358" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="取消"/>
     </component>

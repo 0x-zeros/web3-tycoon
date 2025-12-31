@@ -242,6 +242,7 @@ export class UIGameCreateParams extends UIBase {
 
         // 默认为无限期模式
         this.m_controllerMaxRounds.selectedIndex = 0;
+        this.m_btnMaxRoundsMode.selected = true;  // 同步按钮视觉状态
 
         console.log('[UIGameCreateParams] Default values initialized:', {
             startingCash: this.m_textStartingCash.text,
@@ -295,10 +296,15 @@ export class UIGameCreateParams extends UIBase {
     private _onMaxRoundsModeClick(): void {
         // 切换Controller的page（0=infinite, 1=limited）
         const currentPage = this.m_controllerMaxRounds.selectedIndex;
-        this.m_controllerMaxRounds.selectedIndex = currentPage === 0 ? 1 : 0;
+        const newPage = currentPage === 0 ? 1 : 0;
+
+        this.m_controllerMaxRounds.selectedIndex = newPage;
+
+        // 同步按钮视觉状态
+        this.m_btnMaxRoundsMode.selected = (newPage === 0);
 
         console.log('[UIGameCreateParams] Max rounds mode changed to:',
-            this.m_controllerMaxRounds.selectedIndex === 0 ? 'infinite' : 'limited');
+            newPage === 0 ? 'infinite' : 'limited');
     }
 
     /**

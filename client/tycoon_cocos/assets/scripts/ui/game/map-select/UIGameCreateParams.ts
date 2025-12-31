@@ -25,6 +25,7 @@ const { ccclass } = _decorator;
 export class UIGameCreateParams extends UIBase {
     // FairyGUI组件引用
     private m_btnCreateGame: fgui.GButton;
+    private m_btnCancel: fgui.GButton;
 
     // Slider和Text组件
     private m_sliderStartingCash: fgui.GSlider;
@@ -61,6 +62,7 @@ export class UIGameCreateParams extends UIBase {
 
         // 获取组件引用
         this.m_btnCreateGame = this.getButton('btn_createGame');
+        this.m_btnCancel = this.getButton('btn_cancel');
 
         this.m_sliderStartingCash = this.getSlider('slider_starting_cash');
         this.m_textStartingCash = this.getText('starting_cash');
@@ -77,6 +79,10 @@ export class UIGameCreateParams extends UIBase {
         // 检查组件是否正确获取
         if (!this.m_btnCreateGame) {
             console.error('[UIGameCreateParams] btn_createGame not found');
+        }
+
+        if (!this.m_btnCancel) {
+            console.error('[UIGameCreateParams] btn_cancel not found');
         }
 
         if (!this.m_sliderStartingCash || !this.m_textStartingCash) {
@@ -105,7 +111,8 @@ export class UIGameCreateParams extends UIBase {
      */
     protected bindEvents(): void {
         if (!this.m_sliderStartingCash || !this.m_sliderPriceRiseDays ||
-            !this.m_sliderMaxRounds || !this.m_btnMaxRoundsMode || !this.m_btnCreateGame) {
+            !this.m_sliderMaxRounds || !this.m_btnMaxRoundsMode ||
+            !this.m_btnCreateGame || !this.m_btnCancel) {
             console.error('[UIGameCreateParams] Cannot bind events - components not initialized');
             return;
         }
@@ -118,6 +125,7 @@ export class UIGameCreateParams extends UIBase {
         // 按钮事件
         this.m_btnMaxRoundsMode.on(fgui.Event.CLICK, this._onMaxRoundsModeClick, this);
         this.m_btnCreateGame.on(fgui.Event.CLICK, this._onCreateGameClick, this);
+        this.m_btnCancel.on(fgui.Event.CLICK, this._onCancelClick, this);
     }
 
     /**
@@ -138,6 +146,9 @@ export class UIGameCreateParams extends UIBase {
         }
         if (this.m_btnCreateGame) {
             this.m_btnCreateGame.off(fgui.Event.CLICK, this._onCreateGameClick, this);
+        }
+        if (this.m_btnCancel) {
+            this.m_btnCancel.off(fgui.Event.CLICK, this._onCancelClick, this);
         }
 
         super.unbindEvents();
@@ -311,6 +322,18 @@ export class UIGameCreateParams extends UIBase {
 
         // 发送事件，让UIMapList处理实际创建
         EventBus.emit(EventTypes.Game.CreateGameWithParams, params);
+
+        // 隐藏自己，通知父UI返回主面板
+        if (this._parentUI && this._parentUI.showMainPanel) {
+            this._parentUI.showMainPanel();
+        }
+    }
+
+    /**
+     * 取消按钮点击
+     */
+    private _onCancelClick(): void {
+        console.log('[UIGameCreateParams] Cancel clicked, closing without creating game');
 
         // 隐藏自己，通知父UI返回主面板
         if (this._parentUI && this._parentUI.showMainPanel) {

@@ -5,7 +5,7 @@
     <graph id="n2_qh36" name="bg" xy="511,300" pivot="0.5,0.5" anchor="true" size="1024,600" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,487" size="218,62">
+    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="763,487" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="创建游戏"/>
     </component>
@@ -34,5 +34,9 @@
       <Button checked="true" controller="max_rounds" page="0"/>
     </component>
     <text id="n29_y9h6" name="n29" xy="387,214" size="99,39" fontSize="22" color="#ffffff" autoSize="none" text="无限期"/>
+    <component id="n30_hysa" name="btn_cancel" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="40,487" size="218,62">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="取消"/>
+    </component>
   </displayList>
 </component>

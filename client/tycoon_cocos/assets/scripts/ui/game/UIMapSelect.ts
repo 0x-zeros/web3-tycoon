@@ -272,20 +272,6 @@ export class UIMapSelect extends UIBase {
     }
 
     /**
-     * 显示主界面（从 gameDetail 返回）
-     */
-    public showMainPanel(): void {
-        console.log('[UIMapSelect] Showing main panel');
-
-        // 只隐藏游戏详情
-        if (this.m_gameDetailComponent) {
-            this.m_gameDetailComponent.visible = false;
-        }
-
-        // data 始终保持可见，不需要额外设置
-    }
-
-    /**
      * 显示游戏详情
      * @param gameId 游戏 ID
      */

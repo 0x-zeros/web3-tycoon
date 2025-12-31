@@ -164,7 +164,8 @@ export class UIGameCreateParams extends UIBase {
         // 设置初始值为默认值
         this._initDefaultValues();
 
-        this.show();
+        // 该面板是固定尺寸的模态框，避免被 UIBase 强制拉伸为全屏
+        this.show(undefined, false);
     }
 
     /**

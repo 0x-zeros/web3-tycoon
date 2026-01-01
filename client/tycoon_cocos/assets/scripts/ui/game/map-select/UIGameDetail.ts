@@ -32,6 +32,11 @@ export class UIGameDetail extends UIBase {
     private m_player_2: fgui.GTextField;
     private m_player_3: fgui.GTextField;
 
+    // 游戏创建参数
+    private m_starting_cash: fgui.GTextField;
+    private m_price_rise_days: fgui.GTextField;
+    private m_max_rounds: fgui.GTextField;
+
     // 父容器引用（用于返回）
     private _parentUI: any = null;
 
@@ -59,8 +64,18 @@ export class UIGameDetail extends UIBase {
         this.m_player_2 = this.getText('player_2');
         this.m_player_3 = this.getText('player_3');
 
+        // 获取游戏参数文本
+        this.m_starting_cash = this.getText('starting_cash');
+        this.m_price_rise_days = this.getText('price_rise_days');
+        this.m_max_rounds = this.getText('max_rounds');
+
         console.log('[UIGameDetail] Components setup');
         console.log('  Buttons found:', !!this.m_btn_ok, !!this.m_btn_quitGame, !!this.m_btn_startGame);
+        console.log('  Game params components:', {
+            startingCash: !!this.m_starting_cash,
+            priceRiseDays: !!this.m_price_rise_days,
+            maxRounds: !!this.m_max_rounds
+        });
     }
 
     /**
@@ -131,6 +146,28 @@ export class UIGameDetail extends UIBase {
                 }
             }
         }
+
+        // 显示游戏创建参数
+        if (this.m_starting_cash && game.players.length > 0) {
+            const startingCash = game.players[0].cash;
+            this.m_starting_cash.text = startingCash.toString();
+        }
+
+        if (this.m_price_rise_days) {
+            this.m_price_rise_days.text = game.price_rise_days.toString();
+        }
+
+        if (this.m_max_rounds) {
+            this.m_max_rounds.text = game.max_rounds === 0
+                ? '无限'
+                : game.max_rounds.toString();
+        }
+
+        console.log('[UIGameDetail] Game params displayed:', {
+            startingCash: game.players[0]?.cash.toString(),
+            priceRiseDays: game.price_rise_days,
+            maxRounds: game.max_rounds
+        });
 
         // 按钮显示逻辑（根据游戏状态和玩家身份）
         const isActiveGame = game.status === GameStatus.ACTIVE;  // 进行中

@@ -28,5 +28,11 @@
     <text id="n15_qh36" name="n15" xy="301,195" size="23,31" fontSize="22" color="#ffffff" text="1:"/>
     <text id="n16_qh36" name="n16" xy="555,193" size="23,32" fontSize="22" color="#ffffff" autoSize="none" text="2:"/>
     <text id="n17_qh36" name="n17" xy="810,195" size="23,31" fontSize="22" color="#ffffff" text="3:"/>
+    <text id="n20_no43" name="starting_cash" xy="272,313" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="100000"/>
+    <text id="n22_no43" name="price_rise_days" xy="272,368" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="100000"/>
+    <text id="n21_no43" name="max_rounds" xy="272,420" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="100000"/>
+    <text id="n23_no43" name="starting_cash_desc" xy="32,313" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="初始现金："/>
+    <text id="n24_no43" name="price_rise_days_desc" xy="32,367" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="物价提升天数："/>
+    <text id="n25_no43" name="max_rounds_desc" xy="31,420" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="天数限制："/>
   </displayList>
 </component>

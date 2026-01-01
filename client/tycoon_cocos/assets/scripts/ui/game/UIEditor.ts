@@ -586,8 +586,8 @@ export class UIEditor extends UIBase {
                     btn_3: {
                         text: "创建游戏",
                         visible: true,
-                        callback: async () => {
-                            console.log('[UIEditor] Creating game with template:', result.templateId);
+                        callback: () => {
+                            console.log('[UIEditor] Opening game params UI for template:', result.templateId);
 
                             try {
                                 // 1. 先隐藏编辑器（卸载地图）
@@ -595,30 +595,28 @@ export class UIEditor extends UIBase {
                                     toMapId: null
                                 });
 
-                                // 2. ✅ 立即显示 UIMapSelect（Game List tab）
+                                // 2. 显示 UIMapSelect（Game List tab）
                                 EventBus.emit(EventTypes.UI.ShowMapSelect, {
-                                    category: 0  // ✅ 0 = Game List tab
+                                    category: 0  // 0 = Game List tab
                                 });
 
-                                // 3. 创建游戏
-                                await SuiManager.instance.createGameWithTemplate(result.templateId);
+                                // 3. 打开参数配置界面（而非直接创建）
+                                EventBus.emit(EventTypes.Game.ShowGameCreateParams, {
+                                    mapTemplateId: result.templateId
+                                });
 
-                                // createGameWithTemplate 会：
-                                // - 显示创建成功 MessageBox
-                                // - 触发 GameCreatedEvent
-                                //
-                                // GameCreatedEvent 会触发：
-                                // - SuiManager 查询并设置 _currentGame
-                                // - UIMapSelect._onMoveGameCreated()
-                                //   └→ showGameDetail(gameId)
-                                //        ├→ controller = 0（已设置）
-                                //        ├→ 选中游戏
-                                //        └→ 显示 GameDetail
+                                // ShowGameCreateParams 会触发：
+                                // - UIMapSelect._onShowGameCreateParams()
+                                //   └→ m_gameCreateParamsUI.showWithParams(templateId)
+                                //        ├→ 显示参数配置界面（模态框）
+                                //        └→ 用户配置完成后发送 CreateGameWithParams 事件
+
+                                console.log('[UIEditor] Game params UI opened, waiting for user input');
 
                             } catch (error) {
-                                console.error('[UIEditor] Create game error:', error);
+                                console.error('[UIEditor] Failed to open game params UI:', error);
 
-                                // 创建失败也要显示 UIMapSelect
+                                // 出错也要显示 UIMapSelect
                                 EventBus.emit(EventTypes.UI.ShowMapSelect, {
                                     category: 0
                                 });

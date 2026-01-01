@@ -185,6 +185,29 @@ export class UIGameCreateParams extends UIBase {
     }
 
     /**
+     * Slider值映射到实际参数值（bigint类型，带 snap）
+     * @param percent Slider百分比（0-100）
+     * @param min 最小值
+     * @param max 最大值
+     * @param snapUnit snap单位（如 1000n）
+     */
+    private _mapSliderToBigIntWithSnap(
+        percent: number,
+        min: bigint,
+        max: bigint,
+        snapUnit: bigint
+    ): bigint {
+        const range = Number(max - min);
+        const rawOffset = range * percent / 100;
+
+        // 将 offset 按 snapUnit 对齐
+        const snapUnitNum = Number(snapUnit);
+        const snappedOffset = Math.round(rawOffset / snapUnitNum) * snapUnitNum;
+
+        return min + BigInt(snappedOffset);
+    }
+
+    /**
      * 计算默认值对应的slider百分比（number类型）
      */
     private _calculateInitialPercent(
@@ -257,10 +280,11 @@ export class UIGameCreateParams extends UIBase {
      */
     private _onStartingCashChanged(): void {
         const percent = this.m_sliderStartingCash.value;
-        const value = this._mapSliderToBigInt(
+        const value = this._mapSliderToBigIntWithSnap(
             percent,
             MIN_STARTING_CASH,
-            MAX_STARTING_CASH
+            MAX_STARTING_CASH,
+            1000n  // snap 单位 1000
         );
         this.m_textStartingCash.text = value.toString();
     }

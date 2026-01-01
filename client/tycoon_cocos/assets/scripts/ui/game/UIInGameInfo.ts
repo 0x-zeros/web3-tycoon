@@ -35,17 +35,40 @@ export class UIInGameInfo extends UIBase {
     private _setupComponents(): void {
         // gameInfo 组件
         this.m_gameId = this.getText('gameid');
+        if (!this.m_gameId) {
+            console.warn('[UIInGameInfo] gameId text component not found');
+        }
+
         this.m_daysElapsed = this.getText('daysElapsed');
+        if (!this.m_daysElapsed) {
+            console.warn('[UIInGameInfo] daysElapsed text component not found');
+        }
+
         this.m_weekday = this.getText('weekday');
+        if (!this.m_weekday) {
+            console.warn('[UIInGameInfo] weekday text component not found');
+        }
+
         this.m_priceIndex = this.getText('priceIndex');
+        if (!this.m_priceIndex) {
+            console.warn('[UIInGameInfo] priceIndex text component not found');
+        }
     }
 
     protected bindEvents(): void {
-        // 监听回合变化
+        // 关键：数据加载完成时首次刷新
+        EventBus.on(EventTypes.Game.SessionLoaded, this._onSessionLoaded, this);
+
+        // 关键：轮次变化时刷新（天数/星期/物价都依赖 round）
+        EventBus.on(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
+
+        // 兼容：回合结束时刷新
         EventBus.on(EventTypes.Game.TurnEnd, this._onTurnEnd, this);
     }
 
     protected unbindEvents(): void {
+        EventBus.off(EventTypes.Game.SessionLoaded, this._onSessionLoaded, this);
+        EventBus.off(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
         EventBus.off(EventTypes.Game.TurnEnd, this._onTurnEnd, this);
         super.unbindEvents();
     }
@@ -59,12 +82,28 @@ export class UIInGameInfo extends UIBase {
     }
 
     public refresh(): void {
-        const session = GameInitializer.getInstance()?.getGameSession();
-        if (!session) return;
+        const initializer = GameInitializer.getInstance();
+        if (!initializer) {
+            console.warn('[UIInGameInfo] GameInitializer not found');
+            return;
+        }
 
+        const session = initializer.getGameSession();
+        if (!session) {
+            console.warn('[UIInGameInfo] GameSession not ready yet');
+            return;
+        }
+
+        // 关键检查：通过 gameId 判断数据是否加载完成
+        const gameId = session.getGameId();
+        if (!gameId) {
+            console.warn('[UIInGameInfo] GameSession data not loaded (gameId is empty)');
+            return;
+        }
+
+        // 数据已就绪，开始更新 UI
         const round = session.getRound();
         const priceRiseDays = session.getPriceRiseDays();
-        const gameId = session.getGameId();
 
         // Game ID（short address 格式）
         if (this.m_gameId) {
@@ -89,6 +128,12 @@ export class UIInGameInfo extends UIBase {
             const priceIndex = Math.floor((round + 1) / priceRiseDays) + 1;
             this.m_priceIndex.text = `物价指数: ${priceIndex}`;
         }
+
+        console.log('[UIInGameInfo] Refreshed successfully', {
+            round,
+            weekday: ((round) % 7) + 1,
+            priceIndex: Math.floor((round + 1) / priceRiseDays) + 1
+        });
     }
 
     private getWeekdayName(num: number): string {
@@ -96,7 +141,18 @@ export class UIInGameInfo extends UIBase {
         return names[num] || '';
     }
 
+    private _onSessionLoaded(data: any): void {
+        console.log('[UIInGameInfo] SessionLoaded event received');
+        this.refresh();
+    }
+
+    private _onRoundChanged(data: any): void {
+        console.log('[UIInGameInfo] RoundChanged event received');
+        this.refresh();
+    }
+
     private _onTurnEnd(): void {
+        console.log('[UIInGameInfo] TurnEnd event received');
         this.refresh();
     }
 }

@@ -149,10 +149,7 @@ export class UIGameDetail extends UIBase {
 
         // 显示游戏创建参数
         if (this.m_starting_cash) {
-            const startingCash = game.starting_cash ?? 0n;
-            this.m_starting_cash.text = startingCash === 0n
-                ? 'N/A'
-                : startingCash.toString();
+            this.m_starting_cash.text = game.starting_cash.toString();
         }
 
         if (this.m_price_rise_days) {
@@ -166,7 +163,7 @@ export class UIGameDetail extends UIBase {
         }
 
         console.log('[UIGameDetail] Game params displayed:', {
-            startingCash: game.starting_cash?.toString() ?? 'N/A',
+            startingCash: game.starting_cash.toString(),
             priceRiseDays: game.price_rise_days,
             maxRounds: game.max_rounds
         });

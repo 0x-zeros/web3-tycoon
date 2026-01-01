@@ -263,13 +263,8 @@ entry fun join(
         i = i + 1;
     };
 
-    // 游戏未开始时，第一个玩家的cash就是starting_cash
-    let starting_cash = if (game.players.length() > 0) {
-        game.players[0].cash
-    } else {
-        tycoon::get_starting_cash(game_data)
-    };
-    let player = create_player_with_cash(player_addr, starting_cash, ctx);
+    // 使用游戏创建时配置的starting_cash（持久化字段，确保所有玩家一致）
+    let player = create_player_with_cash(player_addr, game.starting_cash, ctx);
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 

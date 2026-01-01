@@ -540,7 +540,7 @@ export class QueryService {
                 buildings: this.parseBuildings(fields.buildings || []),
                 npc_on: this.parseNpcInstances(fields.npc_on || []),
                 npc_spawn_pool: fields.npc_spawn_pool || [],
-                starting_cash: BigInt(fields.starting_cash || 0),
+                starting_cash: BigInt(fields.starting_cash),
                 max_rounds: Number(fields.max_rounds) || 0,
                 price_rise_days: Number(fields.price_rise_days) || 0,
                 pending_decision: Number(fields.pending_decision) || 0,

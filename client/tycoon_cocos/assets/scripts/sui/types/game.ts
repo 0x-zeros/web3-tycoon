@@ -163,6 +163,8 @@ export interface Game {
     npc_spawn_pool: NpcSpawnEntry[];
 
     // 配置
+    /** 初始现金（游戏创建时设定，不变） */
+    starting_cash: bigint;
     /** 最大回合数（0表示无限期） */
     max_rounds: number;
     /** 物价提升天数 */

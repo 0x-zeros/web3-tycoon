@@ -17,6 +17,7 @@ import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
 import { IdFormatter } from "../utils/IdFormatter";
+import { UINotification } from "../utils/UINotification";
 
 const { ccclass } = _decorator;
 
@@ -141,6 +142,43 @@ export class UIInGameInfo extends UIBase {
         return names[num] || '';
     }
 
+    /**
+     * 检测物价指数变化并显示通知
+     * @param data RoundChanged 事件数据 { oldRound, newRound }
+     */
+    private _checkAndNotifyPriceIndexChange(data: any): void {
+        if (!data || data.oldRound === undefined || data.newRound === undefined) {
+            return;
+        }
+
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            return;
+        }
+
+        const priceRiseDays = session.getPriceRiseDays();
+        if (priceRiseDays <= 0) {
+            return;  // 防御性检查
+        }
+
+        // 计算旧物价指数和新物价指数
+        const oldIndex = Math.floor((data.oldRound + 1) / priceRiseDays) + 1;
+        const newIndex = Math.floor((data.newRound + 1) / priceRiseDays) + 1;
+
+        // 检测物价指数是否提升
+        if (newIndex > oldIndex) {
+            // 显示物价指数上涨通知
+            UINotification.warning(
+                `物价指数上涨！${oldIndex} → ${newIndex}\n所有建筑的购买和升级价格已提高`,
+                '物价提升',
+                4000,  // 显示4秒
+                'center'  // 居中显示
+            );
+
+            console.log(`[UIInGameInfo] 物价指数上涨: ${oldIndex} -> ${newIndex}`);
+        }
+    }
+
     private _onSessionLoaded(data: any): void {
         console.log('[UIInGameInfo] SessionLoaded event received');
         this.refresh();
@@ -148,6 +186,11 @@ export class UIInGameInfo extends UIBase {
 
     private _onRoundChanged(data: any): void {
         console.log('[UIInGameInfo] RoundChanged event received');
+
+        // 检测物价指数是否上涨
+        this._checkAndNotifyPriceIndexChange(data);
+
+        // 刷新UI显示
         this.refresh();
     }
 

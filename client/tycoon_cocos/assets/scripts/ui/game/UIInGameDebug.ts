@@ -23,6 +23,9 @@ export class UIInGameDebug extends UIBase {
     /** Round/Turn 显示标签 */
     private m_label_roundTurn: fgui.GTextField;
 
+    /** Debug信息显示标签 */
+    private m_label_debugInfo: fgui.GTextField;
+
     /** ID显示状态 */
     private _isShowingIds: boolean = false;
 
@@ -43,11 +46,13 @@ export class UIInGameDebug extends UIBase {
         this.m_btn_showIds = this.getButton('btn_showIds');
         this.m_btn_showTileType = this.getButton('btn_showTileType');
         this.m_label_roundTurn = this.getText('roundTurn');
+        this.m_label_debugInfo = this.getText('debugInfo');
 
         console.log('[UIInGameDebug] Components setup', {
             btn_showIds: !!this.m_btn_showIds,
             btn_showTileType: !!this.m_btn_showTileType,
-            label_roundTurn: !!this.m_label_roundTurn
+            label_roundTurn: !!this.m_label_roundTurn,
+            label_debugInfo: !!this.m_label_debugInfo
         });
     }
 
@@ -66,6 +71,9 @@ export class UIInGameDebug extends UIBase {
         // 监听回合变化
         EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
         EventBus.on(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
+
+        // 监听玩家位置变化（用于更新方向显示）
+        EventBus.on(EventTypes.Player.PositionChanged, this._onPlayerPositionChanged, this);
     }
 
     /**
@@ -82,6 +90,7 @@ export class UIInGameDebug extends UIBase {
 
         EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
         EventBus.off(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
+        EventBus.off(EventTypes.Player.PositionChanged, this._onPlayerPositionChanged, this);
 
         super.unbindEvents();
     }
@@ -113,6 +122,9 @@ export class UIInGameDebug extends UIBase {
 
         // 刷新 Round/Turn 显示
         this._refreshRoundTurnDisplay();
+
+        // 刷新 Debug Info 显示
+        this._refreshDebugInfo();
     }
 
     /**
@@ -244,5 +256,62 @@ export class UIInGameDebug extends UIBase {
         const turn = session.getTurn();
 
         this.m_label_roundTurn.text = `round: ${round}\nturn: ${turn}`;
+    }
+
+    /**
+     * 玩家位置变化处理（刷新方向显示）
+     */
+    private _onPlayerPositionChanged(data: any): void {
+        // 只关心 myPlayer 的位置变化
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) return;
+
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer || data.playerIndex !== myPlayer.getPlayerIndex()) {
+            return;
+        }
+
+        this._refreshDebugInfo();
+    }
+
+    /**
+     * 刷新 Debug Info 显示（显示玩家方向）
+     */
+    private _refreshDebugInfo(): void {
+        if (!this.m_label_debugInfo) return;
+
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            this.m_label_debugInfo.text = 'player: -';
+            return;
+        }
+
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer) {
+            this.m_label_debugInfo.text = 'player: not found';
+            return;
+        }
+
+        // 获取 PaperActor
+        const paperActor = myPlayer.getPaperActor();
+        if (!paperActor) {
+            this.m_label_debugInfo.text = 'direction: -';
+            return;
+        }
+
+        // 获取方向（0-3）
+        const direction = paperActor.direction;
+
+        // 方向映射：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
+        const directionMap = [
+            's ↓',  // 0: 南
+            'e →',  // 1: 东
+            'n ↑',  // 2: 北
+            'w ←'   // 3: 西
+        ];
+
+        const directionText = directionMap[direction] || '?';
+
+        this.m_label_debugInfo.text = `direction: ${directionText}`;
     }
 }

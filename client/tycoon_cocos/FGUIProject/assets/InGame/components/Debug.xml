@@ -6,10 +6,11 @@
     </image>
     <text id="n2_105vo" name="n2" xy="2,2" size="263,86" alpha="0.8" fontSize="18" color="#ffffff" vAlign="middle" autoSize="none" text="- F1: 切换到45度Isometric视角&#xA;- F2: 切换到俯视Top-Down视角&#xA;- 鼠标滚轮拉近/远"/>
     <text id="n10_f49a" name="roundTurn" xy="5,101" size="261,68" alpha="0.8" fontSize="25" color="#ffffff" vAlign="middle" autoSize="none" text="round: 0&#xA;turn: 0"/>
-    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="25,180" size="230,50">
+    <text id="n13_qnmx" name="debugInfo" xy="5,184" size="261,186" alpha="0.8" fontSize="18" color="#ffffff" autoSize="none" text="debug info"/>
+    <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="26,382" size="230,50">
       <Button title="显示编号"/>
     </component>
-    <component id="n11_12ec4" name="btn_showTileType" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="25,243" size="230,50">
+    <component id="n11_12ec4" name="btn_showTileType" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="26,445" size="230,50">
       <Button title="显示类型"/>
     </component>
   </displayList>

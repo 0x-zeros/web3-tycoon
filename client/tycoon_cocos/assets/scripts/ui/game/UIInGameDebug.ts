@@ -5,6 +5,7 @@ import { EventTypes } from "../../events/EventTypes";
 import { GameInitializer } from "../../core/GameInitializer";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
+import * as DirectionUtils from "../../utils/DirectionUtils";
 
 const { ccclass } = _decorator;
 
@@ -292,25 +293,15 @@ export class UIInGameDebug extends UIBase {
             return;
         }
 
-        // 获取 PaperActor
-        const paperActor = myPlayer.getPaperActor();
-        if (!paperActor) {
-            this.m_label_debugInfo.text = 'direction: -';
-            return;
-        }
+        // 使用 DirectionUtils 动态计算方向
+        const direction = DirectionUtils.calculatePlayerDirection(
+            myPlayer.getPos(),
+            myPlayer.getLastTileId(),
+            myPlayer.getNextTileId(),
+            (tileId) => session.getTileWorldCenter(tileId)
+        );
 
-        // 获取方向（0-3）
-        const direction = paperActor.direction;
-
-        // 方向映射：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
-        const directionMap = [
-            's ↓',  // 0: 南
-            'e →',  // 1: 东
-            'n ↑',  // 2: 北
-            'w ←'   // 3: 西
-        ];
-
-        const directionText = directionMap[direction] || '?';
+        const directionText = DirectionUtils.formatDirection(direction);
 
         this.m_label_debugInfo.text = `direction: ${directionText}`;
     }

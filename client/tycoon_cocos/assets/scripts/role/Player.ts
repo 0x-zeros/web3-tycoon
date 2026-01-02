@@ -18,6 +18,7 @@ import { IdFormatter } from '../ui/utils/IdFormatter';
 import { Card } from '../card/Card';
 import { Vec3 } from 'cc';
 import { Blackboard } from '../events/Blackboard';
+import * as DirectionUtils from '../utils/DirectionUtils';
 
 /**
  * Player 类
@@ -552,70 +553,23 @@ export class Player extends Role {
             return;
         }
 
-        let fromTileId: number;
-        let toTileId: number;
+        // 使用 DirectionUtils 计算方向
+        const direction = DirectionUtils.calculatePlayerDirection(
+            this._pos,
+            this._lastTileId,
+            this._nextTileId,
+            (tileId) => session.getTileWorldCenter(tileId)
+        );
 
-        // 判断使用哪个方向逻辑
-        if (this._nextTileId !== INVALID_TILE_ID) {
-            // 有强制目标，从当前tile朝向next_tile
-            fromTileId = this._pos;
-            toTileId = this._nextTileId;
-        } else if (this._lastTileId !== INVALID_TILE_ID) {
-            // 没有强制目标，从last_tile朝向当前tile
-            fromTileId = this._lastTileId;
-            toTileId = this._pos;
-        } else {
-            // 两者都无效，无法计算方向
+        if (direction === null) {
+            // 无法计算方向，不更新
             return;
         }
-
-        // 获取两个tile的世界坐标
-        const fromPos = session.getTileWorldCenter(fromTileId);
-        const toPos = session.getTileWorldCenter(toTileId);
-
-        if (!fromPos || !toPos) {
-            console.warn(`[Player] 无法获取tile位置: from=${fromTileId}, to=${toTileId}`);
-            return;
-        }
-
-        // 计算方向向量
-        const direction = this.calculateDirection(fromPos, toPos);
 
         // 设置到PaperActor
         paperActor.setDirection(direction);
 
-        console.log(`[Player] 更新朝向: from=${fromTileId} to=${toTileId}, direction=${direction}`);
-    }
-
-    /**
-     * 根据两个位置计算方向（0-3）
-     * @param from 起点位置
-     * @param to 终点位置
-     * @returns 方向值：0=南(+z), 1=东(+x), 2=北(-z), 3=西(-x)
-     */
-    private calculateDirection(from: Vec3, to: Vec3): number {
-        const dx = to.x - from.x;
-        const dz = to.z - from.z;
-
-        // 计算角度（atan2返回-π到π）
-        // 使用atan2(dx, dz)，其中dx对应偏移量（东西向），dz对应前进量（南北向）
-        const angle = Math.atan2(dx, dz);
-
-        // 将角度转换为度数（0-360）
-        let degrees = (angle * 180 / Math.PI);
-        if (degrees < 0) degrees += 360;
-
-        // 映射到4个方向
-        // atan2(dx, dz):
-        //   0° → +z方向（南） → direction 0
-        //   90° → +x方向（东） → direction 1
-        //   180° → -z方向（北） → direction 2
-        //   270° → -x方向（西） → direction 3
-        //
-        // 四舍五入到最近的90度倍数
-        const direction = Math.round(degrees / 90) % 4;
-
-        return direction;
+        console.log(`[Player] 更新朝向: pos=${this._pos}, last=${this._lastTileId}, next=${this._nextTileId}, direction=${direction}`);
     }
 
     // ========================= 重写方法 =========================

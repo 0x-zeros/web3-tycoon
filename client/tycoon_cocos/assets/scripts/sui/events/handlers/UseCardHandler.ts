@@ -109,7 +109,10 @@ export class UseCardHandler {
             // 1. 更新玩家卡牌（使用卡牌，扣减数量）
             await this.updatePlayerCards(session, event);
 
-            // 2. 应用 buff 变化
+            // 2. 从事件更新next_tile_id
+            this.updatePlayerNextTileId(session, event);
+
+            // 3. 应用 buff 变化
             await this.applyBuffChanges(session, event.buff_changes);
 
             // 3. 应用 NPC 变化
@@ -207,6 +210,31 @@ export class UseCardHandler {
                 player.increaseCash(amount);
                 console.log(`[UseCardHandler] 玩家 ${change.player} 收入 ${amount}`);
             }
+        }
+    }
+
+    /**
+     * 从事件更新玩家的next_tile_id
+     *
+     * @param session GameSession实例
+     * @param event UseCardActionEvent事件
+     */
+    private updatePlayerNextTileId(session: any, event: UseCardActionEvent): void {
+        const player = session.getPlayerByAddress(event.player);
+        if (!player) {
+            console.warn('[UseCardHandler] 玩家未找到（next_tile_id）:', event.player);
+            return;
+        }
+
+        const oldNextTileId = player.getNextTileId();
+        const newNextTileId = event.next_tile_id;
+
+        if (oldNextTileId !== newNextTileId) {
+            player.setNextTileId(newNextTileId);
+            console.log(`[UseCardHandler] 更新next_tile_id: ${oldNextTileId} -> ${newNextTileId}`);
+
+            // 更新玩家朝向（依赖next_tile_id）
+            player.updatePaperActorDirection(session);
         }
     }
 }

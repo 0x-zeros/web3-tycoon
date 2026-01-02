@@ -419,7 +419,8 @@ entry fun use_card(
         params,
         npc_changes,
         buff_changes,
-        cash_changes
+        cash_changes,
+        game.players[seat.player_index as u64].next_tile_id
     );
 }
 

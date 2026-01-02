@@ -159,6 +159,8 @@ export interface UseCardActionEvent {
     buff_changes: BuffChangeItem[];
     /** 现金变动列表 */
     cash_changes: CashDelta[];
+    /** 使用卡牌后的强制下一步目标（65535表示无强制） */
+    next_tile_id: number;
 }
 
 /**

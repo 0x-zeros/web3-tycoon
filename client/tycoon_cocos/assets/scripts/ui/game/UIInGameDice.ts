@@ -283,6 +283,7 @@ export class UIInGameDice extends UIBase {
                 steps: maxSteps,
                 preference: preference,
                 lastTile: player.getLastTileId(),
+                nextTileId: player.getNextTileId(),
                 rotorHistory: rotorHistory
             });
 

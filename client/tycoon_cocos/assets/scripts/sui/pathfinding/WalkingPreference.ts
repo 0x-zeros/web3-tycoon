@@ -151,6 +151,8 @@ export interface PathCalculationConfig {
     preference: WalkingPreference;
     /** 上一步的 tile_id（避免第一步回头，65535 表示无限制） */
     lastTile?: number;
+    /** 下一步强制目标 tile（65535 表示无强制，用于转向卡等） */
+    nextTileId?: number;
     /** Rotor-Router 历史记录（可选，用于保持状态） */
     rotorHistory?: RotorRouterHistory;
 }

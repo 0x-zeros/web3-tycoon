@@ -61,6 +61,7 @@ export class PathCalculator {
             steps,
             preference,
             lastTile = INVALID_TILE_ID,
+            nextTileId = INVALID_TILE_ID,
             rotorHistory
         } = config;
 
@@ -87,6 +88,66 @@ export class PathCalculator {
         if (rotorHistory) {
             this.rotorHistory = rotorHistory;
             this.rotorRouter = new RotorRouter(this.template, this.rotorHistory);
+        }
+
+        // 处理next_tile_id强制第一步的情况（转向卡等）
+        if (nextTileId !== INVALID_TILE_ID) {
+            console.log(`[PathCalculator] 检测到强制第一步: ${startTile} -> ${nextTileId}`);
+
+            // 验证nextTileId是startTile的有效邻居
+            const tileStatic = this.template.tiles_static.get(startTile);
+            if (!tileStatic) {
+                return {
+                    path: [],
+                    success: false,
+                    actualSteps: 0,
+                    error: `Start tile ${startTile} not found`
+                };
+            }
+
+            const validNeighbors = [tileStatic.w, tileStatic.n, tileStatic.e, tileStatic.s];
+            if (!validNeighbors.includes(nextTileId)) {
+                return {
+                    path: [],
+                    success: false,
+                    actualSteps: 0,
+                    error: `next_tile_id ${nextTileId} is not a valid neighbor of ${startTile}`
+                };
+            }
+
+            // 第一步强制走向nextTileId
+            const firstStep = nextTileId;
+
+            // 如果只需要走1步，直接返回
+            if (steps === 1) {
+                return {
+                    path: [firstStep],
+                    success: true,
+                    actualSteps: 1
+                };
+            }
+
+            // 如果需要走多步，第一步用nextTileId，后续步骤用算法计算
+            // 递归调用，从nextTileId开始，lastTile设为startTile，nextTileId清除
+            const remainingResult = this.calculatePath({
+                startTile: firstStep,
+                steps: steps - 1,
+                preference: preference,
+                lastTile: startTile,
+                nextTileId: INVALID_TILE_ID,  // 只有第一步强制，后续正常
+                rotorHistory: rotorHistory
+            });
+
+            if (!remainingResult.success) {
+                return remainingResult;
+            }
+
+            // 合并路径
+            return {
+                path: [firstStep, ...remainingResult.path],
+                success: true,
+                actualSteps: 1 + remainingResult.actualSteps
+            };
         }
 
         // 根据偏好选择算法

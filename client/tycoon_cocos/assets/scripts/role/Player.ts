@@ -517,6 +517,26 @@ export class Player extends Role {
     public getLastTileId(): number { return this._lastTileId; }
     public getNextTileId(): number { return this._nextTileId; }
 
+    /**
+     * 设置下一步强制目标tile
+     * @param tileId 目标tile_id（65535表示无强制）
+     */
+    public setNextTileId(tileId: number): void {
+        const oldValue = this._nextTileId;
+        this._nextTileId = tileId;
+
+        console.log(`[Player] next_tile_id变化: ${oldValue} -> ${tileId}`);
+
+        // 触发事件
+        EventBus.emit(EventTypes.Player.StatusChange, {
+            playerId: this.m_oId,
+            playerIndex: this._playerIndex,
+            statusType: 'next_tile_id',
+            oldValue: oldValue,
+            newValue: tileId
+        });
+    }
+
     public getTempleLevels(): number[] { return [...this._templeLevels]; }
 
     // ========================= PaperActor 关联方法 =========================

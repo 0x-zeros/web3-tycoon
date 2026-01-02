@@ -226,7 +226,8 @@ public struct UseCardActionEvent has copy, drop {
     params: vector<u16>,
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
-    cash_changes: vector<CashDelta>
+    cash_changes: vector<CashDelta>,
+    next_tile_id: u16  // 使用卡牌后的强制下一步目标（65535表示无强制）
 }
 
 public struct RollAndStepActionEvent has copy, drop {
@@ -516,7 +517,8 @@ public(package) fun emit_use_card_action_event(
     params: vector<u16>,
     npc_changes: vector<NpcChangeItem>,
     buff_changes: vector<BuffChangeItem>,
-    cash_changes: vector<CashDelta>
+    cash_changes: vector<CashDelta>,
+    next_tile_id: u16
 ) {
     event::emit(UseCardActionEvent {
         game: game_id,
@@ -527,7 +529,8 @@ public(package) fun emit_use_card_action_event(
         params,
         npc_changes,
         buff_changes,
-        cash_changes
+        cash_changes,
+        next_tile_id
     });
 }
 

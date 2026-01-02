@@ -7,9 +7,7 @@
  */
 
 import { Vec3 } from 'cc';
-
-/** 无效的 Tile ID */
-const INVALID_TILE_ID = -1;
+import { INVALID_TILE_ID } from '../sui/types/constants';
 
 /**
  * 根据两个位置计算方向（0-3）

@@ -17,6 +17,7 @@ import { EventTypes } from '../events/EventTypes';
 import { BFSPathfinder } from '../sui/pathfinding/BFSPathfinder';
 import { MapGraph } from '../sui/pathfinding/MapGraph';
 import { PathExtender } from '../sui/pathfinding/PathExtender';
+import { INVALID_TILE_ID } from '../sui/types/constants';
 
 /**
  * 卡片使用管理器
@@ -181,19 +182,26 @@ export class CardUsageManager {
         if (card.isRemoteControlCard()) {
             // 遥控骰子: params = [target_player_index, dice1, dice2, ...]
             const myPlayerIndex = session?.getMyPlayerIndex() || 0;
+            const myPlayer = session.getMyPlayer();
+            const lastTileId = myPlayer?.getLastTileId() ?? INVALID_TILE_ID;
+            const nextTileId = myPlayer?.getNextTileId() ?? INVALID_TILE_ID;
 
             // 计算路径
             const maxRange = card.getMaxRange();
-            const bfsResult = pathfinder.search(currentPos, maxRange);
-            const pathInfo = pathfinder.getPathTo(bfsResult, selectedTile);
+            const pathInfo = pathfinder.findPathWithConstraints(
+                currentPos,
+                selectedTile,
+                maxRange,
+                { lastTileId, nextTileId }
+            );
 
             if (!pathInfo) {
                 console.error('[CardUsageManager] 无法计算到目标的路径');
                 return [];
             }
 
-            // 保存计算好的路径，供后续投掷骰子使用
-            session.setPendingRemoteDicePath(pathInfo.path);
+            // 保存计算好的路径，供后续投掷骰子使用（去掉起点，只保留步进的tile）
+            session.setPendingRemoteDicePath(pathInfo.path.slice(1));
 
             const steps = pathInfo.distance;
             console.log(`[CardUsageManager] 遥控骰子: 距离=${steps}步, 路径=${pathInfo.path}`);

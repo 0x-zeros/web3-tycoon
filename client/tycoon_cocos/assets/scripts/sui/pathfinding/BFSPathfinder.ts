@@ -4,6 +4,7 @@
  */
 
 import { MapGraph } from './MapGraph';
+import { INVALID_TILE_ID } from '../types/constants';
 
 /**
  * BFS搜索结果
@@ -29,6 +30,16 @@ export interface PathInfo {
     path: number[];
     /** 路径长度 */
     distance: number;
+}
+
+/**
+ * 路径约束（用于遥控骰子）
+ */
+export interface PathConstraints {
+    /** 上一步tile（用于避免回头） */
+    lastTileId?: number;
+    /** 强制第一步（转向卡等） */
+    nextTileId?: number;
 }
 
 /**
@@ -199,6 +210,135 @@ export class BFSPathfinder {
     }
 
     /**
+     * 查找满足约束的路径（避免回头、强制第一步）
+     * 主要用于遥控骰子
+     */
+    public findPathWithConstraints(
+        start: number,
+        target: number,
+        maxSteps: number,
+        constraints: PathConstraints = {}
+    ): PathInfo | null {
+        if (maxSteps <= 0) return null;
+        if (start === target) {
+            return { target, path: [start], distance: 0 };
+        }
+
+        const lastTileId = constraints.lastTileId ?? INVALID_TILE_ID;
+        const nextTileId = constraints.nextTileId ?? INVALID_TILE_ID;
+
+        const queue: Array<{ tile: number; prev: number; path: number[] }> = [];
+        const visited = new Set<string>();
+
+        const enqueue = (tile: number, prev: number, path: number[]) => {
+            const key = `${tile}|${prev}`;
+            if (visited.has(key)) return;
+            visited.add(key);
+            queue.push({ tile, prev, path });
+        };
+
+        if (nextTileId !== INVALID_TILE_ID) {
+            if (!this.graph.areNeighbors(start, nextTileId)) {
+                console.warn(
+                    `[BFSPathfinder] next_tile_id ${nextTileId} is not a neighbor of ${start}`
+                );
+                return null;
+            }
+            const initialPath = [start, nextTileId];
+            if (nextTileId === target) {
+                return { target, path: initialPath, distance: 1 };
+            }
+            enqueue(nextTileId, start, initialPath);
+        } else {
+            enqueue(start, lastTileId, [start]);
+        }
+
+        while (queue.length > 0) {
+            const { tile: current, prev, path } = queue.shift()!;
+            const stepsUsed = path.length - 1;
+            if (stepsUsed >= maxSteps) continue;
+
+            const neighbors = this.graph.getNeighbors(current);
+            for (const next of neighbors) {
+                if (!this.isValidStep(current, next, prev, neighbors)) {
+                    continue;
+                }
+
+                const nextPath = [...path, next];
+                const nextSteps = stepsUsed + 1;
+                if (nextSteps > maxSteps) continue;
+
+                if (next === target) {
+                    return { target, path: nextPath, distance: nextSteps };
+                }
+
+                enqueue(next, current, nextPath);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 获取满足约束的可达tiles（用于遥控骰子可选范围）
+     */
+    public getReachableTilesWithConstraints(
+        start: number,
+        maxSteps: number,
+        constraints: PathConstraints = {}
+    ): number[] {
+        if (maxSteps <= 0) return [];
+
+        const lastTileId = constraints.lastTileId ?? INVALID_TILE_ID;
+        const nextTileId = constraints.nextTileId ?? INVALID_TILE_ID;
+
+        const queue: Array<{ tile: number; prev: number; steps: number }> = [];
+        const visited = new Set<string>();
+        const reachable = new Set<number>();
+
+        const enqueue = (tile: number, prev: number, steps: number) => {
+            const key = `${tile}|${prev}`;
+            if (visited.has(key)) return;
+            visited.add(key);
+            queue.push({ tile, prev, steps });
+        };
+
+        if (nextTileId !== INVALID_TILE_ID) {
+            if (!this.graph.areNeighbors(start, nextTileId)) {
+                console.warn(
+                    `[BFSPathfinder] next_tile_id ${nextTileId} is not a neighbor of ${start}`
+                );
+                return [];
+            }
+            if (maxSteps < 1) return [];
+            reachable.add(nextTileId);
+            enqueue(nextTileId, start, 1);
+        } else {
+            enqueue(start, lastTileId, 0);
+        }
+
+        while (queue.length > 0) {
+            const { tile: current, prev, steps } = queue.shift()!;
+            if (steps >= maxSteps) continue;
+
+            const neighbors = this.graph.getNeighbors(current);
+            for (const next of neighbors) {
+                if (!this.isValidStep(current, next, prev, neighbors)) {
+                    continue;
+                }
+
+                const nextSteps = steps + 1;
+                if (nextSteps > maxSteps) continue;
+
+                reachable.add(next);
+                enqueue(next, current, nextSteps);
+            }
+        }
+
+        return Array.from(reachable);
+    }
+
+    /**
      * 回溯路径
      * @param start 起始地块
      * @param target 目标地块
@@ -243,5 +383,19 @@ export class BFSPathfinder {
         for (const [tile, path] of result.pathTree) {
             console.log(`    To ${tile}: [${path.join(' -> ')}]`);
         }
+    }
+
+    /**
+     * 判断下一步是否合法（避免回头路）
+     */
+    private isValidStep(
+        current: number,
+        next: number,
+        prev: number,
+        neighbors: number[]
+    ): boolean {
+        if (next === current) return false;
+        if (next !== prev) return true;
+        return neighbors.length === 1 && neighbors[0] === prev;
     }
 }

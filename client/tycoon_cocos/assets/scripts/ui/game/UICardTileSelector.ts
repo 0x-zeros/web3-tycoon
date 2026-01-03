@@ -19,6 +19,7 @@ import { MapManager } from '../../map/MapManager';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
 import { UIMessage } from '../utils/UIMessage';
+import { INVALID_TILE_ID } from '../../sui/types/constants';
 
 /**
  * Tile选择器 - 用于卡片使用时的tile选择
@@ -87,6 +88,21 @@ export class UICardTileSelector {
         const maxRange = card.getMaxRange();
         const graph = new MapGraph(mapTemplate);
         const pathfinder = new BFSPathfinder(graph);
+
+        if (card.isRemoteControlCard()) {
+            const myPlayer = session.getMyPlayer();
+            const lastTileId = myPlayer?.getLastTileId() ?? INVALID_TILE_ID;
+            const nextTileId = myPlayer?.getNextTileId() ?? INVALID_TILE_ID;
+
+            const tiles = pathfinder.getReachableTilesWithConstraints(
+                startPos,
+                maxRange,
+                { lastTileId, nextTileId }
+            );
+
+            console.log(`[UICardTileSelector] 遥控骰子可选tiles数量: ${tiles.length}`);
+            return tiles;
+        }
 
         // 使用BFS计算可达范围
         const bfsResult = pathfinder.search(startPos, maxRange);

@@ -18,6 +18,7 @@ import { GridGround, GridGroundConfig } from './GridGround';
 import { UINotification } from '../ui/utils/UINotification';
 import { GameSession } from '../core/GameSession';
 import { IdFormatter } from '../ui/utils/IdFormatter';
+import * as fgui from "fairygui-cc";
 
 const { ccclass, property } = _decorator;
 
@@ -215,15 +216,16 @@ export class MapManager extends Component {
         const { UIManager } = await import("../ui/core/UIManager");
         const { UILoading } = await import("../ui/game/UILoading");
 
-        // 显示Loading UI
+        // 显示Loading UI + 最小显示时长
+        const minDisplayTime = 500; // 最小显示500ms
+        const loadingStartTime = Date.now();
+
         console.log("[MapManager] Attempting to show Loading UI...");
         await UIManager.instance.showUI("Loading");
         const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
 
         if (!loadingUI) {
-            console.error("[MapManager] Failed to get Loading UI! It may not be registered.");
-        } else {
-            console.log("[MapManager] Loading UI obtained successfully");
+            console.error("[MapManager] Failed to get Loading UI for loadMap");
         }
 
         try {
@@ -294,16 +296,22 @@ export class MapManager extends Component {
             loadingUI?.updateProgress(100);
             loadingUI?.updateDescription("地图加载完成！");
 
-            // 短暂延迟后隐藏Loading
-            await new Promise(resolve => setTimeout(resolve, 200));
-            await UIManager.instance.hideUI("Loading");
-
             // 发送地图加载完成事件
             EventBus.emit(EventTypes.Game.MapLoaded, {
                 mapId: mapId,
                 mapName: config.name,
                 mapComponent: mapComponent
             });
+
+            // 确保最小显示时长
+            const elapsed = Date.now() - loadingStartTime;
+            if (elapsed < minDisplayTime) {
+                await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed));
+            }
+
+            // 短暂延迟让用户看到100%
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await UIManager.instance.hideUI("Loading");
 
             return {
                 success: true,
@@ -338,70 +346,118 @@ export class MapManager extends Component {
     public async loadGameMapFromSession(session: GameSession): Promise<any> {
         console.log('[MapManager] 从 GameSession 加载游戏地图');
 
-        // 1. 卸载当前地图（如果有）
-        this.unloadCurrentMap();
+        // 动态导入UI模块
+        const { UIManager } = await import("../ui/core/UIManager");
+        const { UILoading } = await import("../ui/game/UILoading");
 
-        // 2. 创建新的地图节点
-        const gameId = session.getGameId();
-        const shortId = IdFormatter.shortenAddress(gameId).replace(/\.\.\./g, '___');
-        const mapNode = new Node(`ChainGame_${shortId}`);
+        // 显示Loading UI + 最小显示时长
+        const minDisplayTime = 500; // 最小显示500ms
+        const loadingStartTime = Date.now();
 
-        // 3. 添加 GameMap 组件
-        const gameMap = mapNode.addComponent(GameMap);
+        await UIManager.instance.showUI("Loading");
+        const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
 
-        // 4. 创建临时 MapConfig（链上游戏不需要预制体）
-        const tempConfig: MapConfig = {
-            id: `chain_${gameId}`,
-            name: `Chain Game`,
-            prefabPath: '',
-            previewImagePath: '',
-            type: 'classic'
-        };
-
-        // 5. 初始化 GameMap（非编辑模式）
-        console.log('[MapManager] Initializing GameMap (play mode)...');
-        await gameMap.init(tempConfig, false);  // isEdit = false
-
-        // 6. 从 GameSession 加载场景（新方法）
-        console.log('[MapManager] Loading scene from GameSession...');
-        UINotification.info("正在加载游戏地图...");
-
-        const loaded = await gameMap.loadFromGameSession(session);
-
-        if (!loaded) {
-            throw new Error('Failed to load game map from session');
+        if (!loadingUI) {
+            console.error("[MapManager] Failed to get Loading UI for loadGameMapFromSession");
         }
 
-        console.log('[MapManager] Game map loaded successfully');
+        try {
+            // 步骤1: 卸载当前地图 (0-10%)
+            loadingUI?.updateDescription("正在清理当前地图...");
+            loadingUI?.updateProgress(0);
+            this.unloadCurrentMap();
+            loadingUI?.updateProgress(10);
 
-        // 7. 添加到容器
-        const container = this.mapContainer || director.getScene();
-        if (container) {
-            container.addChild(mapNode);
+            // 步骤2-4: 创建节点和组件 (10-30%)
+            loadingUI?.updateDescription("正在初始化游戏地图...");
+
+            const gameId = session.getGameId();
+            const shortId = IdFormatter.shortenAddress(gameId).replace(/\.\.\./g, '___');
+            const mapNode = new Node(`ChainGame_${shortId}`);
+            const gameMap = mapNode.addComponent(GameMap);
+
+            const tempConfig: MapConfig = {
+                id: `chain_${gameId}`,
+                name: `Chain Game`,
+                prefabPath: '',
+                previewImagePath: '',
+                type: 'classic'
+            };
+
+            console.log('[MapManager] Initializing GameMap (play mode)...');
+            await gameMap.init(tempConfig, false);
+            loadingUI?.updateProgress(30);
+
+            // 步骤5: 从GameSession加载场景 (30-70%) - 主要耗时
+            loadingUI?.updateDescription("正在加载游戏场景...");
+            console.log('[MapManager] Loading scene from GameSession...');
+
+            const loaded = await gameMap.loadFromGameSession(session);
+
+            if (!loaded) {
+                throw new Error('Failed to load game map from session');
+            }
+
+            console.log('[MapManager] Game map loaded successfully');
+            loadingUI?.updateProgress(70);
+
+            // 步骤6-7: 添加到容器 (70-80%)
+            loadingUI?.updateDescription("正在添加到场景...");
+
+            const container = this.mapContainer || director.getScene();
+            if (container) {
+                container.addChild(mapNode);
+            }
+
+            this._currentMapInstance = mapNode;
+            this._currentMapComponent = gameMap;
+            this._currentMapId = tempConfig.id;
+
+            this.log(`链上游戏地图加载成功: ${tempConfig.id}`);
+            loadingUI?.updateProgress(80);
+
+            // 步骤8: 显示tile type overlays (80-100%) - 耗时
+            loadingUI?.updateDescription("正在渲染地图元素...");
+            console.log('[MapManager] Showing tile type overlays...');
+            await gameMap.showTileTypeOverlays();
+            console.log('[MapManager] Tile type overlays shown');
+            loadingUI?.updateProgress(100);
+            loadingUI?.updateDescription("游戏地图加载完成！");
+
+            // 发送地图加载完成事件
+            EventBus.emit(EventTypes.Game.MapLoaded, {
+                gameId: gameId,
+                mapId: tempConfig.id,
+                mapComponent: gameMap
+            });
+
+            // 确保最小显示时长
+            const elapsed = Date.now() - loadingStartTime;
+            if (elapsed < minDisplayTime) {
+                await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed));
+            }
+
+            // 短暂延迟让用户看到100%
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await UIManager.instance.hideUI("Loading");
+
+            return gameMap;
+
+        } catch (error) {
+            console.error('[MapManager] 从GameSession加载地图失败:', error);
+
+            // 错误处理：显示错误信息
+            loadingUI?.updateDescription(`地图加载失败: ${error}`);
+            loadingUI?.updateTip("请返回重试", true);
+            loadingUI?.updateProgress(0);
+
+            // 3秒后自动隐藏Loading
+            setTimeout(async () => {
+                await UIManager.instance.hideUI("Loading");
+            }, 3000);
+
+            throw error;
         }
-
-        // 8. 更新当前地图状态
-        this._currentMapInstance = mapNode;
-        this._currentMapComponent = gameMap;
-        this._currentMapId = tempConfig.id;
-
-        this.log(`链上游戏地图加载成功: ${tempConfig.id}`);
-
-        // 9. 默认显示地块类型 overlay
-        console.log('[MapManager] Showing tile type overlays by default...');
-        await gameMap.showTileTypeOverlays();
-        console.log('[MapManager] Tile type overlays shown');
-
-        // 10. 发送地图加载完成事件
-        EventBus.emit(EventTypes.Game.MapLoaded, {
-            gameId: gameId,
-            mapId: tempConfig.id,
-            mapComponent: gameMap
-        });
-
-        UINotification.success("游戏地图加载完成");
-
-        return gameMap;
     }
 
     /**

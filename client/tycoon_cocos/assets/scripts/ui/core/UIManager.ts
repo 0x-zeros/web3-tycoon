@@ -1253,14 +1253,23 @@ export class UIManager {
      * 创建UI实例
      */
     private async _createUIInstance<T extends UIBase>(
-        uiName: string, 
-        config: UIConfig, 
+        uiName: string,
+        config: UIConfig,
         constructor: UIConstructor
     ): Promise<T | null> {
         try {
+            console.log(`[UIManager] Creating UI instance: ${uiName} from ${config.packageName}.${config.componentName}`);
+
+            // 检查包是否已加载
+            const packageLoaded = fgui.UIPackage.getByName(config.packageName);
+            if (!packageLoaded) {
+                error(`[UIManager] Package not loaded: ${config.packageName}`);
+                return null;
+            }
+
             // 使用FairyGUI创建组件
             const fguiComponent = fgui.UIPackage.createObject(
-                config.packageName, 
+                config.packageName,
                 config.componentName
             );
 
@@ -1268,6 +1277,8 @@ export class UIManager {
                 error(`[UIManager] Failed to create FGUI component: ${config.packageName}.${config.componentName}`);
                 return null;
             }
+
+            console.log(`[UIManager] FGUI component created successfully for ${uiName}`);
 
             //修改node的name为uiName
             fguiComponent.node.name = uiName;

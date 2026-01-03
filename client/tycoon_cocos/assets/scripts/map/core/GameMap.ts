@@ -1425,7 +1425,7 @@ export class GameMap extends Component {
                 if (i % 10 === 0 || i === tiles.length - 1) {
                     const progress = 30 + (completed / totalWork) * 20;  // 30-50%范围
                     if (onProgress) {
-                        await onProgress(progress, "正在加载地图方块...");
+                        await onProgress(progress, "加载资源中...");
                     }
                 }
             }
@@ -1440,7 +1440,7 @@ export class GameMap extends Component {
                 if (i % 5 === 0 || i === buildings.length - 1) {
                     const progress = 30 + (completed / totalWork) * 40;  // 继续到70%
                     if (onProgress) {
-                        await onProgress(progress, "正在加载建筑...");
+                        await onProgress(progress, "加载资源中...");
                     }
                 }
             }
@@ -3372,7 +3372,7 @@ export class GameMap extends Component {
             if (i % 5 === 0 || i === validTiles.length - 1) {
                 const progress = 80 + ((i + 1) / validTiles.length) * 20;  // 80-100%
                 if (onProgress) {
-                    await onProgress(progress, "正在渲染地图元素...");
+                    await onProgress(progress, "渲染场景中...");
                 }
             }
         }

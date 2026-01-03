@@ -223,33 +223,22 @@ export class MapManager extends Component {
 
         // 动态导入UI模块
         const { UIManager } = await import("../ui/core/UIManager");
-        const { UILoading } = await import("../ui/game/UILoading");
-
-        // 显示Loading UI
-        await UIManager.instance.showUI("Loading");
-        const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
-
-        if (!loadingUI) {
-            console.error("[MapManager] Failed to get Loading UI for loadMap");
-        }
-
-        const waitForLoadingUI = async (): Promise<void> => {
-            if (!loadingUI) return;
-            await this.waitOneFrame();
-        };
 
         try {
+            // 显示Loading UI
+            await UIManager.instance.showUI("Loading");
+
             // 步骤1: 卸载当前地图 (0-10%)
-            loadingUI?.updateDescription("正在清理当前地图...");
-            loadingUI?.updateProgress(0);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "准备中...");
+            Blackboard.instance.set("loading.progress", 0);
+            await this.waitOneFrame();
             this.unloadCurrentMap();
-            loadingUI?.updateProgress(10);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 10);
+            await this.waitOneFrame();
 
             // 步骤2: 加载预制体 (10-40%)
-            loadingUI?.updateDescription("正在加载地图预制体...");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "加载资源中...");
+            await this.waitOneFrame();
 
             let prefab = this._preloadedMaps.get(mapId);
             let mapInstance: Node;
@@ -259,12 +248,12 @@ export class MapManager extends Component {
                 prefab = await this.loadMapPrefab(config.prefabPath);
             }
 
-            loadingUI?.updateProgress(40);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 40);
+            await this.waitOneFrame();
 
             // 步骤3: 实例化地图 (40-60%)
-            loadingUI?.updateDescription("正在实例化地图...");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "初始化中...");
+            await this.waitOneFrame();
 
             if (prefab) {
                 mapInstance = instantiate(prefab);
@@ -273,22 +262,22 @@ export class MapManager extends Component {
                 this.log(`地图 ${mapId} 没有预制体，创建空节点`);
             }
 
-            loadingUI?.updateProgress(60);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 60);
+            await this.waitOneFrame();
 
             // 步骤4: 初始化地图组件 (60-80%)
-            loadingUI?.updateDescription("正在初始化地图组件...");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "初始化中...");
+            await this.waitOneFrame();
 
             const mapComponent = mapInstance.addComponent(GameMap);
             await mapComponent.init(config, isEdit);
 
-            loadingUI?.updateProgress(80);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 80);
+            await this.waitOneFrame();
 
             // 步骤5: 添加到场景 (80-90%)
-            loadingUI?.updateDescription("正在添加到场景...");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "处理中...");
+            await this.waitOneFrame();
 
             const container = this.mapContainer || director.getScene();
             if (container) {
@@ -302,8 +291,8 @@ export class MapManager extends Component {
 
             this.log(`地图 ${mapId} 加载成功`);
 
-            loadingUI?.updateProgress(90);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 90);
+            await this.waitOneFrame();
 
             // 步骤6: 编辑模式特殊处理 (90-100%)
             if (isEdit) {
@@ -311,16 +300,16 @@ export class MapManager extends Component {
                 await mapComponent.showTileTypeOverlays(async (progress, desc) => {
                     // 将80-100%的进度映射到90-100%
                     const mappedProgress = 90 + ((progress - 80) / 20) * 10;
-                    loadingUI?.updateProgress(mappedProgress);
-                    loadingUI?.updateDescription(desc);
+                    Blackboard.instance.set("loading.progress", mappedProgress);
+                    Blackboard.instance.set("loading.description", desc);
                     await this.waitOneFrame();
                 });
                 console.log('[MapManager] Tile type overlays shown');
             }
 
-            loadingUI?.updateProgress(100);
-            loadingUI?.updateDescription("地图加载完成！");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 100);
+            Blackboard.instance.set("loading.description", "加载完成！");
+            await this.waitOneFrame();
 
             // 发送地图加载完成事件
             EventBus.emit(EventTypes.Game.MapLoaded, {
@@ -328,9 +317,6 @@ export class MapManager extends Component {
                 mapName: config.name,
                 mapComponent: mapComponent
             });
-
-            // 隐藏Loading
-            await UIManager.instance.hideUI("Loading");
 
             return {
                 success: true,
@@ -342,16 +328,22 @@ export class MapManager extends Component {
             console.error(`[MapManager] 加载地图 ${mapId} 失败:`, error);
 
             // 显示错误信息
-            loadingUI?.updateDescription(`地图加载失败: ${error}`);
-            loadingUI?.updateTip("请返回重试", true);
-            loadingUI?.updateProgress(0);
+            Blackboard.instance.set("loading.description", `加载失败: ${error}`);
+            Blackboard.instance.set("loading.tip", "请返回重试");
+            Blackboard.instance.set("loading.progress", 0);
 
             // 3秒后自动隐藏Loading
             setTimeout(async () => {
-                await UIManager.instance.hideUI("Loading");
+                await UIManager.instance.hideUI("Loading").catch(console.error);
             }, 3000);
 
             return { success: false, error: error.toString() };
+
+        } finally {
+            // 防御性保护：确保Loading一定会被隐藏（延迟100ms执行）
+            setTimeout(async () => {
+                await UIManager.instance.hideUI("Loading").catch(console.error);
+            }, 100);
         }
     }
 
@@ -367,33 +359,22 @@ export class MapManager extends Component {
 
         // 动态导入UI模块
         const { UIManager } = await import("../ui/core/UIManager");
-        const { UILoading } = await import("../ui/game/UILoading");
-
-        // 显示Loading UI
-        await UIManager.instance.showUI("Loading");
-        const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
-
-        if (!loadingUI) {
-            console.error("[MapManager] Failed to get Loading UI for loadGameMapFromSession");
-        }
-
-        const waitForLoadingUI = async (): Promise<void> => {
-            if (!loadingUI) return;
-            await this.waitOneFrame();
-        };
 
         try {
+            // 显示Loading UI
+            await UIManager.instance.showUI("Loading");
+
             // 步骤1: 卸载当前地图 (0-10%)
-            loadingUI?.updateDescription("正在清理当前地图...");
-            loadingUI?.updateProgress(0);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "准备中...");
+            Blackboard.instance.set("loading.progress", 0);
+            await this.waitOneFrame();
             this.unloadCurrentMap();
-            loadingUI?.updateProgress(10);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 10);
+            await this.waitOneFrame();
 
             // 步骤2-4: 创建节点和组件 (10-30%)
-            loadingUI?.updateDescription("正在初始化游戏地图...");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "初始化中...");
+            await this.waitOneFrame();
 
             const gameId = session.getGameId();
             const shortId = IdFormatter.shortenAddress(gameId).replace(/\.\.\./g, '___');
@@ -410,15 +391,15 @@ export class MapManager extends Component {
 
             console.log('[MapManager] Initializing GameMap (play mode)...');
             await gameMap.init(tempConfig, false);
-            loadingUI?.updateProgress(30);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 30);
+            await this.waitOneFrame();
 
             // 步骤5: 从GameSession加载场景 (30-70%) - 主要耗时
             console.log('[MapManager] Loading scene from GameSession...');
 
             const loaded = await gameMap.loadFromGameSession(session, async (progress, desc) => {
-                loadingUI?.updateProgress(progress);
-                loadingUI?.updateDescription(desc);
+                Blackboard.instance.set("loading.progress", progress);
+                Blackboard.instance.set("loading.description", desc);
                 await this.waitOneFrame();
             });
 
@@ -427,12 +408,12 @@ export class MapManager extends Component {
             }
 
             console.log('[MapManager] Game map loaded successfully');
-            loadingUI?.updateProgress(70);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 70);
+            await this.waitOneFrame();
 
             // 步骤6-7: 添加到容器 (70-80%)
-            loadingUI?.updateDescription("正在添加到场景...");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.description", "处理中...");
+            await this.waitOneFrame();
 
             const container = this.mapContainer || director.getScene();
             if (container) {
@@ -444,20 +425,20 @@ export class MapManager extends Component {
             this._currentMapId = tempConfig.id;
 
             this.log(`链上游戏地图加载成功: ${tempConfig.id}`);
-            loadingUI?.updateProgress(80);
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 80);
+            await this.waitOneFrame();
 
             // 步骤8: 显示tile type overlays (80-100%) - 耗时
             console.log('[MapManager] Showing tile type overlays...');
             await gameMap.showTileTypeOverlays(async (progress, desc) => {
-                loadingUI?.updateProgress(progress);
-                loadingUI?.updateDescription(desc);
+                Blackboard.instance.set("loading.progress", progress);
+                Blackboard.instance.set("loading.description", desc);
                 await this.waitOneFrame();
             });
             console.log('[MapManager] Tile type overlays shown');
-            loadingUI?.updateProgress(100);
-            loadingUI?.updateDescription("游戏地图加载完成！");
-            await waitForLoadingUI();
+            Blackboard.instance.set("loading.progress", 100);
+            Blackboard.instance.set("loading.description", "加载完成！");
+            await this.waitOneFrame();
 
             // 发送地图加载完成事件
             EventBus.emit(EventTypes.Game.MapLoaded, {
@@ -466,25 +447,28 @@ export class MapManager extends Component {
                 mapComponent: gameMap
             });
 
-            // 隐藏Loading
-            await UIManager.instance.hideUI("Loading");
-
             return gameMap;
 
         } catch (error) {
             console.error('[MapManager] 从GameSession加载地图失败:', error);
 
             // 错误处理：显示错误信息
-            loadingUI?.updateDescription(`地图加载失败: ${error}`);
-            loadingUI?.updateTip("请返回重试", true);
-            loadingUI?.updateProgress(0);
+            Blackboard.instance.set("loading.description", `加载失败: ${error}`);
+            Blackboard.instance.set("loading.tip", "请重试");
+            Blackboard.instance.set("loading.progress", 0);
 
             // 3秒后自动隐藏Loading
             setTimeout(async () => {
-                await UIManager.instance.hideUI("Loading");
+                await UIManager.instance.hideUI("Loading").catch(console.error);
             }, 3000);
 
             throw error;
+
+        } finally {
+            // 防御性保护：确保Loading一定会被隐藏（延迟100ms执行）
+            setTimeout(async () => {
+                await UIManager.instance.hideUI("Loading").catch(console.error);
+            }, 100);
         }
     }
 

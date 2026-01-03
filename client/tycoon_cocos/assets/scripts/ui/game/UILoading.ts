@@ -1,5 +1,6 @@
 import { _decorator } from 'cc';
 import { UIBase } from "../core/UIBase";
+import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
 
 const { ccclass } = _decorator;
@@ -20,6 +21,8 @@ export class UILoading extends UIBase {
     private m_progressBarMaxWidth: number = 0;
     /** 提示文本（可选显示） */
     private m_tip: fgui.GRichTextField;
+    /** 超时timer ID（防御性保护：30秒自动隐藏） */
+    private _timeoutId: any = null;
 
     /**
      * 初始化回调
@@ -158,26 +161,44 @@ export class UILoading extends UIBase {
      * 显示回调
      */
     protected onShow(data?: any): void {
-        console.log("[UILoading] onShow called", data);
-        console.log("[UILoading] _panel:", this._panel);
-        console.log("[UILoading] _panel.visible:", this._panel?.visible);
-        console.log("[UILoading] _panel.alpha:", this._panel?.alpha);
-        console.log("[UILoading] _panel.parent:", this._panel?.parent);
-        console.log("[UILoading] _panel.sortingOrder:", this._panel?.sortingOrder);
+        console.log("[UILoading] onShow called - using Blackboard for progress data");
 
         // 确保面板可见
         if (this._panel) {
             this._panel.visible = true;
             this._panel.alpha = 1;
-            console.log("[UILoading] Set panel visible=true, alpha=1");
         }
 
         // 确保bar初始宽度为0
         if (this.m_progressBar) {
             this.m_progressBar.width = 0;
             this._syncProgressBarMaxWidth();
-            console.log("[UILoading] Reset progress bar width to 0");
         }
+
+        // 监听Blackboard的loading数据变化
+        Blackboard.instance.watch("loading.progress", (value: number) => {
+            this.updateProgress(value);
+        }, this);
+
+        Blackboard.instance.watch("loading.description", (value: string) => {
+            this.updateDescription(value);
+        }, this);
+
+        Blackboard.instance.watch("loading.tip", (value: string) => {
+            if (value) {
+                this.updateTip(value, true);
+            }
+        }, this);
+
+        console.log("[UILoading] Blackboard watchers registered");
+
+        // 设置30秒超时自动隐藏（防御性保护）
+        this._timeoutId = setTimeout(() => {
+            console.warn("[UILoading] Timeout! Auto-hiding loading UI after 30s");
+            this.hide();
+        }, 30000);
+
+        console.log("[UILoading] Timeout protection set (30s)");
 
         // 如果传入了初始数据，应用它
         if (data) {
@@ -197,6 +218,25 @@ export class UILoading extends UIBase {
      * 隐藏回调
      */
     protected onHide(): void {
+        console.log("[UILoading] onHide called - cleaning up");
+
+        // 清除超时timer
+        if (this._timeoutId) {
+            clearTimeout(this._timeoutId);
+            this._timeoutId = null;
+            console.log("[UILoading] Timeout cleared");
+        }
+
+        // 自动清理所有Blackboard监听器
+        Blackboard.instance.unwatchTarget(this);
+        console.log("[UILoading] Blackboard watchers removed");
+
+        // 清理loading数据
+        Blackboard.instance.delete("loading.progress");
+        Blackboard.instance.delete("loading.description");
+        Blackboard.instance.delete("loading.tip");
+        console.log("[UILoading] Blackboard loading data cleared");
+
         // 重置状态，为下次显示做准备
         this.reset();
     }

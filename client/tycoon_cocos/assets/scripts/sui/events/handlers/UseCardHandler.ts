@@ -163,8 +163,13 @@ export class UseCardHandler {
             }
 
             if (change.first_inactive_round !== null) {
-                // 添加 buff
-                player.addBuff(change.buff_kind, change.first_inactive_round);
+                // ✅ 添加 buff - 构建完整的MoveBuffEntry对象
+                player.addBuff({
+                    kind: change.buff_kind,
+                    last_active_round: change.first_inactive_round,
+                    value: 0,  // 默认值，根据实际需求调整
+                    spawn_index: 0  // 默认值
+                });
                 console.log(`[UseCardHandler] 玩家 ${change.player} 获得buff ${change.buff_kind}, 失效回合: ${change.first_inactive_round}`);
             } else {
                 // 移除 buff
@@ -202,14 +207,21 @@ export class UseCardHandler {
                 continue;
             }
 
-            const amount = Number(change.amount);
-            if (change.is_expense) {
-                player.decreaseCash(amount);
-                console.log(`[UseCardHandler] 玩家 ${change.player} 支出 ${amount}`);
-            } else {
-                player.increaseCash(amount);
-                console.log(`[UseCardHandler] 玩家 ${change.player} 收入 ${amount}`);
-            }
+            // ✅ 使用Player.setCash()方法
+            const amount = BigInt(change.amount);  // ✅ 确保类型为BigInt
+            const currentCash = player.getCash();
+
+            const newCash = change.is_expense
+                ? currentCash - amount
+                : currentCash + amount;
+
+            player.setCash(newCash);  // ✅ 正确调用setCash
+
+            console.log(`[UseCardHandler] 玩家 ${change.player} 现金更新`, {
+                isExpense: change.is_expense,
+                amount: amount.toString(),
+                newCash: newCash.toString()
+            });
         }
     }
 

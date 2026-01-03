@@ -17,6 +17,7 @@ import * as fgui from "fairygui-cc";
 import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
 import { getCardName } from "../../sui/types/cards";
+import UI_Card from '../../../.out/InGame/UI_Card';
 
 const { ccclass } = _decorator;
 
@@ -105,16 +106,18 @@ export class UIInGameCards extends UIBase {
         }
 
         const cards = player.getAllCards();
-        this.m_cardList.numItems = cards.length;
+        console.log(`[UIInGameCards] ✅ 刷新列表，卡牌数量: ${cards.length}`, cards);
 
-        console.log(`[UIInGameCards] Refreshed with ${cards.length} cards`);
+        // ✅ 强制重新渲染：先清零再设置（修复count变化但列表长度不变时不刷新的问题）
+        this.m_cardList.numItems = 0;
+        this.m_cardList.numItems = cards.length;
     }
 
     /**
      * 渲染卡牌列表项
      */
     private renderCardItem(index: number, obj: fgui.GObject): void {
-        const item = obj.asCom;
+        const item = obj as UI_Card;  // ✅ 使用UI_Card类型
 
         const session = GameInitializer.getInstance()?.getGameSession();
         const player = session?.getMyPlayer();
@@ -161,11 +164,18 @@ export class UIInGameCards extends UIBase {
             title.text = getCardName(cardEntry.kind);
         }
 
-        // 设置数量
-        const count = item.getChild('count') as fgui.GTextField;
-        if (count) {
-            count.text = `x${cardEntry.count}`;
+        // ✅ 设置数量 - 兼容未绑定UI扩展的情况
+        const countText = item.m_count || (item.getChild('count') as fgui.GTextField);
+        if (countText) {
+            countText.text = `x${cardEntry.count}`;
+            countText.visible = true;
+            console.log(`[UIInGameCards] 设置count[${index}]: kind=${cardEntry.kind}, count=${cardEntry.count}`);
+        } else {
+            console.error('[UIInGameCards] count文本未找到！');
         }
+
+        // ✅ 清除旧的onClick handler（防止handler累积导致重复触发）
+        item.offClick(this);
 
         // === 添加点击事件 ===
         item.onClick(async () => {
@@ -184,14 +194,14 @@ export class UIInGameCards extends UIBase {
             } catch (error: any) {
                 console.error('[UIInGameCards] 使用卡片失败:', error);
             }
-        });
+        }, this);
     }
 
     /**
      * 卡牌变化事件处理
      */
     private _onCardChange(data?: any): void {
-        console.log('[UIInGameCards] Card changed, refreshing');
+        console.log('[UIInGameCards] ✅ 收到卡牌变化事件:', data);
         this.refresh();
     }
 }

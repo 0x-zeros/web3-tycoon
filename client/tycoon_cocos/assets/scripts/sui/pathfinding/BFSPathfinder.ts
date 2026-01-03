@@ -10,13 +10,13 @@ import { MapGraph } from './MapGraph';
  */
 export interface BFSResult {
     /** 可达地块集合 (距离 -> 地块ID列表) */
-    reachableTiles: Map<number, bigint[]>;
+    reachableTiles: Map<number, number[]>;
     /** 每个地块的父节点 (用于回溯路径) */
-    parents: Map<bigint, bigint>;
+    parents: Map<number, number>;
     /** 每个地块的距离 */
-    distances: Map<bigint, number>;
+    distances: Map<number, number>;
     /** 最短路径树 */
-    pathTree: Map<bigint, bigint[]>;
+    pathTree: Map<number, number[]>;
 }
 
 /**
@@ -24,9 +24,9 @@ export interface BFSResult {
  */
 export interface PathInfo {
     /** 目标地块 */
-    target: bigint;
+    target: number;
     /** 路径上的地块序列 (包含起点和终点) */
-    path: bigint[];
+    path: number[];
     /** 路径长度 */
     distance: number;
 }
@@ -48,15 +48,15 @@ export class BFSPathfinder {
      * @param maxSteps 最大步数
      * @returns BFS搜索结果
      */
-    public search(start: bigint, maxSteps: number): BFSResult {
-        const reachableTiles = new Map<number, bigint[]>();
-        const parents = new Map<bigint, bigint>();
-        const distances = new Map<bigint, number>();
-        const pathTree = new Map<bigint, bigint[]>();
+    public search(start: number, maxSteps: number): BFSResult {
+        const reachableTiles = new Map<number, number[]>();
+        const parents = new Map<number, number>();
+        const distances = new Map<number, number>();
+        const pathTree = new Map<number, number[]>();
 
         // 初始化
-        const queue: { tile: bigint; distance: number }[] = [];
-        const visited = new Set<bigint>();
+        const queue: { tile: number; distance: number }[] = [];
+        const visited = new Set<number>();
 
         // 起点
         queue.push({ tile: start, distance: 0 });
@@ -107,13 +107,38 @@ export class BFSPathfinder {
     }
 
     /**
+     * 从BFS结果中提取到目标tile的路径信息
+     * 供CardUsageManager使用
+     * @param result BFS搜索结果
+     * @param target 目标地块ID
+     * @returns 路径信息，如果无法到达则返回null
+     */
+    public getPathTo(result: BFSResult, target: number): PathInfo | null {
+        const distance = result.distances.get(target);
+        if (distance === undefined) {
+            return null;
+        }
+
+        const path = result.pathTree.get(target);
+        if (!path) {
+            return null;
+        }
+
+        return {
+            target,
+            path,
+            distance
+        };
+    }
+
+    /**
      * 查找从起点到目标的最短路径
      * @param start 起始地块ID
      * @param target 目标地块ID
      * @param maxSteps 最大步数限制
      * @returns 路径信息，如果无法到达则返回null
      */
-    public findPath(start: bigint, target: bigint, maxSteps: number): PathInfo | null {
+    public findPath(start: number, target: number, maxSteps: number): PathInfo | null {
         const result = this.search(start, maxSteps);
 
         // 检查目标是否可达
@@ -150,9 +175,9 @@ export class BFSPathfinder {
      * @param steps 步数
      * @returns 可达地块ID列表
      */
-    public getReachableTiles(start: bigint, steps: number): bigint[] {
+    public getReachableTiles(start: number, steps: number): number[] {
         const result = this.search(start, steps);
-        const tiles: bigint[] = [];
+        const tiles: number[] = [];
 
         for (let i = 0; i <= steps; i++) {
             const tilesAtDistance = result.reachableTiles.get(i) || [];
@@ -168,7 +193,7 @@ export class BFSPathfinder {
      * @param steps 步数
      * @returns 恰好k步可达的地块ID列表
      */
-    public getTilesAtExactDistance(start: bigint, steps: number): bigint[] {
+    public getTilesAtExactDistance(start: number, steps: number): number[] {
         const result = this.search(start, steps);
         return result.reachableTiles.get(steps) || [];
     }
@@ -181,11 +206,11 @@ export class BFSPathfinder {
      * @returns 路径数组，从起点到终点
      */
     private reconstructPath(
-        start: bigint,
-        target: bigint,
-        parents: Map<bigint, bigint>
-    ): bigint[] {
-        const path: bigint[] = [];
+        start: number,
+        target: number,
+        parents: Map<number, number>
+    ): number[] {
+        const path: number[] = [];
         let current = target;
 
         // 回溯路径

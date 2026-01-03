@@ -184,8 +184,8 @@ export class CardUsageManager {
 
             // 计算路径
             const maxRange = card.getMaxRange();
-            const bfsResult = pathfinder.search(BigInt(currentPos), maxRange);
-            const pathInfo = pathfinder.getPathTo(bfsResult, BigInt(selectedTile));
+            const bfsResult = pathfinder.search(currentPos, maxRange);
+            const pathInfo = pathfinder.getPathTo(bfsResult, selectedTile);
 
             if (!pathInfo) {
                 console.error('[CardUsageManager] 无法计算到目标的路径');

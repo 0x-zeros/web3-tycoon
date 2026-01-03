@@ -45,12 +45,25 @@ export class PathExtender {
         targetTile: number,
         totalSteps: number = 10
     ): PathExtensionResult {
+        // ⚠️ 新架构暂不支持路径延伸（需要重新设计方向推导逻辑）
+        // 原因：新架构使用四方向邻居（w/n/e/s），无cw_next/ccw_next字段
+        console.error('[PathExtender] 当前架构暂不支持PathExtender，净化卡功能暂时禁用');
+        return {
+            fullPath: [startTile],
+            success: false,
+            error: '新架构暂不支持路径延伸功能，净化卡暂时不可用'
+        };
+
+        // 原有代码保留但不会执行（后续重构时参考）
+        // TODO: 重新设计方向推导逻辑，使用四方向邻居系统
+
+        /*
         // 1. 使用BFS计算起点到目标点的路径
         const pathfinder = new BFSPathfinder(this.graph);
-        const bfsResult = pathfinder.search(BigInt(startTile), totalSteps);
+        const bfsResult = pathfinder.search(startTile, totalSteps);
 
         // 找到目标点的路径
-        const pathInfo = pathfinder.getPathTo(bfsResult, BigInt(targetTile));
+        const pathInfo = pathfinder.getPathTo(bfsResult, targetTile);
         if (!pathInfo) {
             return {
                 fullPath: [],
@@ -59,8 +72,7 @@ export class PathExtender {
             };
         }
 
-        // 转换为number数组
-        const pathToTarget = pathInfo.path.map(t => Number(t));
+        const pathToTarget = pathInfo.path;
         const distanceToTarget = pathInfo.distance;
 
         // 2. 检查是否还需要延伸
@@ -100,13 +112,16 @@ export class PathExtender {
             fullPath,
             success: true
         };
+        */
     }
 
     /**
      * 计算从prevTile到currentTile的方向类型
+     * ⚠️ 暂时禁用：依赖旧架构的getMoveType方法
      */
     private calculateDirectionType(prevTile: number, currentTile: number): 'cw' | 'ccw' | 'adj' | null {
-        return this.graph.getMoveType(BigInt(prevTile), BigInt(currentTile));
+        // return this.graph.getMoveType(prevTile, currentTile);
+        return null;
     }
 
     /**

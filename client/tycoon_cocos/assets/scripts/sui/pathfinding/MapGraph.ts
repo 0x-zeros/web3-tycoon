@@ -3,15 +3,15 @@
  * 用于构建和维护地图的图表示，支持寻路算法
  */
 
-import { MapTemplate, TileInfo, getTileNeighbors } from '../types/MapTemplate';
+import { MapTemplate, TileStatic, getAdjacentTiles } from '../types/map';
 
 /**
  * 图节点
  */
 export interface GraphNode {
-    id: bigint;
-    neighbors: bigint[];
-    tileInfo: TileInfo;
+    id: number;
+    neighbors: number[];
+    tileInfo: TileStatic;
 }
 
 /**
@@ -19,7 +19,7 @@ export interface GraphNode {
  * 将MapTemplate转换为图表示，便于执行寻路算法
  */
 export class MapGraph {
-    private nodes: Map<bigint, GraphNode>;
+    private nodes: Map<number, GraphNode>;
     private template: MapTemplate;
 
     constructor(template: MapTemplate) {
@@ -32,8 +32,8 @@ export class MapGraph {
      * 构建图结构
      */
     private buildGraph(): void {
-        for (const [tileId, tileInfo] of this.template.tiles) {
-            const neighbors = getTileNeighbors(this.template, tileId);
+        for (const [tileId, tileInfo] of this.template.tiles_static) {
+            const neighbors = getAdjacentTiles(tileId, this.template);
 
             const node: GraphNode = {
                 id: tileId,
@@ -50,14 +50,14 @@ export class MapGraph {
     /**
      * 获取节点
      */
-    public getNode(tileId: bigint): GraphNode | undefined {
+    public getNode(tileId: number): GraphNode | undefined {
         return this.nodes.get(tileId);
     }
 
     /**
      * 获取节点的邻居
      */
-    public getNeighbors(tileId: bigint): bigint[] {
+    public getNeighbors(tileId: number): number[] {
         const node = this.nodes.get(tileId);
         return node ? node.neighbors : [];
     }
@@ -72,25 +72,10 @@ export class MapGraph {
     /**
      * 判断两个节点是否直接相连
      */
-    public areNeighbors(tile1: bigint, tile2: bigint): boolean {
+    public areNeighbors(tile1: number, tile2: number): boolean {
         const node = this.nodes.get(tile1);
         if (!node) return false;
         return node.neighbors.includes(tile2);
-    }
-
-    /**
-     * 获取从一个节点到另一个节点的移动类型
-     * @returns 'cw' | 'ccw' | 'adj' | null
-     */
-    public getMoveType(from: bigint, to: bigint): 'cw' | 'ccw' | 'adj' | null {
-        const tile = this.template.tiles.get(from);
-        if (!tile) return null;
-
-        if (tile.cw_next === to) return 'cw';
-        if (tile.ccw_next === to) return 'ccw';
-        if (tile.adj.includes(to)) return 'adj';
-
-        return null;
     }
 
     /**

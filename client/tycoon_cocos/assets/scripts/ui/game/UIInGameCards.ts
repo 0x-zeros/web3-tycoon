@@ -16,6 +16,7 @@ import { EventTypes } from "../../events/EventTypes";
 import * as fgui from "fairygui-cc";
 import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
+import type { Card as PlayerCard } from "../../card/Card";
 import { getCardName } from "../../sui/types/cards";
 import UI_Card from '../../../.out/InGame/UI_Card';
 
@@ -26,6 +27,8 @@ export class UIInGameCards extends UIBase {
 
     /** 卡牌列表 */
     private m_cardList: fgui.GList;
+    /** 当前可显示的卡牌缓存（过滤count为0的卡） */
+    private m_cardsCache: PlayerCard[] = [];
 
     /**
      * 初始化回调
@@ -94,6 +97,7 @@ export class UIInGameCards extends UIBase {
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.warn('[UIInGameCards] GameSession not found');
+            this.m_cardsCache = [];
             this.m_cardList.numItems = 0;
             return;
         }
@@ -101,16 +105,18 @@ export class UIInGameCards extends UIBase {
         const player = session.getMyPlayer();
         if (!player) {
             console.warn('[UIInGameCards] My player not found');
+            this.m_cardsCache = [];
             this.m_cardList.numItems = 0;
             return;
         }
 
         const cards = player.getAllCards();
-        console.log(`[UIInGameCards] ✅ 刷新列表，卡牌数量: ${cards.length}`, cards);
+        this.m_cardsCache = cards.filter(card => card.count > 0);
+        console.log(`[UIInGameCards] ✅ 刷新列表，卡牌数量: ${this.m_cardsCache.length}`, this.m_cardsCache);
 
         // ✅ 强制重新渲染：先清零再设置（修复count变化但列表长度不变时不刷新的问题）
         this.m_cardList.numItems = 0;
-        this.m_cardList.numItems = cards.length;
+        this.m_cardList.numItems = this.m_cardsCache.length;
     }
 
     /**
@@ -120,13 +126,11 @@ export class UIInGameCards extends UIBase {
         const item = obj as UI_Card;  // ✅ 使用UI_Card类型
 
         const session = GameInitializer.getInstance()?.getGameSession();
-        const player = session?.getMyPlayer();
         const gameData = session?.getGameData();
 
-        if (!player || !gameData) return;
+        if (!gameData) return;
 
-        const cards = player.getAllCards();
-        const cardEntry = cards[index];
+        const cardEntry = this.m_cardsCache[index];
 
         if (!cardEntry) return;
 

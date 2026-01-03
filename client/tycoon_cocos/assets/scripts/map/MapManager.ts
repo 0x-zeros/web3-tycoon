@@ -211,35 +211,57 @@ export class MapManager extends Component {
             return { success: false, error: '地图配置不存在' };
         }
 
-        try {
-            // 卸载当前地图
-            this.unloadCurrentMap();
+        // 动态导入UI模块
+        const { UIManager } = await import("../ui/core/UIManager");
+        const { UILoading } = await import("../ui/game/UILoading");
 
-            // 获取预制体（优先使用预加载的）
+        // 显示Loading UI
+        await UIManager.instance.showUI("Loading");
+        const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
+
+        try {
+            // 步骤1: 卸载当前地图 (0-10%)
+            loadingUI?.updateDescription("正在清理当前地图...");
+            loadingUI?.updateProgress(0);
+            this.unloadCurrentMap();
+            loadingUI?.updateProgress(10);
+
+            // 步骤2: 加载预制体 (10-40%)
+            loadingUI?.updateDescription("正在加载地图预制体...");
+
             let prefab = this._preloadedMaps.get(mapId);
             let mapInstance: Node;
 
             if (!prefab && config.prefabPath) {
-                // 尝试动态加载
+                // 动态加载预制体（主要耗时点）
                 prefab = await this.loadMapPrefab(config.prefabPath);
             }
 
+            loadingUI?.updateProgress(40);
+
+            // 步骤3: 实例化地图 (40-60%)
+            loadingUI?.updateDescription("正在实例化地图...");
+
             if (prefab) {
-                // 使用预制体实例化地图
                 mapInstance = instantiate(prefab);
             } else {
-                // 如果没有预制体，创建一个空节点
                 mapInstance = new Node(config.id);
                 this.log(`地图 ${mapId} 没有预制体，创建空节点`);
             }
-            
-            // 添加 GameMap 组件
+
+            loadingUI?.updateProgress(60);
+
+            // 步骤4: 初始化地图组件 (60-80%)
+            loadingUI?.updateDescription("正在初始化地图组件...");
+
             const mapComponent = mapInstance.addComponent(GameMap);
-            
-            // 初始化地图组件，传入 config 和 isEdit
             await mapComponent.init(config, isEdit);
 
-            // 添加到容器
+            loadingUI?.updateProgress(80);
+
+            // 步骤5: 添加到场景 (80-90%)
+            loadingUI?.updateDescription("正在添加到场景...");
+
             const container = this.mapContainer || director.getScene();
             if (container) {
                 container.addChild(mapInstance);
@@ -252,12 +274,22 @@ export class MapManager extends Component {
 
             this.log(`地图 ${mapId} 加载成功`);
 
-            // 如果是编辑模式，默认显示地块类型 overlay
+            loadingUI?.updateProgress(90);
+
+            // 步骤6: 编辑模式特殊处理 (90-100%)
             if (isEdit) {
-                console.log('[MapManager] Editor mode: showing tile type overlays by default...');
+                loadingUI?.updateDescription("正在渲染地块类型...");
+                console.log('[MapManager] Editor mode: showing tile type overlays...');
                 await mapComponent.showTileTypeOverlays();
                 console.log('[MapManager] Tile type overlays shown');
             }
+
+            loadingUI?.updateProgress(100);
+            loadingUI?.updateDescription("地图加载完成！");
+
+            // 短暂延迟后隐藏Loading
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await UIManager.instance.hideUI("Loading");
 
             // 发送地图加载完成事件
             EventBus.emit(EventTypes.Game.MapLoaded, {
@@ -274,6 +306,17 @@ export class MapManager extends Component {
 
         } catch (error) {
             console.error(`[MapManager] 加载地图 ${mapId} 失败:`, error);
+
+            // 显示错误信息
+            loadingUI?.updateDescription(`地图加载失败: ${error}`);
+            loadingUI?.updateTip("请返回重试", true);
+            loadingUI?.updateProgress(0);
+
+            // 3秒后自动隐藏Loading
+            setTimeout(async () => {
+                await UIManager.instance.hideUI("Loading");
+            }, 3000);
+
             return { success: false, error: error.toString() };
         }
     }

@@ -858,6 +858,7 @@ export class UIManager {
             UIManager.instance.registerNotificationUI(); // 注册Notification
             UIManager.instance.registerGameEndUI(); // 注册GameEnd
             UIManager.instance.registerBankruptcyUI(); // 注册Bankruptcy
+            UIManager.instance.registerLoadingUI(UIManager.PRELOAD_PACKAGES[1]); // 注册Loading（ModeSelect包）
             // GameConfig 不再单独注册，作为 CommonLayout 的子组件管理
 
             // 4. 显示Notification（全局通知中心，始终显示）
@@ -986,6 +987,22 @@ export class UIManager {
             isWindow: false,
             layer: UILayer.NOTIFICATION
         }, UIBankruptcy);
+    }
+
+    /**
+     * 便捷注册方法 - 注册Loading UI
+     */
+    public registerLoadingUI(packageName: string = "ModeSelect", componentName: string = "Loading"): void {
+        // 动态导入UILoading类
+        import("../game/UILoading").then(({ UILoading }) => {
+            this.registerUI<UILoading>("Loading", {
+                packageName,
+                componentName,
+                cache: false,  // 不缓存，每次显示时重新创建
+                isWindow: false,
+                layer: UILayer.SYSTEM  // 最高优先级层
+            }, UILoading);
+        });
     }
 
     /**

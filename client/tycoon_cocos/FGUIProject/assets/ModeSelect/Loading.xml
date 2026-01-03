@@ -7,8 +7,8 @@
     <image id="n16_12ec4" name="n16" src="mrxid" fileName="images/logo_deco.png" xy="1181,31"/>
     <text id="n13_pseu" name="desc" xy="97,841" size="685,67" fontSize="35" color="#ffffff" vAlign="middle" autoSize="none" text="Loading......"/>
     <component id="n14_pseu" name="progress" src="pseu9" fileName="components/LoadingProgressBar.xml" xy="86,916" size="1735,46">
-      <ProgressBar value="50" max="100"/>
+      <ProgressBar value="10" max="100"/>
     </component>
-    <richtext id="n17_12ec4" name="tip" xy="96,968" size="1574,67" visible="false" fontSize="30" color="#ffffff" autoSize="none" text="Tips: "/>
+    <richtext id="n17_12ec4" name="tip" xy="96,968" size="1574,67" visible="false" fontSize="30" color="#ffffff" autoSize="none" autoClearText="true" text="Tips: "/>
   </displayList>
 </component>

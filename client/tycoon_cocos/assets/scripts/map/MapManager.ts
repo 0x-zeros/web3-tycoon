@@ -216,10 +216,7 @@ export class MapManager extends Component {
         const { UIManager } = await import("../ui/core/UIManager");
         const { UILoading } = await import("../ui/game/UILoading");
 
-        // 显示Loading UI + 最小显示时长
-        const minDisplayTime = 500; // 最小显示500ms
-        const loadingStartTime = Date.now();
-
+        // 显示Loading UI
         console.log("[MapManager] Attempting to show Loading UI...");
         await UIManager.instance.showUI("Loading");
         const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
@@ -303,14 +300,7 @@ export class MapManager extends Component {
                 mapComponent: mapComponent
             });
 
-            // 确保最小显示时长
-            const elapsed = Date.now() - loadingStartTime;
-            if (elapsed < minDisplayTime) {
-                await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed));
-            }
-
-            // 短暂延迟让用户看到100%
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // 隐藏Loading
             await UIManager.instance.hideUI("Loading");
 
             return {
@@ -350,12 +340,16 @@ export class MapManager extends Component {
         const { UIManager } = await import("../ui/core/UIManager");
         const { UILoading } = await import("../ui/game/UILoading");
 
-        // 显示Loading UI + 最小显示时长
-        const minDisplayTime = 500; // 最小显示500ms
-        const loadingStartTime = Date.now();
-
+        // 显示Loading UI
+        console.log("[MapManager] Calling showUI('Loading')...");
         await UIManager.instance.showUI("Loading");
+
         const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
+        console.log("[MapManager] Got loadingUI:", loadingUI ? "SUCCESS" : "FAILED (null)");
+        console.log("[MapManager] loadingUI type:", typeof loadingUI);
+        console.log("[MapManager] loadingUI object:", loadingUI);
+        console.log("[MapManager] loadingUI.updateProgress exists?", loadingUI && typeof loadingUI.updateProgress === 'function');
+        console.log("[MapManager] loadingUI.updateDescription exists?", loadingUI && typeof loadingUI.updateDescription === 'function');
 
         if (!loadingUI) {
             console.error("[MapManager] Failed to get Loading UI for loadGameMapFromSession");
@@ -363,8 +357,19 @@ export class MapManager extends Component {
 
         try {
             // 步骤1: 卸载当前地图 (0-10%)
-            loadingUI?.updateDescription("正在清理当前地图...");
-            loadingUI?.updateProgress(0);
+            console.log("[MapManager] About to call updateDescription and updateProgress...");
+
+            if (loadingUI) {
+                console.log("[MapManager] Calling updateDescription directly...");
+                loadingUI.updateDescription("正在清理当前地图...");
+                console.log("[MapManager] Called updateDescription");
+
+                console.log("[MapManager] Calling updateProgress(0) directly...");
+                loadingUI.updateProgress(0);
+                console.log("[MapManager] Called updateProgress(0)");
+            } else {
+                console.error("[MapManager] loadingUI is null, skipping updates");
+            }
             this.unloadCurrentMap();
             loadingUI?.updateProgress(10);
 
@@ -431,14 +436,7 @@ export class MapManager extends Component {
                 mapComponent: gameMap
             });
 
-            // 确保最小显示时长
-            const elapsed = Date.now() - loadingStartTime;
-            if (elapsed < minDisplayTime) {
-                await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed));
-            }
-
-            // 短暂延迟让用户看到100%
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // 隐藏Loading
             await UIManager.instance.hideUI("Loading");
 
             return gameMap;

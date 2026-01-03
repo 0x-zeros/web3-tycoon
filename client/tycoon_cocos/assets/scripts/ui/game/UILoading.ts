@@ -21,39 +21,44 @@ export class UILoading extends UIBase {
      * 初始化回调
      */
     protected onInit(): void {
+        console.log("[UILoading] onInit called");
         this._setupComponents();
+        console.log("[UILoading] onInit completed, m_progress:", this.m_progress);
     }
 
     /**
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 获取desc组件（必需）
-        const descChild = this._panel.getChild("desc");
-        if (!descChild) {
-            console.error("[UILoading] Missing required child 'desc' in Loading component");
-            return;
-        }
-        this.m_desc = descChild.asTextField;
+        console.log("[UILoading] _setupComponents called");
 
-        // 获取progress组件（必需）
-        const progressChild = this._panel.getChild("progress");
-        if (!progressChild) {
-            console.error("[UILoading] Missing required child 'progress' in Loading component");
-            return;
-        }
-        this.m_progress = progressChild.asProgress;
+        // 使用UIBase提供的辅助方法获取组件（使用类型断言）
+        this.m_desc = this.getChild("desc") as fgui.GTextField;
+        this.m_progress = this.getChild("progress") as fgui.GProgressBar;
+        this.m_tip = this.getChild("tip") as fgui.GRichTextField;
 
-        // 获取tip组件（必需）
-        const tipChild = this._panel.getChild("tip");
-        if (!tipChild) {
-            console.error("[UILoading] Missing required child 'tip' in Loading component");
-            return;
+        console.log("[UILoading] Components assigned:");
+        console.log("  - m_desc:", this.m_desc);
+        console.log("  - m_progress:", this.m_progress);
+        console.log("  - m_tip:", this.m_tip);
+
+        // 检查是否成功获取
+        if (!this.m_desc) {
+            console.error("[UILoading] Failed to get 'desc' component");
         }
-        this.m_tip = tipChild.asRichTextField;
+        if (!this.m_progress) {
+            console.error("[UILoading] Failed to get 'progress' component");
+        }
+        if (!this.m_tip) {
+            console.error("[UILoading] Failed to get 'tip' component");
+        }
 
         // 默认隐藏提示文本
-        this.m_tip.visible = false;
+        if (this.m_tip) {
+            this.m_tip.visible = false;
+        }
+
+        console.log("[UILoading] _setupComponents completed");
     }
 
     /**
@@ -62,10 +67,20 @@ export class UILoading extends UIBase {
      * @param max 最大值（默认100）
      */
     public updateProgress(value: number, max: number = 100): void {
-        if (!this.m_progress) return;
+        console.log(`[UILoading] updateProgress called! value=${value}, max=${max}`);
 
-        this.m_progress.value = Math.min(value, max);
+        if (!this.m_progress) {
+            console.warn("[UILoading] Progress bar not found, cannot update progress");
+            return;
+        }
+
+        console.log(`[UILoading] Before update - value: ${this.m_progress.value}, max: ${this.m_progress.max}`);
+
+        // FairyGUI ProgressBar 更新方式：直接设置value和max属性
         this.m_progress.max = max;
+        this.m_progress.value = Math.min(value, max);
+
+        console.log(`[UILoading] After update - value: ${this.m_progress.value}, max: ${this.m_progress.max}`);
     }
 
     /**

@@ -150,6 +150,11 @@ export class GameSession {
     /** 待决策信息 */
     private _pendingDecision: PendingDecisionInfo | null = null;
 
+    // ========================= 遥控骰子状态 =========================
+
+    /** 待使用的遥控骰子路径（已计算好） */
+    private _pendingRemoteDicePath: number[] | null = null;
+
     // ========================= 地图相关数据 =========================
 
     /** 地图模板 */
@@ -1030,6 +1035,21 @@ export class GameSession {
     public hasRolled(): boolean { return this._hasRolled; }
 
     public getPendingDecision(): PendingDecisionInfo | null { return this._pendingDecision; }
+
+    // 遥控骰子路径访问器
+    public setPendingRemoteDicePath(path: number[]): void {
+        this._pendingRemoteDicePath = path;
+        console.log('[GameSession] 设置遥控骰子路径:', path);
+    }
+
+    public getPendingRemoteDicePath(): number[] | null {
+        return this._pendingRemoteDicePath;
+    }
+
+    public clearPendingRemoteDicePath(): void {
+        console.log('[GameSession] 清除遥控骰子路径');
+        this._pendingRemoteDicePath = null;
+    }
 
     public getMaxRounds(): number { return this._maxRounds; }
     public getPriceRiseDays(): number { return this._priceRiseDays; }

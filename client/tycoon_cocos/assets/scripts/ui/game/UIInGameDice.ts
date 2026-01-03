@@ -254,62 +254,79 @@ export class UIInGameDice extends UIBase {
                 currentTile: player.getPos()
             });
 
-            // ===== 2. 确定骰子数量 =====
-            const diceCount = this._getDiceCount(player, session.getRound());
-            const maxSteps = diceCount * 6;  // 每个骰子最多6步
+            // ===== 2. 检查遥控骰子路径 =====
+            const pendingPath = session.getPendingRemoteDicePath();
 
-            console.log(`[UIInGameDice] 骰子数量: ${diceCount}, 最大步数: ${maxSteps}`);
+            let pathResult: { success: boolean; path: number[]; actualSteps: number; error?: string };
+            let diceCount: number;
 
-            // ===== 3. 计算路径 =====
-            const preference = this._getWalkingPreference();
-            console.log(`[UIInGameDice] 使用行走偏好: ${preference}`);
+            if (pendingPath && pendingPath.length > 0) {
+                // 遥控骰子模式：直接使用已保存的路径
+                console.log("[UIInGameDice] 遥控骰子模式，使用已保存路径:", pendingPath);
 
-            // 导入 PathCalculator（动态导入避免循环依赖）
-            const { PathCalculator } = await import("../../sui/pathfinding/PathCalculator");
+                pathResult = {
+                    success: true,
+                    path: pendingPath,
+                    actualSteps: pendingPath.length
+                };
+                // 遥控骰子的骰子数量由路径长度决定（向上取整）
+                diceCount = Math.ceil(pendingPath.length / 6);
+            } else {
+                // ===== 3. 正常骰子模式：计算路径 =====
+                diceCount = this._getDiceCount(player, session.getRound());
+                const maxSteps = diceCount * 6;  // 每个骰子最多6步
 
-            // 加载 Rotor-Router 历史记录（如果使用该偏好）
-            let rotorHistory = undefined;
-            if (preference === WalkingPreference.ROTOR_ROUTER) {
-                rotorHistory = HistoryStorage.load(session.getGameId(), player.getPlayerIndex());
-                console.log("[UIInGameDice] Rotor-Router 历史记录已加载", {
-                    recordCount: rotorHistory.lastDirection.size
+                console.log(`[UIInGameDice] 骰子数量: ${diceCount}, 最大步数: ${maxSteps}`);
+
+                const preference = this._getWalkingPreference();
+                console.log(`[UIInGameDice] 使用行走偏好: ${preference}`);
+
+                // 导入 PathCalculator（动态导入避免循环依赖）
+                const { PathCalculator } = await import("../../sui/pathfinding/PathCalculator");
+
+                // 加载 Rotor-Router 历史记录（如果使用该偏好）
+                let rotorHistory = undefined;
+                if (preference === WalkingPreference.ROTOR_ROUTER) {
+                    rotorHistory = HistoryStorage.load(session.getGameId(), player.getPlayerIndex());
+                    console.log("[UIInGameDice] Rotor-Router 历史记录已加载", {
+                        recordCount: rotorHistory.lastDirection.size
+                    });
+                }
+
+                const pathCalculator = new PathCalculator(template, rotorHistory);
+
+                pathResult = pathCalculator.calculatePath({
+                    startTile: player.getPos(),
+                    steps: maxSteps,
+                    preference: preference,
+                    lastTile: player.getLastTileId(),
+                    nextTileId: player.getNextTileId(),
+                    rotorHistory: rotorHistory
                 });
-            }
 
-            const pathCalculator = new PathCalculator(template, rotorHistory);
+                if (!pathResult.success) {
+                    throw new Error(`路径计算失败: ${pathResult.error}`);
+                }
 
-            const pathResult = pathCalculator.calculatePath({
-                startTile: player.getPos(),
-                steps: maxSteps,
-                preference: preference,
-                lastTile: player.getLastTileId(),
-                nextTileId: player.getNextTileId(),
-                rotorHistory: rotorHistory
-            });
+                // 保存 Rotor-Router 历史记录（如果使用该偏好）
+                if (preference === WalkingPreference.ROTOR_ROUTER) {
+                    const updatedHistory = pathCalculator.getRotorHistory();
+                    HistoryStorage.save(session.getGameId(), player.getPlayerIndex(), updatedHistory);
+                    console.log("[UIInGameDice] Rotor-Router 历史记录已保存");
+                }
 
-            if (!pathResult.success) {
-                throw new Error(`路径计算失败: ${pathResult.error}`);
+                // 校验路径合法性
+                const isValid = pathCalculator.validatePath(player.getPos(), pathResult.path);
+                if (!isValid) {
+                    throw new Error("路径校验失败：包含无效的邻接关系");
+                }
             }
 
             console.log("[UIInGameDice] 路径计算成功", {
                 path: pathResult.path,
-                steps: pathResult.actualSteps
+                steps: pathResult.actualSteps,
+                isRemoteDice: !!pendingPath
             });
-
-            // 保存 Rotor-Router 历史记录（如果使用该偏好）
-            if (preference === WalkingPreference.ROTOR_ROUTER) {
-                const updatedHistory = pathCalculator.getRotorHistory();
-                HistoryStorage.save(session.getGameId(), player.getPlayerIndex(), updatedHistory);
-                console.log("[UIInGameDice] Rotor-Router 历史记录已保存");
-            }
-
-            // ===== 4. 校验路径合法性 =====
-            const isValid = pathCalculator.validatePath(player.getPos(), pathResult.path);
-            if (!isValid) {
-                throw new Error("路径校验失败：包含无效的邻接关系");
-            }
-
-            console.log("[UIInGameDice] 路径校验通过");
 
             // ===== 5. 播放骰子动画 =====
             await this._playDiceAnimation(diceCount);
@@ -326,6 +343,9 @@ export class UIInGameDice extends UIBase {
             });
 
             transactionSuccess = true;  // 标记交易成功
+
+            // 清除遥控骰子路径（如果有）
+            session.clearPendingRemoteDicePath();
 
             // ===== 显示成功通知 =====
             const gasInfo = (result as any)._gasInfo;

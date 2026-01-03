@@ -192,8 +192,11 @@ export class CardUsageManager {
                 return [];
             }
 
+            // 保存计算好的路径，供后续投掷骰子使用
+            session.setPendingRemoteDicePath(pathInfo.path);
+
             const steps = pathInfo.distance;
-            console.log(`[CardUsageManager] 遥控骰子: 距离=${steps}步`);
+            console.log(`[CardUsageManager] 遥控骰子: 距离=${steps}步, 路径=${pathInfo.path}`);
 
             // 拆分为多个骰子值（每个1-6）
             const diceValues = this.splitIntoDiceValues(steps);

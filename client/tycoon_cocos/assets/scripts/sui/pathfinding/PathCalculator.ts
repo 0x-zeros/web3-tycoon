@@ -161,6 +161,7 @@ export class PathCalculator {
                 actualSteps: 1 + remainingResult.actualSteps
             };
         }
+        }
 
         // 根据偏好选择算法
         let path: number[];

@@ -38,7 +38,16 @@ export class CardConfigManager {
 
     static getConfig(kind: number): CardConfig | null {
         if (!this.initialized) this.initialize();
-        return this.configs.get(kind) || null;
+
+        const config = this.configs.get(kind);
+
+        // ⚠️ 验证：确保返回的config.kind和请求的kind一致
+        if (config && config.kind !== kind) {
+            console.error(`[CardConfigManager] ⚠️ Config mismatch! Requested kind=${kind}, but got config.kind=${config.kind}, name=${config.name}`);
+            return null;
+        }
+
+        return config || null;
     }
 
     static getAllConfigs(): CardConfig[] {

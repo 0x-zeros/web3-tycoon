@@ -134,6 +134,12 @@ export class UIInGameCards extends UIBase {
 
         if (!cardEntry) return;
 
+        // === 重要：将cardEntry数据保存到item.data，避免闭包陷阱 ===
+        item.data = {
+            kind: cardEntry.kind,
+            count: cardEntry.count
+        };
+
         // 从 GameData 获取卡牌定义
         const cardDef = gameData.cardRegistry.getCard(cardEntry.kind);
 
@@ -184,14 +190,22 @@ export class UIInGameCards extends UIBase {
         // === 添加点击事件 ===
         item.onClick(async () => {
             try {
+                // 从item.data获取数据，而不是闭包cardEntry
+                const cardData = item.data as { kind: number; count: number };
+                if (!cardData) {
+                    console.error('[UIInGameCards] Card data not found in item.data');
+                    return;
+                }
+
                 // 动态导入避免循环依赖
                 const { Card } = await import('../../card/Card');
                 const { CardUsageManager } = await import('../../card/CardUsageManager');
 
                 // 创建Card实例
-                const card = Card.fromEntry(cardEntry.kind, cardEntry.count);
+                const card = Card.fromEntry(cardData.kind, cardData.count);
 
-                console.log(`[UIInGameCards] 点击卡片: ${card.name}`);
+                // 增强日志：显示kind值便于调试
+                console.log(`[UIInGameCards] 点击卡片: ${card.name} (kind=${card.kind})`);
 
                 // 调用CardUsageManager
                 await CardUsageManager.instance.useCard(card);

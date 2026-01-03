@@ -33,6 +33,11 @@ export class Card {
         this.kind = kind;
         this.count = count;
         this.config = CardConfigManager.getConfig(kind);
+
+        // 调试日志：检测kind-config不匹配
+        if (this.config && this.config.kind !== kind) {
+            console.error(`[Card] ⚠️ Kind mismatch! this.kind=${kind}, config.kind=${this.config.kind}, config.name=${this.config.name}`);
+        }
     }
 
     static fromEntry(kind: number, count: number): Card {

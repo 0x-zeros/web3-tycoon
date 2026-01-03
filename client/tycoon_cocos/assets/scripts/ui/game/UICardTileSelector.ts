@@ -89,13 +89,13 @@ export class UICardTileSelector {
         const pathfinder = new BFSPathfinder(graph);
 
         // 使用BFS计算可达范围
-        const bfsResult = pathfinder.search(BigInt(startPos), maxRange);
+        const bfsResult = pathfinder.search(startPos, maxRange);
         const allReachableTiles: number[] = [];
 
         // 收集所有距离的可达tiles
         for (let dist = 1; dist <= maxRange; dist++) {
             const tiles = bfsResult.reachableTiles.get(dist) || [];
-            allReachableTiles.push(...tiles.map(t => Number(t)));
+            allReachableTiles.push(...tiles);
         }
 
         console.log(`[UICardTileSelector] BFS找到 ${allReachableTiles.length} 个可达tiles`);
@@ -158,8 +158,17 @@ export class UICardTileSelector {
 
         console.log(`[UICardTileSelector] 为 ${tileIds.length} 个tiles创建overlay`);
 
+        const allTiles = gameMap.getTiles();
+
         for (const tileId of tileIds) {
-            const tileNode = gameMap.getTileNode(tileId);
+            // 通过tileId索引获取MapTile
+            const mapTile = allTiles[tileId];
+            if (!mapTile) {
+                console.warn(`[UICardTileSelector] Tile ${tileId} 未找到`);
+                continue;
+            }
+
+            const tileNode = mapTile.node;
             if (!tileNode) {
                 console.warn(`[UICardTileSelector] Tile ${tileId} 节点未找到`);
                 continue;

@@ -28,17 +28,15 @@ export class UILoading extends UIBase {
      * 初始化回调
      */
     protected onInit(): void {
-        console.log("[UILoading] onInit called");
+        // console.log("[UILoading] onInit called");
         this._setupComponents();
-        console.log("[UILoading] onInit completed, m_progress:", this.m_progress);
+        // console.log("[UILoading] onInit completed, m_progress:", this.m_progress);
     }
 
     /**
      * 设置组件引用
      */
     private _setupComponents(): void {
-        console.log("[UILoading] _setupComponents called");
-
         // 使用UIBase提供的辅助方法获取组件（使用类型断言）
         this.m_desc = this.getChild("desc") as fgui.GTextField;
         this.m_progress = this.getChild("progress") as fgui.GProgressBar;
@@ -50,17 +48,10 @@ export class UILoading extends UIBase {
             if (this.m_progressBar) {
                 // 保存bar的初始宽度（作为100%的宽度）
                 this._syncProgressBarMaxWidth();
-                console.log("[UILoading] Progress bar子对象获取成功, max width:", this.m_progressBarMaxWidth);
             } else {
                 console.error("[UILoading] Failed to get 'bar' child from progress component");
             }
         }
-
-        console.log("[UILoading] Components assigned:");
-        console.log("  - m_desc:", this.m_desc);
-        console.log("  - m_progress:", this.m_progress);
-        console.log("  - m_progressBar:", this.m_progressBar);
-        console.log("  - m_tip:", this.m_tip);
 
         // 检查是否成功获取
         if (!this.m_desc) {
@@ -77,8 +68,6 @@ export class UILoading extends UIBase {
         if (this.m_tip) {
             this.m_tip.visible = false;
         }
-
-        console.log("[UILoading] _setupComponents completed");
     }
 
     /**
@@ -87,7 +76,7 @@ export class UILoading extends UIBase {
      * @param max 最大值（默认100）
      */
     public updateProgress(value: number, max: number = 100): void {
-        console.log(`[UILoading] updateProgress called! value=${value}, max=${max}`);
+        // console.log(`[UILoading] updateProgress called! value=${value}, max=${max}`);
 
         if (!this.m_progress) {
             console.warn("[UILoading] Progress bar not found, cannot update progress");
@@ -107,9 +96,7 @@ export class UILoading extends UIBase {
             const percentage = max > 0 ? value / max : 0;
             const newWidth = this.m_progressBarMaxWidth * percentage;
             this.m_progressBar.width = newWidth;
-            console.log(`[UILoading] Progress bar width updated: ${newWidth.toFixed(0)}/${this.m_progressBarMaxWidth} (${(percentage * 100).toFixed(1)}%)`);
-        } else {
-            console.warn("[UILoading] Cannot update bar width - bar object or max width not available");
+            // console.log(`[UILoading] Progress bar width updated: ${newWidth.toFixed(0)}/${this.m_progressBarMaxWidth} (${(percentage * 100).toFixed(1)}%)`);
         }
     }
 
@@ -118,17 +105,10 @@ export class UILoading extends UIBase {
      * @param text 描述文本
      */
     public updateDescription(text: string): void {
-        console.log(`[UILoading] updateDescription called! text="${text}"`);
-
         if (!this.m_desc) {
-            console.warn("[UILoading] Description text field not found");
             return;
         }
-
-        console.log(`[UILoading] Before update - desc.text: "${this.m_desc.text}"`);
         this.m_desc.text = text;
-        console.log(`[UILoading] After update - desc.text: "${this.m_desc.text}"`);
-        console.log(`[UILoading] desc.visible: ${this.m_desc.visible}`);
     }
 
     /**
@@ -161,8 +141,6 @@ export class UILoading extends UIBase {
      * 显示回调
      */
     protected onShow(data?: any): void {
-        console.log("[UILoading] onShow called - using Blackboard for progress data");
-
         // 确保面板可见
         if (this._panel) {
             this._panel.visible = true;
@@ -190,15 +168,11 @@ export class UILoading extends UIBase {
             }
         }, this);
 
-        console.log("[UILoading] Blackboard watchers registered");
-
         // 设置30秒超时自动隐藏（防御性保护）
         this._timeoutId = setTimeout(() => {
             console.warn("[UILoading] Timeout! Auto-hiding loading UI after 30s");
             this.hide();
         }, 30000);
-
-        console.log("[UILoading] Timeout protection set (30s)");
 
         // 如果传入了初始数据，应用它
         if (data) {
@@ -218,24 +192,19 @@ export class UILoading extends UIBase {
      * 隐藏回调
      */
     protected onHide(): void {
-        console.log("[UILoading] onHide called - cleaning up");
-
         // 清除超时timer
         if (this._timeoutId) {
             clearTimeout(this._timeoutId);
             this._timeoutId = null;
-            console.log("[UILoading] Timeout cleared");
         }
 
         // 自动清理所有Blackboard监听器
         Blackboard.instance.unwatchTarget(this);
-        console.log("[UILoading] Blackboard watchers removed");
 
         // 清理loading数据
         Blackboard.instance.delete("loading.progress");
         Blackboard.instance.delete("loading.description");
         Blackboard.instance.delete("loading.tip");
-        console.log("[UILoading] Blackboard loading data cleared");
 
         // 重置状态，为下次显示做准备
         this.reset();

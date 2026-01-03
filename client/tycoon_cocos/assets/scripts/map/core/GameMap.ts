@@ -222,6 +222,9 @@ export class GameMap extends Component {
             this.createEditModeGrid();
             // 初始化交互管理器
             this.initializeInteractionManager();
+        } else {
+            // 游戏模式：创建不可见的GridGround，用于卡牌tile选择
+            this.createGameModeGrid();
         }
         
         // 尝试加载已保存的地图数据
@@ -379,7 +382,31 @@ export class GameMap extends Component {
 
         console.log('[GameMap] Grid boundary (0-255) created for u8 coordinate validation');
     }
-    
+
+    /**
+     * 创建游戏模式下的网格
+     * 用于卡牌使用时的tile选择（如遥控骰子）
+     */
+    private createGameModeGrid(): void {
+        const gridNode = new Node('GridGround');
+        gridNode.setParent(this.node);
+
+        const gridGround = gridNode.addComponent(GridGround);
+
+        // 配置参数 - 和编辑模式一样的网格样式
+        gridGround.step = 1;
+        gridGround.minCoord = 0;
+        gridGround.maxCoord = 255;  // 完整u8坐标范围
+        gridGround.color = new Color(130, 130, 130, 255);  // 和编辑模式一样的灰色
+        gridGround.y = 0;
+        gridGround.enableClickDetection = true;
+        gridGround.enableSnapping = true;
+        gridGround.debugMode = this.debugMode;
+        gridGround.cam = this.mainCamera;
+
+        console.log('[GameMap] Game mode grid created for tile selection');
+    }
+
     /**
      * 创建空地图
      */

@@ -219,8 +219,15 @@ export class UICardTileSelector {
         resolve: (tile: number | null) => void
     ): void {
         const handler = (event: any) => {
-            // 从 GroundClicked 事件获取 gridIndex
-            const gridIndex = event.gridIndex; // { x: number, y: number }
+            // 从 GroundClicked 事件获取 gridIndex（兼容旧版 y / 新版 z）
+            const gridIndex = event.gridIndex as { x?: number; y?: number; z?: number } | undefined;
+            const gridX = gridIndex?.x;
+            const gridZ = gridIndex?.z ?? gridIndex?.y;
+
+            if (gridX == null || gridZ == null) {
+                console.warn('[UICardTileSelector] GroundClicked缺少gridIndex');
+                return;
+            }
 
             // 从 grid 坐标转换到 tileId
             const gameMap = MapManager.getInstance()?.getCurrentGameMap();
@@ -229,9 +236,9 @@ export class UICardTileSelector {
                 return;
             }
 
-            const mapTile = gameMap.getTileAt(gridIndex.x, gridIndex.y);
+            const mapTile = gameMap.getTileAt(gridX, gridZ);
             if (!mapTile) {
-                console.log(`[UICardTileSelector] Grid (${gridIndex.x}, ${gridIndex.y}) 没有tile`);
+                console.log(`[UICardTileSelector] Grid (${gridX}, ${gridZ}) 没有tile`);
                 return;
             }
 

@@ -185,10 +185,13 @@ export class UIInGameCards extends UIBase {
         }
 
         // ✅ 清除旧的onClick handler（防止handler累积导致重复触发）
-        item.offClick(this);
+        const existingClickHandler = (item as any).__cardClickHandler as Function | undefined;
+        if (existingClickHandler) {
+            item.offClick(existingClickHandler, this);
+        }
 
         // === 添加点击事件 ===
-        item.onClick(async () => {
+        const clickHandler = async () => {
             try {
                 // 从item.data获取数据，而不是闭包cardEntry
                 const cardData = item.data as { kind: number; count: number };
@@ -212,7 +215,9 @@ export class UIInGameCards extends UIBase {
             } catch (error: any) {
                 console.error('[UIInGameCards] 使用卡片失败:', error);
             }
-        }, this);
+        };
+        (item as any).__cardClickHandler = clickHandler;
+        item.onClick(clickHandler, this);
     }
 
     /**

@@ -11,6 +11,7 @@
       <gearDisplay controller="button" pages="1,2,3"/>
     </image>
     <text id="n2_ue83" name="title" xy="39,90" size="104,107" fontSize="40" color="#666600" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="遥控骰子"/>
+    <text id="n5_obwq" name="count" xy="57,37" size="76,54" fontSize="40" color="#666600" align="center" vAlign="middle" autoSize="none" bold="true" italic="true" autoClearText="true" text="1"/>
   </displayList>
   <Button downEffect="scale" downEffectValue="0.8"/>
   <transition name="t0" autoPlay="true" autoPlayRepeat="-1">

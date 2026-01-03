@@ -19,10 +19,7 @@ import { _decorator } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
 import { SuiManager } from "../../sui/managers/SuiManager";
 import { UINotification } from "../utils/UINotification";
-import { UIMessage } from "../utils/UIMessage";
 import { BuildingType, BuildingSize, DecisionType } from "../../sui/types/constants";
-import type { BuildingDecisionEvent } from "../../sui/events/types";
-import type { EventMetadata } from "../../sui/events/types";
 
 const { ccclass } = _decorator;
 
@@ -68,7 +65,7 @@ export class UIInGameBuildingSelect extends UIBase {
         this._setupButtons();
 
         // 初始隐藏
-        this.hide();
+        this._setVisible(false);
     }
 
     /**
@@ -113,6 +110,7 @@ export class UIInGameBuildingSelect extends UIBase {
     protected bindEvents(): void {
         // 监听建筑决策事件
         EventBus.on(EventTypes.Move.BuildingDecision, this._onBuildingDecision, this);
+        EventBus.on(EventTypes.Game.SessionReset, this._onSessionReset, this);
     }
 
     /**
@@ -120,6 +118,7 @@ export class UIInGameBuildingSelect extends UIBase {
      */
     protected unbindEvents(): void {
         EventBus.off(EventTypes.Move.BuildingDecision, this._onBuildingDecision, this);
+        EventBus.off(EventTypes.Game.SessionReset, this._onSessionReset, this);
         super.unbindEvents();
     }
 
@@ -127,6 +126,14 @@ export class UIInGameBuildingSelect extends UIBase {
      * 显示回调
      */
     protected onShow(data?: any): void {
+        if (!this._shouldShowForCurrentDecision()) {
+            console.log("[UIInGameBuildingSelect] No valid pending decision, hiding");
+            this._setVisible(false);
+            this._isShowing = false;
+            return;
+        }
+
+        this._setVisible(true);
         console.log("[UIInGameBuildingSelect] Showing building select");
         this.refresh();
     }
@@ -210,37 +217,53 @@ export class UIInGameBuildingSelect extends UIBase {
             return;
         }
 
-        // 获取事件数据
-        const event = data as BuildingDecisionEvent;
-
-        // 获取建筑信息
-        const building = session.getBuildingByIndex(event.building_id);
-        if (!building) {
-            console.warn('[UIInGameBuildingSelect] Building not found:', event.building_id);
-            return;
-        }
-
-        // 判断是否需要显示建筑类型选择界面
-        // 条件：决策类型为升级 && 建筑大小为2x2 && 建筑等级为0
-        const needsTypeSelection =
-            event.decision_type === DecisionType.UPGRADE_PROPERTY &&
-            building.getSize() === BuildingSize.SIZE_2X2 &&
-            building.getLevel() === 0;
-
-        console.log('[UIInGameBuildingSelect] Check conditions:', {
-            decisionType: event.decision_type,
-            buildingSize: building.getSize(),
-            buildingLevel: building.getLevel(),
-            needsTypeSelection
-        });
-
-        if (needsTypeSelection) {
-            // 显示建筑选择界面
+        if (this._shouldShowForCurrentDecision()) {
             console.log('[UIInGameBuildingSelect] Showing building type selection');
             this.show();
+        }
+    }
+
+    /**
+     * 判断当前是否需要显示建筑类型选择
+     */
+    private _shouldShowForCurrentDecision(): boolean {
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            return false;
+        }
+
+        const pendingDecision = session.getPendingDecision();
+        if (!pendingDecision || pendingDecision.type !== DecisionType.UPGRADE_PROPERTY) {
+            return false;
+        }
+
+        if (!session.isMyTurn()) {
+            return false;
+        }
+
+        const building = session.getBuildingByTileId(pendingDecision.tileId);
+        if (!building) {
+            return false;
+        }
+
+        return building.getSize() === BuildingSize.SIZE_2X2 && building.getLevel() === 0;
+    }
+
+    /**
+     * Session 重置时强制隐藏
+     */
+    private _onSessionReset(): void {
+        this._setVisible(false);
+    }
+
+    /**
+     * 设置面板可见性（避免影响事件监听）
+     */
+    private _setVisible(visible: boolean): void {
+        if (this.panel) {
+            this.panel.visible = visible;
         } else {
-            // 其他情况继续使用 MessageBox
-            console.log('[UIInGameBuildingSelect] Using MessageBox for decision');
+            this.node.active = visible;
         }
     }
 
@@ -381,7 +404,8 @@ export class UIInGameBuildingSelect extends UIBase {
      * 隐藏界面并重置状态
      */
     public override hide(): void {
-        super.hide();
+        this._setVisible(false);
+        this._isShowing = false;
 
         // 重新启用按钮
         if (this.m_btnUpgrade) {

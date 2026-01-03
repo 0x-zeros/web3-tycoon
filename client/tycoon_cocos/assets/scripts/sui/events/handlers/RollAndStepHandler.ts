@@ -351,6 +351,13 @@ export class RollAndStepHandler {
         // 使用缓存的 GameSession
         const session = this.currentSession;
 
+        // ✅ 清除玩家的next_tile_id（移动完成后，强制步骤已使用）
+        const player = session?.getPlayerByAddress(event.player);
+        if (player && player.getNextTileId() !== 65535) {
+            player.setNextTileId(65535);
+            console.log('[RollAndStepHandler] next_tile_id已清除（移动完成）');
+        }
+
         if (session) {
             // 1. 检查事件是否属于当前游戏
             if (event.game !== session.getGameId()) {

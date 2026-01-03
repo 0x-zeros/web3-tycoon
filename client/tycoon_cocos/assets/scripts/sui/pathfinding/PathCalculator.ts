@@ -94,6 +94,16 @@ export class PathCalculator {
         if (nextTileId !== INVALID_TILE_ID) {
             console.log(`[PathCalculator] 检测到强制第一步: ${startTile} -> ${nextTileId}`);
 
+            // ✅ 修复：先检查步数（防止递归时steps - 1变成负数）
+            if (steps <= 0) {
+                return {
+                    path: [],
+                    success: false,
+                    actualSteps: 0,
+                    error: 'Invalid steps: must be > 0 when nextTileId is set'
+                };
+            }
+
             // 验证nextTileId是startTile的有效邻居
             const tileStatic = this.template.tiles_static.get(startTile);
             if (!tileStatic) {
@@ -107,13 +117,15 @@ export class PathCalculator {
 
             const validNeighbors = [tileStatic.w, tileStatic.n, tileStatic.e, tileStatic.s];
             if (!validNeighbors.includes(nextTileId)) {
-                return {
-                    path: [],
-                    success: false,
-                    actualSteps: 0,
-                    error: `next_tile_id ${nextTileId} is not a valid neighbor of ${startTile}`
-                };
-            }
+                // ✅ 修复：Fallback到正常路径（防止状态不同步导致无法移动）
+                console.warn(
+                    `[PathCalculator] next_tile_id ${nextTileId} is not a valid neighbor of ${startTile}, ` +
+                    `falling back to normal routing (possible state desync or map mismatch)`
+                );
+                // 清除无效的nextTileId，继续使用正常算法
+                nextTileId = INVALID_TILE_ID;
+                // 跳过强制步骤逻辑，使用后续的正常路径计算
+            } else {
 
             // 第一步强制走向nextTileId
             const firstStep = nextTileId;

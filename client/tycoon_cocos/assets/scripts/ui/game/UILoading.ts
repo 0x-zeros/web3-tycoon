@@ -28,9 +28,29 @@ export class UILoading extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        this.m_desc = this._panel.getChild("desc").asTextField;
-        this.m_progress = this._panel.getChild("progress").asProgress;
-        this.m_tip = this._panel.getChild("tip").asRichTextField;
+        // 获取desc组件（必需）
+        const descChild = this._panel.getChild("desc");
+        if (!descChild) {
+            console.error("[UILoading] Missing required child 'desc' in Loading component");
+            return;
+        }
+        this.m_desc = descChild.asTextField;
+
+        // 获取progress组件（必需）
+        const progressChild = this._panel.getChild("progress");
+        if (!progressChild) {
+            console.error("[UILoading] Missing required child 'progress' in Loading component");
+            return;
+        }
+        this.m_progress = progressChild.asProgress;
+
+        // 获取tip组件（必需）
+        const tipChild = this._panel.getChild("tip");
+        if (!tipChild) {
+            console.error("[UILoading] Missing required child 'tip' in Loading component");
+            return;
+        }
+        this.m_tip = tipChild.asRichTextField;
 
         // 默认隐藏提示文本
         this.m_tip.visible = false;
@@ -83,6 +103,8 @@ export class UILoading extends UIBase {
      * 显示回调
      */
     protected onShow(data?: any): void {
+        console.log("[UILoading] onShow called", data);
+
         // 如果传入了初始数据，应用它
         if (data) {
             if (data.description) {

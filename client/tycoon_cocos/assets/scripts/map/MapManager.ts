@@ -216,8 +216,15 @@ export class MapManager extends Component {
         const { UILoading } = await import("../ui/game/UILoading");
 
         // 显示Loading UI
+        console.log("[MapManager] Attempting to show Loading UI...");
         await UIManager.instance.showUI("Loading");
         const loadingUI = UIManager.instance.getActiveUI<UILoading>("Loading");
+
+        if (!loadingUI) {
+            console.error("[MapManager] Failed to get Loading UI! It may not be registered.");
+        } else {
+            console.log("[MapManager] Loading UI obtained successfully");
+        }
 
         try {
             // 步骤1: 卸载当前地图 (0-10%)

@@ -184,7 +184,6 @@ export class CardUsageManager {
             const myPlayerIndex = session?.getMyPlayerIndex() || 0;
             const myPlayer = session.getMyPlayer();
             const lastTileId = myPlayer?.getLastTileId() ?? INVALID_TILE_ID;
-            const nextTileId = myPlayer?.getNextTileId() ?? INVALID_TILE_ID;
 
             // 计算路径
             const maxRange = card.getMaxRange();
@@ -192,7 +191,7 @@ export class CardUsageManager {
                 currentPos,
                 selectedTile,
                 maxRange,
-                { lastTileId, nextTileId }
+                { lastTileId, allowBacktrackFirstStep: true }
             );
 
             if (!pathInfo) {

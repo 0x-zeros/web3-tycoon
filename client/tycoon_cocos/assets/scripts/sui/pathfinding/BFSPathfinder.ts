@@ -40,6 +40,8 @@ export interface PathConstraints {
     lastTileId?: number;
     /** 强制第一步（转向卡等） */
     nextTileId?: number;
+    /** 允许第一步回头（遥控骰子允许转向） */
+    allowBacktrackFirstStep?: boolean;
 }
 
 /**
@@ -226,6 +228,7 @@ export class BFSPathfinder {
 
         const lastTileId = constraints.lastTileId ?? INVALID_TILE_ID;
         const nextTileId = constraints.nextTileId ?? INVALID_TILE_ID;
+        const allowBacktrackFirstStep = constraints.allowBacktrackFirstStep ?? false;
 
         const queue: Array<{ tile: number; prev: number; path: number[] }> = [];
         const visited = new Set<string>();
@@ -260,7 +263,8 @@ export class BFSPathfinder {
 
             const neighbors = this.graph.getNeighbors(current);
             for (const next of neighbors) {
-                if (!this.isValidStep(current, next, prev, neighbors)) {
+                const allowBacktrack = allowBacktrackFirstStep && stepsUsed === 0;
+                if (!this.isValidStep(current, next, prev, neighbors, allowBacktrack)) {
                     continue;
                 }
 
@@ -291,6 +295,7 @@ export class BFSPathfinder {
 
         const lastTileId = constraints.lastTileId ?? INVALID_TILE_ID;
         const nextTileId = constraints.nextTileId ?? INVALID_TILE_ID;
+        const allowBacktrackFirstStep = constraints.allowBacktrackFirstStep ?? false;
 
         const queue: Array<{ tile: number; prev: number; steps: number }> = [];
         const visited = new Set<string>();
@@ -323,7 +328,8 @@ export class BFSPathfinder {
 
             const neighbors = this.graph.getNeighbors(current);
             for (const next of neighbors) {
-                if (!this.isValidStep(current, next, prev, neighbors)) {
+                const allowBacktrack = allowBacktrackFirstStep && steps === 0;
+                if (!this.isValidStep(current, next, prev, neighbors, allowBacktrack)) {
                     continue;
                 }
 
@@ -392,9 +398,11 @@ export class BFSPathfinder {
         current: number,
         next: number,
         prev: number,
-        neighbors: number[]
+        neighbors: number[],
+        allowBacktrack: boolean
     ): boolean {
         if (next === current) return false;
+        if (allowBacktrack) return true;
         if (next !== prev) return true;
         return neighbors.length === 1 && neighbors[0] === prev;
     }

@@ -464,6 +464,7 @@ entry fun roll_and_step(
 
     let mut steps = vector[];
     let mut cash_changes = vector[];
+    let allow_turn_first_step = has_move_ctrl;
 
     execute_step_movement_with_choices(
         game,
@@ -475,6 +476,7 @@ entry fun roll_and_step(
         auto_buy,
         auto_upgrade,
         prefer_rent_card,
+        allow_turn_first_step,
         game_data,
         map,
         &mut generator
@@ -1077,6 +1079,7 @@ fun execute_step_movement_with_choices(
     auto_buy: bool,
     auto_upgrade: bool,
     prefer_rent_card: bool,
+    allow_turn_first_step: bool,
     game_data: &GameData,
     map: &map::MapTemplate,
     generator: &mut RandomGenerator
@@ -1113,6 +1116,10 @@ fun execute_step_movement_with_choices(
         return
     };
 
+    if (allow_turn_first_step) {
+        next_tile_id = 65535;
+    };
+
     let mut current_pos = from_pos;
     let mut step_index: u8 = 0;
     let mut i = 0;
@@ -1121,7 +1128,9 @@ fun execute_step_movement_with_choices(
         let next_pos = path_choices[i as u64];
 
         // 第一步：检查是否有强制目标（转向卡等）
-        if (i == 0 && next_tile_id != 65535) {
+        if (i == 0 && allow_turn_first_step) {
+            assert!(is_valid_neighbor(map, current_pos, next_pos, 65535), EInvalidPath);
+        } else if (i == 0 && next_tile_id != 65535) {
             assert!(next_pos == next_tile_id, EInvalidPath);
             assert!(is_valid_neighbor(map, current_pos, next_pos, 65535), EInvalidPath);
             next_tile_id = 65535;

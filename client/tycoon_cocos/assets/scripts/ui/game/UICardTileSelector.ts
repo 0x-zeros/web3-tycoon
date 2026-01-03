@@ -92,12 +92,11 @@ export class UICardTileSelector {
         if (card.isRemoteControlCard()) {
             const myPlayer = session.getMyPlayer();
             const lastTileId = myPlayer?.getLastTileId() ?? INVALID_TILE_ID;
-            const nextTileId = myPlayer?.getNextTileId() ?? INVALID_TILE_ID;
 
             const tiles = pathfinder.getReachableTilesWithConstraints(
                 startPos,
                 maxRange,
-                { lastTileId, nextTileId }
+                { lastTileId, allowBacktrackFirstStep: true }
             );
 
             console.log(`[UICardTileSelector] 遥控骰子可选tiles数量: ${tiles.length}`);

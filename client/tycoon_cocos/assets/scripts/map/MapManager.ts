@@ -307,10 +307,14 @@ export class MapManager extends Component {
 
             // 步骤6: 编辑模式特殊处理 (90-100%)
             if (isEdit) {
-                loadingUI?.updateDescription("正在渲染地块类型...");
-                await waitForLoadingUI();
                 console.log('[MapManager] Editor mode: showing tile type overlays...');
-                await mapComponent.showTileTypeOverlays();
+                await mapComponent.showTileTypeOverlays(async (progress, desc) => {
+                    // 将80-100%的进度映射到90-100%
+                    const mappedProgress = 90 + ((progress - 80) / 20) * 10;
+                    loadingUI?.updateProgress(mappedProgress);
+                    loadingUI?.updateDescription(desc);
+                    await this.waitOneFrame();
+                });
                 console.log('[MapManager] Tile type overlays shown');
             }
 
@@ -410,11 +414,13 @@ export class MapManager extends Component {
             await waitForLoadingUI();
 
             // 步骤5: 从GameSession加载场景 (30-70%) - 主要耗时
-            loadingUI?.updateDescription("正在加载游戏场景...");
-            await waitForLoadingUI();
             console.log('[MapManager] Loading scene from GameSession...');
 
-            const loaded = await gameMap.loadFromGameSession(session);
+            const loaded = await gameMap.loadFromGameSession(session, async (progress, desc) => {
+                loadingUI?.updateProgress(progress);
+                loadingUI?.updateDescription(desc);
+                await this.waitOneFrame();
+            });
 
             if (!loaded) {
                 throw new Error('Failed to load game map from session');
@@ -442,10 +448,12 @@ export class MapManager extends Component {
             await waitForLoadingUI();
 
             // 步骤8: 显示tile type overlays (80-100%) - 耗时
-            loadingUI?.updateDescription("正在渲染地图元素...");
-            await waitForLoadingUI();
             console.log('[MapManager] Showing tile type overlays...');
-            await gameMap.showTileTypeOverlays();
+            await gameMap.showTileTypeOverlays(async (progress, desc) => {
+                loadingUI?.updateProgress(progress);
+                loadingUI?.updateDescription(desc);
+                await this.waitOneFrame();
+            });
             console.log('[MapManager] Tile type overlays shown');
             loadingUI?.updateProgress(100);
             loadingUI?.updateDescription("游戏地图加载完成！");

@@ -1386,7 +1386,10 @@ export class GameMap extends Component {
      * @param session GameSession 实例
      * @returns 是否加载成功
      */
-    public async loadFromGameSession(session: GameSession): Promise<boolean> {
+    public async loadFromGameSession(
+        session: GameSession,
+        onProgress?: (progress: number, description: string) => Promise<void>
+    ): Promise<boolean> {
         try {
             console.log('[GameMap] 从 GameSession 加载场景');
 
@@ -1408,25 +1411,53 @@ export class GameMap extends Component {
             console.log('  NPCs:', npcs.length);
             console.log('  Players:', players.length);
 
-            // 渲染 Tiles
-            for (const gameTile of tiles) {
+            // 计算总工作量（用于进度计算）
+            const totalWork = tiles.length + buildings.length + npcs.length + players.length;
+            let completed = 0;
+
+            // 渲染 Tiles (30-50%)
+            for (let i = 0; i < tiles.length; i++) {
+                const gameTile = tiles[i];
                 await this.renderGameTile(gameTile);
+                completed++;
+
+                // 每10个tile更新一次进度
+                if (i % 10 === 0 || i === tiles.length - 1) {
+                    const progress = 30 + (completed / totalWork) * 20;  // 30-50%范围
+                    if (onProgress) {
+                        await onProgress(progress, "正在加载地图方块...");
+                    }
+                }
             }
 
-            // 渲染 Buildings
-            for (const gameBuilding of buildings) {
+            // 渲染 Buildings (50-70%)
+            for (let i = 0; i < buildings.length; i++) {
+                const gameBuilding = buildings[i];
                 await this.renderGameBuilding(gameBuilding);
+                completed++;
+
+                // 每5个building更新一次进度
+                if (i % 5 === 0 || i === buildings.length - 1) {
+                    const progress = 30 + (completed / totalWork) * 40;  // 继续到70%
+                    if (onProgress) {
+                        await onProgress(progress, "正在加载建筑...");
+                    }
+                }
             }
 
-            // 渲染 NPCs
-            for (const npc of npcs) {
+            // 渲染 NPCs (70%附近)
+            for (let i = 0; i < npcs.length; i++) {
+                const npc = npcs[i];
                 const tileId = npc.getTileId();
                 await this.renderNPC(npc, tileId);
+                completed++;
             }
 
-            // 渲染 Players
-            for (const player of players) {
+            // 渲染 Players (70%附近)
+            for (let i = 0; i < players.length; i++) {
+                const player = players[i];
                 await this.renderPlayer(player);
+                completed++;
             }
 
             // 只在编辑模式下设置相机看向地图中心
@@ -3305,21 +3336,25 @@ export class GameMap extends Component {
      * 显示地块类型 Overlay（Layer 5）
      * 为非空地的 tile 添加类型文字标签
      */
-    public async showTileTypeOverlays(): Promise<void> {
+    public async showTileTypeOverlays(
+        onProgress?: (progress: number, description: string) => Promise<void>
+    ): Promise<void> {
         console.log('[GameMap] Showing tile type overlays...');
 
         // 清除旧的地块类型 overlay
         this.clearTileTypeOverlays();
 
+        // 筛选出需要添加overlay的tile
+        const validTiles = this._tiles.filter(t =>
+            t.getTypeId() !== 0 && t.getTileId() !== 65535
+        );
+
+        console.log(`[GameMap] Adding overlays for ${validTiles.length} tiles...`);
+
         // 为所有非空地 tile 添加类型 overlay
-        for (const tile of this._tiles) {
+        for (let i = 0; i < validTiles.length; i++) {
+            const tile = validTiles[i];
             const typeId = tile.getTypeId();
-
-            // 跳过空地（typeId === 0）
-            if (typeId === 0 || tile.getTileId() === 65535) {
-                continue;
-            }
-
             const pos = tile.getGridPosition();
 
             // 生成地块类型纹理
@@ -3332,6 +3367,14 @@ export class GameMap extends Component {
                 layerIndex: 5,
                 techniqueIndex: 1  // 透明渲染
             });
+
+            // 每5个tile更新一次进度
+            if (i % 5 === 0 || i === validTiles.length - 1) {
+                const progress = 80 + ((i + 1) / validTiles.length) * 20;  // 80-100%
+                if (onProgress) {
+                    await onProgress(progress, "正在渲染地图元素...");
+                }
+            }
         }
 
         // 设置显示状态

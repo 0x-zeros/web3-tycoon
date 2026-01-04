@@ -662,11 +662,10 @@ fun try_execute_buy_building(
 
     let building_mut = &mut game.buildings[building_id as u64];
     building_mut.owner = player_index;
-    building_mut.level = 1;
+    // 购买空地后保持 level 0（空地状态），需要再次升级才变成 1 级
+    // 符合大富翁游戏规则：购买 ≠ 建造
 
-    if (building_mut.building_type == types::BUILDING_TEMPLE()) {
-        player_mut.temple_levels.push_back(1);
-    };
+    // 注意：temple_levels 只在升级时添加（level > 0 才算有效 temple）
 
     let cash_delta = events::make_cash_delta(
         player_addr,
@@ -866,7 +865,7 @@ entry fun buy_building(
         building_id,
         tile_id,
         price,
-        1,
+        0,  // 购买后保持 level 0（空地状态）
         building_type
     );
 
@@ -1414,7 +1413,7 @@ fun handle_tile_stop_with_collector(
                             building_id,
                             tile_id,
                             price,
-                            1,
+                            0,  // 购买后保持 level 0（空地状态）
                             purchased_building.building_type
                         );
 

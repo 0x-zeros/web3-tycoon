@@ -953,7 +953,7 @@ export class GameMap extends Component {
 
                     await actor.setConfig({
                         components: [{
-                            blockId: 'web3:empty_land',
+                            blockId: 'web3:building_1x1',  // 与初始创建保持一致
                             position: new Vec3(0, 0, 0),
                             scale: scale,
                             techniqueIndex: 1,

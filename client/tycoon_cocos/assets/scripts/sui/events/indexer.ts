@@ -342,6 +342,24 @@ export class TycoonEventIndexer {
                         if (normalizedStep.stop_effect.fields) {
                             normalizedStep.stop_effect = { ...normalizedStep.stop_effect.fields };
                         }
+
+                        // 递归展开 building_decision.fields
+                        if (normalizedStep.stop_effect.building_decision &&
+                            typeof normalizedStep.stop_effect.building_decision === 'object' &&
+                            normalizedStep.stop_effect.building_decision.fields) {
+                            normalizedStep.stop_effect.building_decision = {
+                                ...normalizedStep.stop_effect.building_decision.fields
+                            };
+                        }
+
+                        // 递归展开 rent_decision.fields
+                        if (normalizedStep.stop_effect.rent_decision &&
+                            typeof normalizedStep.stop_effect.rent_decision === 'object' &&
+                            normalizedStep.stop_effect.rent_decision.fields) {
+                            normalizedStep.stop_effect.rent_decision = {
+                                ...normalizedStep.stop_effect.rent_decision.fields
+                            };
+                        }
                     }
 
                     // 展开 npc_event.fields

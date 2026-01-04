@@ -1,11 +1,11 @@
 /**
  * 骰子控制器 - 单例模式
  * 管理骰子的加载、动画和显示
+ * 支持1-3个骰子同时显示
  */
 
 import {
     _decorator,
-    Component,
     Node,
     Prefab,
     instantiate,
@@ -14,14 +14,13 @@ import {
     Quat,
     tween,
     Tween,
-    Camera,
     director,
 } from 'cc';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { Blackboard } from '../events/Blackboard';
 
-const { ccclass, property } = _decorator;
+const { ccclass } = _decorator;
 
 /**
  * 骰子面对应的旋转角度（使目标点数朝上）
@@ -30,26 +29,29 @@ const { ccclass, property } = _decorator;
  * 我们计算将对应朝向转到 +Y 朝上的旋转。
  */
 const DICE_FACE_ROTATIONS: { [key: number]: Quat } = {
-
-        // +Z(前) -> 旋转 -90° 绕X 使前面朝上
-        3: Quat.fromEuler(new Quat(), -90, 0, 0),
-        // +Y(上) -> 无旋转
-        5: Quat.fromEuler(new Quat(), 0, 0, 0),
-        // -X(左) -> 旋转 -90° 绕Z 使左面朝上
-        6: Quat.fromEuler(new Quat(), 0, 0, -90),
-        // +X(右) -> 旋转 +90° 绕Z 使右面朝上
-        1: Quat.fromEuler(new Quat(), 0, 0, 90),
-        // -Y(下) -> 旋转 180° 绕X 使下面朝上
-        2: Quat.fromEuler(new Quat(), 180, 0, 0),
-        // -Z(后) -> 旋转 +90° 绕X 使后面朝上
-        4: Quat.fromEuler(new Quat(), 90, 0, 0),
+    // +Z(前) -> 旋转 -90° 绕X 使前面朝上
+    3: Quat.fromEuler(new Quat(), -90, 0, 0),
+    // +Y(上) -> 无旋转
+    5: Quat.fromEuler(new Quat(), 0, 0, 0),
+    // -X(左) -> 旋转 -90° 绕Z 使左面朝上
+    6: Quat.fromEuler(new Quat(), 0, 0, -90),
+    // +X(右) -> 旋转 +90° 绕Z 使右面朝上
+    1: Quat.fromEuler(new Quat(), 0, 0, 90),
+    // -Y(下) -> 旋转 180° 绕X 使下面朝上
+    2: Quat.fromEuler(new Quat(), 180, 0, 0),
+    // -Z(后) -> 旋转 +90° 绕X 使后面朝上
+    4: Quat.fromEuler(new Quat(), 90, 0, 0),
 };
+
+// 多骰子水平间距
+const DICE_SPACING = 1.2;
 
 @ccclass('DiceController')
 export class DiceController {
     private static _instance: DiceController | null = null;
-    
-    private diceNode: Node | null = null;
+
+    // 多骰子节点数组
+    private diceNodes: Node[] = [];
     private dicePrefab: Prefab | null = null;
     private isRolling: boolean = false;
     private currentValue: number = 1;
@@ -57,9 +59,12 @@ export class DiceController {
 
     // 循环播放相关
     private isLooping: boolean = false;
-    private loopTween: Tween<Node> | null = null;
+    private loopTweens: Tween<Node>[] = [];
     private pendingCallback: (() => void) | null = null;
-    
+
+    // 当前骰子数量
+    private currentDiceCount: number = 1;
+
     /**
      * 获取单例实例
      */
@@ -69,11 +74,11 @@ export class DiceController {
         }
         return this._instance;
     }
-    
+
     private constructor() {
         // 私有构造函数，确保单例
     }
-    
+
     /**
      * 初始化骰子系统
      */
@@ -81,7 +86,7 @@ export class DiceController {
         if (this.dicePrefab) {
             return; // 已经初始化
         }
-        
+
         return new Promise((resolve, reject) => {
             resources.load('prefabs/dice', Prefab, (err, prefab) => {
                 if (err) {
@@ -89,14 +94,14 @@ export class DiceController {
                     reject(err);
                     return;
                 }
-                
+
                 this.dicePrefab = prefab;
                 console.log('[DiceController] 骰子预制体加载成功');
                 resolve();
             });
         });
     }
-    
+
     /**
      * 获取当前活跃玩家位置（用于骰子显示）
      */
@@ -126,21 +131,37 @@ export class DiceController {
         // 计算骰子位置：玩家位置右侧偏移 + 上方
         const playerPos = paperActor.node.getWorldPosition();
         const dicePos = new Vec3(
-            playerPos.x + 1.5,  // 右侧偏移3个单位
-            playerPos.y + 1.5,  // 上方5个单位（高度）
-            playerPos.z + 1.5     // Z轴与玩家相同
+            playerPos.x + 1.5,
+            playerPos.y + 1.5,
+            playerPos.z + 1.5
         );
-
-        console.log('[DiceController] 骰子位置基于玩家:', {
-            playerPos: { x: playerPos.x, y: playerPos.y, z: playerPos.z },
-            dicePos: { x: dicePos.x, y: dicePos.y, z: dicePos.z }
-        });
 
         return dicePos;
     }
-    
+
     /**
-     * 滚动骰子
+     * 确保有足够的骰子节点
+     */
+    private async _ensureDiceNodes(count: number): Promise<void> {
+        await this.initialize();
+
+        if (!this.dicePrefab) {
+            console.error('[DiceController] 骰子预制体未加载');
+            return;
+        }
+
+        // 创建缺少的骰子节点
+        while (this.diceNodes.length < count) {
+            const node = instantiate(this.dicePrefab);
+            director.getScene()?.addChild(node);
+            node.active = false;
+            this.diceNodes.push(node);
+            console.log('[DiceController] 创建新骰子节点，总数:', this.diceNodes.length);
+        }
+    }
+
+    /**
+     * 滚动骰子（单骰子兼容方法）
      * @param value 最终显示的值 (1-6)
      * @param callback 动画完成回调
      */
@@ -149,128 +170,90 @@ export class DiceController {
             console.warn('[DiceController] 骰子正在滚动中，请稍候');
             return;
         }
-        
+
         if (value < 1 || value > 6) {
             console.error('[DiceController] 无效的骰子值:', value);
             return;
         }
-        
-        // 确保已初始化
-        await this.initialize();
-        
-        if (!this.dicePrefab) {
-            console.error('[DiceController] 骰子预制体未加载');
-            return;
-        }
-        
+
+        await this._ensureDiceNodes(1);
+
         this.isRolling = true;
         this.currentValue = value;
-        
-        // 清理上一次的隐藏计时，避免在新一轮滚动时被旧计时隐藏
+        this.currentDiceCount = 1;
+
+        // 清理上一次的隐藏计时
         if (this.hideTimer !== null) {
             clearTimeout(this.hideTimer);
             this.hideTimer = null;
         }
 
-        // 创建或显示骰子
-        if (!this.diceNode) {
-            this.diceNode = instantiate(this.dicePrefab);
-            director.getScene()?.addChild(this.diceNode);
-        }
+        const diceNode = this.diceNodes[0];
 
-        // 设置初始位置和显示（基于当前玩家位置）
+        // 设置初始位置和显示
         const startPos = this.getActivePlayerPosition();
-        this.diceNode.setPosition(startPos);
-        this.diceNode.active = true;
+        diceNode.setPosition(startPos);
+        diceNode.active = true;
+
         // 停止可能残留的补间动画
-        Tween.stopAllByTarget(this.diceNode);
-        
+        Tween.stopAllByTarget(diceNode);
+
         // 播放滚动动画
-        this.playRollAnimation(value, () => {
+        this._playRollAnimationForNode(diceNode, value, () => {
             this.isRolling = false;
-            
-            // 3秒后隐藏
             this.scheduleHide();
-            
             if (callback) {
                 callback();
             }
         });
     }
-    
+
     /**
-     * 播放骰子滚动动画
+     * 为单个节点播放滚动动画
      */
-    private playRollAnimation(finalValue: number, onComplete: () => void): void {
-        if (!this.diceNode) return;
-        
+    private _playRollAnimationForNode(node: Node, finalValue: number, onComplete: () => void): void {
         // 初始随机旋转
         const initialRotation = new Quat();
-        Quat.fromEuler(initialRotation, 
+        Quat.fromEuler(initialRotation,
             Math.random() * 360,
             Math.random() * 360,
             Math.random() * 360
         );
-        this.diceNode.setRotation(initialRotation);
-        
-        // 创建滚动动画（时间缩短一半）
-        const rollDuration = 0.75; // 滚动持续时间
-        const bounceDuration = 0.25; // 弹跳持续时间
-        
-        // 滚动阶段 - 快速旋转
-        tween(this.diceNode)
-            // 上升并旋转
+        node.setRotation(initialRotation);
+
+        const rollDuration = 0.75;
+        const bounceDuration = 0.25;
+        const startPos = node.position.clone();
+
+        tween(node)
             .to(rollDuration * 0.3, {
-                position: new Vec3(
-                    this.diceNode.position.x,
-                    this.diceNode.position.y + 3,
-                    this.diceNode.position.z
-                )
+                position: new Vec3(startPos.x, startPos.y + 3, startPos.z)
             }, { easing: 'quadOut' })
             .by(rollDuration * 0.3, {
-                eulerAngles: new Vec3(720, 540, 360) // 快速旋转
+                eulerAngles: new Vec3(720, 540, 360)
             })
-            // 下落
             .to(rollDuration * 0.4, {
-                position: new Vec3(
-                    this.diceNode.position.x,
-                    this.diceNode.position.y - 2.5,
-                    this.diceNode.position.z
-                )
+                position: new Vec3(startPos.x, startPos.y + 0.5, startPos.z)
             }, { easing: 'quadIn' })
             .by(rollDuration * 0.4, {
-                eulerAngles: new Vec3(360, 270, 180) // 继续旋转
+                eulerAngles: new Vec3(360, 270, 180)
             })
-            // 弹跳
             .to(bounceDuration * 0.5, {
-                position: new Vec3(
-                    this.diceNode.position.x,
-                    this.diceNode.position.y + 1,
-                    this.diceNode.position.z
-                )
+                position: new Vec3(startPos.x, startPos.y + 1.5, startPos.z)
             }, { easing: 'quadOut' })
-            // 最终落地
             .to(bounceDuration * 0.5, {
-                position: new Vec3(
-                    this.diceNode.position.x,
-                    this.diceNode.position.y - 0.5,
-                    this.diceNode.position.z
-                )
+                position: new Vec3(startPos.x, startPos.y + 1, startPos.z)
             }, { easing: 'bounceOut' })
-            // 设置最终朝向
             .call(() => {
-                if (this.diceNode) {
-                    const targetRotation = DICE_FACE_ROTATIONS[finalValue];
-                    // 平滑过渡到目标旋转（时间缩短一半）
-                    tween(this.diceNode)
-                        .to(0.15, { rotation: targetRotation }, { easing: 'quadInOut' })
-                        .call(onComplete)
-                        .start();
-                }
+                const targetRotation = DICE_FACE_ROTATIONS[finalValue];
+                tween(node)
+                    .to(0.15, { rotation: targetRotation }, { easing: 'quadInOut' })
+                    .call(onComplete)
+                    .start();
             })
             .start();
     }
-    
+
     /**
      * 计划隐藏骰子
      */
@@ -279,48 +262,47 @@ export class DiceController {
             clearTimeout(this.hideTimer);
             this.hideTimer = null;
         }
-        // 使用 setTimeout，并记录句柄，避免与下一次roll冲突
         this.hideTimer = setTimeout(() => {
             this.hide();
             this.hideTimer = null;
         }, 3000) as unknown as number;
     }
-    
+
     /**
-     * 隐藏骰子（不销毁）
+     * 隐藏所有骰子（不销毁）
      */
     public hide(): void {
-        if (this.diceNode) {
-            this.diceNode.active = false;
+        for (const node of this.diceNodes) {
+            node.active = false;
         }
     }
-    
+
     /**
-     * 显示骰子
+     * 显示当前数量的骰子
      */
     public show(): void {
-        if (this.diceNode) {
-            this.diceNode.active = true;
+        for (let i = 0; i < this.currentDiceCount && i < this.diceNodes.length; i++) {
+            this.diceNodes[i].active = true;
         }
     }
-    
+
     /**
      * 获取当前骰子值
      */
     public getCurrentValue(): number {
         return this.currentValue;
     }
-    
+
     /**
      * 是否正在滚动
      */
     public getIsRolling(): boolean {
         return this.isRolling;
     }
-    
+
     /**
      * 开始循环播放骰子动画（等待链上结果）
-     * @param diceCount 骰子数量
+     * @param diceCount 骰子数量（1-3）
      * @param onComplete 完成回调（收到链上结果并停止后调用）
      */
     public async startRolling(diceCount: number, onComplete: () => void): Promise<void> {
@@ -329,13 +311,11 @@ export class DiceController {
             return;
         }
 
-        // 确保已初始化
-        await this.initialize();
+        // 限制骰子数量
+        diceCount = Math.max(1, Math.min(3, diceCount));
+        this.currentDiceCount = diceCount;
 
-        if (!this.dicePrefab) {
-            console.error('[DiceController] 骰子预制体未加载');
-            return;
-        }
+        await this._ensureDiceNodes(diceCount);
 
         this.isLooping = true;
         this.pendingCallback = onComplete;
@@ -346,54 +326,60 @@ export class DiceController {
             this.hideTimer = null;
         }
 
-        // 创建或显示骰子
-        if (!this.diceNode) {
-            this.diceNode = instantiate(this.dicePrefab);
-            director.getScene()?.addChild(this.diceNode);
+        // 获取基础位置
+        const basePos = this.getActivePlayerPosition();
+
+        // 设置每个骰子的位置并开始循环动画
+        for (let i = 0; i < diceCount; i++) {
+            const node = this.diceNodes[i];
+
+            // 水平排列，居中对齐
+            const offsetX = (i - (diceCount - 1) / 2) * DICE_SPACING;
+            node.setPosition(basePos.x + offsetX, basePos.y, basePos.z);
+            node.active = true;
+
+            // 停止可能残留的补间动画
+            Tween.stopAllByTarget(node);
+
+            // 播放循环动画
+            this._playLoopAnimationForNode(node, i);
         }
 
-        // 设置初始位置和显示（基于当前玩家位置）
-        const startPos = this.getActivePlayerPosition();
-        this.diceNode.setPosition(startPos);
-        this.diceNode.active = true;
-
-        // 停止可能残留的补间动画
-        Tween.stopAllByTarget(this.diceNode);
+        // 隐藏多余的骰子
+        for (let i = diceCount; i < this.diceNodes.length; i++) {
+            this.diceNodes[i].active = false;
+        }
 
         console.log('[DiceController] 开始循环播放骰子动画，数量:', diceCount);
-
-        // 播放循环动画
-        this._playLoopAnimation();
 
         // 监听链上结果
         EventBus.on(EventTypes.Dice.RollResult, this._onRollResult, this);
     }
 
     /**
-     * 播放循环旋转动画
+     * 为单个节点播放循环旋转动画
      */
-    private _playLoopAnimation(): void {
-        if (!this.diceNode) return;
-
-        // 随机初始旋转
+    private _playLoopAnimationForNode(node: Node, index: number): void {
+        // 随机初始旋转（每个骰子不同）
         const initialRotation = new Quat();
         Quat.fromEuler(initialRotation,
             Math.random() * 360,
             Math.random() * 360,
             Math.random() * 360
         );
-        this.diceNode.setRotation(initialRotation);
+        node.setRotation(initialRotation);
 
-        // 持续旋转动画（循环）
-        this.loopTween = tween(this.diceNode)
-            .by(0.5, {
+        // 持续旋转动画（每个骰子速度略有不同）
+        const speed = 0.5 + index * 0.05;
+        const loopTween = tween(node)
+            .by(speed, {
                 eulerAngles: new Vec3(180, 270, 180)
             })
-            .union()  // 链接动画
-            .repeat(999)  // 重复多次
+            .union()
+            .repeat(999)
             .start() as Tween<Node>;
 
-        console.log('[DiceController] 循环动画已开始');
+        this.loopTweens.push(loopTween);
     }
 
     /**
@@ -412,93 +398,87 @@ export class DiceController {
     }
 
     /**
-     * 停止在指定值（播放减速动画）
+     * 停止所有骰子在指定值（播放减速动画）
      */
     private _stopAtValue(value: number): void {
-        if (!this.diceNode) return;
-
         this.isLooping = false;
-        this.isRolling = true;  // 标记为正在停止动画
+        this.isRolling = true;
         this.currentValue = value;
 
-        // 停止循环动画
-        if (this.loopTween) {
-            this.loopTween.stop();
-            this.loopTween = null;
+        // 停止所有循环动画
+        for (const loopTween of this.loopTweens) {
+            loopTween.stop();
         }
-
-        Tween.stopAllByTarget(this.diceNode);
+        this.loopTweens = [];
 
         console.log('[DiceController] 停止循环，播放减速动画到值:', value);
 
-        // 播放减速并停在目标值的动画
         const targetRotation = DICE_FACE_ROTATIONS[value];
+        let completedCount = 0;
 
-        tween(this.diceNode)
-            // 减速阶段：继续旋转但逐渐减慢（加速：0.3s → 0.12s）
-            .by(0.12, {
-                eulerAngles: new Vec3(90, 135, 90)
-            }, { easing: 'quadOut' })
-            // 弹跳落地（加速：0.2s → 0.08s）
-            .to(0.08, {
-                position: new Vec3(
-                    this.diceNode.position.x,
-                    this.diceNode.position.y + 1,
-                    this.diceNode.position.z
-                )
-            }, { easing: 'quadOut' })
-            .to(0.08, {
-                position: new Vec3(
-                    this.diceNode.position.x,
-                    this.diceNode.position.y - 0.5,
-                    this.diceNode.position.z
-                )
-            }, { easing: 'bounceOut' })
-            // 最终旋转到目标值（加速：0.3s → 0.12s）
-            .to(0.12, { rotation: targetRotation }, { easing: 'quadInOut' })
-            .call(() => {
-                this.isRolling = false;
+        // 为每个骰子播放停止动画
+        for (let i = 0; i < this.currentDiceCount; i++) {
+            const node = this.diceNodes[i];
+            Tween.stopAllByTarget(node);
 
-                // 3秒后隐藏
-                this.scheduleHide();
+            const startPos = node.position.clone();
 
-                // 调用完成回调
-                if (this.pendingCallback) {
-                    this.pendingCallback();
-                    this.pendingCallback = null;
-                }
+            tween(node)
+                // 减速阶段
+                .by(0.12, {
+                    eulerAngles: new Vec3(90, 135, 90)
+                }, { easing: 'quadOut' })
+                // 弹跳落地
+                .to(0.08, {
+                    position: new Vec3(startPos.x, startPos.y + 1, startPos.z)
+                }, { easing: 'quadOut' })
+                .to(0.08, {
+                    position: new Vec3(startPos.x, startPos.y - 0.5, startPos.z)
+                }, { easing: 'bounceOut' })
+                // 最终旋转到目标值
+                .to(0.12, { rotation: targetRotation }, { easing: 'quadInOut' })
+                .call(() => {
+                    completedCount++;
+                    // 所有骰子动画完成后回调
+                    if (completedCount >= this.currentDiceCount) {
+                        this.isRolling = false;
+                        this.scheduleHide();
 
-                console.log('[DiceController] 骰子动画完成，停在值:', value);
-            })
-            .start();
+                        if (this.pendingCallback) {
+                            this.pendingCallback();
+                            this.pendingCallback = null;
+                        }
+
+                        console.log('[DiceController] 所有骰子动画完成，停在值:', value);
+                    }
+                })
+                .start();
+        }
     }
 
     /**
      * 停止骰子循环动画（用于交易失败时）
-     * 与 cleanup() 不同，此方法只停止动画但保留骰子节点和预制体
      */
     public stopRolling(): void {
         console.log('[DiceController] 停止骰子循环动画（交易失败）');
 
-        // 停止循环动画
-        if (this.loopTween) {
-            this.loopTween.stop();
-            this.loopTween = null;
+        // 停止所有循环动画
+        for (const loopTween of this.loopTweens) {
+            loopTween.stop();
         }
+        this.loopTweens = [];
 
         // 取消事件监听
         EventBus.off(EventTypes.Dice.RollResult, this._onRollResult, this);
 
         // 停止所有补间动画
-        if (this.diceNode) {
-            Tween.stopAllByTarget(this.diceNode);
+        for (const node of this.diceNodes) {
+            Tween.stopAllByTarget(node);
         }
 
         // 重置状态
         this.isRolling = false;
         this.isLooping = false;
-
-        // 清除待处理的回调
         this.pendingCallback = null;
 
         // 隐藏骰子
@@ -511,24 +491,28 @@ export class DiceController {
      * 清理资源
      */
     public cleanup(): void {
-        // 停止循环动画
-        if (this.loopTween) {
-            this.loopTween.stop();
-            this.loopTween = null;
+        // 停止所有循环动画
+        for (const loopTween of this.loopTweens) {
+            loopTween.stop();
         }
+        this.loopTweens = [];
 
         // 取消事件监听
         EventBus.off(EventTypes.Dice.RollResult, this._onRollResult, this);
 
-        if (this.diceNode) {
-            Tween.stopAllByTarget(this.diceNode);
-            this.diceNode.destroy();
-            this.diceNode = null;
+        // 销毁所有骰子节点
+        for (const node of this.diceNodes) {
+            Tween.stopAllByTarget(node);
+            node.destroy();
         }
+        this.diceNodes = [];
+
         this.dicePrefab = null;
         this.isRolling = false;
         this.isLooping = false;
         this.pendingCallback = null;
+        this.currentDiceCount = 1;
+
         if (this.hideTimer !== null) {
             clearTimeout(this.hideTimer);
             this.hideTimer = null;

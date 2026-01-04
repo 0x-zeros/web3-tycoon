@@ -54,8 +54,9 @@ public(package) fun BUFF_FROZEN(): u8 { 2 }
 public(package) fun BUFF_RENT_FREE(): u8 { 3 }
 public(package) fun BUFF_LAND_BLESSING(): u8 { 4 }
 public(package) fun BUFF_FORTUNE(): u8 { 5 }
+public(package) fun BUFF_LOCOMOTIVE(): u8 { 6 }  // 机车卡：允许多骰子
 
-// 6-199: 预留给card及其他
+// 7-199: 预留给card及其他
 
 // ===== GameStatus =====
 public(package) fun STATUS_READY(): u8 { 0 }

@@ -454,7 +454,8 @@ entry fun roll_and_step(
     let has_move_ctrl = is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
 
     let dice = if (has_move_ctrl) {
-        assert!(!path.is_empty() && path.length() <= 12, EInvalidPath);
+        // 遥控骰子模式：路径长度就是步数，最多18步（3个骰子）
+        assert!(!path.is_empty() && path.length() <= 18, EInvalidPath);
         path.length() as u8
     } else {
         let dice_value = get_dice_value(game, player_index, &mut generator);

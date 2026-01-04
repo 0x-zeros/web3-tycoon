@@ -37,6 +37,17 @@ export class UIInGameDice extends UIBase {
     /** 跳过回合按钮 */
     private m_btn_skipTurn: fgui.GButton;
 
+    /** 骰子数量选择按钮 */
+    private m_btn_diceNum_1: fgui.GButton;
+    private m_btn_diceNum_2: fgui.GButton;
+    private m_btn_diceNum_3: fgui.GButton;
+
+    /** 骰子数量控制器 */
+    private m_ctrl_diceNum: fgui.Controller;
+
+    /** 当前选中的骰子数量 */
+    private _selectedDiceCount: number = 1;
+
     /**
      * 初始化回调
      */
@@ -66,6 +77,21 @@ export class UIInGameDice extends UIBase {
         } else {
             console.error('[UIInGameDice] Skip turn button not found');
         }
+
+        // 骰子数量选择按钮
+        this.m_btn_diceNum_1 = this.getButton('btn_diceNum_1');
+        this.m_btn_diceNum_2 = this.getButton('btn_diceNum_2');
+        this.m_btn_diceNum_3 = this.getButton('btn_diceNum_3');
+
+        // 获取骰子数量控制器
+        this.m_ctrl_diceNum = this.getController('dice_num');
+
+        if (this.m_ctrl_diceNum) {
+            console.log('[UIInGameDice] Dice num controller found');
+        }
+
+        // 更新骰子选择按钮可用性
+        this._updateDiceCountOptions();
     }
 
     /**
@@ -78,6 +104,17 @@ export class UIInGameDice extends UIBase {
 
         if (this.m_btn_skipTurn) {
             this.m_btn_skipTurn.onClick(this._onSkipTurnClick, this);
+        }
+
+        // 骰子数量选择按钮
+        if (this.m_btn_diceNum_1) {
+            this.m_btn_diceNum_1.onClick(() => this._onDiceCountSelect(1), this);
+        }
+        if (this.m_btn_diceNum_2) {
+            this.m_btn_diceNum_2.onClick(() => this._onDiceCountSelect(2), this);
+        }
+        if (this.m_btn_diceNum_3) {
+            this.m_btn_diceNum_3.onClick(() => this._onDiceCountSelect(3), this);
         }
 
         // 监听骰子事件
@@ -99,6 +136,10 @@ export class UIInGameDice extends UIBase {
         if (this.m_btn_skipTurn) {
             this.m_btn_skipTurn.offClick(this._onSkipTurnClick, this);
         }
+
+        // 骰子数量选择按钮（FairyGUI onClick with arrow function 不需要 offClick）
+        // 因为使用了箭头函数，每次绑定都是新函数引用，无法精确解绑
+        // 但由于 UIBase 在销毁时会清理整个组件，不会造成内存泄漏
 
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.off(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
@@ -384,29 +425,27 @@ export class UIInGameDice extends UIBase {
     }
 
     /**
-     * 确定骰子数量
+     * 获取当前选择的骰子数量
      *
-     * 根据玩家的 buffs 判断：
-     * - 有遥控骰子 buff (MOVE_CTRL)：可以使用 1-3 个骰子
-     * - 无遥控骰子：固定 1 个骰子
+     * 遥控骰子(MOVE_CTRL)和机车卡(LOCOMOTIVE)是独立功能：
+     * - 机车卡：控制骰子数量（当前阶段全部可用，后续检查buff）
+     * - 遥控骰子：控制骰子点数（用户指定路径而非随机）
      *
-     * @param player 玩家对象
-     * @param currentRound 当前轮次
+     * @param player 玩家对象（暂未使用，预留机车卡检查）
+     * @param currentRound 当前轮次（暂未使用，预留机车卡检查）
      * @returns 骰子数量（1-3）
      */
     private _getDiceCount(player: any, currentRound: number): number {
-        // 检查是否有遥控骰子 buff
-        const hasMoveCtr = player.hasActiveBuff(BuffKind.MOVE_CTRL, currentRound);
+        // 当前阶段：直接返回用户选择的骰子数量
+        return this._selectedDiceCount;
 
-        if (hasMoveCtr) {
-            // 有遥控骰子，可以选择 1-3 个
-            // TODO: 弹出选择器让玩家选择骰子数量
-            // 目前默认使用 2 个骰子
-            return 2;
-        } else {
-            // 无遥控骰子，固定 1 个
-            return 1;
-        }
+        // TODO: 后续添加机车卡检查
+        // const hasLocomotive = player.hasActiveBuff(BuffKind.LOCOMOTIVE, currentRound);
+        // if (!hasLocomotive && this._selectedDiceCount > 1) {
+        //     console.warn('[UIInGameDice] 无机车卡buff，强制使用1个骰子');
+        //     return 1;
+        // }
+        // return this._selectedDiceCount;
     }
 
     /**
@@ -528,5 +567,54 @@ export class UIInGameDice extends UIBase {
      */
     private _onTurnChanged(data: { isMyTurn: boolean }): void {
         this._updateButtonState();  // 统一使用 _updateButtonState
+        this._updateDiceCountOptions();  // 同时更新骰子数量选项
+    }
+
+    /**
+     * 更新骰子数量选择按钮的可用性
+     *
+     * 当前阶段：全部可用（用于测试）
+     * 后续添加机车卡后：无buff只能选1个，有LOCOMOTIVE buff可选2/3个
+     */
+    private _updateDiceCountOptions(): void {
+        // 当前阶段：全部启用（用于测试多骰子功能）
+        if (this.m_btn_diceNum_1) {
+            this.m_btn_diceNum_1.enabled = true;
+        }
+        if (this.m_btn_diceNum_2) {
+            this.m_btn_diceNum_2.enabled = true;
+        }
+        if (this.m_btn_diceNum_3) {
+            this.m_btn_diceNum_3.enabled = true;
+        }
+
+        // 设置控制器默认选中状态
+        if (this.m_ctrl_diceNum) {
+            this.m_ctrl_diceNum.selectedIndex = this._selectedDiceCount - 1;
+        }
+
+        // TODO: 后续机车卡逻辑
+        // const session = GameInitializer.getInstance()?.getGameSession();
+        // const player = session?.getMyPlayer();
+        // const round = session?.getRound() || 0;
+        // const hasLocomotive = player?.hasActiveBuff(BuffKind.LOCOMOTIVE, round);
+        // this.m_btn_diceNum_2.enabled = hasLocomotive;
+        // this.m_btn_diceNum_3.enabled = hasLocomotive;
+    }
+
+    /**
+     * 骰子数量选择按钮点击
+     *
+     * @param count 骰子数量（1-3）
+     */
+    private _onDiceCountSelect(count: number): void {
+        console.log(`[UIInGameDice] 选择骰子数量: ${count}`);
+
+        this._selectedDiceCount = count;
+
+        // 更新控制器状态（控制器索引从0开始）
+        if (this.m_ctrl_diceNum) {
+            this.m_ctrl_diceNum.selectedIndex = count - 1;
+        }
     }
 }

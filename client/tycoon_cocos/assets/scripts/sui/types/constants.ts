@@ -80,7 +80,8 @@ export enum BuffKind {
     FROZEN = 2,             // 冰冻状态
     RENT_FREE = 3,          // 免租状态
     LAND_BLESSING = 4,      // 土地神祝福
-    FORTUNE = 5             // 福神幸运
+    FORTUNE = 5,            // 福神幸运
+    LOCOMOTIVE = 6          // 机车卡：允许多骰子
 }
 
 // ===== Phase 游戏阶段 =====

@@ -586,9 +586,16 @@ export class UIInGame extends UIBase {
                 if (building &&
                     building.size === BuildingSize.SIZE_2X2 &&
                     building.level === 0) {
-                    // 2x2 lv0 升级由 UIInGameBuildingSelect 处理
-                    console.log('[UIInGame] 2x2 lv0 升级，由 BuildingSelect 处理');
-                    // 不调用 DecisionDialogHelper，事件已经通过 EventBus 通知到 UIInGameBuildingSelect
+                    // 2x2 lv0 升级需要选择建筑类型
+                    console.log('[UIInGame] 2x2 lv0 升级，显示建筑类型选择');
+
+                    // 主动显示 UIInGameBuildingSelect（兜底方案）
+                    if (this.m_buildingSelectUI) {
+                        this.m_buildingSelectUI.show(undefined, false);
+                    } else {
+                        console.warn('[UIInGame] BuildingSelect 组件未找到，使用默认升级对话框');
+                        DecisionDialogHelper.showUpgradeDialog(decision, session);
+                    }
                 } else {
                     // 普通升级使用 DecisionDialogHelper
                     DecisionDialogHelper.showUpgradeDialog(decision, session);

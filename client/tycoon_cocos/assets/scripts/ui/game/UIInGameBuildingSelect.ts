@@ -231,24 +231,46 @@ export class UIInGameBuildingSelect extends UIBase {
     private _shouldShowForCurrentDecision(): boolean {
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: GameSession 未找到');
             return false;
         }
 
         const pendingDecision = session.getPendingDecision();
-        if (!pendingDecision || pendingDecision.type !== DecisionType.UPGRADE_PROPERTY) {
+        if (!pendingDecision) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: 没有待决策');
+            return false;
+        }
+
+        if (pendingDecision.type !== DecisionType.UPGRADE_PROPERTY) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: 决策类型不是 UPGRADE_PROPERTY，当前类型:', pendingDecision.type);
             return false;
         }
 
         if (!session.isMyTurn()) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: 不是我的回合', {
+                myPlayerIndex: session.getMyPlayerIndex(),
+                activePlayerIndex: session.getActivePlayerIndex()
+            });
             return false;
         }
 
         const building = session.getBuildingByTileId(pendingDecision.tileId);
         if (!building) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: 未找到建筑，tileId:', pendingDecision.tileId);
             return false;
         }
 
-        return building.size === BuildingSize.SIZE_2X2 && building.level === 0;
+        if (building.size !== BuildingSize.SIZE_2X2 || building.level !== 0) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: 建筑不符合条件', {
+                size: building.size,
+                level: building.level,
+                required: '2x2 lv0'
+            });
+            return false;
+        }
+
+        console.log('[UIInGameBuildingSelect] 条件检查通过，应该显示');
+        return true;
     }
 
     /**

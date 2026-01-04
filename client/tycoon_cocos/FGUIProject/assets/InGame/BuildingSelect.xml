@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="860,520">
   <displayList>
-    <list id="n0_n6n6" name="list" xy="24,120" size="815,256" layout="row" scroll="horizontal" colGap="20" defaultItem="ui://8z385pimn6n6oy" autoClearItems="true">
+    <image id="n4_tsph" name="n4" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="860,520"/>
+    <list id="n0_n6n6" name="list" xy="24,120" size="815,256" layout="row" overflow="scroll" scroll="horizontal" colGap="20" defaultItem="ui://8z385pimn6n6oy" autoClearItems="true">
+      <item/>
       <item/>
       <item/>
       <item/>

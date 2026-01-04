@@ -21,6 +21,7 @@ export class UIPlayerSelector {
     private btnOk: fgui.GButton | null = null;
     private btnCancel: fgui.GButton | null = null;
     private selectedIndex: number = -1;
+    private myPlayerIndex: number = -1;
     private resolveCallback: ((index: number | null) => void) | null = null;
 
     /**
@@ -37,6 +38,7 @@ export class UIPlayerSelector {
 
         const allPlayers = session.getAllPlayers();
         const myPlayerIndex = session.getMyPlayerIndex();
+        this.myPlayerIndex = myPlayerIndex;
 
         const selectablePlayers = allPlayers
             .map((player, index) => ({ player, index }))
@@ -52,14 +54,14 @@ export class UIPlayerSelector {
         // 创建并显示弹窗
         return new Promise((resolve) => {
             this.resolveCallback = resolve;
-            this.showDialog(selectablePlayers);
+            this.showDialog(selectablePlayers, excludeMyself);
         });
     }
 
     /**
      * 显示FairyGUI对话框
      */
-    private showDialog(players: Array<{ player: any; index: number }>): void {
+    private showDialog(players: Array<{ player: any; index: number }>, excludeMyself: boolean): void {
         // 创建 PlayerSelect 组件
         this.panel = fgui.UIPackage.createObject('InGame', 'PlayerSelect').asCom;
         fgui.GRoot.inst.addChild(this.panel);
@@ -74,32 +76,42 @@ export class UIPlayerSelector {
         if (this.playerList) {
             this.playerList.itemRenderer = this.renderPlayerItem.bind(this);
             this.playerList.on(fgui.Event.CLICK_ITEM, this.onItemClick, this);
-            this.playerList.numItems = players.length;
-            this.playerList.data = players; // 存储数据
+            this.playerList.data = players; // 先存储数据
+            this.playerList.numItems = players.length; // 再设置数量，触发渲染
+
+            // 如果可以选择自己，默认选中自己
+            if (!excludeMyself) {
+                const myListIndex = players.findIndex(p => p.index === this.myPlayerIndex);
+                if (myListIndex >= 0) {
+                    this.playerList.selectedIndex = myListIndex;
+                    this.selectedIndex = this.myPlayerIndex;
+                }
+            }
         }
 
         // 绑定按钮
         if (this.btnOk) {
             this.btnOk.onClick(this.onOkClick, this);
-            this.btnOk.enabled = false; // 初始禁用，选中后启用
+            this.btnOk.enabled = this.selectedIndex >= 0; // 如果有默认选中则启用
         }
 
         if (this.btnCancel) {
             this.btnCancel.onClick(this.onCancelClick, this);
         }
 
-        console.log('[UIPlayerSelector] 对话框已显示，玩家数:', players.length);
+        console.log('[UIPlayerSelector] 对话框已显示，玩家数:', players.length, '默认选中:', this.selectedIndex);
     }
 
     /**
      * 渲染玩家列表项
      */
     private renderPlayerItem(index: number, obj: fgui.GObject): void {
-        const item = obj.asCom;
         const players = this.playerList?.data as Array<{ player: any; index: number }>;
         if (!players) return;
 
         const { player, index: playerIndex } = players[index];
+        const item = obj.asCom;
+        if (!item) return;
 
         // 设置头像
         const avatar = item.getChild('avatar') as fgui.GLoader;
@@ -139,8 +151,15 @@ export class UIPlayerSelector {
      * 列表项点击
      */
     private onItemClick(item: fgui.GObject): void {
-        this.selectedIndex = item.data as number;
-        console.log('[UIPlayerSelector] 选中玩家:', this.selectedIndex);
+        // Radio 模式下，通过 list.selectedIndex 获取选中的列表索引
+        if (this.playerList) {
+            const listIndex = this.playerList.selectedIndex;
+            const players = this.playerList.data as Array<{ player: any; index: number }>;
+            if (players && listIndex >= 0) {
+                this.selectedIndex = players[listIndex].index;
+                console.log('[UIPlayerSelector] 选中玩家:', this.selectedIndex);
+            }
+        }
 
         // 启用确定按钮
         if (this.btnOk) {

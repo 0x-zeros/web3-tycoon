@@ -181,8 +181,8 @@ export class CardUsageManager {
     private async handlePlayerSelectionCard(card: Card): Promise<void> {
         console.log(`[CardUsageManager] 选择目标玩家: ${card.name}`);
 
-        // 显示玩家选择界面
-        const selectedPlayerIndex = await this.playerSelector.showPlayerSelection(true);
+        // 显示玩家选择界面（冰冻卡不排除自己，可以对自己使用）
+        const selectedPlayerIndex = await this.playerSelector.showPlayerSelection(false);
 
         if (selectedPlayerIndex === null) {
             console.log('[CardUsageManager] 用户取消选择');

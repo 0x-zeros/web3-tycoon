@@ -1953,10 +1953,10 @@ fun apply_card_effect_with_collectors(
             option::some(game.round + 1)
         ));
     } else if (kind == types::CARD_FREEZE()) {
+        // 冰冻卡可以对自己或其他玩家使用
         assert!(params.length() >= 1, EInvalidParams);
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
-        assert!(target_index != player_index, EInvalidCardTarget);
 
         let target_player = &mut game.players[target_index as u64];
         apply_buff(target_player, types::BUFF_FROZEN(), game.round + 1, 0);

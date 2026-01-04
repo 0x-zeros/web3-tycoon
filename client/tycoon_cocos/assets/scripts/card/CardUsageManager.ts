@@ -11,6 +11,7 @@ import { Card } from './Card';
 import { UICardTileSelector } from '../ui/game/UICardTileSelector';
 import { UIPlayerSelector } from '../ui/game/UIPlayerSelector';
 import { UIMessage } from '../ui/utils/UIMessage';
+import { UINotification } from '../ui/utils/UINotification';
 import { GameInitializer } from '../core/GameInitializer';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
@@ -91,7 +92,7 @@ export class CardUsageManager {
     private async handleDirectCard(card: Card): Promise<void> {
         console.log(`[CardUsageManager] 直接使用卡片: ${card.name}`);
         const params: number[] = [];
-        await this.callUseCard(card.kind, params);
+        await this.callUseCard(card.kind, params, card.name);
     }
 
     /**
@@ -152,7 +153,7 @@ export class CardUsageManager {
         console.log(`[CardUsageManager] ${card.name} 参数:`, params);
 
         // 调用合约
-        await this.callUseCard(card.kind, params);
+        await this.callUseCard(card.kind, params, card.name, `Tile ${selectedTile}`);
     }
 
     /**
@@ -173,10 +174,15 @@ export class CardUsageManager {
 
         const params = [selectedPlayerIndex];
 
+        // 获取目标玩家名称
+        const session = GameInitializer.getInstance()?.getGameSession();
+        const targetPlayer = session?.getPlayerByIndex(selectedPlayerIndex);
+        const targetName = targetPlayer?.getName() || `玩家${selectedPlayerIndex + 1}`;
+
         console.log(`[CardUsageManager] ${card.name} 参数:`, params);
 
         // 调用合约
-        await this.callUseCard(card.kind, params);
+        await this.callUseCard(card.kind, params, card.name, targetName);
     }
 
     /**
@@ -263,7 +269,7 @@ export class CardUsageManager {
     /**
      * 调用use_card合约
      */
-    private async callUseCard(kind: number, params: number[]): Promise<void> {
+    private async callUseCard(kind: number, params: number[], cardName: string, targetDesc?: string): Promise<void> {
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) throw new Error('游戏会话未初始化');
 
@@ -290,7 +296,8 @@ export class CardUsageManager {
         const result = await CardInteraction.useCard(gameId, seatId, mapTemplateId, kind, params);
 
         if (result.success) {
-            await UIMessage.success('卡片使用成功');
+            const msg = targetDesc ? `对${targetDesc}使用了${cardName}` : `使用了${cardName}`;
+            UINotification.success(msg, undefined, undefined, 'center');
             console.log('[CardUsageManager] 卡片使用成功, digest:', result.digest);
             // 触发事件刷新UI
             EventBus.emit(EventTypes.Card.UseCard, { kind, params });

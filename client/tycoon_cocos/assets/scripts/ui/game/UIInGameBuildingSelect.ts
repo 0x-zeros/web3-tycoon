@@ -154,6 +154,8 @@ export class UIInGameBuildingSelect extends UIBase {
             return;
         }
 
+        console.log('[UIInGameBuildingSelect] 开始刷新，建筑类型数量:', this.m_buildingTypes.length);
+
         // 设置列表项数量
         this.m_buildingList.numItems = this.m_buildingTypes.length;
 
@@ -161,14 +163,18 @@ export class UIInGameBuildingSelect extends UIBase {
         this.m_buildingList.selectedIndex = 0;
         this.m_selectedBuildingType = BuildingType.TEMPLE;
 
-        console.log(`[UIInGameBuildingSelect] Refreshed with ${this.m_buildingTypes.length} building types`);
+        console.log('[UIInGameBuildingSelect] 刷新完成，列表项数量:', this.m_buildingList.numItems);
     }
 
     /**
      * 渲染建筑类型列表项
      */
     private renderBuildingItem(index: number, obj: fgui.GObject): void {
-        const item = obj.asButton;
+        console.log(`[UIInGameBuildingSelect] 渲染列表项 ${index}，obj 类型:`, obj?.constructor?.name);
+
+        const item = obj as fgui.GButton;
+        console.log(`[UIInGameBuildingSelect] GButton 转换结果:`, item ? 'success' : 'null');
+
         if (!item) {
             console.warn('[UIInGameBuildingSelect] Item is not a button');
             return;
@@ -180,10 +186,18 @@ export class UIInGameBuildingSelect extends UIBase {
             return;
         }
 
+        console.log(`[UIInGameBuildingSelect] 渲染建筑: ${buildingInfo.name}`);
+
         // 设置标题（建筑名称）
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
             title.text = buildingInfo.name;
+            console.log(`[UIInGameBuildingSelect] 设置 title: "${buildingInfo.name}"`, {
+                success: title.text === buildingInfo.name,
+                actualText: title.text
+            });
+        } else {
+            console.error('[UIInGameBuildingSelect] title 组件未找到！');
         }
 
         // 设置状态文本
@@ -191,6 +205,12 @@ export class UIInGameBuildingSelect extends UIBase {
         if (status) {
             status.text = buildingInfo.status;
             status.visible = buildingInfo.status !== "";
+            console.log(`[UIInGameBuildingSelect] 设置 status: "${buildingInfo.status}"`, {
+                visible: status.visible,
+                actualText: status.text
+            });
+        } else {
+            console.error('[UIInGameBuildingSelect] status 组件未找到！');
         }
 
         // 设置按钮可用性

@@ -5,6 +5,7 @@
  */
 
 import { CardConfig, CardConfigManager } from './CardConfig';
+import { UIInGameDice } from '../ui/game/UIInGameDice';
 
 /**
  * 卡片可视化配置
@@ -121,10 +122,14 @@ export class Card {
 
     /**
      * 获取卡片使用的最大步数/范围
+     * 遥控骰子根据当前选择的骰子数量计算范围
      */
     getMaxRange(): number {
         if (this.isRemoteControlCard()) {
-            return 12; // 遥控骰子最大12步
+            // 遥控骰子：根据当前选择的骰子数量计算
+            // 1个骰子→6步，2个→12步，3个→18步
+            const diceCount = UIInGameDice.getSelectedDiceCount();
+            return diceCount * 6;
         } else if (this.isCleanseCard()) {
             return 10; // 净化卡10步
         } else if (this.isSimpleNpcCard()) {

@@ -31,6 +31,9 @@ const { ccclass } = _decorator;
 @ccclass('UIInGameDice')
 export class UIInGameDice extends UIBase {
 
+    /** 静态实例引用（供其他模块获取骰子数量） */
+    private static _instance: UIInGameDice | null = null;
+
     /** 投掷骰子按钮 */
     private m_btn_roll: fgui.GButton;
 
@@ -52,7 +55,16 @@ export class UIInGameDice extends UIBase {
      * 初始化回调
      */
     protected onInit(): void {
+        UIInGameDice._instance = this;
         this._setupComponents();
+    }
+
+    /**
+     * 获取当前选择的骰子数量
+     * 供其他模块（如遥控骰子卡）查询
+     */
+    public static getSelectedDiceCount(): number {
+        return UIInGameDice._instance?._selectedDiceCount ?? 1;
     }
 
     /**

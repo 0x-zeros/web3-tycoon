@@ -25,9 +25,76 @@ import { INVALID_TILE_ID } from '../../sui/types/constants';
  * Tile选择器 - 用于卡片使用时的tile选择
  */
 export class UICardTileSelector {
+    /** 静态实例引用 */
+    private static _instance: UICardTileSelector | null = null;
+
     private overlayNodes: Map<number, Node> = new Map();
     private selectedTile: number | null = null;
     private isActive: boolean = false;
+
+    /** Promise的resolve引用，用于取消时调用 */
+    private cancelResolve: ((value: number | null) => void) | null = null;
+
+    /** ESC键监听器引用，用于清理 */
+    private escKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+
+    /** 地面点击事件监听器引用 */
+    private groundClickHandler: ((event: any) => void) | null = null;
+
+    constructor() {
+        UICardTileSelector._instance = this;
+    }
+
+    /**
+     * 取消当前选择（供外部调用）
+     */
+    public static cancelSelection(): void {
+        UICardTileSelector._instance?.cancel();
+    }
+
+    /**
+     * 检查是否正在选择
+     */
+    public static isSelecting(): boolean {
+        return UICardTileSelector._instance?.isActive ?? false;
+    }
+
+    /**
+     * 取消选择
+     */
+    public cancel(): void {
+        if (!this.isActive) return;
+
+        console.log('[UICardTileSelector] 取消选择');
+
+        // 移除事件监听
+        this.removeEventListeners();
+
+        // 清理overlays
+        this.cleanup();
+
+        // resolve null表示取消
+        if (this.cancelResolve) {
+            this.cancelResolve(null);
+            this.cancelResolve = null;
+        }
+
+        this.isActive = false;
+    }
+
+    /**
+     * 移除事件监听器
+     */
+    private removeEventListeners(): void {
+        if (this.escKeyHandler) {
+            window.removeEventListener('keydown', this.escKeyHandler);
+            this.escKeyHandler = null;
+        }
+        if (this.groundClickHandler) {
+            EventBus.off(EventTypes.Game.GroundClicked, this.groundClickHandler);
+            this.groundClickHandler = null;
+        }
+    }
 
     /**
      * 显示tile选择界面
@@ -62,9 +129,11 @@ export class UICardTileSelector {
 
         // 等待用户选择
         const result = await new Promise<number | null>((resolve) => {
+            this.cancelResolve = resolve;  // 保存引用供取消使用
             this.setupTileClickHandlers(reachableTiles, resolve);
         });
 
+        this.cancelResolve = null;
         this.isActive = false;
         return result;
     }
@@ -233,7 +302,8 @@ export class UICardTileSelector {
         tileIds: number[],
         resolve: (tile: number | null) => void
     ): void {
-        const handler = (event: any) => {
+        // 地面点击handler
+        this.groundClickHandler = (event: any) => {
             // 从 GroundClicked 事件获取 gridIndex（兼容旧版 y / 新版 z）
             const gridIndex = event.gridIndex as { x?: number; y?: number; z?: number } | undefined;
             const gridX = gridIndex?.x;
@@ -266,25 +336,24 @@ export class UICardTileSelector {
 
             console.log(`[UICardTileSelector] 选中tile: ${tileId}`);
 
-            // 单选模式：直接返回
+            // 单选模式：清理并返回结果
+            this.removeEventListeners();
             this.cleanup();
-            EventBus.off(EventTypes.Game.GroundClicked, handler);
             resolve(tileId);
         };
 
-        EventBus.on(EventTypes.Game.GroundClicked, handler);
+        EventBus.on(EventTypes.Game.GroundClicked, this.groundClickHandler);
 
-        // 添加取消按钮监听（ESC键）
-        const cancelHandler = (event: KeyboardEvent) => {
+        // ESC键取消监听
+        this.escKeyHandler = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 console.log('[UICardTileSelector] 用户取消选择（ESC）');
-                window.removeEventListener('keydown', cancelHandler);
+                this.removeEventListeners();
                 this.cleanup();
-                EventBus.off(EventTypes.Game.GroundClicked, handler);
                 resolve(null);
             }
         };
-        window.addEventListener('keydown', cancelHandler);
+        window.addEventListener('keydown', this.escKeyHandler);
 
         console.log('[UICardTileSelector] 等待用户选择tile（ESC取消）');
     }

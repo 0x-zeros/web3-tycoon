@@ -28,6 +28,9 @@ export class CardUsageManager {
     private tileSelector: UICardTileSelector;
     private playerSelector: UIPlayerSelector;
 
+    /** 当前正在使用的卡片（用于检测再次点击取消） */
+    private currentUsingCard: Card | null = null;
+
     private constructor() {
         this.tileSelector = new UICardTileSelector();
         this.playerSelector = new UIPlayerSelector();
@@ -44,6 +47,19 @@ export class CardUsageManager {
      * 使用卡片（主入口）
      */
     async useCard(card: Card): Promise<void> {
+        // 检查是否正在选择tile目标（遥控骰子等）
+        if (UICardTileSelector.isSelecting()) {
+            // 如果再次点击同一张卡（需要tile目标的卡），则取消选择
+            if (this.currentUsingCard &&
+                this.currentUsingCard.kind === card.kind &&
+                card.needsTileTarget()) {
+                console.log('[CardUsageManager] 再次点击同一张卡，取消使用');
+                UICardTileSelector.cancelSelection();
+                this.currentUsingCard = null;
+                return;
+            }
+        }
+
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             await UIMessage.error('游戏会话未初始化');
@@ -69,6 +85,7 @@ export class CardUsageManager {
 
         try {
             console.log(`[CardUsageManager] 使用卡片: ${card.name} (kind=${card.kind})`);
+            this.currentUsingCard = card;  // 记录当前使用的卡片
 
             if (card.canUseDirectly()) {
                 // 直接使用（免租卡、转向卡）
@@ -83,6 +100,8 @@ export class CardUsageManager {
         } catch (error: any) {
             console.error('[CardUsageManager] 使用卡片失败:', error);
             await UIMessage.error(error.message || '使用卡片失败');
+        } finally {
+            this.currentUsingCard = null;  // 清除记录
         }
     }
 

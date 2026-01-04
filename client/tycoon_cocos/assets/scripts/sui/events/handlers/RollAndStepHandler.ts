@@ -324,9 +324,11 @@ export class RollAndStepHandler {
             // 2. ✅ 检查是否被送往医院（炸弹或恶犬）
             const NpcResult = { NONE: 0, SEND_HOSPITAL: 1, BARRIER_STOP: 2 };
             if (step.npc_event.result === NpcResult.SEND_HOSPITAL) {
-                // 设置玩家的医院回合数（与链上的DEFAULT_HOSPITAL_TURNS保持一致：2回合）
+                // 设置玩家的医院回合数
                 if (player) {
-                    const DEFAULT_HOSPITAL_TURNS = 2;  // 对应 Move types.move::DEFAULT_HOSPITAL_TURNS()
+                    // ⚠️ 注意：此值需与 Move types::DEFAULT_HOSPITAL_TURNS() 保持一致
+                    // 当前链上值为 2，如需修改请同步更新
+                    const DEFAULT_HOSPITAL_TURNS = 2;
                     player.setInHospitalTurns(DEFAULT_HOSPITAL_TURNS);
                     console.log('[RollAndStepHandler] 玩家被送往医院，设置住院回合数:', DEFAULT_HOSPITAL_TURNS);
                 }

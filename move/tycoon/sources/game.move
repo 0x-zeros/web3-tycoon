@@ -28,7 +28,7 @@ const EAlreadyJoined: u64 = 6005;
 const EInvalidDecision: u64 = 6006;
 const EPendingDecision: u64 = 6007;
 const EShouldSkipTurn: u64 = 6008;
-const EShouldNotSkipTurn: u64 = 6009;  // 玩家应该跳过回合（在医院）
+const ECannotRollDuringHospital: u64 = 6009;  // 住院期间不能掷骰子
 
 const EInsufficientFunds: u64 = 7001;
 const EBuildingAlreadyOwned: u64 = 7002;
@@ -444,7 +444,7 @@ entry fun roll_and_step(
 
     assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
     // 检查玩家是否应该跳过回合（住院等）
-    assert!(!should_skip_turn(game, seat.player_index), EShouldNotSkipTurn);
+    assert!(!should_skip_turn(game, seat.player_index), ECannotRollDuringHospital);
     // 验证骰子数量（1-3）
     assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
 

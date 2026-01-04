@@ -321,7 +321,18 @@ export class RollAndStepHandler {
             const description = this._getNpcEventDescription(step.npc_event);
             UINotification.info(description, 'NPC事件');
 
-            // 2. 如果 NPC 被消耗，删除
+            // 2. ✅ 检查是否被送往医院（炸弹或恶犬）
+            const NpcResult = { NONE: 0, SEND_HOSPITAL: 1, BARRIER_STOP: 2 };
+            if (step.npc_event.result === NpcResult.SEND_HOSPITAL) {
+                // 设置玩家的医院回合数（与链上的DEFAULT_HOSPITAL_TURNS保持一致：2回合）
+                if (player) {
+                    const DEFAULT_HOSPITAL_TURNS = 2;  // 对应 Move types.move::DEFAULT_HOSPITAL_TURNS()
+                    player.setInHospitalTurns(DEFAULT_HOSPITAL_TURNS);
+                    console.log('[RollAndStepHandler] 玩家被送往医院，设置住院回合数:', DEFAULT_HOSPITAL_TURNS);
+                }
+            }
+
+            // 3. 如果 NPC 被消耗，删除
             if (step.npc_event.consumed) {
                 const session = this.currentSession;
 

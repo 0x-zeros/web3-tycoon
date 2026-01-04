@@ -9,9 +9,9 @@
  */
 
 import { UIBase } from "../../core/UIBase";
-import { UIManager } from "../../core/UIManager";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
+import { UIMessage } from "../../utils/UIMessage";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { MapTemplatePublishedEvent } from "../../../sui/types/admin";
@@ -256,19 +256,17 @@ export class UIMapList extends UIBase {
             console.log('[UIMapList] 游戏创建成功:', result);
 
             // 显示成功消息
-            UIManager.showMessageBox(
-                '成功',
+            UIMessage.success(
                 `游戏创建成功！\n游戏ID: ${result.gameId}\n座位ID: ${result.seatId}`,
-                '确定'
+                '成功'
             );
 
             // 等待EventIndexer收到GameCreatedEvent后，会自动显示GameDetail
         } catch (error) {
             console.error('[UIMapList] 创建游戏失败:', error);
-            UIManager.showMessageBox(
-                '错误',
+            UIMessage.error(
                 `创建游戏失败: ${error.message}`,
-                '确定'
+                '错误'
             );
         }
     }

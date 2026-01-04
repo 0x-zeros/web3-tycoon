@@ -14,7 +14,7 @@ import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import * as fgui from "fairygui-cc";
-import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
+import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect, Color } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
 
 const { ccclass } = _decorator;
@@ -132,10 +132,11 @@ export class UIInGamePlayer extends UIBase {
             indexText.text = `${index + 1}`;
         }
 
-        // 玩家名称
+        // 玩家名称（颜色与建筑 Owner 颜色一致，便于识别）
         const playerName = item.getChild('playerName') as fgui.GTextField;
         if (playerName) {
             playerName.text = `玩家 ${index + 1}`;
+            playerName.color = this._getPlayerColor(index);
         }
 
         // 现金
@@ -245,6 +246,20 @@ export class UIInGamePlayer extends UIBase {
 
     private _onGameUpdate(): void {
         this.refresh();
+    }
+
+    /**
+     * 获取玩家颜色（与建筑 Owner 颜色保持一致）
+     * 颜色定义参考 NumberTextureGenerator.getBuildingOwnerColor
+     */
+    private _getPlayerColor(playerIndex: number): Color {
+        switch (playerIndex) {
+            case 0: return new Color(255, 193, 7);    // #FFC107 亮黄
+            case 1: return new Color(255, 82, 82);    // #FF5252 亮红
+            case 2: return new Color(105, 240, 174);  // #69F0AE 荧光绿
+            case 3: return new Color(224, 64, 251);   // #E040FB 荧光紫
+            default: return new Color(255, 255, 255); // 白色（默认）
+        }
     }
 
     /**

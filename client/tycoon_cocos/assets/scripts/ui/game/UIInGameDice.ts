@@ -18,13 +18,15 @@ import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { DiceController } from "../../game/DiceController";
 import { SuiManager } from "../../sui/managers/SuiManager";
-import { BuffKind } from "../../sui/types/constants";
+import { BuffKind, DecisionType, BuildingSize } from "../../sui/types/constants";
 import { WalkingPreference } from "../../sui/pathfinding/WalkingPreference";
 import { HistoryStorage } from "../../sui/pathfinding/HistoryStorage";
 import { UIMessage } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
 import { GameInitializer } from "../../core/GameInitializer";
 import { handleSuiTransactionError } from "../../sui/utils/TransactionErrorHandler";
+import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
+import type { PendingDecisionInfo } from "../../core/GameSession";
 
 const { ccclass } = _decorator;
 
@@ -306,6 +308,28 @@ export class UIInGameDice extends UIBase {
                 player: player.getPlayerIndex(),
                 currentTile: player.getPos()
             });
+
+            // ===== 【兜底检测】检查是否有待决策 =====
+            const pendingDecision = session.getPendingDecision();
+            if (pendingDecision) {
+                console.log('[UIInGameDice] 检测到待决策，显示决策窗口（兜底）', pendingDecision);
+
+                // 停止骰子动画
+                DiceController.instance.stopRolling();
+
+                // 恢复按钮状态
+                if (this.m_btn_roll) {
+                    this.m_btn_roll.enabled = true;
+                }
+
+                // 显示决策窗口
+                this._showDecisionDialogFallback(pendingDecision, session);
+
+                // 提示用户
+                UINotification.warning('请先处理待决策事项', undefined, undefined, 'center');
+
+                return;  // 不提交交易
+            }
 
             // ===== 2. 检查遥控骰子路径 =====
             const pendingPath = session.getPendingRemoteDicePath();
@@ -705,6 +729,50 @@ export class UIInGameDice extends UIBase {
         // 更新控制器状态（控制器索引从0开始）
         if (this.m_ctrl_diceNum) {
             this.m_ctrl_diceNum.selectedIndex = count - 1;
+        }
+    }
+
+    /**
+     * 显示决策窗口（兜底方案）
+     * 用于在掷骰子前检测到待决策时主动显示
+     */
+    private _showDecisionDialogFallback(decision: PendingDecisionInfo, session: any): void {
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer) {
+            console.warn('[UIInGameDice] 无法获取当前玩家');
+            return;
+        }
+
+        // 根据决策类型显示不同的窗口
+        switch (decision.type) {
+            case DecisionType.BUY_PROPERTY:
+                console.log('[UIInGameDice] 显示购买决策窗口');
+                DecisionDialogHelper.showBuyDialog(decision, session);
+                break;
+
+            case DecisionType.UPGRADE_PROPERTY:
+                // 检查是否是 2x2 lv0 升级（需要选择建筑类型）
+                const building = session.getBuildingByTileId(decision.tileId);
+                if (building && building.size === BuildingSize.SIZE_2X2 && building.level === 0) {
+                    console.log('[UIInGameDice] 2x2 lv0 升级，触发 DecisionPending 事件');
+                    // 触发事件，让 UIInGameBuildingSelect 处理
+                    EventBus.emit(EventTypes.Game.DecisionPending, {
+                        session: session,
+                        decision: decision
+                    });
+                } else {
+                    console.log('[UIInGameDice] 显示升级决策窗口');
+                    DecisionDialogHelper.showUpgradeDialog(decision, session);
+                }
+                break;
+
+            case DecisionType.PAY_RENT:
+                console.log('[UIInGameDice] 显示租金决策窗口');
+                DecisionDialogHelper.showRentDialog(decision, session);
+                break;
+
+            default:
+                console.warn('[UIInGameDice] 未知的决策类型', decision.type);
         }
     }
 }

@@ -174,6 +174,10 @@ export abstract class UIBase extends Component {
      * 隐藏UI（通过停用节点）
      */
     public hide(): void {
+        // 防御性检查：节点可能已被销毁
+        if (!this.node) {
+            return;
+        }
         // 停用节点（会触发onDisable生命周期）
         this.node.active = false;
     }

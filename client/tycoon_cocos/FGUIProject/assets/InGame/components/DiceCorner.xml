@@ -5,5 +5,14 @@
     <component id="n3_f49a" name="btn_skipTurn" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="0,-63" size="256,128">
       <Button title="结束回合"/>
     </component>
+    <component id="n6_tsph" name="btn_diceNum_1" src="tsphp6" fileName="components/Dice_small.xml" xy="-14,63">
+      <Button title="1"/>
+    </component>
+    <component id="n7_tsph" name="btn_diceNum_2" src="tsphp6" fileName="components/Dice_small.xml" xy="-28,127">
+      <Button title="2"/>
+    </component>
+    <component id="n8_tsph" name="btn_diceNum_3" src="tsphp6" fileName="components/Dice_small.xml" xy="-14,191">
+      <Button title="3"/>
+    </component>
   </displayList>
 </component>

@@ -216,6 +216,59 @@ export class UIInGame extends UIBase {
 
         // 监听待决策事件
         EventBus.on(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
+
+        // 监听 GameSession 加载完成事件，确保在正确时机检查待决策
+        EventBus.on(EventTypes.Game.SessionLoaded, this._onSessionLoaded, this);
+    }
+
+    /**
+     * GameSession 加载完成后的处理
+     */
+    private _onSessionLoaded(data: any): void {
+        console.log('[UIInGame] GameSession 已加载，检查是否有待决策');
+
+        // 主动检查待决策状态
+        this._checkPendingDecisionAfterSessionLoaded().catch(error => {
+            console.error('[UIInGame] Failed to check pending decision after session loaded:', error);
+        });
+    }
+
+    /**
+     * SessionLoaded 后主动检查待决策（异步）
+     */
+    private async _checkPendingDecisionAfterSessionLoaded(): Promise<void> {
+        const { GameInitializer } = await import("../../core/GameInitializer");
+        const session = GameInitializer.getInstance()?.getGameSession();
+
+        if (!session) {
+            console.log('[UIInGame] GameSession 未找到');
+            return;
+        }
+
+        const pendingDecision = session.getPendingDecision();
+        if (!pendingDecision) {
+            console.log('[UIInGame] 没有待决策');
+            return;
+        }
+
+        console.log('[UIInGame] SessionLoaded 后检测到待决策，主动显示', pendingDecision);
+
+        // 检查是否是我的回合
+        if (!session.isMyTurn()) {
+            console.log('[UIInGame] 不是我的回合，不显示决策窗口', {
+                myPlayerIndex: session.getMyPlayerIndex(),
+                activePlayerIndex: session.getActivePlayerIndex()
+            });
+            return;
+        }
+
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer) {
+            console.warn('[UIInGame] 我的玩家未找到');
+            return;
+        }
+
+        this._showDecisionDialog(pendingDecision, myPlayer, session);
     }
 
     /**
@@ -242,6 +295,7 @@ export class UIInGame extends UIBase {
 
         // 移除待决策事件监听
         EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
+        EventBus.off(EventTypes.Game.SessionLoaded, this._onSessionLoaded, this);
 
         super.unbindEvents();
     }
@@ -530,8 +584,8 @@ export class UIInGame extends UIBase {
                 // 检查是否是 2x2 建筑 lv0→lv1 升级（需要选择建筑类型）
                 const building = session.getBuildingByTileId(decision.tileId);
                 if (building &&
-                    building.getSize() === BuildingSize.SIZE_2X2 &&
-                    building.getLevel() === 0) {
+                    building.size === BuildingSize.SIZE_2X2 &&
+                    building.level === 0) {
                     // 2x2 lv0 升级由 UIInGameBuildingSelect 处理
                     console.log('[UIInGame] 2x2 lv0 升级，由 BuildingSelect 处理');
                     // 不调用 DecisionDialogHelper，事件已经通过 EventBus 通知到 UIInGameBuildingSelect

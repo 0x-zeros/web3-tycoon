@@ -248,7 +248,7 @@ export class UIInGameBuildingSelect extends UIBase {
             return false;
         }
 
-        return building.getSize() === BuildingSize.SIZE_2X2 && building.getLevel() === 0;
+        return building.size === BuildingSize.SIZE_2X2 && building.level === 0;
     }
 
     /**

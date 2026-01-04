@@ -150,6 +150,9 @@ export class GameSession {
     /** 待决策信息 */
     private _pendingDecision: PendingDecisionInfo | null = null;
 
+    /** 玩家识别失败标志（需要在 loadPlayerAssets 后重试） */
+    private _needsPlayerIdentification: boolean = false;
+
     // ========================= 遥控骰子状态 =========================
 
     /** 待使用的遥控骰子路径（已计算好） */
@@ -285,6 +288,12 @@ export class GameSession {
         await SuiManager.instance.loadPlayerAssets();
         console.log('[GameSession] 玩家资产已刷新');
 
+        // 10.5. 如果之前玩家识别失败，在这里重试
+        if (this._needsPlayerIdentification) {
+            console.log('[GameSession] 重新识别玩家（之前识别失败）...');
+            this.identifyMyPlayer();
+        }
+
         // 11. 缓存当前游戏的 Seat
         const playerAssets = SuiManager.instance.playerAssets;
         if (playerAssets) {
@@ -345,6 +354,8 @@ export class GameSession {
 
         if (!currentAddress) {
             console.warn('[GameSession] No current address, cannot identify my player');
+            // 标记需要重试（在 loadPlayerAssets 后）
+            this._needsPlayerIdentification = true;
             return;
         }
 
@@ -367,6 +378,8 @@ export class GameSession {
         if (myPlayerIndex >= 0) {
             this._myPlayer = this._players[myPlayerIndex];
             this._myPlayerIndex = myPlayerIndex;
+            // 清除重试标志
+            this._needsPlayerIdentification = false;
 
             console.log('[GameSession] My player identified:');
             console.log('  Player index:', myPlayerIndex);

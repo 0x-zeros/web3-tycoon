@@ -414,6 +414,83 @@ export class UIInGameDice extends UIBase {
         } catch (error) {
             console.error("[UIInGameDice] 掷骰子失败:", error);
 
+            // ===== 添加详细调试日志 =====
+            console.log('========== 掷骰子失败 - 详细调试信息 ==========');
+
+            try {
+                const session = GameInitializer.getInstance()?.getGameSession();
+
+                // 1. 打印 Game 对象完整 JSON（从 SuiManager 获取）
+                const { SuiManager } = await import('../../sui/managers/SuiManager');
+                const gameId = session?.getGameId();
+                if (gameId) {
+                    const game = await SuiManager.instance.getGameState(gameId);
+                    if (game) {
+                        console.log('【链上 Game 对象】:', JSON.stringify(game, (key, value) =>
+                            typeof value === 'bigint' ? value.toString() : value
+                        , 2));
+                    } else {
+                        console.log('【链上 Game 对象】: 查询失败');
+                    }
+                }
+
+                // 2. 打印 GameSession 状态
+                if (session) {
+                    console.log('【GameSession 状态】:');
+                    console.log('  游戏ID:', session.getGameId());
+                    console.log('  当前轮次 (round):', session.getRound());
+                    console.log('  轮内回合 (turn):', session.getTurn());
+                    console.log('  活跃玩家索引 (activePlayerIndex):', session.getActivePlayerIndex());
+                    console.log('  我的玩家索引 (myPlayerIndex):', session.getMyPlayerIndex());
+                    console.log('  是否已掷骰 (hasRolled):', session.hasRolled());
+                    console.log('  是否我的回合 (isMyTurn):', session.isMyTurn());
+
+                    // 3. 打印待决策详细信息
+                    const pendingDecision = session.getPendingDecision();
+                    if (pendingDecision) {
+                        console.log('【客户端 PendingDecision】:');
+                        console.log('  决策类型 (type):', pendingDecision.type);
+                        console.log('  相关地块ID (tileId):', pendingDecision.tileId);
+                        console.log('  相关金额 (amount):', pendingDecision.amount?.toString());
+
+                        // 打印建筑详细信息
+                        const building = session.getBuildingByTileId(pendingDecision.tileId);
+                        if (building) {
+                            console.log('  建筑信息:', {
+                                buildingId: building.buildingId,
+                                size: building.size,
+                                level: building.level,
+                                owner: building.owner,
+                                entranceTileIds: building.entranceTileIds
+                            });
+                        } else {
+                            console.log('  未找到建筑（地块ID:', pendingDecision.tileId, '）');
+                        }
+                    } else {
+                        console.log('【客户端 PendingDecision】: null');
+                    }
+
+                    // 4. 打印玩家列表
+                    const players = session.getPlayers();
+                    console.log('【玩家列表】:', players.map((p, i) => ({
+                        index: i,
+                        address: p.getOwner()?.substring(0, 10) + '...',
+                        pos: p.getPos(),
+                        cash: p.getCash()?.toString(),
+                        isActive: i === session.getActivePlayerIndex()
+                    })));
+                }
+
+                // 5. 打印 SuiManager 当前地址
+                console.log('【SuiManager】:');
+                console.log('  当前地址:', SuiManager.instance.currentAddress?.substring(0, 10) + '...');
+
+            } catch (debugError) {
+                console.error('[UIInGameDice] 打印调试日志失败:', debugError);
+            }
+
+            console.log('========== 调试信息结束 ==========');
+
             // ===== 停止骰子动画 =====
             DiceController.instance.stopRolling();
 

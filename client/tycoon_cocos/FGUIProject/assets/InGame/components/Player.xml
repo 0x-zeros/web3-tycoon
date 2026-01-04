@@ -2,6 +2,6 @@
 <component size="256,256">
   <displayList>
     <loader id="n1_ue83" name="avatar" xy="0,0" size="256,256" url="ui://8z385pimue83g" align="center" vAlign="middle" fill="scale"/>
-    <text id="n2_t5u9" name="title" xy="137,213" size="117,42" fontSize="30" color="#ffffff" autoSize="none" text="玩家1号、"/>
+    <text id="n2_t5u9" name="title" xy="137,213" size="117,42" fontSize="28" color="#ffffff" autoSize="none" text="玩家1号、"/>
   </displayList>
 </component>

@@ -146,7 +146,7 @@ export abstract class UIBase extends Component {
     /**
      * 显示UI（通过激活节点）
      */
-    public show(data?: any, isFullScreen: boolean = true): void {
+    public show(data?: any, isFullScreen: boolean): void {
         this._data = data;
 
         //设置组件全屏，即大小和逻辑屏幕大小一致。

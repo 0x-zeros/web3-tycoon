@@ -63,7 +63,7 @@ export class UIPlayerSelector {
         // 创建 PlayerSelect 组件
         this.panel = fgui.UIPackage.createObject('InGame', 'PlayerSelect').asCom;
         fgui.GRoot.inst.addChild(this.panel);
-        this.panel.makeFullScreen();
+        this.panel.center();
 
         // 获取组件引用
         this.playerList = this.panel.getChild('list') as fgui.GList;

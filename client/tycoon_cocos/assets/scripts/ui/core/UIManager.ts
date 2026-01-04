@@ -466,7 +466,7 @@ export class UIManager {
             }
             // 刷新现有UI的数据
             existingUI.refresh(data);
-            existingUI.show(data);
+            existingUI.show(data, true);
             return existingUI as T;
         } else if (existingUI) {
             if (this._config.debug) {
@@ -503,7 +503,7 @@ export class UIManager {
                 this._showAsComponent(uiInstance, config);
             }
 
-            uiInstance.show(data);
+            uiInstance.show(data, true);
             this._activeUIs.set(uiName, uiInstance);
 
             // 发送显示事件

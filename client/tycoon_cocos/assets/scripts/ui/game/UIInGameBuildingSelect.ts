@@ -221,7 +221,7 @@ export class UIInGameBuildingSelect extends UIBase {
         // 检查是否满足 2x2 lv0 升级条件
         if (this._shouldShowForCurrentDecision()) {
             console.log('[UIInGameBuildingSelect] Showing building type selection for 2x2 upgrade');
-            this.show();
+            this.show(undefined, false);
         }
     }
 

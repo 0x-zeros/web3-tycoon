@@ -77,7 +77,14 @@ export class UIInGameBuildingSelect extends UIBase {
 
         if (this.m_buildingList) {
             this.m_buildingList.itemRenderer = this.renderBuildingItem.bind(this);
-            console.log('[UIInGameBuildingSelect] Building list setup');
+
+            // 设置列表为单选模式（Radio 按钮需要）
+            this.m_buildingList.selectionMode = fgui.ListSelectionMode.Single;
+
+            // 监听列表项选中事件（而不是单个按钮的 onClick）
+            this.m_buildingList.on(fgui.Event.CLICK_ITEM, this._onItemClick, this);
+
+            console.log('[UIInGameBuildingSelect] Building list setup with Single selection mode');
         } else {
             console.error('[UIInGameBuildingSelect] Building list not found');
         }
@@ -216,13 +223,28 @@ export class UIInGameBuildingSelect extends UIBase {
         // 设置按钮可用性
         item.enabled = buildingInfo.enabled;
 
-        // 监听选中事件
-        item.onClick(() => {
-            if (buildingInfo.enabled) {
-                this.m_selectedBuildingType = buildingInfo.type;
-                console.log(`[UIInGameBuildingSelect] Selected building type: ${buildingInfo.name} (${buildingInfo.type})`);
-            }
-        });
+        console.log(`[UIInGameBuildingSelect] 列表项 ${index} 渲染完成，enabled:`, buildingInfo.enabled);
+    }
+
+    /**
+     * 列表项点击事件
+     */
+    private _onItemClick(index: number): void {
+        console.log(`[UIInGameBuildingSelect] 列表项被点击: ${index}`);
+
+        const buildingInfo = this.m_buildingTypes[index];
+        if (!buildingInfo) {
+            console.warn(`[UIInGameBuildingSelect] Building info not found at index ${index}`);
+            return;
+        }
+
+        if (!buildingInfo.enabled) {
+            console.log(`[UIInGameBuildingSelect] 建筑类型 "${buildingInfo.name}" 未启用`);
+            return;
+        }
+
+        this.m_selectedBuildingType = buildingInfo.type;
+        console.log(`[UIInGameBuildingSelect] 已选择建筑类型: ${buildingInfo.name} (type=${buildingInfo.type})`);
     }
 
     /**

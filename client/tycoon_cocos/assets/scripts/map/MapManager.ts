@@ -333,16 +333,16 @@ export class MapManager extends Component {
             Blackboard.instance.set("loading.progress", 0);
 
             // 3秒后自动隐藏Loading
-            setTimeout(async () => {
-                await UIManager.instance.hideUI("Loading").catch(console.error);
+            setTimeout(() => {
+                UIManager.instance.hideUI("Loading");
             }, 3000);
 
             return { success: false, error: error.toString() };
 
         } finally {
             // 防御性保护：确保Loading一定会被隐藏（延迟100ms执行）
-            setTimeout(async () => {
-                await UIManager.instance.hideUI("Loading").catch(console.error);
+            setTimeout(() => {
+                UIManager.instance.hideUI("Loading");
             }, 100);
         }
     }

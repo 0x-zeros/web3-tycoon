@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="256,256">
+  <controller name="dice_num" pages="0,1,1,2,2,3" selected="0"/>
   <displayList>
     <component id="n2_mumq" name="btn_roll" src="mumq5" fileName="components/Dice.xml" xy="30,33"/>
     <component id="n3_f49a" name="btn_skipTurn" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="0,-63" size="256,128">
       <Button title="结束回合"/>
     </component>
     <component id="n6_tsph" name="btn_diceNum_1" src="tsphp6" fileName="components/Dice_small.xml" xy="-14,63">
-      <Button title="1"/>
+      <Button checked="true" title="1" controller="dice_num" page="0"/>
     </component>
     <component id="n7_tsph" name="btn_diceNum_2" src="tsphp6" fileName="components/Dice_small.xml" xy="-28,127">
-      <Button title="2"/>
+      <Button title="2" controller="dice_num" page="1"/>
     </component>
     <component id="n8_tsph" name="btn_diceNum_3" src="tsphp6" fileName="components/Dice_small.xml" xy="-14,191">
-      <Button title="3"/>
+      <Button title="3" controller="dice_num" page="2"/>
     </component>
   </displayList>
 </component>

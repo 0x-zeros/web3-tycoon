@@ -7,6 +7,6 @@
     </image>
     <text id="n2_tsph" name="title" xy="1,1" size="62,66" fontSize="50" color="#996600" align="center" vAlign="middle" autoSize="none" text="1"/>
   </displayList>
-  <Button downEffect="scale" downEffectValue="0.8"/>
+  <Button mode="Radio" downEffect="scale" downEffectValue="1.2"/>
   <transition name="t0" autoPlay="true" autoPlayRepeat="-1"/>
 </component>

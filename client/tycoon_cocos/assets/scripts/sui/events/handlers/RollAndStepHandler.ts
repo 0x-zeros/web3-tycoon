@@ -20,6 +20,7 @@ import { EventTypes } from '../../../events/EventTypes';
 import { Blackboard } from '../../../events/Blackboard';
 import { UINotification } from '../../../ui/utils/UINotification';
 import { DecisionType } from '../../types/constants';
+import { getCardName } from '../../types/cards';
 import type { Player } from '../../types/game';
 
 /**
@@ -295,15 +296,19 @@ export class RollAndStepHandler {
 
             // 处理停留获得的卡牌（stop_type = CARD_STOP）
             if (step.stop_effect.card_gains && step.stop_effect.card_gains.length > 0) {
-                console.log('[RollAndStepHandler] 停留卡牌数据:', JSON.stringify(step.stop_effect.card_gains));
                 if (player) {
                     for (const cardDraw of step.stop_effect.card_gains) {
-                        player.addCard(cardDraw.kind, cardDraw.count);
+                        // Sui SDK 解析的结构体数据在 fields 字段中
+                        const fields = (cardDraw as any).fields || cardDraw;
+                        player.addCard(fields.kind, fields.count);
                     }
                     const cardNames = step.stop_effect.card_gains
-                        .map(c => `卡牌${c.kind} x${c.count}`)
+                        .map(c => {
+                            const fields = (c as any).fields || c;
+                            return `${getCardName(fields.kind)} x${fields.count}`;
+                        })
                         .join(', ');
-                    UINotification.info(`获得: ${cardNames}`, '卡牌');
+                    UINotification.info(`获得: ${cardNames}`, '卡牌', 4000, 'center');
                 }
             }
         }

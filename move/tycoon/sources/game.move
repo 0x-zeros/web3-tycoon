@@ -428,6 +428,7 @@ entry fun roll_and_step(
     game: &mut Game,
     seat: &Seat,
     path: vector<u16>,
+    dice_count: u8,
     auto_buy: bool,
     auto_upgrade: bool,
     prefer_rent_card: bool,
@@ -441,6 +442,8 @@ entry fun roll_and_step(
     validate_seat_and_turn(game, seat);
 
     assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
+    // 验证骰子数量（1-3）
+    assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
 
     game.has_rolled = true;
 
@@ -453,14 +456,27 @@ entry fun roll_and_step(
     let from_pos = player.pos;
     let has_move_ctrl = is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
 
-    let dice = if (has_move_ctrl) {
-        // 遥控骰子模式：路径长度就是步数，最多18步（3个骰子）
+    // 根据模式生成骰子值
+    let (dice_values, total_dice) = if (has_move_ctrl) {
+        // 遥控骰子模式：路径长度就是步数，最多18步
         assert!(!path.is_empty() && path.length() <= 18, EInvalidPath);
-        path.length() as u8
+        let total = path.length() as u8;
+        // 遥控模式：将总步数拆分为骰子值（用于动画显示）
+        let values = split_into_dice_values(total, dice_count);
+        (values, total)
     } else {
-        let dice_value = get_dice_value(game, player_index, &mut generator);
-        assert!(path.length() >= (dice_value as u64), EPathTooShort);
-        dice_value
+        // 普通模式：根据骰子数量生成随机值
+        let mut values = vector[];
+        let mut total = 0u8;
+        let mut i = 0u8;
+        while (i < dice_count) {
+            let value = generator.generate_u8_in_range(1, 6);
+            values.push_back(value);
+            total = total + value;
+            i = i + 1;
+        };
+        assert!(path.length() >= (total as u64), EPathTooShort);
+        (values, total)
     };
 
     let mut steps = vector[];
@@ -469,7 +485,7 @@ entry fun roll_and_step(
     execute_step_movement_with_choices(
         game,
         seat.player_index,
-        dice,
+        total_dice,
         &path,
         &mut steps,
         &mut cash_changes,
@@ -485,8 +501,8 @@ entry fun roll_and_step(
     let end_pos = end_player.pos;
 
     let mut used_path = vector[];
-    let mut i = 0;
-    while (i < dice) {
+    let mut i = 0u8;
+    while (i < total_dice) {
         used_path.push_back(path[i as u64]);
         i = i + 1;
     };
@@ -496,7 +512,7 @@ entry fun roll_and_step(
         player_addr,
         game.round,
         game.turn,
-        dice,
+        dice_values,
         used_path,
         from_pos,
         steps,
@@ -1054,6 +1070,36 @@ fun get_dice_value(game: &Game, player_index: u8, generator: &mut RandomGenerato
     };
 
     generator.generate_u8_in_range(1, 6)
+}
+
+/// 将总步数拆分为骰子值数组（用于遥控骰子模式的动画显示）
+/// 每个骰子值保持在1-6范围内，尽量均匀分配
+fun split_into_dice_values(total: u8, dice_count: u8): vector<u8> {
+    let mut values = vector[];
+
+    if (dice_count == 0 || total == 0) {
+        return values
+    };
+
+    // 计算基础值和余数
+    let base_value = total / dice_count;
+    let remainder = total % dice_count;
+
+    let mut i = 0u8;
+    while (i < dice_count) {
+        // 前 remainder 个骰子多分配1点
+        let value = if (i < remainder) {
+            base_value + 1
+        } else {
+            base_value
+        };
+        // 限制在1-6范围内（实际上遥控模式下不会超过6*3=18，每个骰子最多6）
+        let clamped = if (value > 6) { 6 } else if (value < 1) { 1 } else { value };
+        values.push_back(clamped);
+        i = i + 1;
+    };
+
+    values
 }
 
 // 执行玩家的逐步移动，处理路径上的所有事件

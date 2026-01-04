@@ -85,7 +85,7 @@ export interface RollAndStepActionEvent {
     player: string;
     round: number;
     turn_in_round: number;
-    dice: number;
+    dice_values: number[];   // 每颗骰子的值（长度1-3）
     path_choices: number[];  // 分叉选择序列
     from: number;
     steps: StepEffect[];     // 核心：每一步的详细信息

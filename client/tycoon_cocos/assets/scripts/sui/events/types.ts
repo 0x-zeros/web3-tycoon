@@ -5,7 +5,7 @@
  * Move源文件: move/tycoon/sources/events.move
  */
 
-import type { BuildingDecisionInfo, RentDecisionInfo } from './RollAndStepEvent';
+import type { BuildingDecisionInfo, RentDecisionInfo } from './types/RollAndStepEvent';
 
 // ===== Game Events 游戏事件 =====
 

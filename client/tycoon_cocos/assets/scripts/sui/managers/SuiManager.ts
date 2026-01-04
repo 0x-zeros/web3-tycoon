@@ -539,10 +539,11 @@ export class SuiManager {
      *
      * @param session GameSession 实例
      * @param path 路径数组（客户端使用行走偏好算法计算）
+     * @param diceCount 骰子数量（1-3）
      * @returns 掷骰结果
      */
-    public async rollAndStep(session: any, path: number[]): Promise<{
-        dice: number;
+    public async rollAndStep(session: any, path: number[], diceCount: number = 1): Promise<{
+        diceValues: number[];
         endPos: number;
         txHash: string;
     }> {
@@ -556,7 +557,8 @@ export class SuiManager {
 
         this._log('[SuiManager] Rolling dice and stepping...', {
             gameId,
-            path: path
+            path: path,
+            diceCount: diceCount
         });
 
         // 校验 Seat
@@ -571,7 +573,8 @@ export class SuiManager {
             gameId,
             seat.id,
             templateMapId,
-            path
+            path,
+            diceCount
         );
 
         // 签名并执行
@@ -581,7 +584,7 @@ export class SuiManager {
         const rollEvent = this._extractRollAndStepEvent(result);
 
         const response = {
-            dice: rollEvent.dice,
+            diceValues: rollEvent.dice_values,
             endPos: rollEvent.end_pos,
             txHash: result.digest
         } as any;
@@ -1077,7 +1080,7 @@ export class SuiManager {
         }
         // 如果没找到事件，返回默认值
         return {
-            dice: 0,
+            dice_values: [],
             end_pos: 0,
             from: 0,
             steps: [],

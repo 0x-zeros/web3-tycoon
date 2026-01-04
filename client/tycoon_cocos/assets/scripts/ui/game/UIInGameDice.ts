@@ -366,7 +366,8 @@ export class UIInGameDice extends UIBase {
             console.log("[UIInGameDice] 路径计算成功", {
                 path: pathResult.path,
                 steps: pathResult.actualSteps,
-                isRemoteDice: !!pendingPath
+                isRemoteDice: !!pendingPath,
+                diceCount: diceCount
             });
 
             // ===== 5. 播放骰子动画 =====
@@ -375,11 +376,11 @@ export class UIInGameDice extends UIBase {
             // ===== 6. 提交链上交易 =====
             console.log("[UIInGameDice] 提交链上交易...");
 
-            const result = await SuiManager.instance.rollAndStep(session, pathResult.path);
+            const result = await SuiManager.instance.rollAndStep(session, pathResult.path, diceCount);
 
             console.log("[UIInGameDice] 交易成功", {
                 txHash: result.txHash,
-                dice: result.dice,
+                diceValues: result.diceValues,
                 endPos: result.endPos
             });
 

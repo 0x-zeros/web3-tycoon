@@ -139,6 +139,7 @@ export class GameInteraction {
         seatId: string,
         mapTemplateId: string,
         path: number[],
+        diceCount: number = 1,
         autoBuy: boolean = true,
         autoUpgrade: boolean = true,
         preferRentCard: boolean = true
@@ -151,6 +152,7 @@ export class GameInteraction {
                 tx.object(gameId),
                 tx.object(seatId),
                 tx.pure.vector('u16', path),
+                tx.pure.u8(diceCount),           // 骰子数量（1-3）
                 tx.pure.bool(autoBuy),           // 自动购买无主建筑
                 tx.pure.bool(autoUpgrade),       // 自动升级自己的建筑
                 tx.pure.bool(preferRentCard),    // 优先使用免租卡支付租金

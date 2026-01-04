@@ -81,13 +81,13 @@ export class RollAndStepHandler {
             // 0. 发送链上骰子结果，让骰子动画停在正确的值
             // 骰子动画在 dice 点击时就开始播放（循环动画）
             // 收到链上真实值后，让动画停止在该值
-            // 无论是普通骰子还是遥控骰子，都以链上返回的 dice 值为准
+            // 现在返回 dice_values 数组，每个骰子有独立的值
             EventBus.emit(EventTypes.Dice.RollResult, {
-                value: event.dice,  // 链上真实骰子值（1-6 或遥控骰子时可能更大）
+                values: event.dice_values,  // 每颗骰子的值数组（长度1-3）
                 source: 'chain'
             });
 
-            console.log('[RollAndStepHandler] 发送骰子结果:', event.dice);
+            console.log('[RollAndStepHandler] 发送骰子结果:', event.dice_values);
 
             // TODO: DiceController 需要监听 Dice.RollResult 事件
             // 在收到后停止循环动画，播放减速到目标值的动画
@@ -185,10 +185,12 @@ export class RollAndStepHandler {
         // console.log('[RollAndStepHandler] GameSession 状态同步完成');
 
         // 目前使用轻量级更新（仅日志）
+        const totalDice = event.dice_values?.reduce((a, b) => a + b, 0) || 0;
         console.log('[RollAndStepHandler] 更新玩家位置', {
             from: event.from,
             to: event.end_pos,
-            dice: event.dice,
+            diceValues: event.dice_values,
+            totalSteps: totalDice,
             steps: event.steps.length
         });
 

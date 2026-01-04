@@ -385,25 +385,28 @@ export class DiceController {
     /**
      * 收到链上骰子结果
      */
-    private _onRollResult(data: { value: number }): void {
+    private _onRollResult(data: { values: number[] }): void {
         if (!this.isLooping) return;
 
-        console.log('[DiceController] 收到链上骰子值:', data.value);
+        console.log('[DiceController] 收到链上骰子值:', data.values);
 
-        // 停止循环，播放停止动画到目标值
-        this._stopAtValue(data.value);
+        // 停止循环，播放停止动画到各自目标值
+        this._stopAtValues(data.values);
 
         // 取消监听
         EventBus.off(EventTypes.Dice.RollResult, this._onRollResult, this);
     }
 
     /**
-     * 停止所有骰子在指定值（播放减速动画）
+     * 停止骰子在指定值数组（每个骰子独立显示）
+     * @param values 骰子值数组，每个骰子对应一个值（1-6）
      */
-    private _stopAtValue(value: number): void {
+    private _stopAtValues(values: number[]): void {
         this.isLooping = false;
         this.isRolling = true;
-        this.currentValue = value;
+
+        // 计算总和作为 currentValue（用于兼容）
+        this.currentValue = values.reduce((a, b) => a + b, 0);
 
         // 停止所有循环动画
         for (const loopTween of this.loopTweens) {
@@ -411,15 +414,20 @@ export class DiceController {
         }
         this.loopTweens = [];
 
-        console.log('[DiceController] 停止循环，播放减速动画到值:', value);
+        console.log('[DiceController] 停止循环，播放减速动画到各值:', values);
 
-        const targetRotation = DICE_FACE_ROTATIONS[value];
         let completedCount = 0;
 
-        // 为每个骰子播放停止动画
+        // 为每个骰子播放停止动画（使用各自的值）
         for (let i = 0; i < this.currentDiceCount; i++) {
             const node = this.diceNodes[i];
             Tween.stopAllByTarget(node);
+
+            // 获取该骰子的目标值（如果values长度不够，默认使用1）
+            const diceValue = values[i] || 1;
+            // 确保值在1-6范围内
+            const clampedValue = Math.max(1, Math.min(6, diceValue));
+            const targetRotation = DICE_FACE_ROTATIONS[clampedValue];
 
             const startPos = node.position.clone();
 
@@ -449,7 +457,7 @@ export class DiceController {
                             this.pendingCallback = null;
                         }
 
-                        console.log('[DiceController] 所有骰子动画完成，停在值:', value);
+                        console.log('[DiceController] 所有骰子动画完成，停在值:', values);
                     }
                 })
                 .start();

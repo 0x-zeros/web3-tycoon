@@ -464,7 +464,6 @@ entry fun roll_and_step(
 
     let mut steps = vector[];
     let mut cash_changes = vector[];
-    let allow_turn_first_step = has_move_ctrl;
 
     execute_step_movement_with_choices(
         game,
@@ -476,7 +475,6 @@ entry fun roll_and_step(
         auto_buy,
         auto_upgrade,
         prefer_rent_card,
-        allow_turn_first_step,
         game_data,
         map,
         &mut generator
@@ -1079,15 +1077,20 @@ fun execute_step_movement_with_choices(
     auto_buy: bool,
     auto_upgrade: bool,
     prefer_rent_card: bool,
-    allow_turn_first_step: bool,
     game_data: &GameData,
     map: &map::MapTemplate,
     generator: &mut RandomGenerator
 ) {
 
-    let (from_pos, mut last_tile_id, mut next_tile_id, is_frozen) = {
+    let (from_pos, mut last_tile_id, mut next_tile_id, is_frozen, has_move_ctrl) = {
         let player = &game.players[player_index as u64];
-        (player.pos, player.last_tile_id, player.next_tile_id, is_buff_active(player, types::BUFF_FROZEN(), game.round))
+        (
+            player.pos,
+            player.last_tile_id,
+            player.next_tile_id,
+            is_buff_active(player, types::BUFF_FROZEN(), game.round),
+            is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round)
+        )
     };
 
     if (is_frozen) {
@@ -1116,7 +1119,8 @@ fun execute_step_movement_with_choices(
         return
     };
 
-    if (allow_turn_first_step) {
+    // 遥控骰子buff：允许第一步转向，清除强制方向
+    if (has_move_ctrl) {
         next_tile_id = 65535;
     };
 
@@ -1127,8 +1131,9 @@ fun execute_step_movement_with_choices(
     while (i < dice) {
         let next_pos = path_choices[i as u64];
 
-        // 第一步：检查是否有强制目标（转向卡等）
-        if (i == 0 && allow_turn_first_step) {
+        // 第一步：检查是否有强制目标（转向卡等）或遥控骰子buff
+        if (i == 0 && has_move_ctrl) {
+            // 遥控骰子：只验证邻居关系，允许回头
             assert!(is_valid_neighbor(map, current_pos, next_pos, 65535), EInvalidPath);
         } else if (i == 0 && next_tile_id != 65535) {
             assert!(next_pos == next_tile_id, EInvalidPath);

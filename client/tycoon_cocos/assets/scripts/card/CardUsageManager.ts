@@ -118,6 +118,29 @@ export class CardUsageManager {
 
         console.log(`[CardUsageManager] 用户选择tile: ${selectedTile}`);
 
+        // 计算路径，获取第一步的tile用于更新朝向
+        const mapTemplate = session?.getMapTemplate();
+        if (mapTemplate) {
+            const graph = new MapGraph(mapTemplate);
+            const pathfinder = new BFSPathfinder(graph);
+            const lastTileId = myPlayer.getLastTileId() ?? INVALID_TILE_ID;
+            const maxRange = card.getMaxRange();
+
+            const pathInfo = pathfinder.findPathWithConstraints(
+                currentPos,
+                selectedTile,
+                maxRange,
+                { lastTileId, allowBacktrackFirstStep: true }
+            );
+
+            if (pathInfo && pathInfo.path.length > 1) {
+                // path[0] 是当前位置，path[1] 是第一步要走的tile
+                const firstStepTile = pathInfo.path[1];
+                myPlayer.setNextTileId(firstStepTile);
+                console.log(`[CardUsageManager] 设置nextTileId为第一步: ${firstStepTile}`);
+            }
+        }
+
         // 构建参数
         const params = await this.buildTileCardParams(card, currentPos, selectedTile);
 

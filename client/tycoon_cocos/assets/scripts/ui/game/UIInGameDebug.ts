@@ -75,6 +75,9 @@ export class UIInGameDebug extends UIBase {
 
         // 监听玩家位置变化（用于更新方向显示）
         EventBus.on(EventTypes.Player.PositionChanged, this._onPlayerPositionChanged, this);
+
+        // 监听玩家状态变化（用于更新方向显示，当next_tile_id变化时）
+        EventBus.on(EventTypes.Player.StatusChange, this._onPlayerStatusChange, this);
     }
 
     /**
@@ -92,6 +95,7 @@ export class UIInGameDebug extends UIBase {
         EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
         EventBus.off(EventTypes.Game.RoundChanged, this._onRoundChanged, this);
         EventBus.off(EventTypes.Player.PositionChanged, this._onPlayerPositionChanged, this);
+        EventBus.off(EventTypes.Player.StatusChange, this._onPlayerStatusChange, this);
 
         super.unbindEvents();
     }
@@ -264,6 +268,28 @@ export class UIInGameDebug extends UIBase {
      */
     private _onPlayerPositionChanged(data: any): void {
         // 只关心 myPlayer 的位置变化
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) return;
+
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer || data.playerIndex !== myPlayer.getPlayerIndex()) {
+            return;
+        }
+
+        this._refreshDebugInfo();
+    }
+
+    /**
+     * 玩家状态变化处理（刷新方向显示，当next_tile_id变化时）
+     */
+    private _onPlayerStatusChange(data: any): void {
+        console.log('[UIInGameDebug] _onPlayerStatusChange received:', data);
+
+        // 只关心 next_tile_id 变化
+        if (data.statusType !== 'next_tile_id') return;
+
+        console.log('[UIInGameDebug] next_tile_id changed, refreshing debug info');
+
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) return;
 

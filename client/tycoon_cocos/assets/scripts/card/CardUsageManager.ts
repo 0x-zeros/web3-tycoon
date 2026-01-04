@@ -67,19 +67,19 @@ export class CardUsageManager {
         }
 
         if (!session.isMyTurn()) {
-            await UIMessage.warning('不是你的回合');
+            UINotification.warning('不是你的回合', undefined, undefined, 'center');
+            return;
+        }
+
+        // 检查是否有待决策（优先级最高）
+        if (session.getPendingDecision()) {
+            UINotification.warning('有待决策事项，请先处理', undefined, undefined, 'center');
             return;
         }
 
         // 检查是否已掷骰
         if (session.hasRolled && session.hasRolled()) {
-            await UIMessage.warning('本回合已掷骰，无法使用卡片');
-            return;
-        }
-
-        // 检查是否有待决策
-        if (session.getPendingDecision()) {
-            await UIMessage.warning('有待决策事项，请先处理');
+            UINotification.warning('本回合已掷骰，无法使用卡片', undefined, undefined, 'center');
             return;
         }
 

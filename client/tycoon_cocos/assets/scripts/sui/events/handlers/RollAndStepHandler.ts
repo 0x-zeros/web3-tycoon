@@ -213,6 +213,13 @@ export class RollAndStepHandler {
         const player = session.getPlayerByAddress(event.player);
         if (!player) return;
 
+        // 如果 from = to，说明被冰冻，跳过移动动画
+        if (step.from_tile === step.to_tile) {
+            console.log('[RollAndStepHandler] 玩家被冰冻，原地停留');
+            UINotification.info('被冰冻了，无法移动！', '冰冻');
+            return;
+        }
+
         // 获取目标 tile 的顶部中心点
         const targetCenter = session.getTileWorldCenter(step.to_tile);
 

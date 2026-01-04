@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="860,520">
+<component size="1416,520">
   <displayList>
-    <image id="n4_tsph" name="n4" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="860,520"/>
-    <list id="n0_n6n6" name="list" xy="24,120" size="815,256" layout="row" overflow="scroll" scroll="horizontal" colGap="20" defaultItem="ui://8z385pimn6n6oy" autoClearItems="true">
+    <image id="n4_tsph" name="n4" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1421,520"/>
+    <list id="n0_n6n6" name="list" xy="24,120" size="1387,256" layout="row" scroll="horizontal" colGap="25" defaultItem="ui://8z385pimn6n6oy" autoClearItems="true">
+      <item/>
       <item/>
       <item/>
       <item/>
       <item/>
     </list>
-    <text id="n1_n6n6" name="title" xy="203,5" size="475,74" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="请选择建筑类型" input="true"/>
-    <component id="n2_n6n6" name="btn_upgrade" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="589,422" size="248,74">
+    <text id="n1_n6n6" name="title" xy="505,6" size="475,74" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="请选择建筑类型" input="true"/>
+    <component id="n2_n6n6" name="btn_upgrade" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="1155,422" size="248,74">
       <Button title="升级"/>
     </component>
     <component id="n3_n6n6" name="btn_skip" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="24,422" size="248,74">

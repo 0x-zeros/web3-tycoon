@@ -949,7 +949,12 @@ export class GameMap extends Component {
                         ? new Vec3(baseScale, 0.1, baseScale)
                         : new Vec3(baseScale * 2, 0.1, baseScale * 2);
 
-                    const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(level, owner);
+                    const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(
+                        level,
+                        owner,
+                        gameBuilding?.size || 1,           // 传递建筑大小
+                        gameBuilding?.buildingType || 0    // 传递建筑类型
+                    );
 
                     await actor.setConfig({
                         components: [{
@@ -1843,10 +1848,12 @@ export class GameMap extends Component {
         const { CompositeVoxelActor } = await import('../../voxel/composite/CompositeVoxelActor');
         const actor = buildingNode.addComponent(CompositeVoxelActor);
 
-        // 4. 生成标签纹理（根据 level 和 owner）
+        // 4. 生成标签纹理（根据 level、owner、size、buildingType）
         const labelTexture = NumberTextureGenerator.getBuildingLabelTexture(
             gameBuilding.level,
-            gameBuilding.owner
+            gameBuilding.owner,
+            gameBuilding.size,          // 传递建筑大小
+            gameBuilding.buildingType   // 传递建筑类型
         );
 
         // 5. 配置并渲染

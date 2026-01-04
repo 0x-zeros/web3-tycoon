@@ -8,6 +8,7 @@
  */
 
 import { Texture2D, ImageAsset } from 'cc';
+import { BuildingType } from '../../sui/types/constants';
 
 /**
  * 数字纹理生成选项
@@ -117,11 +118,24 @@ export class NumberTextureGenerator {
         // 绘制文字（优先级: customText > prefix+num > num）
         const text = options?.customText ||
                      (prefix ? `${prefix}${num}` : num.toString());
+
+        // 判断是否需要多行显示（检测空格）
+        const lines = text.includes(' ') ? text.split(' ') : [text];
+        const lineHeight = fontSize * 1.2;  // 行间距系数
+        const totalHeight = lines.length * lineHeight;
+
         ctx.fillStyle = textColor;
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, size / 2, size / 2);
+
+        // 垂直居中：从中心点向上偏移半个总高度，然后逐行绘制
+        const startY = size / 2 - totalHeight / 2 + lineHeight / 2;
+
+        lines.forEach((line, index) => {
+            const y = startY + index * lineHeight;
+            ctx.fillText(line, size / 2, y);
+        });
 
         // 转换为Cocos Texture2D
         const image = new ImageAsset();
@@ -349,19 +363,29 @@ export class NumberTextureGenerator {
     }
 
     /**
-     * 生成建筑标签纹理（空地/等级）
+     * 生成建筑标签纹理（空地/等级/类型）
      *
      * @param level 建筑等级（0-5）
      * @param owner 拥有者索引（255=无主，0-3=玩家）
+     * @param size 建筑大小（1或2，默认1）
+     * @param buildingType 建筑类型（0=无类型，20-24=各类型，默认0）
      * @returns Texture2D
      */
-    static getBuildingLabelTexture(level: number, owner: number): Texture2D {
-        const text = this.getBuildingLevelText(level);
+    static getBuildingLabelTexture(
+        level: number,
+        owner: number,
+        size: number = 1,
+        buildingType: number = 0
+    ): Texture2D {
+        const text = this.getBuildingLevelText(level, size, buildingType);
         const textColor = this.getBuildingOwnerColor(owner);
+
+        // 动态字体大小：2x2长文本（两行）用16px，其他用20px
+        const fontSize = (size === 2 && buildingType > 0) ? 16 : 20;
 
         return this.getNumberTexture(0, {
             size: 64,
-            fontSize: 22,
+            fontSize: fontSize,
             bgColor: 'rgba(0, 0, 0, 0)',  // 透明背景
             textColor: textColor,          // 根据 owner 动态颜色
             withBorder: true,
@@ -373,16 +397,54 @@ export class NumberTextureGenerator {
     /**
      * 获取建筑等级文字
      *
-     * @param level 建筑等级
-     * @returns 等级文字
+     * @param level 建筑等级（0-5）
+     * @param size 建筑大小（1或2）
+     * @param buildingType 建筑类型（0=无类型）
+     * @returns 等级文字（如"空地"、"1级"、"1级 土地庙"）
      */
-    private static getBuildingLevelText(level: number): string {
+    private static getBuildingLevelText(
+        level: number,
+        size: number = 1,
+        buildingType: number = 0
+    ): string {
+        // Level 0: 所有建筑都显示"空地"
         if (level === 0) {
             return '空地';
-        } else if (level >= 1 && level <= 5) {
+        }
+
+        // 1x1建筑: 只显示等级
+        if (size === 1) {
             return `${level}级`;
-        } else {
-            return '未知';
+        }
+
+        // 2x2建筑: level >= 1 时必然有类型，显示"X级 类型名"
+        if (size === 2) {
+            const typeName = this.getBuildingTypeDisplayName(buildingType);
+            // 防御性检查：如果类型名为空（理论上不应该发生），只返回等级
+            if (!typeName) {
+                return `${level}级`;
+            }
+            return `${level}级 ${typeName}`;
+        }
+
+        // 兜底
+        return `${level}级`;
+    }
+
+    /**
+     * 获取建筑类型的显示名称
+     *
+     * @param buildingType BuildingType枚举值
+     * @returns 中文类型名称
+     */
+    private static getBuildingTypeDisplayName(buildingType: number): string {
+        switch (buildingType) {
+            case BuildingType.TEMPLE:      return '土地庙';
+            case BuildingType.RESEARCH:    return '研究所';
+            case BuildingType.OIL:         return '石油公司';
+            case BuildingType.COMMERCIAL:  return '商业中心';
+            case BuildingType.HOTEL:       return '大饭店';
+            default:                        return '';  // 返回空字符串（作为防御）
         }
     }
 

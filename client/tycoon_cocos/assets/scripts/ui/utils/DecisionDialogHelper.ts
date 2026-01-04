@@ -206,9 +206,18 @@ export class DecisionDialogHelper {
     private static async _executeBuyBuilding(session: any): Promise<void> {
         try {
             const suiManager = SuiManager.instance;
+
+            // 检查 Seat 是否存在
+            const seat = session.getMySeat();
+            if (!seat) {
+                console.error('[DecisionDialogHelper] Seat not loaded');
+                UINotification.error('游戏状态未加载完成');
+                return;
+            }
+
             const tx = suiManager.gameClient.game.buildBuyBuildingTx(
                 session.getGameId(),
-                session.getMySeat().id,
+                seat.id,
                 session.getTemplateMapId()
             );
 
@@ -230,9 +239,18 @@ export class DecisionDialogHelper {
     private static async _executeUpgradeBuilding(session: any): Promise<void> {
         try {
             const suiManager = SuiManager.instance;
+
+            // 检查 Seat 是否存在
+            const seat = session.getMySeat();
+            if (!seat) {
+                console.error('[DecisionDialogHelper] Seat not loaded');
+                UINotification.error('游戏状态未加载完成');
+                return;
+            }
+
             const tx = suiManager.gameClient.game.buildUpgradeBuildingTx(
                 session.getGameId(),
-                session.getMySeat().id,
+                seat.id,
                 session.getTemplateMapId()
             );
 
@@ -257,23 +275,22 @@ export class DecisionDialogHelper {
     private static async _executePayRent(session: any, useRentFree: boolean): Promise<void> {
         try {
             const suiManager = SuiManager.instance;
-            let tx;
 
-            if (useRentFree) {
-                // 使用免租卡支付
-                tx = suiManager.gameClient.game.buildPayRentWithCardTx(
-                    session.getGameId(),
-                    session.getMySeat().id,
-                    session.getTemplateMapId()
-                );
-            } else {
-                // 使用现金支付
-                tx = suiManager.gameClient.game.buildPayRentWithCashTx(
-                    session.getGameId(),
-                    session.getMySeat().id,
-                    session.getTemplateMapId()
-                );
+            // 检查 Seat 是否存在
+            const seat = session.getMySeat();
+            if (!seat) {
+                console.error('[DecisionDialogHelper] Seat not loaded');
+                UINotification.error('游戏状态未加载完成');
+                return;
             }
+
+            // 使用统一的 buildDecideRentPaymentTx 方法
+            const tx = suiManager.gameClient.game.buildDecideRentPaymentTx(
+                session.getGameId(),
+                seat.id,
+                session.getTemplateMapId(),
+                useRentFree  // true: 使用免租卡, false: 现金支付
+            );
 
             await suiManager.signAndExecuteTransaction(tx);
             UINotification.success(useRentFree ? '已使用免租卡' : '租金支付成功');
@@ -293,9 +310,18 @@ export class DecisionDialogHelper {
     private static async _executeSkipDecision(session: any): Promise<void> {
         try {
             const suiManager = SuiManager.instance;
+
+            // 检查 Seat 是否存在
+            const seat = session.getMySeat();
+            if (!seat) {
+                console.error('[DecisionDialogHelper] Seat not loaded');
+                UINotification.error('游戏状态未加载完成');
+                return;
+            }
+
             const tx = suiManager.gameClient.game.buildSkipBuildingDecisionTx(
                 session.getGameId(),
-                session.getMySeat().id,
+                seat.id,
                 session.getTemplateMapId()
             );
 

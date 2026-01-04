@@ -178,6 +178,9 @@ export class RentDecisionHandler {
                 }
             }
 
+            // 7. 清除待决策状态
+            session.clearPendingDecision();
+
             console.log('[RentDecisionHandler] RentDecisionEvent 处理完成');
 
         } catch (error) {

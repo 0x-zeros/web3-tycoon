@@ -108,8 +108,8 @@ export class UIInGameBuildingSelect extends UIBase {
      * 绑定事件
      */
     protected bindEvents(): void {
-        // 监听建筑决策事件
-        EventBus.on(EventTypes.Move.BuildingDecision, this._onBuildingDecision, this);
+        // 监听决策待处理事件（原来的 Move.BuildingDecision 从未被 emit）
+        EventBus.on(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
         EventBus.on(EventTypes.Game.SessionReset, this._onSessionReset, this);
     }
 
@@ -117,7 +117,7 @@ export class UIInGameBuildingSelect extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
-        EventBus.off(EventTypes.Move.BuildingDecision, this._onBuildingDecision, this);
+        EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
         EventBus.off(EventTypes.Game.SessionReset, this._onSessionReset, this);
         super.unbindEvents();
     }
@@ -206,19 +206,21 @@ export class UIInGameBuildingSelect extends UIBase {
     }
 
     /**
-     * 处理建筑决策事件
+     * 处理待决策事件
+     * 当收到 DecisionPending 事件时，判断是否为 2x2 建筑 lv0→lv1 升级
      */
-    private _onBuildingDecision(data: any): void {
-        console.log('[UIInGameBuildingSelect] BuildingDecision event received', data);
+    private _onDecisionPending(data: any): void {
+        console.log('[UIInGameBuildingSelect] DecisionPending event received', data);
 
-        const session = GameInitializer.getInstance()?.getGameSession();
+        const session = data.session || GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.warn('[UIInGameBuildingSelect] GameSession not found');
             return;
         }
 
+        // 检查是否满足 2x2 lv0 升级条件
         if (this._shouldShowForCurrentDecision()) {
-            console.log('[UIInGameBuildingSelect] Showing building type selection');
+            console.log('[UIInGameBuildingSelect] Showing building type selection for 2x2 upgrade');
             this.show();
         }
     }

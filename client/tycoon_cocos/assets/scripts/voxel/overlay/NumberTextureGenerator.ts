@@ -49,15 +49,16 @@ export class NumberTextureGenerator {
         num: number,
         options?: NumberTextureOptions
     ): Texture2D {
-        // 生成缓存键（包含主要参数）
+        // 生成缓存键（包含主要参数，包括 textColor 以区分不同 owner）
         const prefix = options?.prefix || '';
         const bgColor = options?.bgColor || 'default';
+        const textColor = options?.textColor || 'default';
         const customText = options?.customText || '';
 
-        // 缓存键：customText优先，否则用prefix+num
+        // 缓存键：包含 textColor 以确保不同 owner 的纹理不会被复用
         const cacheKey = customText
-            ? `custom_${customText}_${bgColor}`
-            : `${prefix}${num}_${bgColor}`;
+            ? `custom_${customText}_${bgColor}_${textColor}`
+            : `${prefix}${num}_${bgColor}_${textColor}`;
 
         // 检查缓存
         if (this.cache.has(cacheKey)) {

@@ -14,7 +14,7 @@ import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { UIInGamePlaySetting } from "./UIInGamePlaySetting";
 import { MapManager } from "../../map/MapManager";
-import { DecisionType } from "../../sui/types/constants";
+import { DecisionType, BuildingSize } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
 
@@ -527,7 +527,18 @@ export class UIInGame extends UIBase {
                 DecisionDialogHelper.showBuyDialog(decision, session);
                 break;
             case DecisionType.UPGRADE_PROPERTY:
-                DecisionDialogHelper.showUpgradeDialog(decision, session);
+                // 检查是否是 2x2 建筑 lv0→lv1 升级（需要选择建筑类型）
+                const building = session.getBuildingByTileId(decision.tileId);
+                if (building &&
+                    building.getSize() === BuildingSize.SIZE_2X2 &&
+                    building.getLevel() === 0) {
+                    // 2x2 lv0 升级由 UIInGameBuildingSelect 处理
+                    console.log('[UIInGame] 2x2 lv0 升级，由 BuildingSelect 处理');
+                    // 不调用 DecisionDialogHelper，事件已经通过 EventBus 通知到 UIInGameBuildingSelect
+                } else {
+                    // 普通升级使用 DecisionDialogHelper
+                    DecisionDialogHelper.showUpgradeDialog(decision, session);
+                }
                 break;
             case DecisionType.PAY_RENT:
                 DecisionDialogHelper.showRentDialog(decision, session);

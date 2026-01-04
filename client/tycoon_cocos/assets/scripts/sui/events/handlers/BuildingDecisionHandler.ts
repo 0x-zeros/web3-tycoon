@@ -160,6 +160,9 @@ export class BuildingDecisionHandler {
                 `玩家${player.getPlayerIndex() + 1}${decisionTypeStr}了${buildingName}，花费${amount.toString()}`
             );
 
+            // 9. 清除待决策状态
+            session.clearPendingDecision();
+
             console.log('[BuildingDecisionHandler] BuildingDecisionEvent 处理完成');
 
         } catch (error) {

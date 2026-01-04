@@ -115,6 +115,9 @@ export class DecisionSkippedHandler {
                 `玩家${player.getPlayerIndex() + 1}放弃${decisionTypeStr}${buildingName}`
             );
 
+            // 6. 清除待决策状态
+            session.clearPendingDecision();
+
             console.log('[DecisionSkippedHandler] DecisionSkippedEvent 处理完成', {
                 player: player.getPlayerIndex(),
                 decisionType: decisionTypeStr,

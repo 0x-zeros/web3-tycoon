@@ -31,7 +31,7 @@ export class UIPlayerDetail extends UIBase {
     // 子组件
     private m_playerInfo: fgui.GComponent;
     private m_cardList: fgui.GList;
-    private m_btnClose: fgui.GButton;
+    private m_btnClose: fgui.GComponent;
 
     // PlayerInfo 子元素
     private m_avatar: fgui.GLoader;
@@ -69,14 +69,18 @@ export class UIPlayerDetail extends UIBase {
             }
         }
 
-        // 获取关闭按钮
-        this.m_btnClose = this.getChild('btn_close')?.asButton;
+        // 获取关闭按钮（Button13 是组件类型，用 asCom 获取）
+        this.m_btnClose = this.getButton('btn_close');
+        // console.log('[UIPlayerDetail] btn_close:', this.m_btnClose ? 'found' : 'not found');
     }
 
     protected bindEvents(): void {
         // 关闭按钮点击
         if (this.m_btnClose) {
             this.m_btnClose.onClick(this._onCloseClick, this);
+            console.log('[UIPlayerDetail] 关闭按钮事件已绑定');
+        } else {
+            console.warn('[UIPlayerDetail] 关闭按钮未找到，无法绑定事件');
         }
 
         // 监听卡牌变化事件
@@ -343,7 +347,11 @@ export class UIPlayerDetail extends UIBase {
      * 关闭按钮点击
      */
     private _onCloseClick(): void {
-        this.hide();
+        console.log('[UIPlayerDetail] 关闭按钮点击');
+        // 直接设置面板不可见
+        if (this._panel) {
+            this._panel.visible = false;
+        }
     }
 
     /**

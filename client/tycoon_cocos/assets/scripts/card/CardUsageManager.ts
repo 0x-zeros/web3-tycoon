@@ -44,6 +44,13 @@ export class CardUsageManager {
     }
 
     /**
+     * 清除当前使用的卡牌状态（供外部调用）
+     */
+    public clearCurrentCard(): void {
+        this.currentUsingCard = null;
+    }
+
+    /**
      * 使用卡片（主入口）
      */
     async useCard(card: Card): Promise<void> {

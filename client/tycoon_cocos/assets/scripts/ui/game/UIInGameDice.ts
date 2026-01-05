@@ -27,6 +27,8 @@ import { GameInitializer } from "../../core/GameInitializer";
 import { handleSuiTransactionError } from "../../sui/utils/TransactionErrorHandler";
 import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
 import type { PendingDecisionInfo } from "../../core/GameSession";
+import { UICardTileSelector } from './UICardTileSelector';
+import { CardUsageManager } from '../../card/CardUsageManager';
 
 const { ccclass } = _decorator;
 
@@ -278,6 +280,13 @@ export class UIInGameDice extends UIBase {
      */
     private async _onRollDiceOnSui(): Promise<void> {
         console.log("[UIInGameDice] 掷骰子按钮点击（链上版本）");
+
+        // 如果正在选择卡牌目标tile，先取消选择
+        if (UICardTileSelector.isSelecting()) {
+            console.log('[UIInGameDice] 掷骰子前取消卡牌tile选择');
+            UICardTileSelector.cancelSelection();
+            CardUsageManager.instance.clearCurrentCard();
+        }
 
         // 禁用骰子按钮，防止重复点击
         if (this.m_btn_roll) {

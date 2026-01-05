@@ -179,6 +179,19 @@ export class UIInGamePlayer extends UIBase {
         if (buffsList) {
             this.renderBuffsList(buffsList, player, session);
         }
+
+        // 清除旧的点击 handler
+        const existingClickHandler = (item as any).__playerClickHandler as Function | undefined;
+        if (existingClickHandler) {
+            item.offClick(existingClickHandler, this);
+        }
+
+        // 添加点击事件 - 显示玩家详情面板
+        const clickHandler = () => {
+            EventBus.emit(EventTypes.UI.ShowPlayerDetail, { playerIndex: index });
+        };
+        (item as any).__playerClickHandler = clickHandler;
+        item.onClick(clickHandler, this);
     }
 
     /**

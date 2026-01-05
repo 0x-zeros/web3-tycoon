@@ -44,7 +44,9 @@ export const EventTypes = {
         /** PlaySetting 面板关闭 */
         PlaySettingClosed: "ui_play_setting_closed",
         /** SuiConfig 面板关闭 */
-        SuiConfigClosed: "ui_sui_config_closed"
+        SuiConfigClosed: "ui_sui_config_closed",
+        /** 显示玩家详情面板 */
+        ShowPlayerDetail: "ui_show_player_detail"
     },
 
     /** 地图相关事件 */

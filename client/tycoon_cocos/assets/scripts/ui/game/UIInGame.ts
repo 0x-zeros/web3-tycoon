@@ -13,6 +13,7 @@ import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { UIInGamePlaySetting } from "./UIInGamePlaySetting";
+import { UIPlayerDetail } from "./UIPlayerDetail";
 import { MapManager } from "../../map/MapManager";
 import { DecisionType, BuildingSize } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
@@ -36,6 +37,7 @@ export class UIInGame extends UIBase {
     private m_infoUI: UIInGameInfo | null = null;
     private m_buildingSelectUI: UIInGameBuildingSelect | null = null;
     private m_playSettingUI: UIInGamePlaySetting | null = null;
+    private m_playerDetailUI: UIPlayerDetail | null = null;
 
     // ================ 控制器 ================
     private m_modeController: fgui.Controller;
@@ -167,6 +169,17 @@ export class UIInGame extends UIBase {
         this._settingsBtn = this.getButton("btnSettings");
         this._bagBtn = this.getButton("btnBag");
 
+        // m_playerDetailUI
+        const playerDetailComponent = this.getChild('playerDetail')?.asCom;
+        if (playerDetailComponent) {
+            this.m_playerDetailUI = playerDetailComponent.node.addComponent(UIPlayerDetail);
+            this.m_playerDetailUI.setUIName("PlayerDetail");
+            this.m_playerDetailUI.setPanel(playerDetailComponent);
+            this.m_playerDetailUI.init();
+            this.m_playerDetailUI.hide();
+            console.log('[UIInGame] PlayerDetail UI component created');
+        }
+
         // 初始化时主动设置一次 mode 控制器（防止错过 EditModeChanged 事件）
         this.updateModeController();
     }
@@ -219,6 +232,9 @@ export class UIInGame extends UIBase {
 
         // 监听 GameSession 加载完成事件，确保在正确时机检查待决策
         EventBus.on(EventTypes.Game.SessionLoaded, this._onSessionLoaded, this);
+
+        // 监听显示玩家详情事件
+        EventBus.on(EventTypes.UI.ShowPlayerDetail, this._onShowPlayerDetail, this);
     }
 
     /**
@@ -296,6 +312,9 @@ export class UIInGame extends UIBase {
         // 移除待决策事件监听
         EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionPending, this);
         EventBus.off(EventTypes.Game.SessionLoaded, this._onSessionLoaded, this);
+
+        // 移除显示玩家详情事件监听
+        EventBus.off(EventTypes.UI.ShowPlayerDetail, this._onShowPlayerDetail, this);
 
         super.unbindEvents();
     }
@@ -663,6 +682,33 @@ export class UIInGame extends UIBase {
      */
     public isDebugVisible(): boolean {
         return this.m_debugUI?.panel?.visible || false;
+    }
+
+    /**
+     * 显示玩家详情面板
+     */
+    public showPlayerDetail(playerIndex: number): void {
+        if (!this.m_playerDetailUI) {
+            console.warn('[UIInGame] PlayerDetail UI not initialized');
+            return;
+        }
+
+        this.m_playerDetailUI.show({ playerIndex });
+        console.log('[UIInGame] 显示玩家详情:', playerIndex);
+    }
+
+    /**
+     * 隐藏玩家详情面板
+     */
+    public hidePlayerDetail(): void {
+        this.m_playerDetailUI?.hide();
+    }
+
+    /**
+     * 显示玩家详情事件处理
+     */
+    private _onShowPlayerDetail(data: { playerIndex: number }): void {
+        this.showPlayerDetail(data.playerIndex);
     }
 
     /**

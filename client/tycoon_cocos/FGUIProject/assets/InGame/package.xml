@@ -29,6 +29,7 @@
     <component id="t5u9p4" name="Player.xml" path="/components/"/>
     <component id="t5u9p5" name="PlayerSelect.xml" path="/" exported="true"/>
     <component id="tsphp6" name="Dice_small.xml" path="/components/"/>
+    <component id="j5iwp7" name="PlayerDetail.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

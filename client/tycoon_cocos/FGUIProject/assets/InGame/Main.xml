@@ -50,5 +50,6 @@
       <gearDisplay controller="mode" pages="0"/>
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
+    <component id="n17_j5iw" name="playerDetail" src="j5iwp7" fileName="components/PlayerDetail.xml" xy="134,242" visible="false"/>
   </displayList>
 </component>

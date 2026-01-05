@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1670,600">
+  <displayList>
+    <image id="n2_j5iw" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1670,600">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <component id="n0_j5iw" name="playerInfo" src="ue83j" fileName="components/PlayerInfo.xml" xy="3,4"/>
+    <component id="n1_j5iw" name="cardList" src="mumq6" fileName="components/CardList.xml" xy="0,337"/>
+    <component id="n8_j5iw" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="1404,10"/>
+  </displayList>
+</component>

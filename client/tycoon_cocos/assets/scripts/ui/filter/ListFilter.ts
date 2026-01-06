@@ -120,9 +120,14 @@ export class ListFilter<T> {
         const fieldValue = field.extractor(item);
         const search = searchValue.toLowerCase();
 
+        // 空值处理
+        if (fieldValue == null) {
+            return false;
+        }
+
         // 支持数组值（如 players）
         if (Array.isArray(fieldValue)) {
-            return fieldValue.some(v => v.toLowerCase().includes(search));
+            return fieldValue.some(v => v != null && v.toLowerCase().includes(search));
         }
 
         return fieldValue.toLowerCase().includes(search);

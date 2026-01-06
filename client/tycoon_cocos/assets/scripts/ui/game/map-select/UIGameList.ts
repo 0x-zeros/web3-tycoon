@@ -139,8 +139,21 @@ export class UIGameList extends UIBase {
 
         console.log(`[UIGameList] Loaded ${this._games.length} games`);
 
-        // 默认显示全部数据
-        this._renderList(this._games);
+        // 重新应用当前过滤条件（保持输入框状态）
+        this._applyCurrentFilter();
+    }
+
+    /**
+     * 应用当前输入框的过滤条件
+     */
+    private _applyCurrentFilter(): void {
+        const searchValues = new Map<string, string>();
+        searchValues.set('gameid', this.m_gameidInput?.text ?? '');
+        searchValues.set('mapid', this.m_mapidInput?.text ?? '');
+        searchValues.set('player', this.m_playerInput?.text ?? '');
+
+        const filtered = this._filter.filter(searchValues);
+        this._renderList(filtered);
     }
 
     /**
@@ -161,18 +174,21 @@ export class UIGameList extends UIBase {
             this._renderItemWithGame(i, item, data[i]);
         }
 
-        // 处理选中状态
+        // 处理选中状态并同步 GameDetail
         if (data.length > 0) {
+            let selectedIndex = 0;
+
             // 尝试保持之前的选中状态
             if (this._selectedGameId) {
                 const index = data.findIndex(g => g.id === this._selectedGameId);
                 if (index >= 0) {
-                    this._selectGame(index);
-                    return;
+                    selectedIndex = index;
                 }
             }
-            // 选中第一个
-            this._selectGame(0);
+
+            // 选中并同步显示 GameDetail
+            this._selectGame(selectedIndex);
+            this._showGameDetail(data[selectedIndex]);
         } else {
             // 清空选中状态
             this._selectedIndex = -1;
@@ -184,14 +200,8 @@ export class UIGameList extends UIBase {
      * 过滤按钮点击 / 输入框变化
      */
     private _onFilterClick(): void {
-        const searchValues = new Map<string, string>();
-        searchValues.set('gameid', this.m_gameidInput?.text ?? '');
-        searchValues.set('mapid', this.m_mapidInput?.text ?? '');
-        searchValues.set('player', this.m_playerInput?.text ?? '');
-
-        const filtered = this._filter.filter(searchValues);
-        console.log(`[UIGameList] Filter applied, ${filtered.length}/${this._games.length} games match`);
-        this._renderList(filtered);
+        console.log('[UIGameList] Filter triggered');
+        this._applyCurrentFilter();
     }
 
     /**

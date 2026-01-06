@@ -132,8 +132,19 @@ export class UIMapList extends UIBase {
 
         console.log(`[UIMapList] Loaded ${this._templates.length} templates`);
 
-        // 默认显示全部数据
-        this._renderList(this._templates);
+        // 重新应用当前过滤条件（保持输入框状态）
+        this._applyCurrentFilter();
+    }
+
+    /**
+     * 应用当前输入框的过滤条件
+     */
+    private _applyCurrentFilter(): void {
+        const searchValues = new Map<string, string>();
+        searchValues.set('mapid', this.m_mapidInput?.text ?? '');
+
+        const filtered = this._filter.filter(searchValues);
+        this._renderList(filtered);
     }
 
     /**
@@ -177,12 +188,8 @@ export class UIMapList extends UIBase {
      * 过滤按钮点击 / 输入框变化
      */
     private _onFilterClick(): void {
-        const searchValues = new Map<string, string>();
-        searchValues.set('mapid', this.m_mapidInput?.text ?? '');
-
-        const filtered = this._filter.filter(searchValues);
-        console.log(`[UIMapList] Filter applied, ${filtered.length}/${this._templates.length} templates match`);
-        this._renderList(filtered);
+        console.log('[UIMapList] Filter triggered');
+        this._applyCurrentFilter();
     }
 
     /**

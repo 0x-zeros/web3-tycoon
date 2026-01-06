@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1024,600">
+<component size="1024,722">
   <displayList>
-    <graph id="n2_qh36" name="bg" xy="512,300" pivot="0.5,0.5" anchor="true" size="1024,600" type="rect" fillColor="#ff6699cc">
+    <graph id="n2_qh36" name="bg" xy="512,361" pivot="0.5,0.5" anchor="true" size="1024,722" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,487" size="218,62">
+    <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,557" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="退出游戏"/>
     </component>
-    <component id="n3_qh36" name="btn_ok" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="390,487" size="218,62">
+    <component id="n3_qh36" name="btn_ok" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="390,557" size="218,62">
       <relation target="" sidePair="right-right,bottom-bottom"/>
       <Button title="确定"/>
     </component>
-    <component id="n19_qh36" name="btn_startGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,487" size="218,62">
+    <component id="n19_qh36" name="btn_startGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,558" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="开始游戏"/>
     </component>
@@ -34,5 +34,13 @@
     <text id="n23_no43" name="starting_cash_desc" xy="32,313" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="初始现金："/>
     <text id="n24_no43" name="price_rise_days_desc" xy="32,367" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="物价提升天数："/>
     <text id="n25_no43" name="max_rounds_desc" xy="31,420" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="天数限制："/>
+    <component id="n26_lizy" name="btn_watch" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="391,641" size="218,62">
+      <relation target="" sidePair="right-right,bottom-bottom"/>
+      <Button title="观战"/>
+    </component>
+    <component id="n27_lizy" name="btn_replay" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="757,642" size="218,62" visible="false">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="重播"/>
+    </component>
   </displayList>
 </component>

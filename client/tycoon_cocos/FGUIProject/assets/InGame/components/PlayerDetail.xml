@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1670,600">
+<component size="1134,1024">
   <displayList>
-    <image id="n2_j5iw" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1670,600">
+    <image id="n2_j5iw" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1134,1024">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <component id="n0_j5iw" name="playerInfo" src="ue83j" fileName="components/PlayerInfo.xml" xy="3,4"/>
-    <component id="n1_j5iw" name="cardList" src="mumq6" fileName="components/CardList.xml" xy="0,337"/>
-    <component id="n8_j5iw" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="1404,10"/>
+    <component id="n0_j5iw" name="playerInfo" src="lizyp9" fileName="components/PlayerInfo2.xml" xy="47,203"/>
+    <component id="n1_j5iw" name="cardList" src="lizyp8" fileName="components/CardList2.xml" xy="0,506"/>
+    <component id="n8_j5iw" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="872,13">
+      <Button title="关闭"/>
+    </component>
+    <text id="n9_lizy" name="n9" xy="257,17" size="555,90" fontSize="48" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="玩家信息"/>
   </displayList>
 </component>

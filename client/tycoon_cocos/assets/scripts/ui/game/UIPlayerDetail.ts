@@ -31,7 +31,7 @@ export class UIPlayerDetail extends UIBase {
     // 子组件
     private m_playerInfo: fgui.GComponent;
     private m_cardList: fgui.GList;
-    private m_btnClose: fgui.GComponent;
+    private m_btnClose: fgui.GButton;
 
     // PlayerInfo 子元素
     private m_avatar: fgui.GLoader;
@@ -112,7 +112,7 @@ export class UIPlayerDetail extends UIBase {
         this.refresh();
     }
 
-    protected onRefresh(data?: any): void {
+    protected onRefresh(_data?: any): void {
         this.refresh();
     }
 
@@ -348,10 +348,7 @@ export class UIPlayerDetail extends UIBase {
      */
     private _onCloseClick(): void {
         console.log('[UIPlayerDetail] 关闭按钮点击');
-        // 直接设置面板不可见
-        if (this._panel) {
-            this._panel.visible = false;
-        }
+        this.hide();
     }
 
     /**

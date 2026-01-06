@@ -10,6 +10,7 @@
     <component id="y9h6o6" name="GameCreateParams.xml" path="/" exported="true"/>
     <component id="y9h6ob" name="ParamSlider_grip.xml" path="/components/"/>
     <component id="y9h6oc" name="ParamSlider.xml" path="/components/"/>
+    <component id="lizyod" name="SearchGame.xml" path="/components/"/>
   </resources>
   <publish name=""/>
 </packageDescription>

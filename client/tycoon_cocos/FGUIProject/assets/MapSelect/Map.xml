@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1280,768">
-  <controller name="category" pages="0,game_id,1,map_id,2,map_json" selected="2"/>
+  <controller name="category" pages="0,game_id,1,map_id,2,map_json" selected="0"/>
   <displayList>
     <list id="n0_105vo" name="game_id" xy="0,0" size="1024,768" layout="flow_hz" overflow="scroll" defaultItem="ui://8joqc56jpseuo3" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
@@ -32,13 +32,13 @@
       <item/>
     </list>
     <component id="n6_ez89" name="btn_game_id" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="4,-110" size="380,100">
-      <Button title="Game 列表" controller="category" page="0"/>
+      <Button checked="true" title="Game 列表" controller="category" page="0"/>
     </component>
     <component id="n7_ez89" name="btn_map_id" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="386,-110" size="380,100">
       <Button title="Map 列表" controller="category" page="1"/>
     </component>
     <component id="n8_ez89" name="btn_map_json" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="768,-110" size="380,100">
-      <Button checked="true" title="客户端地图" controller="category" page="2"/>
+      <Button title="客户端地图" controller="category" page="2"/>
     </component>
     <component id="n11_pseu" name="btn_joinGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="386,803" size="378,76" visible="false">
       <gearDisplay controller="category" pages="0"/>
@@ -59,5 +59,11 @@
     <text id="n15_pseu" name="n15" xy="935,806" size="463,61" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="优先从浏览器localStorage加载">
       <gearDisplay controller="category" pages="2"/>
     </text>
+    <component id="n16_lizy" name="searchGame" src="lizyod" fileName="components/SearchGame.xml" xy="1050,132">
+      <gearDisplay controller="category" pages="0"/>
+    </component>
+    <component id="n17_lizy" name="searchMap" src="lizyoe" fileName="components/SearchMap.xml" xy="1051,130">
+      <gearDisplay controller="category" pages="1"/>
+    </component>
   </displayList>
 </component>

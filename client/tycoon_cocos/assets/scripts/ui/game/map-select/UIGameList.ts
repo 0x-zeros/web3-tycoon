@@ -16,8 +16,22 @@ import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
 import { getGameStatusText } from "../../../sui/types/constants";
+import { ListFilter, FilterConfig } from "../../filter/ListFilter";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
+
+/**
+ * Game 列表过滤配置
+ * 支持按 gameid、mapid、player 三个字段联合过滤（AND逻辑）
+ */
+const GAME_FILTER_CONFIG: FilterConfig<Game> = {
+    fields: [
+        { name: 'gameid', extractor: (g) => g.id },
+        { name: 'mapid', extractor: (g) => g.template_map_id || '' },
+        { name: 'player', extractor: (g) => g.players.map(p => p.owner) }
+    ],
+    logic: 'AND'
+};
 
 const { ccclass } = _decorator;
 
@@ -27,8 +41,20 @@ export class UIGameList extends UIBase {
     private m_list: fgui.GList;
     private m_btn_joinGame: fgui.GButton;
 
+    // 搜索组件引用
+    private m_searchComponent: fgui.GComponent | null = null;
+    private m_btnFilter: fgui.GButton | null = null;
+    private m_btnNoFilter: fgui.GButton | null = null;
+    private m_gameidInput: fgui.GTextInput | null = null;
+    private m_mapidInput: fgui.GTextInput | null = null;
+    private m_playerInput: fgui.GTextInput | null = null;
+
+    // 过滤器
+    private _filter: ListFilter<Game> = new ListFilter<Game>(GAME_FILTER_CONFIG);
+
     // 数据
     private _games: Game[] = [];
+    private _displayGames: Game[] = [];  // 当前显示的数据（可能是过滤后的）
     private _selectedGameId: string | null = null;
     private _selectedIndex: number = -1;
 
@@ -49,9 +75,20 @@ export class UIGameList extends UIBase {
         // 获取列表
         this.m_list = this.getList("game_id");
 
+        // 获取搜索组件
+        this.m_searchComponent = this.getFGuiComponent('searchGame');
+        if (this.m_searchComponent) {
+            this.m_gameidInput = this.m_searchComponent.getChild('gameid') as fgui.GTextInput;
+            this.m_mapidInput = this.m_searchComponent.getChild('mapid') as fgui.GTextInput;
+            this.m_playerInput = this.m_searchComponent.getChild('player') as fgui.GTextInput;
+            this.m_btnFilter = this.m_searchComponent.getChild('btn_filter') as fgui.GButton;
+            this.m_btnNoFilter = this.m_searchComponent.getChild('btn_noFilter') as fgui.GButton;
+        }
+
         console.log('[UIGameList] Components setup');
         console.log('  m_btn_joinGame:', !!this.m_btn_joinGame);
         console.log('  m_list:', !!this.m_list);
+        console.log('  m_searchComponent:', !!this.m_searchComponent);
     }
 
     /**
@@ -62,6 +99,15 @@ export class UIGameList extends UIBase {
 
         // 监听游戏列表更新事件（缓存更新时自动刷新）
         EventBus.on(EventTypes.Sui.GamesListUpdated, this._onGamesListUpdated, this);
+
+        // 搜索组件事件绑定
+        this.m_btnFilter?.onClick(this._onFilterClick, this);
+        this.m_btnNoFilter?.onClick(this._onNoFilterClick, this);
+
+        // 实时过滤：监听输入框变化
+        this.m_gameidInput?.on(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+        this.m_mapidInput?.on(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+        this.m_playerInput?.on(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
     }
 
     /**
@@ -70,6 +116,14 @@ export class UIGameList extends UIBase {
     protected unbindEvents(): void {
         this.m_btn_joinGame?.offClick(this._onJoinGameClick, this);
         EventBus.off(EventTypes.Sui.GamesListUpdated, this._onGamesListUpdated, this);
+
+        // 搜索组件事件解绑
+        this.m_btnFilter?.offClick(this._onFilterClick, this);
+        this.m_btnNoFilter?.offClick(this._onNoFilterClick, this);
+        this.m_gameidInput?.off(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+        this.m_mapidInput?.off(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+        this.m_playerInput?.off(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+
         super.unbindEvents();
     }
 
@@ -81,52 +135,83 @@ export class UIGameList extends UIBase {
 
         // 从 SuiManager 获取缓存的 Game 列表
         this._games = SuiManager.instance.getCachedGames();
+        this._filter.setData(this._games);
 
         console.log(`[UIGameList] Loaded ${this._games.length} games`);
 
-        // 更新列表
-        if (this.m_list) {
-            // 设置数量并填充
-            this.m_list.numItems = this._games.length;
-            console.log('  List updated, numItems:', this.m_list.numItems);
+        // 默认显示全部数据
+        this._renderList(this._games);
+    }
 
-            for (let i = 0; i < this._games.length; i++) {
-                const item = this.m_list.getChildAt(i);
-                if (!item) continue;
-                this._renderItem(i, item);
-            }
+    /**
+     * 渲染列表（供过滤器调用）
+     */
+    private _renderList(data: Game[]): void {
+        this._displayGames = data;
 
-            // ✅ 保持之前的选中状态
-            if (this._selectedGameId) {
-                // 尝试找到之前选中的游戏
-                const index = this._games.findIndex(g => g.id === this._selectedGameId);
-                if (index >= 0) {
-                    this._selectGame(index);  // 选中之前的游戏
-                    console.log('  Kept previous selection:', this._selectedGameId);
-                } else {
-                    // 之前的游戏不在列表了（可能已开始），选第一个
-                    if (this._games.length > 0) {
-                        this._selectGame(0);
-                        console.log('  Previous game not found, selected first');
-                    }
-                }
-            } else {
-                // 首次加载，选第一个
-                if (this._games.length > 0) {
-                    this._selectGame(0);
-                    console.log('  First load, selected first game');
-                }
-            }
+        if (!this.m_list) return;
+
+        // 设置数量并填充
+        this.m_list.numItems = data.length;
+        console.log('  List updated, numItems:', this.m_list.numItems);
+
+        for (let i = 0; i < data.length; i++) {
+            const item = this.m_list.getChildAt(i);
+            if (!item) continue;
+            this._renderItemWithGame(i, item, data[i]);
         }
+
+        // 处理选中状态
+        if (data.length > 0) {
+            // 尝试保持之前的选中状态
+            if (this._selectedGameId) {
+                const index = data.findIndex(g => g.id === this._selectedGameId);
+                if (index >= 0) {
+                    this._selectGame(index);
+                    return;
+                }
+            }
+            // 选中第一个
+            this._selectGame(0);
+        } else {
+            // 清空选中状态
+            this._selectedIndex = -1;
+            this._selectedGameId = null;
+        }
+    }
+
+    /**
+     * 过滤按钮点击 / 输入框变化
+     */
+    private _onFilterClick(): void {
+        const searchValues = new Map<string, string>();
+        searchValues.set('gameid', this.m_gameidInput?.text ?? '');
+        searchValues.set('mapid', this.m_mapidInput?.text ?? '');
+        searchValues.set('player', this.m_playerInput?.text ?? '');
+
+        const filtered = this._filter.filter(searchValues);
+        console.log(`[UIGameList] Filter applied, ${filtered.length}/${this._games.length} games match`);
+        this._renderList(filtered);
+    }
+
+    /**
+     * 恢复按钮点击（清空过滤）
+     */
+    private _onNoFilterClick(): void {
+        // 清空输入框
+        if (this.m_gameidInput) this.m_gameidInput.text = '';
+        if (this.m_mapidInput) this.m_mapidInput.text = '';
+        if (this.m_playerInput) this.m_playerInput.text = '';
+
+        const all = this._filter.reset();
+        console.log(`[UIGameList] Filter cleared, showing all ${all.length} games`);
+        this._renderList(all);
     }
 
     /**
      * 渲染列表项
      */
-    private _renderItem(index: number, item: fgui.GObject): void {
-        if (index >= this._games.length) return;
-
-        const game = this._games[index];
+    private _renderItemWithGame(index: number, item: fgui.GObject, game: Game): void {
         const button = item.asCom as fgui.GButton;
 
         // 显示索引（从 1 开始）
@@ -178,10 +263,10 @@ export class UIGameList extends UIBase {
      * 选择游戏
      */
     private _selectGame(index: number): void {
-        if (index < 0 || index >= this._games.length) return;
+        if (index < 0 || index >= this._displayGames.length) return;
 
         this._selectedIndex = index;
-        const game = this._games[index];
+        const game = this._displayGames[index];
         this._selectedGameId = game.id;
 
         console.log(`[UIGameList] Selected game: ${game.id}`);
@@ -235,7 +320,7 @@ export class UIGameList extends UIBase {
     public selectGameById(gameId: string): void {
         console.log('[UIGameList] selectGameById:', gameId);
 
-        const index = this._games.findIndex(g => g.id === gameId);
+        const index = this._displayGames.findIndex(g => g.id === gameId);
 
         if (index >= 0) {
             this._selectGame(index);
@@ -256,11 +341,11 @@ export class UIGameList extends UIBase {
         const btn = evt.sender as fgui.GButton;
         const index = (btn?.data as number) ?? -1;
 
-        if (index >= 0 && index < this._games.length) {
+        if (index >= 0 && index < this._displayGames.length) {
             this._selectGame(index);
 
             // ✅ 点击后显示 GameDetail
-            const game = this._games[index];
+            const game = this._displayGames[index];
             this._showGameDetail(game);
         }
     }

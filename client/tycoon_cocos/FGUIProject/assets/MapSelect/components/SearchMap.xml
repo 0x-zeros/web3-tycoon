@@ -4,11 +4,11 @@
     <image id="n0_lizy" name="n0" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="1,0" size="1024,512">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <text id="n6_lizy" name="n6" xy="39,23" size="165,36" fontSize="22" color="#ffffff" autoSize="none" text="查找 todo："/>
+    <text id="n6_lizy" name="n6" xy="39,23" size="165,36" fontSize="22" color="#ffffff" autoSize="none" text="filter："/>
     <text id="n2_lizy" name="n2" xy="25,182" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
-    <text id="n4_lizy" name="mapid" xy="153,180" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true"/>
-    <component id="n9_lizy" name="btn_noFilter" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="299,387" size="448,76">
-      <Button title="去掉filter"/>
+    <text id="n4_lizy" name="mapid" xy="153,180" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="map id 或者 子字段"/>
+    <component id="n9_lizy" name="btn_noFilter" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="329,387" size="388,76">
+      <Button title="清除 filter"/>
     </component>
   </displayList>
 </component>

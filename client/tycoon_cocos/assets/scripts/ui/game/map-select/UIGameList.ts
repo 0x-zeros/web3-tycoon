@@ -186,9 +186,9 @@ export class UIGameList extends UIBase {
                 }
             }
 
-            // 选中并同步显示 GameDetail
+            // 选中并同步当前游戏数据（不弹出面板）
             this._selectGame(selectedIndex);
-            this._showGameDetail(data[selectedIndex]);
+            SuiManager.instance.setCurrentGame(data[selectedIndex]);
         } else {
             // 清空选中状态
             this._selectedIndex = -1;

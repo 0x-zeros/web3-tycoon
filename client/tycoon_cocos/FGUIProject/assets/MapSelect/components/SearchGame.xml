@@ -4,15 +4,15 @@
     <image id="n0_lizy" name="n0" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="1,0" size="1024,512">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <text id="n6_lizy" name="n6" xy="39,23" size="165,36" fontSize="22" color="#ffffff" autoSize="none" text="查找 todo："/>
+    <text id="n6_lizy" name="n6" xy="39,22" size="165,36" fontSize="22" color="#ffffff" autoSize="none" text="filter："/>
     <text id="n1_lizy" name="n1" xy="27,115" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id"/>
     <text id="n2_lizy" name="n2" xy="25,182" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
     <text id="n7_lizy" name="n7" xy="27,258" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="player id"/>
-    <text id="n3_lizy" name="gameid" xy="153,112" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true"/>
-    <text id="n4_lizy" name="mapid" xy="153,180" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true"/>
-    <text id="n5_lizy" name="player" xy="153,257" size="856,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece" input="true"/>
+    <text id="n3_lizy" name="gameid" xy="153,112" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="game id 或者 子字段"/>
+    <text id="n4_lizy" name="mapid" xy="153,179" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="map id 或者 子字段"/>
+    <text id="n5_lizy" name="player" xy="153,257" size="856,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece" input="true" prompt="player id 或者 子字段"/>
     <component id="n9_lizy" name="btn_noFilter" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="301,402" size="448,76">
-      <Button title="恢复"/>
+      <Button title="清除 filter"/>
     </component>
   </displayList>
 </component>

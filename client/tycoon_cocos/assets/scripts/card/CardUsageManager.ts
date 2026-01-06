@@ -73,6 +73,12 @@ export class CardUsageManager {
             return;
         }
 
+        // 观战模式检查
+        if (session.isSpectatorMode()) {
+            UINotification.warning('观战模式下无法使用卡牌', undefined, undefined, 'center');
+            return;
+        }
+
         if (!session.isMyTurn()) {
             UINotification.warning('不是你的回合', undefined, undefined, 'center');
             return;

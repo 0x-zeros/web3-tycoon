@@ -33,6 +33,12 @@ export class DecisionDialogHelper {
         decision: PendingDecisionInfo,
         session: any
     ): Promise<void> {
+        // 观战模式跳过决策对话框
+        if (session?.isSpectatorMode()) {
+            console.log('[DecisionDialogHelper] Spectator mode, skip buy dialog');
+            return;
+        }
+
         const player = session.getMyPlayer();
         if (!player) {
             console.warn('[DecisionDialogHelper] My player not found');
@@ -86,6 +92,12 @@ export class DecisionDialogHelper {
         session: any,
         currentLevel?: number
     ): Promise<void> {
+        // 观战模式跳过决策对话框
+        if (session?.isSpectatorMode()) {
+            console.log('[DecisionDialogHelper] Spectator mode, skip upgrade dialog');
+            return;
+        }
+
         const player = session.getMyPlayer();
         if (!player) {
             console.warn('[DecisionDialogHelper] My player not found');
@@ -140,6 +152,12 @@ export class DecisionDialogHelper {
         session: any,
         owner?: string | number
     ): Promise<void> {
+        // 观战模式跳过决策对话框
+        if (session?.isSpectatorMode()) {
+            console.log('[DecisionDialogHelper] Spectator mode, skip rent dialog');
+            return;
+        }
+
         const player = session.getMyPlayer();
         if (!player) {
             console.warn('[DecisionDialogHelper] My player not found');

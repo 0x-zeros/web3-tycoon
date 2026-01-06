@@ -277,6 +277,12 @@ export class UIInGameBuildingSelect extends UIBase {
             return false;
         }
 
+        // 观战模式不显示建筑选择
+        if (session.isSpectatorMode()) {
+            console.log('[UIInGameBuildingSelect] 条件检查失败: 观战模式');
+            return false;
+        }
+
         const pendingDecision = session.getPendingDecision();
         if (!pendingDecision) {
             console.log('[UIInGameBuildingSelect] 条件检查失败: 没有待决策');

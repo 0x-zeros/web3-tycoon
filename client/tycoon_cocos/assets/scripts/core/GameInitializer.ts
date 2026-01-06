@@ -503,9 +503,10 @@ export class GameInitializer extends Component {
         console.log('[GameInitializer] Move GameStarted event received:', data);
 
         try {
-            // 检查是否是玩家
-            if (!data.isPlayer) {
-                console.log('[GameInitializer] 不是玩家，跳过 GameSession 加载');
+            // 检查是否是玩家或观战者
+            const isSpectator = data.isSpectator === true;
+            if (!data.isPlayer && !isSpectator) {
+                console.log('[GameInitializer] 不是玩家也不是观战者，跳过 GameSession 加载');
                 return;
             }
 
@@ -519,10 +520,10 @@ export class GameInitializer extends Component {
                 return;
             }
 
-            // 加载到 GameSession
+            // 加载到 GameSession（观战模式传递 isSpectator 参数）
             if (this.gameSession) {
-                await this.gameSession.loadFromMoveGame(game, template, gameData);
-                console.log('[GameInitializer] GameSession 数据加载完成');
+                await this.gameSession.loadFromMoveGame(game, template, gameData, isSpectator);
+                console.log('[GameInitializer] GameSession 数据加载完成', { isSpectator });
 
                 // 设置到 Blackboard（供 UI 组件访问）
                 Blackboard.instance.set("currentGameSession", this.gameSession);

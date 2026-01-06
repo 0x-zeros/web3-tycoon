@@ -23,6 +23,7 @@ export class UIGameDetail extends UIBase {
     private m_btn_ok: fgui.GButton;
     private m_btn_quitGame: fgui.GButton;
     private m_btn_startGame: fgui.GButton;
+    private m_btn_watch: fgui.GButton;
 
     // 文本字段
     private m_gameid: fgui.GTextField;
@@ -55,6 +56,7 @@ export class UIGameDetail extends UIBase {
         this.m_btn_ok = this.getButton('btn_ok');
         this.m_btn_quitGame = this.getButton('btn_quitGame');
         this.m_btn_startGame = this.getButton('btn_startGame');
+        this.m_btn_watch = this.getButton('btn_watch');
 
         // 获取文本字段
         this.m_gameid = this.getText('gameid');
@@ -85,6 +87,7 @@ export class UIGameDetail extends UIBase {
         this.m_btn_ok?.onClick(this._onOkClick, this);
         this.m_btn_quitGame?.onClick(this._onQuitGameClick, this);
         this.m_btn_startGame?.onClick(this._onStartGameClick, this);
+        this.m_btn_watch?.onClick(this._onWatchGameClick, this);
 
         // 监听玩家加入事件（用于实时更新显示）
         EventBus.on(EventTypes.Move.PlayerJoined, this._onPlayerJoinedEvent, this);
@@ -97,6 +100,7 @@ export class UIGameDetail extends UIBase {
         this.m_btn_ok?.offClick(this._onOkClick, this);
         this.m_btn_quitGame?.offClick(this._onQuitGameClick, this);
         this.m_btn_startGame?.offClick(this._onStartGameClick, this);
+        this.m_btn_watch?.offClick(this._onWatchGameClick, this);
         EventBus.off(EventTypes.Move.PlayerJoined, this._onPlayerJoinedEvent, this);
         super.unbindEvents();
     }
@@ -183,6 +187,11 @@ export class UIGameDetail extends UIBase {
             this.m_btn_startGame.grayed = true;
 
             this.m_btn_quitGame.visible = false;
+
+            // 隐藏观战按钮（已结束）
+            if (this.m_btn_watch) {
+                this.m_btn_watch.visible = false;
+            }
         } else if (isActiveGame) {
             // === 进行中的游戏 ===
             if (isPlayer) {
@@ -193,10 +202,21 @@ export class UIGameDetail extends UIBase {
                 this.m_btn_startGame.grayed = false;
 
                 this.m_btn_quitGame.visible = true;
+
+                // 隐藏观战按钮（自己已是玩家）
+                if (this.m_btn_watch) {
+                    this.m_btn_watch.visible = false;
+                }
             } else {
-                // 情况2：不是玩家 → 只显示 "确定"
+                // 情况2：不是玩家 → 显示"观战"按钮
                 this.m_btn_startGame.visible = false;
                 this.m_btn_quitGame.visible = false;
+
+                // 显示观战按钮
+                if (this.m_btn_watch) {
+                    this.m_btn_watch.visible = true;
+                    this.m_btn_watch.enabled = true;
+                }
             }
         } else {
             // === 准备中的游戏（原逻辑） ===
@@ -224,6 +244,11 @@ export class UIGameDetail extends UIBase {
                 this.m_btn_startGame.grayed = true;
 
                 this.m_btn_quitGame.visible = false;
+            }
+
+            // 隐藏观战按钮（游戏未开始）
+            if (this.m_btn_watch) {
+                this.m_btn_watch.visible = false;
             }
         }
 
@@ -393,6 +418,33 @@ export class UIGameDetail extends UIBase {
                 `错误信息: ${errorMsg}\n\n` +
                 `请检查网络连接或稍后重试`,
                 "加载失败"
+            );
+        }
+    }
+
+    /**
+     * 观战按钮点击处理
+     */
+    private async _onWatchGameClick(): Promise<void> {
+        console.log('[UIGameDetail] Watch game clicked');
+
+        const game = SuiManager.instance.currentGame;
+        if (!game) {
+            console.error('[UIGameDetail] No current game');
+            return;
+        }
+
+        try {
+            UINotification.info("正在进入观战模式...");
+            await SuiManager.instance.watchGameScene(game.id, game.template_map_id);
+        } catch (error) {
+            console.error('[UIGameDetail] Failed to watch game:', error);
+            const errorMsg = (error as any)?.message || error?.toString() || '未知错误';
+            await UIMessage.error(
+                `进入观战失败\n\n` +
+                `错误信息: ${errorMsg}\n\n` +
+                `请检查网络连接或稍后重试`,
+                "观战失败"
             );
         }
     }

@@ -195,6 +195,19 @@ export class UIInGameDice extends UIBase {
             return;
         }
 
+        // 观战模式：禁用所有骰子操作
+        if (session.isSpectatorMode()) {
+            this.m_btn_roll.enabled = false;
+            if (this.m_btn_skipTurn) {
+                this.m_btn_skipTurn.visible = false;
+            }
+            if (this.m_btn_diceNum_1) this.m_btn_diceNum_1.enabled = false;
+            if (this.m_btn_diceNum_2) this.m_btn_diceNum_2.enabled = false;
+            if (this.m_btn_diceNum_3) this.m_btn_diceNum_3.enabled = false;
+            console.log('[UIInGameDice] Spectator mode, 骰子按钮禁用');
+            return;
+        }
+
         const isMyTurn = session.isMyTurn();
         const myPlayer = session.getMyPlayer();
 

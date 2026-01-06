@@ -186,6 +186,11 @@ export class GameSession {
     /** 胜利者地址 */
     private _winner: string | null = null;
 
+    // ========================= 观战模式 =========================
+
+    /** 观战模式标志 */
+    private _isSpectatorMode: boolean = false;
+
     // ========================= 构造和初始化 =========================
 
     constructor() {
@@ -197,14 +202,20 @@ export class GameSession {
      * @param game Move 端的 Game 对象
      * @param template MapTemplate 数据
      * @param gameData GameData 配置数据
+     * @param isSpectator 是否为观战模式（默认 false）
      */
     public async loadFromMoveGame(
         game: Game,
         template: MapTemplate,
-        gameData: GameData
+        gameData: GameData,
+        isSpectator: boolean = false
     ): Promise<void> {
         console.log('[GameSession] 从 Move 数据加载游戏会话');
         console.log('  Game ID:', game.id);
+        console.log('  Spectator Mode:', isSpectator);
+
+        // 0. 设置观战模式
+        this._isSpectatorMode = isSpectator;
         // console.log('  Template tiles:', template.tiles_static.size);
         // console.log('  Template buildings:', template.buildings_static.size);
 
@@ -257,7 +268,7 @@ export class GameSession {
         console.log('[GameSession]  GameData:', gameData);
         
         EventBus.emit(EventTypes.Game.GameStart, {
-            mode: 'play',
+            mode: isSpectator ? 'spectate' : 'play',
             source: 'chain_game',
         });
 
@@ -350,6 +361,15 @@ export class GameSession {
      * 识别我的玩家（通过当前连接的地址）
      */
     private identifyMyPlayer(): void {
+        // 观战模式下跳过玩家识别
+        if (this._isSpectatorMode) {
+            console.log('[GameSession] Spectator mode, skipping player identification');
+            this._myPlayer = null;
+            this._myPlayerIndex = -1;
+            this._needsPlayerIdentification = false;
+            return;
+        }
+
         const currentAddress = SuiManager.instance.currentAddress;
 
         if (!currentAddress) {
@@ -830,9 +850,20 @@ export class GameSession {
 
     /**
      * 是否是我的回合
+     * 观战模式下始终返回 false
      */
     public isMyTurn(): boolean {
+        if (this._isSpectatorMode) {
+            return false;
+        }
         return this._myPlayerIndex === this._activePlayerIndex;
+    }
+
+    /**
+     * 是否为观战模式
+     */
+    public isSpectatorMode(): boolean {
+        return this._isSpectatorMode;
     }
 
     // ========================= NPC管理 =========================
@@ -1191,6 +1222,7 @@ export class GameSession {
         this._maxRounds = 0;
         this._priceRiseDays = 15;
         this._winner = null;
+        this._isSpectatorMode = false;
 
         // 清理地图数据
         this._mapTemplate = null;

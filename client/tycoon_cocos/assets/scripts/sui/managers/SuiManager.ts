@@ -1604,6 +1604,63 @@ export class SuiManager {
     }
 
     /**
+     * 观战游戏场景（以只读模式加载游戏）
+     * @param gameId 游戏 ID
+     * @param templateMapId 地图模板 ID
+     */
+    public async watchGameScene(gameId: string, templateMapId: string): Promise<void> {
+        console.log('[SuiManager] Loading spectator game scene...');
+        UINotification.info("正在加载观战场景...");
+
+        // 注册游戏事件监听（观战也需要同步游戏进度）
+        this._registerGameEventListeners();
+
+        try {
+            // 并行加载 Game + MapTemplate + GameData
+            const [game, template, gameData] = await Promise.all([
+                this._queryService!.getGame(gameId),
+                this.getMapTemplate(templateMapId),
+                this._queryService!.getGameData()
+            ]);
+
+            if (!game) {
+                throw new Error('Failed to get game state');
+            }
+
+            if (!template) {
+                throw new Error('Failed to get map template');
+            }
+
+            // 设置为当前游戏
+            this._currentGame = game;
+
+            console.log('[SuiManager] Spectator game scene data loaded');
+            console.log('  Game ID:', game.id);
+            console.log('  Template tiles:', template.tiles_static.size);
+            console.log('  Template buildings:', template.buildings_static.size);
+            console.log('  Game players:', game.players.length);
+
+            // 发送事件，触发 GameSession 以观战模式加载
+            EventBus.emit(EventTypes.Move.GameStarted, {
+                game: game,
+                template: template,
+                gameData: gameData,
+                isPlayer: false,
+                isSpectator: true
+            });
+
+            UINotification.success("观战场景加载完成");
+
+        } catch (error) {
+            // 加载失败：取消游戏事件监听
+            console.error('[SuiManager] Failed to load spectator scene:', error);
+            this._unregisterGameEventListeners();
+            UINotification.error("观战场景加载失败");
+            throw error;
+        }
+    }
+
+    /**
      * 排序并限制游戏列表
      */
     private _sortAndLimitGames(games: GameListItem[]): Game[] {

@@ -123,7 +123,10 @@ export class UseCardHandler {
 
             console.log('[UseCardHandler] 事件处理完成');
 
-            // 5. 触发 UI 刷新事件
+            // 5. 显示卡牌使用通知（所有客户端）
+            await this.showCardNotification(session, event);
+
+            // 6. 触发 UI 刷新事件
             EventBus.emit(EventTypes.Card.UseCard, {
                 kind: event.kind,
                 params: event.params
@@ -248,6 +251,97 @@ export class UseCardHandler {
             // 更新玩家朝向（依赖next_tile_id）
             player.updatePaperActorDirection(session);
         }
+    }
+
+    /**
+     * 显示卡牌使用通知（所有客户端）
+     *
+     * @param session GameSession实例
+     * @param event UseCardActionEvent事件
+     */
+    private async showCardNotification(session: any, event: UseCardActionEvent): Promise<void> {
+        // 1. 获取使用卡牌的玩家
+        const player = session.getPlayerByAddress(event.player);
+        if (!player) {
+            console.warn('[UseCardHandler] 玩家未找到，无法显示通知:', event.player);
+            return;
+        }
+
+        // 2. 获取卡牌名称
+        const { getCardName } = await import('../../types/cards');
+        const cardName = getCardName(event.kind);
+
+        // 3. 判断观战模式
+        const isSpectator = session.isSpectatorMode();
+        const myPlayer = session.getMyPlayer();
+        const playerIndex = player.getPlayerIndex();
+
+        // 4. 构建基础文本
+        const playerPrefix = (isSpectator || player !== myPlayer)
+            ? `玩家${playerIndex + 1} `
+            : '';
+
+        let notificationText = `${playerPrefix}使用了 ${cardName}`;
+
+        // 5. 根据卡牌类型添加目标信息
+        notificationText += this.getCardTargetInfo(event.kind, event.params);
+
+        // 6. 显示通知
+        const { UINotification } = await import('../../../ui/utils/UINotification');
+        UINotification.info(notificationText, undefined, 2500, 'center');
+
+        console.log('[UseCardHandler] 显示卡牌使用通知:', {
+            player: event.player,
+            playerIndex,
+            cardName,
+            isSpectator,
+            text: notificationText
+        });
+    }
+
+    /**
+     * 获取卡牌目标信息（用于丰富通知内容）
+     *
+     * @param kind 卡牌类型
+     * @param params 卡牌参数
+     * @returns 目标信息字符串（如" (目标: 玩家2)"）
+     */
+    private getCardTargetInfo(kind: number, params: number[]): string {
+        if (!params || params.length === 0) {
+            return '';
+        }
+
+        switch (kind) {
+            case 4: // 冰冻卡
+                if (params.length > 0) {
+                    const targetPlayerIndex = params[0];
+                    return ` (目标: 玩家${targetPlayerIndex + 1})`;
+                }
+                break;
+
+            case 0: // 遥控骰子
+                if (params.length > 1) {
+                    const diceValues = params.slice(1);
+                    const totalSteps = diceValues.reduce((a, b) => a + b, 0);
+                    return ` (${totalSteps}步)`;
+                }
+                break;
+
+            case 1: // 路障卡
+            case 2: // 炸弹卡
+            case 5: // 恶犬卡
+                if (params.length > 0) {
+                    const tileId = params[0];
+                    return ` (地块${tileId})`;
+                }
+                break;
+
+            // 其他卡牌（如免租卡、传送卡等）不添加额外信息
+            default:
+                return '';
+        }
+
+        return '';
     }
 }
 

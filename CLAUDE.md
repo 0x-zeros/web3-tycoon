@@ -73,6 +73,54 @@ npm run lint
 npm run test
 ```
 
+### 构建脚本
+
+#### 自动化构建
+```bash
+cd client/tycoon_cocos
+bash build.sh  # 完整的自动化构建流程
+# 流程：环境检查 → npm依赖 → 清理 → 构建 → 验证
+```
+
+#### 手动修复 Sui SDK 兼容性
+```bash
+node scripts/fix-sui-modules.js  # 修复 @mysten/sui 模块
+node scripts/copy-esm-to-libs.js # 生成 ESM import-map
+node scripts/copy-logo.js        # 构建后复制 logo
+```
+
+## CI/CD 和部署
+
+### GitHub Actions 工作流
+
+项目配置了两个自动部署工作流：
+
+**deploy-cloudflare.yml** - Cloudflare Pages 部署
+- 触发条件: push 到 `main` 或 `dev` 分支，且 `client/tycoon_cocos/build/web-mobile/**` 有变化
+- 部署目标: Cloudflare Pages
+- 需要配置的 GitHub Secrets:
+  - `CLOUDFLARE_API_TOKEN` - Cloudflare API 令牌
+  - `CLOUDFLARE_ACCOUNT_ID` - Cloudflare 账户 ID
+  - `CLOUDFLARE_PROJECT_NAME` - 项目名称
+
+**deploy-cdn.yml** - Walrus 去中心化存储部署
+- 触发条件: 同上
+- 部署目标: Cloudflare Pages (CDN) + Walrus Sites
+- 使用相同的 Secrets
+
+### 部署流程
+
+1. **本地构建**: 在 Cocos Creator 3.8.7 中构建为 web-mobile 平台
+2. **提交构建**: 将 `build/web-mobile/` 目录提交到 Git
+3. **自动部署**: GitHub Actions 检测到变化后自动部署
+4. **访问地址**:
+   - 生产环境 (main): https://cdn.web3tycoon.com
+   - 预览环境 (dev): https://{commit-sha}.pages.dev
+
+### 手动触发部署
+
+可以通过 GitHub Actions 界面手动触发部署（workflow_dispatch）。
+
 ## Architecture Overview
 
 ### Core System Architecture
@@ -364,6 +412,84 @@ web3-tycoon/
 - `tools/asset-generator/assets_config.js` - AIGC prompts (100+ templates)
 - `tools/asset-generator/.env` - API keys configuration
 
+## 关键构建脚本说明
+
+### Sui SDK 兼容性处理
+
+Cocos Creator 的 Rollup 打包系统与 @mysten/sui 的 ES6 模块存在兼容性问题。项目通过以下机制解决：
+
+#### fix-sui-modules.js (postinstall hook)
+
+**位置**: `client/tycoon_cocos/scripts/fix-sui-modules.js`
+
+**问题**:
+- Cocos Creator 打包时，@mysten/sui 的 ES6 模块导入被破坏
+- `resolveTransactionPlugin` 函数引用丢失
+- MapIterator 对象无法正确处理
+
+**解决方案**:
+- 在 `npm install` 后自动运行 (package.json postinstall hook)
+- 修补 `node_modules/@mysten/sui/dist/esm/transactions/Transaction.js`:
+  1. 添加 `resolveTransactionPlugin` 的 fallback 逻辑
+  2. 转换 MapIterator → Array
+- 修补 `node_modules/@mysten/sui/dist/esm/transactions/resolve.js`:
+  1. 确保函数正确导出
+
+#### copy-esm-to-libs.js
+
+**功能**:
+- 将 8 个 npm 包的 ESM 模块复制到 `libs/` 目录
+- 生成 `preview-template/import-map.json` 用于浏览器 import-map
+- 包含的包: @mysten/sui, @mysten/wallet-standard, @noble/curves 等
+
+#### rollup-guard 扩展
+
+**位置**: `client/tycoon_cocos/extensions/rollup-guard/`
+
+**功能**: Cocos Creator 自定义扩展，处理 Rollup 打包过程
+
+**配置选项** (在 build_config/*.json 中):
+- `retargetES2020`: 是否重新目标化到 ES2020
+- `externalizeMysten`: 是否外部化 @mysten 依赖（设为 false 避免重复）
+
+### 构建配置文件
+
+#### build_config/web-mobile.json
+- **用途**: Cloudflare Pages 部署配置
+- **平台**: web-mobile
+- **关键设置**: `md5Cache: true`, `sourceMaps: false`, `orientation: landscape`
+
+#### build_config/web-walrus.json
+- **用途**: Walrus 去中心化存储部署配置
+- **服务器**: https://cdn.web3tycoon.com/
+- **其他配置**: 同 web-mobile
+
+### build.sh 自动化脚本
+
+**位置**: `client/tycoon_cocos/build.sh`
+
+**功能**: 完整的自动化构建流程
+
+**执行步骤**:
+1. 检查 Cocos Creator 3.8.7 安装路径
+2. 检查项目路径和 package.json
+3. 安装/更新 npm 依赖（智能检测）
+4. 清理旧的构建目录
+5. 跳过 TypeScript 检查（Creator 构建时处理）
+6. 执行 Cocos Creator CLI 构建
+7. 验证构建结果（检查 index.html、显示大小）
+
+**构建参数**:
+```bash
+platform=web-desktop
+debug=false
+sourceMaps=OFF
+md5Cache=false
+inlineEnums=true
+mergeStartScene=false
+optimizeHotUpdate=false
+```
+
 ## Development Workflow
 
 ### Game Initialization Sequence
@@ -434,6 +560,13 @@ All managers follow singleton pattern and are accessed via static `getInstance()
 - **TypeScript Target**: DO NOT modify `tsconfig.json` target (ES2020) - Cocos Creator has specific requirements
 - **Library/Temp Folders**: Never edit `library/` or `temp/` - these are auto-generated
 - **资源加载**: Use `resources.load()` callback style (no `loadAsync()`), wrap in Promise if needed
+
+### 构建系统特殊处理
+- **Sui SDK 兼容性**: 项目使用 postinstall hook 自动修复 @mysten/sui 模块兼容性问题
+- **双构建配置**: web-mobile (Cloudflare) 和 web-walrus (去中心化存储) 两套配置
+- **rollup-guard 扩展**: 必须启用以确保 Rollup 正确打包 Sui SDK
+- **import-map 生成**: copy-esm-to-libs.js 自动生成浏览器 ESM 模块映射
+- **自动化脚本**: build.sh 提供完整的构建流程，包含环境检查和依赖管理
 
 ### Voxel System Guidelines
 - **Voxel system is core** - Not just UI, but fundamental to gameplay

@@ -18,6 +18,7 @@ import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
 import type { Card as PlayerCard } from "../../card/Card";
 import { getCardName } from "../../sui/types/cards";
+import { CardConfigManager } from "../../card/CardConfig";
 import UI_Card from '../../../.out/InGame/UI_Card';
 
 const { ccclass } = _decorator;
@@ -167,8 +168,16 @@ export class UIInGameCards extends UIBase {
         // 设置图标
         const icon = item.getChild('icon') as fgui.GLoader;
         if (icon) {
-            // 加载卡牌纹理
-            const texturePath = `web3/cards/${cardEntry.kind}/texture`;
+            // 加载卡牌纹理 - 从CardConfig获取正确的iconPath
+            const cardConfig = CardConfigManager.getConfig(cardEntry.kind);
+            const texturePath = cardConfig ? `${cardConfig.iconPath}/texture` : null;
+
+            if (!texturePath) {
+                console.warn(`[UIInGameCards] 卡牌配置未找到: kind=${cardEntry.kind}`);
+                icon.url = null;
+                return;
+            }
+
             resources.load(texturePath, Texture2D, (err, texture) => {
                 if (!err && texture) {
                     const spriteFrame = new SpriteFrame();

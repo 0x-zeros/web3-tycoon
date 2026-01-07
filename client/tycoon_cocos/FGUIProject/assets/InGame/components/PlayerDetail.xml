@@ -6,7 +6,7 @@
     </image>
     <component id="n0_j5iw" name="playerInfo" src="lizyp9" fileName="components/PlayerInfo2.xml" xy="47,203"/>
     <component id="n1_j5iw" name="cardList" src="lizyp8" fileName="components/CardList2.xml" xy="0,506"/>
-    <component id="n8_j5iw" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="872,13">
+    <component id="n8_j5iw" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="929,12" size="194,68">
       <Button title="关闭"/>
     </component>
     <text id="n9_lizy" name="n9" xy="257,17" size="555,90" fontSize="48" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="玩家信息"/>

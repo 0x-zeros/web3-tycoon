@@ -7,9 +7,9 @@
     <richtext id="n3_bk5i" name="message" xy="14,5" size="741,118" fontSize="28" color="#ffffff" vAlign="middle" leading="2" autoSize="none" autoClearText="true" text="现在UINotification应该可以正常显示彩色背景的Toast通知了！ https://backpack.exchange/leaderboard， 游戏内会弹出“物价指数上涨”提示">
       <relation target="" sidePair="center-center,middle-middle"/>
     </richtext>
-    <loader id="n4_r3rm" name="icon" xy="-147,-23" size="150,150"/>
-    <loader id="n5_r3rm" name="loader1" xy="411,-13" size="125,150"/>
-    <loader id="n6_r3rm" name="loader2" xy="560,-13" size="125,150"/>
-    <loader id="n7_r3rm" name="loader3" xy="704,-13" size="125,150"/>
+    <loader id="n4_r3rm" name="icon" xy="-147,-23" size="150,150" fill="scaleFree"/>
+    <loader id="n5_r3rm" name="loader1" xy="411,-13" size="125,150" fill="scaleFree"/>
+    <loader id="n6_r3rm" name="loader2" xy="560,-13" size="125,150" fill="scaleFree"/>
+    <loader id="n7_r3rm" name="loader3" xy="704,-13" size="125,150" fill="scaleFree"/>
   </displayList>
 </component>

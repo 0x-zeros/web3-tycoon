@@ -1,4 +1,4 @@
-import { _decorator, Color } from 'cc';
+import { _decorator, Color, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
 
@@ -48,6 +48,10 @@ export interface NotificationOptions {
     duration?: number;
     /** 通知类型（决定背景色） */
     type?: NotifyType;
+    /** 玩家头像（玩家索引，0-3） */
+    playerIndex?: number;
+    /** 卡片列表（卡片kind数组，最多3张） */
+    cards?: number[];
 }
 
 // ==================== Toast封装类 ====================
@@ -120,6 +124,41 @@ class NotificationToast {
         }
 
         // BBCode 链接会自动调用节点上的 onOpenTx 方法，无需手动绑定事件
+
+        // ========== 新增：加载玩家头像 ==========
+        const iconLoader = this._gObject.getChild("icon") as fgui.GLoader;
+        if (iconLoader) {
+            if (options.playerIndex !== undefined) {
+                this._loadPlayerAvatar(iconLoader, options.playerIndex);
+            } else {
+                iconLoader.url = null;  // 清空
+            }
+        }
+
+        // ========== 新增：加载卡片图片 ==========
+        const loader1 = this._gObject.getChild("loader1") as fgui.GLoader;
+        const loader2 = this._gObject.getChild("loader2") as fgui.GLoader;
+        const loader3 = this._gObject.getChild("loader3") as fgui.GLoader;
+        const loaders = [loader1, loader2, loader3];
+
+        if (options.cards && options.cards.length > 0) {
+            // 加载卡片（最多3张）
+            for (let i = 0; i < loaders.length; i++) {
+                const loader = loaders[i];
+                if (!loader) continue;
+
+                if (i < options.cards.length) {
+                    this._loadCardImage(loader, options.cards[i]);
+                } else {
+                    loader.url = null;  // 清空多余的 loader
+                }
+            }
+        } else {
+            // 没有卡片，清空所有 loader
+            loaders.forEach(loader => {
+                if (loader) loader.url = null;
+            });
+        }
     }
 
     /** 递归查找第一个文本控件（Rich 或普通） */
@@ -164,6 +203,69 @@ class NotificationToast {
         const g = ((hex >> 8) & 0xFF);
         const b = (hex & 0xFF);
         return new Color(r, g, b, a);
+    }
+
+    /**
+     * 加载玩家头像
+     * @param loader FairyGUI Loader 组件
+     * @param playerIndex 玩家索引（0-3）
+     */
+    private _loadPlayerAvatar(loader: fgui.GLoader, playerIndex: number): void {
+        const texturePath = `web3/actors/player_${playerIndex}/texture`;
+
+        resources.load(texturePath, Texture2D, (err, texture) => {
+            if (!err && texture) {
+                const spriteFrame = new SpriteFrame();
+                spriteFrame.texture = texture;
+                spriteFrame.originalSize = new Size(texture.width, texture.height);
+                spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+                loader.texture = spriteFrame;
+            } else {
+                console.warn(`[NotificationToast] 加载玩家头像失败: ${texturePath}`, err);
+                loader.url = null;
+            }
+        });
+    }
+
+    /**
+     * 加载卡片图片
+     * @param loader FairyGUI Loader 组件
+     * @param cardKind 卡片类型（0-7）
+     */
+    private _loadCardImage(loader: fgui.GLoader, cardKind: number): void {
+        // 卡片文件名映射
+        const cardFileNames: { [key: number]: string } = {
+            0: 'move_ctrl',   // 遥控骰子
+            1: 'barrier',     // 路障卡
+            2: 'bomb',        // 炸弹卡
+            3: 'rent_free',   // 免租卡
+            4: 'freeze',      // 冰冻卡
+            5: 'dog',         // 恶犬卡
+            6: 'cleanse',     // 机器娃娃
+            7: 'turn'         // 转向卡
+        };
+
+        const fileName = cardFileNames[cardKind];
+        if (!fileName) {
+            console.warn(`[NotificationToast] 未知卡片类型: ${cardKind}`);
+            loader.url = null;
+            return;
+        }
+
+        const texturePath = `web3/cards/${fileName}/texture`;
+
+        resources.load(texturePath, Texture2D, (err, texture) => {
+            if (!err && texture) {
+                const spriteFrame = new SpriteFrame();
+                spriteFrame.texture = texture;
+                spriteFrame.originalSize = new Size(texture.width, texture.height);
+                spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+                loader.texture = spriteFrame;
+            } else {
+                console.warn(`[NotificationToast] 加载卡片图片失败: ${texturePath}`, err);
+                loader.url = null;
+            }
+        });
     }
 
     /**
@@ -539,48 +641,76 @@ export class UINotification extends UIBase {
     /**
      * 信息通知（蓝色）
      */
-    public static info(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
+    public static info(
+        message: string,
+        title?: string,
+        duration?: number,
+        anchor?: AnchorPosition,
+        extraOptions?: Partial<NotificationOptions>
+    ): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.INFO,
-            duration
+            duration,
+            ...extraOptions
         }, anchor || 'rightbottom');
     }
 
     /**
      * 成功通知（绿色）
      */
-    public static success(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
+    public static success(
+        message: string,
+        title?: string,
+        duration?: number,
+        anchor?: AnchorPosition,
+        extraOptions?: Partial<NotificationOptions>
+    ): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.SUCCESS,
-            duration
+            duration,
+            ...extraOptions
         }, anchor || 'rightbottom');
     }
 
     /**
      * 警告通知（黄色）
      */
-    public static warning(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
+    public static warning(
+        message: string,
+        title?: string,
+        duration?: number,
+        anchor?: AnchorPosition,
+        extraOptions?: Partial<NotificationOptions>
+    ): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.WARNING,
-            duration
+            duration,
+            ...extraOptions
         }, anchor || 'rightbottom');
     }
 
     /**
      * 错误通知（红色）
      */
-    public static error(message: string, title?: string, duration?: number, anchor?: AnchorPosition): void {
+    public static error(
+        message: string,
+        title?: string,
+        duration?: number,
+        anchor?: AnchorPosition,
+        extraOptions?: Partial<NotificationOptions>
+    ): void {
         this._addMessage({
             title,
             message,
             type: NotifyType.ERROR,
-            duration
+            duration,
+            ...extraOptions
         }, anchor || 'rightbottom');
     }
 

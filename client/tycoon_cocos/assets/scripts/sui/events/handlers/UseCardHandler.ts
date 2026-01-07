@@ -271,72 +271,63 @@ export class UseCardHandler {
         const { getCardName } = await import('../../types/cards');
         const cardName = getCardName(event.kind);
 
-        // 3. 判断观战模式
-        const isSpectator = session.isSpectatorMode();
-        const myPlayer = session.getMyPlayer();
+        // 3. 获取玩家索引
         const playerIndex = player.getPlayerIndex();
 
-        // 4. 构建基础文本
-        const playerPrefix = (isSpectator || player !== myPlayer)
-            ? `玩家${playerIndex + 1} `
-            : '';
+        // 4. 构建消息文本（格式："（对玩家X）使用了 卡牌名"）
+        let notificationText = '';
 
-        let notificationText = `${playerPrefix}使用了 ${cardName}`;
+        // 判断是否需要显示目标玩家（只有冰冻卡以player为目标）
+        const targetInfo = this._getCardTargetPlayerInfo(event.kind, event.params);
+        if (targetInfo) {
+            notificationText += targetInfo;  // 如 "（对玩家2）"
+        }
 
-        // 5. 根据卡牌类型添加目标信息
-        notificationText += this.getCardTargetInfo(event.kind, event.params);
+        notificationText += `使用了 ${cardName}`;
 
-        // 6. 显示通知
+        // 5. 显示通知
         const { UINotification } = await import('../../../ui/utils/UINotification');
-        UINotification.info(notificationText, undefined, 2500, 'center');
+        UINotification.info(notificationText, undefined, 2500, 'center', {
+            playerIndex: playerIndex,  // 显示使用者头像
+            cards: [event.kind]        // 显示使用的卡片
+        });
 
         console.log('[UseCardHandler] 显示卡牌使用通知:', {
             player: event.player,
             playerIndex,
             cardName,
-            isSpectator,
             text: notificationText
         });
     }
 
     /**
-     * 获取卡牌目标信息（用于丰富通知内容）
+     * 获取卡牌目标玩家信息（仅针对以player为目标的卡牌）
      *
      * @param kind 卡牌类型
      * @param params 卡牌参数
-     * @returns 目标信息字符串（如" (目标: 玩家2)"）
+     * @returns 目标玩家字符串（如"（对玩家2）"），不需要目标时返回空字符串
      */
-    private getCardTargetInfo(kind: number, params: number[]): string {
+    private _getCardTargetPlayerInfo(kind: number, params: number[]): string {
         if (!params || params.length === 0) {
             return '';
         }
 
         switch (kind) {
-            case 4: // 冰冻卡
+            case 4: // 冰冻卡 - 唯一以player为目标的卡牌
                 if (params.length > 0) {
                     const targetPlayerIndex = params[0];
-                    return ` (目标: 玩家${targetPlayerIndex + 1})`;
+                    return `（对玩家${targetPlayerIndex + 1}）`;
                 }
                 break;
 
-            case 0: // 遥控骰子
-                if (params.length > 1) {
-                    const diceValues = params.slice(1);
-                    const totalSteps = diceValues.reduce((a, b) => a + b, 0);
-                    return ` (${totalSteps}步)`;
-                }
-                break;
-
-            case 1: // 路障卡
-            case 2: // 炸弹卡
-            case 5: // 恶犬卡
-                if (params.length > 0) {
-                    const tileId = params[0];
-                    return ` (地块${tileId})`;
-                }
-                break;
-
-            // 其他卡牌（如免租卡、传送卡等）不添加额外信息
+            // 其他卡牌不以player为目标：
+            // - 0: 遥控骰子（对自己）
+            // - 1: 路障卡（对tile）
+            // - 2: 炸弹卡（对tile）
+            // - 3: 免租卡（对自己）
+            // - 5: 恶犬卡（对tile）
+            // - 6: 机器娃娃（对tile范围）
+            // - 7: 转向卡（对自己）
             default:
                 return '';
         }

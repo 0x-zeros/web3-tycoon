@@ -312,18 +312,39 @@ export class RollAndStepHandler {
             // 处理停留获得的卡牌（stop_type = CARD_STOP）
             if (step.stop_effect.card_gains && step.stop_effect.card_gains.length > 0) {
                 if (player) {
+                    // 1. 添加卡牌到玩家数据
                     for (const cardDraw of step.stop_effect.card_gains) {
                         // Sui SDK 解析的结构体数据在 fields 字段中
                         const fields = (cardDraw as any).fields || cardDraw;
                         player.addCard(fields.kind, fields.count);
                     }
+
+                    // 2. 构建卡片列表（最多3张用于显示）
+                    const cards: number[] = [];
+
+                    for (const cardDraw of step.stop_effect.card_gains) {
+                        const fields = (cardDraw as any).fields || cardDraw;
+                        const count = fields.count;
+
+                        // 将卡牌kind重复添加count次，直到达到3张上限
+                        for (let i = 0; i < count && cards.length < 3; i++) {
+                            cards.push(fields.kind);
+                        }
+                    }
+
+                    // 3. 构建消息文本
                     const cardNames = step.stop_effect.card_gains
                         .map(c => {
                             const fields = (c as any).fields || c;
                             return `${getCardName(fields.kind)} x${fields.count}`;
                         })
                         .join(', ');
-                    UINotification.info(`获得: ${cardNames}`, '卡牌', 4000, 'center');
+
+                    // 4. 显示通知
+                    UINotification.info(`获得: ${cardNames}`, '卡牌', 4000, 'center', {
+                        playerIndex: player.getPlayerIndex(),
+                        cards: cards  // 最多3张
+                    });
                 }
             }
         }
@@ -389,11 +410,26 @@ export class RollAndStepHandler {
                     player.addCard(cardDraw.kind, cardDraw.count);
                 }
 
-                // 2. 显示 CardDraws UI
-                // TODO: 需要创建 CardDraws UI 组件
-                // 暂时使用 Notification 显示
-                const cardNames = step.pass_draws.map(c => `卡牌${c.kind} x${c.count}`).join(', ');
-                UINotification.info(`获得: ${cardNames}`, '卡牌');
+                // 2. 构建卡片列表（最多3张用于显示）
+                const cards: number[] = [];
+
+                for (const cardDraw of step.pass_draws) {
+                    // 将卡牌kind重复添加count次，直到达到3张上限
+                    for (let i = 0; i < cardDraw.count && cards.length < 3; i++) {
+                        cards.push(cardDraw.kind);
+                    }
+                }
+
+                // 3. 构建消息文本
+                const cardNames = step.pass_draws
+                    .map(c => `${getCardName(c.kind)} x${c.count}`)
+                    .join(', ');
+
+                // 4. 显示通知
+                UINotification.info(`获得: ${cardNames}`, '卡牌', 4000, 'center', {
+                    playerIndex: player.getPlayerIndex(),
+                    cards: cards  // 最多3张
+                });
             }
         }
     }

@@ -79,7 +79,22 @@ export class RollAndStepHandler {
                 return;
             }
 
-            // 0. 发送链上骰子结果，让骰子动画停在正确的值
+            // 0. 为所有客户端（包括观战者和非当前玩家）显示骰子动画
+            // 这个事件会触发 DiceController 显示骰子动画
+            const diceCount = event.dice_values?.length || 1;
+            EventBus.emit(EventTypes.Dice.ShowDiceAnimation, {
+                diceCount: diceCount,
+                diceValues: event.dice_values,
+                playerAddress: event.player
+            });
+
+            console.log('[RollAndStepHandler] 发送骰子动画事件（所有客户端）:', {
+                diceCount,
+                values: event.dice_values,
+                player: event.player
+            });
+
+            // 1. 发送链上骰子结果，让骰子动画停在正确的值
             // 骰子动画在 dice 点击时就开始播放（循环动画）
             // 收到链上真实值后，让动画停止在该值
             // 现在返回 dice_values 数组，每个骰子有独立的值

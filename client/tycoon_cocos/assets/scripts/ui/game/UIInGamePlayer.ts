@@ -25,6 +25,7 @@ export class UIInGamePlayer extends UIBase {
     // myPlayer 组件
     private m_myPlayer: fgui.GComponent;
     private m_myPlayerAvatar: fgui.GLoader;
+    private m_status: fgui.GTextField;
 
     // playerList 组件
     private m_playerList: fgui.GList;
@@ -38,6 +39,7 @@ export class UIInGamePlayer extends UIBase {
         this.m_myPlayer = this.getChild('myPlayer')?.asCom;
         if (this.m_myPlayer) {
             this.m_myPlayerAvatar = this.m_myPlayer.getChild('avatar') as fgui.GLoader;
+            this.m_status = this.m_myPlayer.getChild('status') as fgui.GTextField;
         }
 
         // playerList（list 名称为 "players"）
@@ -90,11 +92,40 @@ export class UIInGamePlayer extends UIBase {
     }
 
     private refreshMyPlayer(session: any): void {
-        const myPlayer = session.getMyPlayer();
-        if (!myPlayer || !this.m_myPlayerAvatar) return;
+        const isSpectator = session.isSpectatorMode();
 
-        const playerIndex = myPlayer.getPlayerIndex();
+        // 观战模式：显示当前活跃玩家
+        // 正常模式：显示自己
+        const player = isSpectator
+            ? session.getActivePlayer()
+            : session.getMyPlayer();
+
+        // 更新状态标签
+        if (this.m_status) {
+            this.m_status.text = isSpectator ? '观战中' : '';
+            this.m_status.visible = isSpectator;
+        }
+
+        if (!player) {
+            if (this.m_myPlayerAvatar) {
+                this.m_myPlayerAvatar.visible = false;
+            }
+            return;
+        }
+
+        if (!this.m_myPlayerAvatar) return;
+
+        // 确保头像可见
+        this.m_myPlayerAvatar.visible = true;
+
+        const playerIndex = player.getPlayerIndex();
         this.loadPlayerAvatar(this.m_myPlayerAvatar, playerIndex);
+
+        console.log('[UIInGamePlayer] Refresh myPlayer', {
+            isSpectator,
+            playerIndex,
+            statusVisible: this.m_status?.visible
+        });
     }
 
     private refreshPlayerList(session: any): void {

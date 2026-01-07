@@ -10,7 +10,7 @@
       <gearDisplay controller="mode" pages="0"/>
       <relation target="" sidePair="right-right,bottom-bottom"/>
     </component>
-    <component id="n2_ue83" name="myPlayer" src="ue83f" fileName="components/MyPlayer.xml" xy="14,814">
+    <component id="n2_ue83" name="myPlayer" src="ue83f" fileName="components/MyPlayer.xml" xy="13,814">
       <gearDisplay controller="mode" pages="0"/>
       <relation target="" sidePair="left-left,bottom-bottom"/>
     </component>

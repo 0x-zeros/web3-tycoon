@@ -2,5 +2,6 @@
 <component size="256,256">
   <displayList>
     <loader id="n1_ue83" name="avatar" xy="0,0" size="256,256" url="ui://8z385pimue83g" align="center" vAlign="middle" fill="scale"/>
+    <text id="n2_r3rm" name="status" xy="143,1" size="248,67" fontSize="48" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="观战中"/>
   </displayList>
 </component>

@@ -61,6 +61,9 @@ export class UIInGameCards extends UIBase {
         EventBus.on(EventTypes.Player.CardRemoved, this._onCardChange, this);  // ✅ 监听 Player.removeCard() 触发的事件
         EventBus.on(EventTypes.Card.GetNewCard, this._onCardChange, this);
         EventBus.on(EventTypes.Card.UseCard, this._onCardChange, this);
+
+        // 监听回合变化事件（观战模式下刷新显示新活跃玩家的卡牌）
+        EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
     }
 
     /**
@@ -71,6 +74,7 @@ export class UIInGameCards extends UIBase {
         EventBus.off(EventTypes.Player.CardRemoved, this._onCardChange, this);
         EventBus.off(EventTypes.Card.GetNewCard, this._onCardChange, this);
         EventBus.off(EventTypes.Card.UseCard, this._onCardChange, this);
+        EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
 
         super.unbindEvents();
     }
@@ -102,9 +106,17 @@ export class UIInGameCards extends UIBase {
             return;
         }
 
-        const player = session.getMyPlayer();
+        // 观战模式：显示当前活跃玩家的卡牌
+        // 正常模式：显示自己的卡牌
+        const player = session.isSpectatorMode()
+            ? session.getActivePlayer()
+            : session.getMyPlayer();
+
         if (!player) {
-            console.warn('[UIInGameCards] My player not found');
+            console.warn('[UIInGameCards] Player not found', {
+                isSpectator: session.isSpectatorMode(),
+                mode: session.isSpectatorMode() ? 'active player' : 'my player'
+            });
             this.m_cardsCache = [];
             this.m_cardList.numItems = 0;
             return;
@@ -112,7 +124,11 @@ export class UIInGameCards extends UIBase {
 
         const cards = player.getAllCards();
         this.m_cardsCache = cards.filter(card => card.count > 0);
-        console.log(`[UIInGameCards] ✅ 刷新列表，卡牌数量: ${this.m_cardsCache.length}`, this.m_cardsCache);
+        console.log(`[UIInGameCards] ✅ 刷新列表，卡牌数量: ${this.m_cardsCache.length}`, {
+            isSpectator: session.isSpectatorMode(),
+            playerIndex: player.getPlayerIndex(),
+            cards: this.m_cardsCache
+        });
 
         // ✅ 强制重新渲染：先清零再设置（修复count变化但列表长度不变时不刷新的问题）
         this.m_cardList.numItems = 0;
@@ -226,5 +242,16 @@ export class UIInGameCards extends UIBase {
     private _onCardChange(data?: any): void {
         console.log('[UIInGameCards] ✅ 收到卡牌变化事件:', data);
         this.refresh();
+    }
+
+    /**
+     * 回合变化事件处理（观战模式下刷新显示新活跃玩家的卡牌）
+     */
+    private _onTurnChanged(data?: any): void {
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (session?.isSpectatorMode()) {
+            console.log('[UIInGameCards] 观战模式 - 回合变化，刷新卡牌列表');
+            this.refresh();
+        }
     }
 }

@@ -300,7 +300,9 @@ export const EventTypes = {
         /** 投掷结果 */
         RollResult: "dice_roll_result",
         /** 投掷完成 */
-        RollComplete: "dice_roll_complete"
+        RollComplete: "dice_roll_complete",
+        /** 显示骰子动画（所有客户端，用于非当前玩家和观战者看到掷骰动画） */
+        ShowDiceAnimation: "dice_show_animation"
     },
 
     /** 音效相关事件 */

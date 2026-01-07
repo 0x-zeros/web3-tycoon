@@ -97,6 +97,10 @@ export class DiceController {
 
                 this.dicePrefab = prefab;
                 console.log('[DiceController] 骰子预制体加载成功');
+
+                // 监听全局骰子动画事件（用于观战者和非当前玩家）
+                EventBus.on(EventTypes.Dice.ShowDiceAnimation, this._onShowDiceAnimation, this);
+
                 resolve();
             });
         });
@@ -206,6 +210,75 @@ export class DiceController {
                 callback();
             }
         });
+    }
+
+    /**
+     * 直接显示骰子结果（用于观战者和非当前玩家）
+     * @param diceCount 骰子数量（1-3）
+     * @param values 骰子值数组（每个骰子的点数）
+     */
+    public async showDiceResult(diceCount: number, values: number[]): Promise<void> {
+        if (this.isRolling || this.isLooping) {
+            console.warn('[DiceController] 骰子正在滚动中，跳过显示');
+            return;
+        }
+
+        // 限制骰子数量
+        diceCount = Math.max(1, Math.min(3, diceCount));
+        this.currentDiceCount = diceCount;
+
+        await this._ensureDiceNodes(diceCount);
+
+        this.isRolling = true;
+
+        // 计算总和作为 currentValue
+        this.currentValue = values.reduce((a, b) => a + b, 0);
+
+        // 清理上一次的隐藏计时
+        if (this.hideTimer !== null) {
+            clearTimeout(this.hideTimer);
+            this.hideTimer = null;
+        }
+
+        // 获取基础位置
+        const basePos = this.getActivePlayerPosition();
+
+        let completedCount = 0;
+
+        // 为每个骰子播放动画
+        for (let i = 0; i < diceCount; i++) {
+            const node = this.diceNodes[i];
+
+            // 水平排列，居中对齐
+            const offsetX = (i - (diceCount - 1) / 2) * DICE_SPACING;
+            node.setPosition(basePos.x + offsetX, basePos.y, basePos.z);
+            node.active = true;
+
+            // 停止可能残留的补间动画
+            Tween.stopAllByTarget(node);
+
+            // 获取该骰子的目标值
+            const diceValue = values[i] || 1;
+            const clampedValue = Math.max(1, Math.min(6, diceValue));
+
+            // 播放滚动动画
+            this._playRollAnimationForNode(node, clampedValue, () => {
+                completedCount++;
+                // 所有骰子动画完成后
+                if (completedCount >= diceCount) {
+                    this.isRolling = false;
+                    this.scheduleHide();
+                    console.log('[DiceController] 骰子动画完成，显示值:', values);
+                }
+            });
+        }
+
+        // 隐藏多余的骰子
+        for (let i = diceCount; i < this.diceNodes.length; i++) {
+            this.diceNodes[i].active = false;
+        }
+
+        console.log('[DiceController] 显示骰子结果，数量:', diceCount, '值:', values);
     }
 
     /**
@@ -398,6 +471,30 @@ export class DiceController {
     }
 
     /**
+     * 处理全局骰子动画事件（用于观战者和非当前玩家）
+     */
+    private async _onShowDiceAnimation(data: {
+        diceCount: number;
+        diceValues: number[];
+        playerAddress: string;
+    }): Promise<void> {
+        // 如果当前玩家正在掷骰子（循环或滚动中），跳过显示
+        if (this.isLooping || this.isRolling) {
+            console.log('[DiceController] 当前正在掷骰子，跳过全局动画');
+            return;
+        }
+
+        console.log('[DiceController] 显示其他玩家的骰子动画:', {
+            diceCount: data.diceCount,
+            values: data.diceValues,
+            player: data.playerAddress
+        });
+
+        // 显示骰子动画
+        await this.showDiceResult(data.diceCount, data.diceValues);
+    }
+
+    /**
      * 停止骰子在指定值数组（每个骰子独立显示）
      * @param values 骰子值数组，每个骰子对应一个值（1-6）
      */
@@ -507,6 +604,7 @@ export class DiceController {
 
         // 取消事件监听
         EventBus.off(EventTypes.Dice.RollResult, this._onRollResult, this);
+        EventBus.off(EventTypes.Dice.ShowDiceAnimation, this._onShowDiceAnimation, this);
 
         // 销毁所有骰子节点
         for (const node of this.diceNodes) {

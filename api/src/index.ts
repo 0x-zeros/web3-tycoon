@@ -8,6 +8,7 @@
 import { Env } from './types';
 import { handlePlayerRoutes } from './routes/players';
 import { handleGameRoutes } from './routes/games';
+import { handleMapRoutes } from './routes/maps';
 import { setCorsHeaders, errorResponse } from './utils/cors';
 
 export default {
@@ -43,6 +44,10 @@ export default {
 
             if (url.pathname.startsWith('/api/games')) {
                 return await handleGameRoutes(request, env);
+            }
+
+            if (url.pathname.startsWith('/api/maps')) {
+                return await handleMapRoutes(request, env);
             }
 
             // 404

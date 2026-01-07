@@ -85,6 +85,11 @@ async function createGame(
     const key = `game:${gameId}`;
 
     try {
+        // 验证必填字段
+        if (!metadata.hostAddress) {
+            return errorResponse('hostAddress is required', 400);
+        }
+
         // 检查是否已存在
         const existing = await env.METADATA_KV.get(key);
         if (existing) {
@@ -100,7 +105,7 @@ async function createGame(
             players: metadata.players || [],
             visibility: metadata.visibility || 'public',
             status: 'waiting',
-            hostAddress: metadata.hostAddress!,
+            hostAddress: metadata.hostAddress,
             createdAt: Date.now()
         };
 
@@ -108,7 +113,7 @@ async function createGame(
         await env.METADATA_KV.put(key, JSON.stringify(game));
 
         // 更新状态索引（用于列表查询）
-        await updateGameIndex(game, env);
+        await updateGameIndex(game, null, env);
 
         return jsonResponse(game, 201);
     } catch (error) {
@@ -135,6 +140,9 @@ async function updateGame(
             return errorResponse('Game not found', 404);
         }
 
+        // 记录旧状态（用于索引更新）
+        const oldStatus = existing.status;
+
         // 合并更新
         const game: GameRoomMetadata = {
             ...existing,
@@ -154,8 +162,8 @@ async function updateGame(
         // 保存
         await env.METADATA_KV.put(key, JSON.stringify(game));
 
-        // 更新索引
-        await updateGameIndex(game, env);
+        // 更新索引（传入旧状态以便清理）
+        await updateGameIndex(game, oldStatus, env);
 
         return jsonResponse(game);
     } catch (error) {
@@ -223,9 +231,30 @@ async function listGames(url: URL, env: Env): Promise<Response> {
 /**
  * 更新游戏索引
  * 用于快速查询不同状态的游戏
+ * @param game 当前游戏数据
+ * @param oldStatus 旧状态（用于从旧索引中移除），null表示新创建的游戏
+ * @param env 环境变量
  */
-async function updateGameIndex(game: GameRoomMetadata, env: Env): Promise<void> {
-    // 更新状态索引
+async function updateGameIndex(
+    game: GameRoomMetadata,
+    oldStatus: string | null,
+    env: Env
+): Promise<void> {
+    // 如果状态发生变化，从旧状态索引中移除
+    if (oldStatus && oldStatus !== game.status) {
+        const oldStatusKey = `games_by_status:${oldStatus}`;
+        const oldStatusGamesJson = await env.METADATA_KV.get(oldStatusKey);
+        if (oldStatusGamesJson) {
+            const oldStatusGames: string[] = JSON.parse(oldStatusGamesJson);
+            const index = oldStatusGames.indexOf(game.gameId);
+            if (index !== -1) {
+                oldStatusGames.splice(index, 1);
+                await env.METADATA_KV.put(oldStatusKey, JSON.stringify(oldStatusGames));
+            }
+        }
+    }
+
+    // 更新当前状态索引
     const statusKey = `games_by_status:${game.status}`;
     const statusGamesJson = await env.METADATA_KV.get(statusKey);
     const statusGames: string[] = statusGamesJson ? JSON.parse(statusGamesJson) : [];

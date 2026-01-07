@@ -82,21 +82,25 @@ async function createOrUpdatePlayer(
         // 获取现有数据
         const existing = await env.METADATA_KV.get(key, 'json') as PlayerMetadata | null;
 
-        // 合并数据
+        // 默认值
+        const defaultStats = { gamesPlayed: 0, gamesWon: 0, totalEarnings: '0' };
+        const defaultPreferences = { language: 'zh-CN' as const, soundEnabled: true, soundVolume: 80 };
+
+        // 深度合并数据（嵌套对象合并而非替换）
         const player: PlayerMetadata = {
             address,
-            nickname: metadata.nickname || existing?.nickname || '',
-            avatar: metadata.avatar || existing?.avatar || '',
-            bio: metadata.bio || existing?.bio,
-            stats: metadata.stats || existing?.stats || {
-                gamesPlayed: 0,
-                gamesWon: 0,
-                totalEarnings: '0'
+            nickname: metadata.nickname ?? existing?.nickname ?? '',
+            avatar: metadata.avatar ?? existing?.avatar ?? '',
+            bio: metadata.bio ?? existing?.bio,
+            // 深度合并 stats
+            stats: {
+                ...(existing?.stats || defaultStats),
+                ...(metadata.stats || {})
             },
-            preferences: metadata.preferences || existing?.preferences || {
-                language: 'zh-CN',
-                soundEnabled: true,
-                soundVolume: 80
+            // 深度合并 preferences
+            preferences: {
+                ...(existing?.preferences || defaultPreferences),
+                ...(metadata.preferences || {})
             },
             createdAt: existing?.createdAt || Date.now(),
             updatedAt: Date.now()
@@ -130,10 +134,23 @@ async function updatePlayer(
             return errorResponse('Player not found', 404);
         }
 
-        // 合并更新
+        // 深度合并更新（嵌套对象合并而非替换）
         const player: PlayerMetadata = {
             ...existing,
-            ...updates,
+            // 顶层字段直接覆盖
+            nickname: updates.nickname ?? existing.nickname,
+            avatar: updates.avatar ?? existing.avatar,
+            bio: updates.bio ?? existing.bio,
+            // 深度合并 stats
+            stats: {
+                ...existing.stats,
+                ...(updates.stats || {})
+            },
+            // 深度合并 preferences
+            preferences: {
+                ...existing.preferences,
+                ...(updates.preferences || {})
+            },
             address,  // 地址不允许修改
             createdAt: existing.createdAt,  // 创建时间不允许修改
             updatedAt: Date.now()

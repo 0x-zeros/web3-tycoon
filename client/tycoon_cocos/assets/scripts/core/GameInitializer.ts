@@ -26,6 +26,9 @@ import { CacheManager } from '../http/CacheManager';
 import { MetadataService } from '../http/MetadataService';
 import * as TWEEN from '@tweenjs/tween.js';
 
+// 导入测试脚本（开发环境）
+import '../tests/TestMetadataService';
+
 const { ccclass, property } = _decorator;
 
 /**
@@ -213,7 +216,7 @@ export class GameInitializer extends Component {
 
             // 创建HTTP客户端
             this.httpClient = new HttpClient({
-                baseUrl: 'https://api.web3tycoon.com',
+                baseUrl: 'https://web3-tycoon-api.zeros-null.workers.dev',
                 timeout: 30000
             });
 

@@ -20,6 +20,7 @@ import { MapManager } from '../map/MapManager';
 import { SuiManager } from '../sui/managers/SuiManager';
 import { SuiEnvConfigManager } from '../config/SuiEnvConfigManager';
 import { GameSession } from './GameSession';
+import { DiceController } from '../game/DiceController';
 import * as TWEEN from '@tweenjs/tween.js';
 
 const { ccclass, property } = _decorator;
@@ -528,6 +529,14 @@ export class GameInitializer extends Component {
                 // 设置到 Blackboard（供 UI 组件访问）
                 Blackboard.instance.set("currentGameSession", this.gameSession);
                 console.log('[GameInitializer] GameSession 设置到 Blackboard');
+
+                // 初始化 DiceController（确保观战者也能看到骰子动画）
+                try {
+                    await DiceController.instance.initialize();
+                    console.log('[GameInitializer] DiceController 初始化完成', { isSpectator });
+                } catch (error) {
+                    console.error('[GameInitializer] DiceController 初始化失败:', error);
+                }
             } else {
                 console.error('[GameInitializer] GameSession 未初始化');
             }

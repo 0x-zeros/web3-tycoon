@@ -332,6 +332,22 @@ export class SuiManager {
     }
 
     /**
+     * 签名个人消息（用于 API 身份验证）
+     * @param message 消息字符串
+     * @returns Base64 编码的签名
+     */
+    public async signPersonalMessage(message: string): Promise<string> {
+        this._ensureSigner();
+
+        const messageBytes = new TextEncoder().encode(message);
+        const result = await this._signer!.signPersonalMessage(messageBytes);
+
+        this._log('[SuiManager] Personal message signed');
+
+        return result.signature;
+    }
+
+    /**
      * 检查签名器是否可用
      */
     private _ensureSigner(): void {

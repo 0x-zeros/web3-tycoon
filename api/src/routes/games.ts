@@ -4,6 +4,7 @@
 
 import { Env, GameRoomMetadata } from '../types';
 import { jsonResponse, errorResponse } from '../utils/cors';
+import { verifyAndParseSignature, checkOwnership, parseSignedRequest } from '../utils/auth';
 
 /**
  * 处理游戏房间相关路由
@@ -13,12 +14,12 @@ export async function handleGameRoutes(request: Request, env: Env): Promise<Resp
     const method = request.method;
     const path = url.pathname;
 
-    // GET /api/games - 列出游戏房间
+    // GET /api/games - 列出游戏房间（无需验证）
     if (method === 'GET' && path === '/api/games') {
         return await listGames(url, env);
     }
 
-    // GET /api/games/:gameId - 获取单个游戏房间
+    // GET /api/games/:gameId - 获取单个游戏房间（无需验证）
     if (method === 'GET') {
         const match = path.match(/^\/api\/games\/(.+)$/);
         if (match) {
@@ -27,24 +28,75 @@ export async function handleGameRoutes(request: Request, env: Env): Promise<Resp
         }
     }
 
-    // POST /api/games - 创建游戏房间
+    // POST /api/games - 创建游戏房间（需要签名验证）
     if (method === 'POST' && path === '/api/games') {
         try {
-            const body = await request.json() as Partial<GameRoomMetadata> & { gameId: string };
-            return await createGame(body, env);
+            const body = await request.json();
+            const signedRequest = parseSignedRequest(body);
+
+            if (signedRequest) {
+                // 签名请求：验证签名
+                const auth = await verifyAndParseSignature(signedRequest);
+                if (!auth.valid) {
+                    return errorResponse(auth.error || 'Invalid signature', 401);
+                }
+
+                // 从 payload 获取数据
+                const payload = auth.payload!;
+                const gameData = payload.data as Partial<GameRoomMetadata> & { gameId: string };
+
+                // 检查：签名者 === hostAddress
+                const hostAddress = gameData.hostAddress || payload.address;
+                if (!checkOwnership(auth.address!, hostAddress)) {
+                    return errorResponse('hostAddress must match signer', 403);
+                }
+
+                return await createGame({
+                    ...gameData,
+                    hostAddress: auth.address!  // 使用签名者地址作为 hostAddress
+                }, env);
+            } else {
+                // 非签名请求：暂时允许（向后兼容，后续可移除）
+                const input = body as Partial<GameRoomMetadata> & { gameId: string };
+                return await createGame(input, env);
+            }
         } catch (error) {
             return errorResponse('Invalid JSON body', 400);
         }
     }
 
-    // PUT /api/games/:gameId - 更新游戏房间
+    // PUT /api/games/:gameId - 更新游戏房间（需要签名验证，只有房主可修改）
     if (method === 'PUT') {
         const match = path.match(/^\/api\/games\/(.+)$/);
         if (match) {
             const gameId = match[1];
             try {
-                const body = await request.json() as Partial<GameRoomMetadata>;
-                return await updateGame(gameId, body, env);
+                const body = await request.json();
+                const signedRequest = parseSignedRequest(body);
+
+                if (signedRequest) {
+                    // 签名请求：验证签名
+                    const auth = await verifyAndParseSignature(signedRequest);
+                    if (!auth.valid) {
+                        return errorResponse(auth.error || 'Invalid signature', 401);
+                    }
+
+                    // 获取现有游戏，检查权限
+                    const existing = await env.METADATA_KV.get(`game:${gameId}`, 'json') as GameRoomMetadata | null;
+                    if (!existing) {
+                        return errorResponse('Game not found', 404);
+                    }
+
+                    // 检查：签名者 === 游戏的 hostAddress
+                    if (!checkOwnership(auth.address!, existing.hostAddress)) {
+                        return errorResponse('Only host can modify game', 403);
+                    }
+
+                    return await updateGame(gameId, auth.payload!.data, env);
+                } else {
+                    // 非签名请求：暂时允许（向后兼容，后续可移除）
+                    return await updateGame(gameId, body as Partial<GameRoomMetadata>, env);
+                }
             } catch (error) {
                 return errorResponse('Invalid JSON body', 400);
             }

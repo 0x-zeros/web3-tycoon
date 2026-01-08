@@ -20,6 +20,9 @@
   ],
   "author": "Web3 Tycoon Team",
   "license": "MIT",
+  "dependencies": {
+    "@mysten/sui": "^1.42.0"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",
     "wrangler": "^3.22.1",

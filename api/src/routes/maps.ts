@@ -4,6 +4,7 @@
 
 import { Env, MapMetadata } from '../types';
 import { jsonResponse, errorResponse } from '../utils/cors';
+import { verifyAndParseSignature, checkOwnership, parseSignedRequest } from '../utils/auth';
 
 /**
  * 处理地图相关路由
@@ -27,24 +28,78 @@ export async function handleMapRoutes(request: Request, env: Env): Promise<Respo
         }
     }
 
-    // POST /api/maps - 创建地图元数据
+    // POST /api/maps - 创建地图元数据（需要签名验证）
     if (method === 'POST' && path === '/api/maps') {
         try {
-            const body = await request.json() as Partial<MapMetadata> & { templateId: string };
-            return await createMap(body, env);
+            const body = await request.json();
+            const signedRequest = parseSignedRequest(body);
+
+            if (signedRequest) {
+                // 签名请求：验证签名
+                const auth = await verifyAndParseSignature(signedRequest);
+                if (!auth.valid) {
+                    return errorResponse(auth.error || 'Invalid signature', 401);
+                }
+
+                // 从 payload 获取数据
+                const payload = auth.payload!;
+                const mapData = payload.data as Partial<MapMetadata> & { templateId: string };
+
+                // 检查：签名者 === creator.address
+                const creatorAddress = mapData.creator?.address || payload.address;
+                if (!checkOwnership(auth.address!, creatorAddress)) {
+                    return errorResponse('creator.address must match signer', 403);
+                }
+
+                return await createMap({
+                    ...mapData,
+                    creator: {
+                        ...(mapData.creator || {}),
+                        address: auth.address!  // 使用签名者地址作为 creator.address
+                    }
+                }, env);
+            } else {
+                // 非签名请求：暂时允许（向后兼容，后续可移除）
+                const input = body as Partial<MapMetadata> & { templateId: string };
+                return await createMap(input, env);
+            }
         } catch (error) {
             return errorResponse('Invalid JSON body', 400);
         }
     }
 
-    // PUT /api/maps/:templateId - 更新地图元数据
+    // PUT /api/maps/:templateId - 更新地图元数据（需要签名验证，只有创建者可修改）
     if (method === 'PUT') {
         const match = path.match(/^\/api\/maps\/(.+)$/);
         if (match) {
             const templateId = match[1];
             try {
-                const body = await request.json() as Partial<MapMetadata>;
-                return await updateMap(templateId, body, env);
+                const body = await request.json();
+                const signedRequest = parseSignedRequest(body);
+
+                if (signedRequest) {
+                    // 签名请求：验证签名
+                    const auth = await verifyAndParseSignature(signedRequest);
+                    if (!auth.valid) {
+                        return errorResponse(auth.error || 'Invalid signature', 401);
+                    }
+
+                    // 获取现有地图，检查权限
+                    const existing = await env.METADATA_KV.get(`map:${templateId}`, 'json') as MapMetadata | null;
+                    if (!existing) {
+                        return errorResponse('Map not found', 404);
+                    }
+
+                    // 检查：签名者 === 地图的 creator.address
+                    if (!checkOwnership(auth.address!, existing.creator.address)) {
+                        return errorResponse('Only creator can modify map', 403);
+                    }
+
+                    return await updateMap(templateId, auth.payload!.data, env);
+                } else {
+                    // 非签名请求：暂时允许（向后兼容，后续可移除）
+                    return await updateMap(templateId, body as Partial<MapMetadata>, env);
+                }
             } catch (error) {
                 return errorResponse('Invalid JSON body', 400);
             }

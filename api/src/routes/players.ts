@@ -4,6 +4,7 @@
 
 import { Env, PlayerMetadata } from '../types';
 import { jsonResponse, errorResponse } from '../utils/cors';
+import { verifyAndParseSignature, checkOwnership, parseSignedRequest } from '../utils/auth';
 
 /**
  * 处理玩家相关路由
@@ -12,7 +13,7 @@ export async function handlePlayerRoutes(request: Request, env: Env): Promise<Re
     const url = new URL(request.url);
     const method = request.method;
 
-    // GET /api/players/:address
+    // GET /api/players/:address - 读取无需验证
     if (method === 'GET') {
         const match = url.pathname.match(/^\/api\/players\/(.+)$/);
         if (match) {
@@ -21,24 +22,65 @@ export async function handlePlayerRoutes(request: Request, env: Env): Promise<Re
         }
     }
 
-    // POST /api/players
+    // POST /api/players - 创建/更新玩家（需要签名验证）
     if (method === 'POST') {
         try {
-            const body = await request.json() as Partial<PlayerMetadata> & { address: string };
-            return await createOrUpdatePlayer(body, env);
+            const body = await request.json();
+            const signedRequest = parseSignedRequest(body);
+
+            if (signedRequest) {
+                // 签名请求：验证签名
+                const auth = await verifyAndParseSignature(signedRequest);
+                if (!auth.valid) {
+                    return errorResponse(auth.error || 'Invalid signature', 401);
+                }
+
+                // 检查：签名者 === 请求的玩家地址
+                const payload = auth.payload!;
+                if (!checkOwnership(auth.address!, payload.address)) {
+                    return errorResponse('Cannot modify other player', 403);
+                }
+
+                return await createOrUpdatePlayer({
+                    address: payload.address,
+                    ...payload.data
+                }, env);
+            } else {
+                // 非签名请求：暂时允许（向后兼容，后续可移除）
+                const input = body as Partial<PlayerMetadata> & { address: string };
+                return await createOrUpdatePlayer(input, env);
+            }
         } catch (error) {
             return errorResponse('Invalid JSON body', 400);
         }
     }
 
-    // PUT /api/players/:address
+    // PUT /api/players/:address - 更新玩家（需要签名验证）
     if (method === 'PUT') {
         const match = url.pathname.match(/^\/api\/players\/(.+)$/);
         if (match) {
             const address = match[1];
             try {
-                const body = await request.json() as Partial<PlayerMetadata>;
-                return await updatePlayer(address, body, env);
+                const body = await request.json();
+                const signedRequest = parseSignedRequest(body);
+
+                if (signedRequest) {
+                    // 签名请求：验证签名
+                    const auth = await verifyAndParseSignature(signedRequest);
+                    if (!auth.valid) {
+                        return errorResponse(auth.error || 'Invalid signature', 401);
+                    }
+
+                    // 检查：签名者 === URL中的地址
+                    if (!checkOwnership(auth.address!, address)) {
+                        return errorResponse('Cannot modify other player', 403);
+                    }
+
+                    return await updatePlayer(address, auth.payload!.data, env);
+                } else {
+                    // 非签名请求：暂时允许（向后兼容，后续可移除）
+                    return await updatePlayer(address, body as Partial<PlayerMetadata>, env);
+                }
             } catch (error) {
                 return errorResponse('Invalid JSON body', 400);
             }

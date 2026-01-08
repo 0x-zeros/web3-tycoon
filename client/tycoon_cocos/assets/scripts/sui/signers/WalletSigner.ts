@@ -7,7 +7,7 @@
 import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
 import type { Wallet, WalletAccount } from '@mysten/wallet-standard';
-import { SignerProvider } from './SignerProvider';
+import { SignerProvider, PersonalMessageSignature } from './SignerProvider';
 
 /**
  * Wallet 签名器
@@ -69,6 +69,37 @@ export class WalletSigner implements SignerProvider {
                 throw new Error('交易失败：请等待钱包完全加载后再点击确认');
             }
 
+            throw error;
+        }
+    }
+
+    /**
+     * 签名个人消息（用于身份验证）
+     */
+    async signPersonalMessage(message: Uint8Array): Promise<PersonalMessageSignature> {
+        console.log('[WalletSigner] Signing personal message with wallet:', this.wallet.name);
+
+        // 获取钱包的个人消息签名功能
+        const signFeature = this.wallet.features['sui:signPersonalMessage'] as any;
+
+        if (!signFeature || typeof signFeature.signPersonalMessage !== 'function') {
+            throw new Error(`Wallet ${this.wallet.name} does not support sui:signPersonalMessage`);
+        }
+
+        try {
+            const result = await signFeature.signPersonalMessage({
+                message,
+                account: this.account,
+                chain: `sui:${this.network}`
+            });
+
+            console.log('[WalletSigner] Personal message signed successfully');
+            return {
+                bytes: result.bytes,
+                signature: result.signature
+            };
+        } catch (error) {
+            console.error('[WalletSigner] Personal message signing failed:', error);
             throw error;
         }
     }

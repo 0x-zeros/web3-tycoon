@@ -187,14 +187,17 @@ export class UseCardHandler {
      */
     private async applyNpcChanges(session: any, npcChanges: NpcChangeItem[]): Promise<void> {
         for (const change of npcChanges) {
-            if (change.action === 0) {
-                // 添加 NPC
+            if (change.action === 1) {
+                // NPC_ACTION_SPAWN: 添加 NPC
                 session.addNPC(change.tile_id, change.npc_kind, change.consumable);
                 console.log(`[UseCardHandler] 在 tile ${change.tile_id} 添加 NPC ${change.npc_kind}`);
-            } else {
-                // 移除 NPC
+            } else if (change.action === 2) {
+                // NPC_ACTION_REMOVE: 移除 NPC
                 session.removeNPC(change.tile_id);
                 console.log(`[UseCardHandler] 从 tile ${change.tile_id} 移除 NPC`);
+            } else if (change.action === 3) {
+                // NPC_ACTION_HIT: 触发效果（不一定删除，由consumable决定）
+                console.log(`[UseCardHandler] NPC被触发 at tile ${change.tile_id}`);
             }
         }
     }

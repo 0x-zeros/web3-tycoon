@@ -889,12 +889,14 @@ export class GameSession {
         const index = this._npcs.findIndex(npc => npc.getTileId() === tileId);
         if (index >= 0) {
             const npc = this._npcs[index];
-
-            // 销毁NPC的PaperActor节点
-            npc.destroy();
-
             this._npcs.splice(index, 1);
             console.log(`[GameSession] 移除地块 ${tileId} 上的NPC`);
+
+            // 通过 GameMap 清理渲染（会销毁节点并从_npcActors删除）
+            const gameMap = this.getGameMap();
+            if (gameMap) {
+                gameMap.removeNPCActor(tileId);
+            }
 
             EventBus.emit(EventTypes.Game.NPCRemoved, {
                 session: this,

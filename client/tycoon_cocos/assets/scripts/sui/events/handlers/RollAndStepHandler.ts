@@ -374,14 +374,8 @@ export class RollAndStepHandler {
             if (step.npc_event.consumed) {
                 const session = this.currentSession;
 
-                // 从 GameSession 数据删除
+                // 从 GameSession 删除（内部会调用 gameMap.removeNPCActor 清理渲染）
                 session.removeNPC(step.npc_event.tile_id);
-
-                // 从 GameMap 渲染删除
-                const gameMap = session.getGameMap();
-                if (gameMap && gameMap.removeNPCActor) {
-                    gameMap.removeNPCActor(step.npc_event.tile_id);
-                }
 
                 console.log('[RollAndStepHandler] NPC 已消耗并删除:', step.npc_event.tile_id);
             }

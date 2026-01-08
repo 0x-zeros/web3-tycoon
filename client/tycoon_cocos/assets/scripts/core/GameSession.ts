@@ -887,6 +887,13 @@ export class GameSession {
      * 用于处理链上事件中的NPC生成
      */
     public async spawnNPC(tileId: number, kind: number, consumable: boolean): Promise<void> {
+        // 0. 检查并清理已有NPC（防止重复）
+        const existingNPC = this.getNPCAtTile(tileId);
+        if (existingNPC) {
+            console.warn(`[GameSession] tile ${tileId} 已有NPC，先移除旧NPC`);
+            this.removeNPC(tileId);
+        }
+
         // 1. 创建NPC对象
         const npc = new NPC();
         npc.loadFromConfig({

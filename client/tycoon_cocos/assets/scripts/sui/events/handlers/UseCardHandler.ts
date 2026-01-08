@@ -30,13 +30,13 @@ export interface UseCardActionEvent {
 }
 
 /**
- * NPC 变化项
+ * NPC 变化项（与 Move 端 NpcChangeItem 对应）
  */
 export interface NpcChangeItem {
     tile_id: number;        // u16
-    npc_kind: number;       // u8
+    kind: number;           // u8 - NPC类型
     action: number;         // u8: 1=spawn, 2=remove, 3=hit
-    consumable: boolean;
+    consumed: boolean;      // 是否已消耗
 }
 
 /**
@@ -189,14 +189,14 @@ export class UseCardHandler {
         for (const change of npcChanges) {
             if (change.action === 1) {
                 // NPC_ACTION_SPAWN: 生成 NPC（数据+渲染）
-                await session.spawnNPC(change.tile_id, change.npc_kind, change.consumable);
-                console.log(`[UseCardHandler] 在 tile ${change.tile_id} 生成 NPC ${change.npc_kind}`);
+                await session.spawnNPC(change.tile_id, change.kind, change.consumed);
+                console.log(`[UseCardHandler] 在 tile ${change.tile_id} 生成 NPC ${change.kind}`);
             } else if (change.action === 2) {
                 // NPC_ACTION_REMOVE: 移除 NPC
                 session.removeNPC(change.tile_id);
                 console.log(`[UseCardHandler] 从 tile ${change.tile_id} 移除 NPC`);
             } else if (change.action === 3) {
-                // NPC_ACTION_HIT: 触发效果（不一定删除，由consumable决定）
+                // NPC_ACTION_HIT: 触发效果（不一定删除，由consumed决定）
                 console.log(`[UseCardHandler] NPC被触发 at tile ${change.tile_id}`);
             }
         }

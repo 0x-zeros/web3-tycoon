@@ -120,7 +120,17 @@ export class NPC extends Role {
         this.m_strName = config.displayName || this.getNPCKindName(this._kind);
         this.m_oId = `npc_${this._kind}_${this._spawnIndex}_${Date.now()}`;
 
+        // 同步到 Role 基类属性（与 loadFromMoveNPC 一致）
+        this.setAttr(RoleAttribute.HP, 1);
+
         console.log('[NPC] NPC配置加载完成');
+
+        // 触发NPC数据加载事件（与 loadFromMoveNPC 一致）
+        EventBus.emit(EventTypes.Role.Initialized, {
+            roleId: this.m_oId,
+            role: this,
+            npcKind: this._kind
+        });
     }
 
     // ========================= 辅助方法 =========================

@@ -889,6 +889,10 @@ export class GameSession {
         const index = this._npcs.findIndex(npc => npc.getTileId() === tileId);
         if (index >= 0) {
             const npc = this._npcs[index];
+
+            // 销毁NPC的PaperActor节点
+            npc.destroy();
+
             this._npcs.splice(index, 1);
             console.log(`[GameSession] 移除地块 ${tileId} 上的NPC`);
 

@@ -35,7 +35,7 @@ export interface UseCardActionEvent {
 export interface NpcChangeItem {
     tile_id: number;        // u16
     npc_kind: number;       // u8
-    action: number;         // u8: 0=add, 1=remove
+    action: number;         // u8: 1=spawn, 2=remove, 3=hit
     consumable: boolean;
 }
 

@@ -82,6 +82,16 @@ export class MetadataService {
         return suiManager.isConnected;
     }
 
+    /**
+     * 确保签名能力可用（写操作必需）
+     * @throws Error 如果钱包未连接
+     */
+    private ensureSigningCapability(): void {
+        if (!this.hasSigningCapability()) {
+            throw new Error('Wallet not connected. Please connect your wallet first.');
+        }
+    }
+
     // ==================== 玩家元数据 ====================
 
     /**
@@ -122,28 +132,21 @@ export class MetadataService {
 
     /**
      * 创建或更新玩家元数据
-     * 如果钱包已连接，使用签名验证
+     * 需要钱包签名验证
      */
     public async createOrUpdatePlayer(
         address: string,
         metadata: Partial<PlayerMetadata>
     ): Promise<PlayerMetadata> {
-        try {
-            let requestBody: any;
+        this.ensureSigningCapability();
 
-            // 如果有签名能力，使用签名请求
-            if (this.hasSigningCapability()) {
-                console.log(`[MetadataService] 使用签名请求创建/更新玩家: ${address}`);
-                requestBody = await this.createSignedRequest(
-                    'create_player',
-                    address,
-                    { address, ...metadata }
-                );
-            } else {
-                // 无签名能力，使用普通请求（向后兼容）
-                console.log(`[MetadataService] 使用普通请求创建/更新玩家: ${address}`);
-                requestBody = { address, ...metadata };
-            }
+        try {
+            console.log(`[MetadataService] 使用签名请求创建/更新玩家: ${address}`);
+            const requestBody = await this.createSignedRequest(
+                'create_player',
+                address,
+                { address, ...metadata }
+            );
 
             const data = await this.httpClient.post<PlayerMetadata>(
                 '/api/players',
@@ -164,27 +167,21 @@ export class MetadataService {
 
     /**
      * 更新玩家元数据
-     * 如果钱包已连接，使用签名验证
+     * 需要钱包签名验证
      */
     public async updatePlayer(
         address: string,
         updates: UpdatePlayerRequest
     ): Promise<PlayerMetadata> {
-        try {
-            let requestBody: any;
+        this.ensureSigningCapability();
 
-            // 如果有签名能力，使用签名请求
-            if (this.hasSigningCapability()) {
-                console.log(`[MetadataService] 使用签名请求更新玩家: ${address}`);
-                requestBody = await this.createSignedRequest(
-                    'update_player',
-                    address,
-                    updates
-                );
-            } else {
-                console.log(`[MetadataService] 使用普通请求更新玩家: ${address}`);
-                requestBody = updates;
-            }
+        try {
+            console.log(`[MetadataService] 使用签名请求更新玩家: ${address}`);
+            const requestBody = await this.createSignedRequest(
+                'update_player',
+                address,
+                updates
+            );
 
             const data = await this.httpClient.put<PlayerMetadata>(
                 `/api/players/${address}`,
@@ -241,26 +238,20 @@ export class MetadataService {
 
     /**
      * 创建游戏房间元数据
-     * 如果钱包已连接，使用签名验证
+     * 需要钱包签名验证
      */
     public async createGameRoom(
         request: CreateGameRoomRequest
     ): Promise<GameRoomMetadata> {
-        try {
-            let requestBody: any;
+        this.ensureSigningCapability();
 
-            // 如果有签名能力，使用签名请求
-            if (this.hasSigningCapability()) {
-                console.log(`[MetadataService] 使用签名请求创建游戏房间: ${request.gameId}`);
-                requestBody = await this.createSignedRequest(
-                    'create_game',
-                    request.hostAddress,
-                    request
-                );
-            } else {
-                console.log(`[MetadataService] 使用普通请求创建游戏房间: ${request.gameId}`);
-                requestBody = request;
-            }
+        try {
+            console.log(`[MetadataService] 使用签名请求创建游戏房间: ${request.gameId}`);
+            const requestBody = await this.createSignedRequest(
+                'create_game',
+                request.hostAddress,
+                request
+            );
 
             const data = await this.httpClient.post<GameRoomMetadata>(
                 '/api/games',
@@ -281,34 +272,28 @@ export class MetadataService {
 
     /**
      * 更新游戏房间元数据
-     * 如果钱包已连接，使用签名验证（只有 hostAddress 可以更新）
+     * 需要钱包签名验证（只有 hostAddress 可以更新）
      */
     public async updateGameRoom(
         gameId: string,
         updates: UpdateGameRoomRequest
     ): Promise<GameRoomMetadata> {
+        this.ensureSigningCapability();
+
         try {
-            let requestBody: any;
+            const suiManager = SuiManager.instance;
+            const currentAddress = suiManager.currentAddress;
 
-            // 如果有签名能力，使用签名请求
-            if (this.hasSigningCapability()) {
-                const suiManager = SuiManager.instance;
-                const currentAddress = suiManager.currentAddress;
-
-                if (!currentAddress) {
-                    throw new Error('No wallet address available for signing');
-                }
-
-                console.log(`[MetadataService] 使用签名请求更新游戏房间: ${gameId}`);
-                requestBody = await this.createSignedRequest(
-                    'update_game',
-                    currentAddress,
-                    updates
-                );
-            } else {
-                console.log(`[MetadataService] 使用普通请求更新游戏房间: ${gameId}`);
-                requestBody = updates;
+            if (!currentAddress) {
+                throw new Error('No wallet address available for signing');
             }
+
+            console.log(`[MetadataService] 使用签名请求更新游戏房间: ${gameId}`);
+            const requestBody = await this.createSignedRequest(
+                'update_game',
+                currentAddress,
+                updates
+            );
 
             const data = await this.httpClient.put<GameRoomMetadata>(
                 `/api/games/${gameId}`,

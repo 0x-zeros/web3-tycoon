@@ -59,7 +59,6 @@ NPC、物体的纹理资源（仅用于PaperActor，不包括装饰物）
 
 #### Web3主题建筑
   - `crypto_mine_lv0-3.png` - 加密矿场（4个等级）
-  - `defi_center_lv0-3.png` - DeFi中心（4个等级）
   - `nft_gallery_lv0-3.png` - NFT画廊（4个等级）
 
 ### ui/

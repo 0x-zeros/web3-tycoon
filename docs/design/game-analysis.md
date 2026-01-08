@@ -84,35 +84,17 @@ struct CharacterNFT has key, store {
 }
 ```
 
-#### 2. DeFi机制集成
-
-**Scallop借贷集成：**
-- 抵押地产NFT获得流动资金
-- 利息计算基于Scallop协议
-- 清算机制保护借贷安全
-
-**Navi流动性挖矿：**
-- 游戏内代币质押挖矿
-- 提供流动性获得额外奖励
-- 治理代币参与游戏规则制定
-
-**Bucket数据存储：**
-- 游戏状态去中心化存储
-- 历史记录永久保存
-- 跨设备数据同步
-
-#### 3. 代币经济设计
+#### 2. 代币经济设计
 
 **双代币模型：**
 1. **游戏币（TYCO）**：游戏内流通货币
-2. **治理币（TYCOON）**：治理和质押奖励
+2. **治理币（TYCOON）**：治理奖励
 
 **代币分配：**
 - 50% 游戏奖励池
 - 20% 团队和开发
-- 15% 流动性挖矿
-- 10% 生态建设
-- 5% 初始流动性
+- 20% 生态建设
+- 10% 初始储备
 
 ## 游戏创新点
 
@@ -128,7 +110,6 @@ struct CharacterNFT has key, store {
 
 ### 3. GameFi机制
 - Play-to-Earn：游戏表现获得代币奖励
-- Stake-to-Play：质押代币参与高级游戏
 - NFT升级：通过游戏提升NFT属性
 
 ### 4. 跨链互操作
@@ -180,8 +161,6 @@ struct CompactGameState has store {
 module game_core;
 // 地产管理
 module property_manager;
-// DeFi集成
-module defi_integration;
 // 治理机制
 module governance;
 ```
@@ -213,7 +192,6 @@ module governance;
 
 ### 2. 价值循环
 - 玩家游戏获得奖励
-- 质押代币获得收益
 - 参与治理获得权益
 - 社区建设增加价值
 
@@ -238,11 +216,5 @@ module governance;
 - [ ] 自定义地图
 - [ ] 移动端支持
 - [ ] VR模式
-
-### DeFi集成（加分）
-- [ ] Scallop借贷
-- [ ] Navi挖矿
-- [ ] Bucket存储
-- [ ] 跨协议互操作
 
 这个分析为我们的Web3大富翁项目提供了全面的设计基础，既保持了经典游戏的核心乐趣，又融入了Web3的创新元素。

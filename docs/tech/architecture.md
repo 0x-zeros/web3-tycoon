@@ -18,9 +18,6 @@ graph TB
     
     subgraph "区块链层"
         SC[Sui智能合约]
-        BUCKET[Bucket Protocol]
-        SCALLOP[Scallop Protocol]
-        NAVI[Navi Protocol]
     end
     
     subgraph "存储层"
@@ -36,10 +33,6 @@ graph TB
     MM --> SC
     API --> SC
     WS --> REDIS
-    
-    SC --> BUCKET
-    SC --> SCALLOP
-    SC --> NAVI
     
     API --> DB
     CC --> IPFS
@@ -107,84 +100,7 @@ module tycoon::property {
 }
 ```
 
-### 1.2 DeFi协议集成
-
-**Bucket Protocol集成：**
-```move
-module tycoon::bucket_integration {
-    use bucket::data_bucket::{Self, DataBucket};
-    
-    // 游戏数据存储桶
-    struct GameDataBucket has key {
-        id: UID,
-        bucket: DataBucket<GameState>,
-        access_control: vector<address>
-    }
-    
-    // 存储游戏状态到Bucket
-    public fun store_game_state(
-        bucket: &mut GameDataBucket,
-        game: &Game,
-        ctx: &mut TxContext
-    ) {
-        // 实现游戏状态序列化和存储
-    }
-}
-```
-
-**Scallop Protocol集成：**
-```move
-module tycoon::scallop_integration {
-    use scallop::lending_pool::{Self, LendingPool};
-    
-    // 地产抵押贷款
-    struct PropertyLoan has key {
-        id: UID,
-        borrower: address,
-        collateral_property: u32,
-        loan_amount: u64,
-        interest_rate: u64,
-        due_date: u64
-    }
-    
-    // 抵押地产获得贷款
-    public entry fun mortgage_property(
-        property: &PropertyNFT,
-        amount: u64,
-        pool: &mut LendingPool,
-        ctx: &mut TxContext
-    ) {
-        // 实现地产抵押逻辑
-    }
-}
-```
-
-**Navi Protocol集成：**
-```move
-module tycoon::navi_integration {
-    use navi::liquidity_pool::{Self, Pool};
-    
-    // 流动性挖矿奖励
-    struct LiquidityReward has key {
-        id: UID,
-        provider: address,
-        staked_amount: u64,
-        reward_rate: u64,
-        last_claim: u64
-    }
-    
-    // 质押代币挖矿
-    public entry fun stake_for_mining(
-        amount: u64,
-        pool: &mut Pool,
-        ctx: &mut TxContext
-    ) {
-        // 实现流动性挖矿逻辑
-    }
-}
-```
-
-### 1.3 Gas费优化策略
+### 1.2 Gas费优化策略
 
 **批量操作设计：**
 ```move
@@ -315,10 +231,6 @@ app.put('/api/players/:id', updatePlayer);    // 更新玩家信息
 // NFT API路由
 app.get('/api/nfts/:id', getNFT);            // 获取NFT信息
 app.post('/api/nfts/mint', mintNFT);         // 铸造NFT
-
-// DeFi API路由
-app.post('/api/defi/stake', stakeTokens);     // 质押代币
-app.post('/api/defi/lend', lendTokens);       // 借贷操作
 ```
 
 ## 3. 客户端层设计

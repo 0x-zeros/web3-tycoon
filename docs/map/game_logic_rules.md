@@ -607,23 +607,6 @@ interface NFTRules {
 }
 ```
 
-#### 1.2 DeFi集成规则
-```typescript
-interface DeFiRules {
-  // 借贷规则
-  propertyMortgage: boolean;     // 地产抵押
-  interestRates: number;         // 利率设置
-
-  // 流动性挖矿
-  liquidityMining: boolean;      // 流动性挖矿
-  rewardDistribution: boolean;   // 奖励分配
-
-  // 代币经济
-  tokenEconomy: boolean;         // 代币经济
-  tokenRewards: boolean;         // 代币奖励
-}
-```
-
 ### 2. 自定义规则系统
 
 #### 2.1 规则模板

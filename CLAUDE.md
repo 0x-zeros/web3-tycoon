@@ -19,7 +19,7 @@ Web3 Tycoon is a Sui blockchain-based Monopoly game with voxel-style 3D graphics
 - **Asset Generation**: OpenAI DALL-E 3 / Google Gemini dual-engine AIGC pipeline
 - **UI Framework**: FairyGUI integration for complex interfaces
 - **Resource System**: Minecraft-style resource pack architecture
-- **Planned**: Node.js backend for multiplayer, DeFi protocol integrations (Bucket, Scallop, Navi)
+- **Planned**: Node.js backend for multiplayer
 
 ## Development Commands
 
@@ -532,7 +532,6 @@ All managers follow singleton pattern and are accessed via static `getInstance()
 
 ### 📋 Planned
 - Multiplayer backend (Node.js)
-- DeFi protocol integrations (Bucket, Scallop, Navi)
 - Advanced game modes
 - Tournament system
 

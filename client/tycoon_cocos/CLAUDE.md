@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board game mechanics with modern DeFi protocols. The active Cocos Creator client prototype is in ongoing development.
+Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board game mechanics with blockchain technology. The active Cocos Creator client prototype is in ongoing development.
 
 **Primary Development Focus**: The active Cocos Creator 3.8.7 TypeScript client in `client/tycoon_cocos/` serves as the main deliverable, with blockchain integration planned for later phases.
 
@@ -13,8 +13,7 @@ Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board 
 - **Frontend**: Cocos Creator 3.8.7 with TypeScript
 - **Asset Generation**: OpenAI DALL-E 3 / GPT-Image-1 with custom AIGC pipeline
 - **Planned Blockchain**: Sui Network + Move language for smart contracts
-- **Planned Backend**: Node.js/TypeScript for multiplayer matchmaking  
-- **Planned DeFi**: Bucket Protocol (data storage), Scallop Protocol (lending), Navi Protocol (liquidity mining)
+- **Planned Backend**: Node.js/TypeScript for multiplayer matchmaking
 
 ## Development Commands
 
@@ -172,7 +171,6 @@ assets/
 ### ⏳ Planned Integration (Later Phases)
 - **Sui Smart Contracts** - Move language for game logic and NFTs
 - **Multiplayer Backend** - Node.js for real-time game rooms
-- **DeFi Features** - Integration with Bucket, Scallop, Navi protocols
 
 ## Development Workflow
 
@@ -206,8 +204,7 @@ assets/
 
 ### Web3 Integration (Future)
 - Property ownership will be represented as Sui NFTs
-- Game state stored on Sui blockchain via Move contracts  
-- DeFi features enable property lending/borrowing mechanics
+- Game state stored on Sui blockchain via Move contracts
 
 ### Performance Guidelines  
 - Use object pooling (`game.pool`) for frequently created/destroyed objects

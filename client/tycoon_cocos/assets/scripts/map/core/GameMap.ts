@@ -1614,7 +1614,7 @@ export class GameMap extends Component {
      * @param npc NPC 逻辑对象
      * @param tileId NPC 所在的 tile ID
      */
-    private async renderNPC(npc: any, tileId: number): Promise<void> {
+    public async renderNPC(npc: any, tileId: number): Promise<void> {
         // 使用新的 CompositeVoxelActor 渲染（可通过配置切换）
         const USE_COMPOSITE_RENDERER = true;
 

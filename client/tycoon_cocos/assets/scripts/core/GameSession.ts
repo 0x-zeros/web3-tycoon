@@ -869,7 +869,7 @@ export class GameSession {
     // ========================= NPC管理 =========================
 
     /**
-     * 添加NPC
+     * 添加NPC（仅数据，不创建渲染）
      */
     public addNPC(npc: NPC): void {
         this._npcs.push(npc);
@@ -878,6 +878,37 @@ export class GameSession {
         EventBus.emit(EventTypes.Game.NPCSpawned, {
             session: this,
             tileId: npc.getTileId(),
+            npc: npc
+        });
+    }
+
+    /**
+     * 生成NPC（统一入口：创建数据 + 渲染）
+     * 用于处理链上事件中的NPC生成
+     */
+    public async spawnNPC(tileId: number, kind: number, consumable: boolean): Promise<void> {
+        // 1. 创建NPC对象
+        const npc = new NPC();
+        npc.loadFromConfig({
+            kind: kind,
+            consumable: consumable,
+            spawnIndex: 0xFFFF  // 玩家放置
+        }, tileId);
+
+        // 2. 添加到数据
+        this._npcs.push(npc);
+        console.log(`[GameSession] 生成NPC到地块 ${tileId}, kind=${kind}`);
+
+        // 3. 通过 GameMap 创建渲染
+        const gameMap = this.getGameMap();
+        if (gameMap) {
+            await gameMap.renderNPC(npc, tileId);
+        }
+
+        // 4. 发出事件
+        EventBus.emit(EventTypes.Game.NPCSpawned, {
+            session: this,
+            tileId: tileId,
             npc: npc
         });
     }

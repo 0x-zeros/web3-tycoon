@@ -188,9 +188,9 @@ export class UseCardHandler {
     private async applyNpcChanges(session: any, npcChanges: NpcChangeItem[]): Promise<void> {
         for (const change of npcChanges) {
             if (change.action === 1) {
-                // NPC_ACTION_SPAWN: 添加 NPC
-                session.addNPC(change.tile_id, change.npc_kind, change.consumable);
-                console.log(`[UseCardHandler] 在 tile ${change.tile_id} 添加 NPC ${change.npc_kind}`);
+                // NPC_ACTION_SPAWN: 生成 NPC（数据+渲染）
+                await session.spawnNPC(change.tile_id, change.npc_kind, change.consumable);
+                console.log(`[UseCardHandler] 在 tile ${change.tile_id} 生成 NPC ${change.npc_kind}`);
             } else if (change.action === 2) {
                 // NPC_ACTION_REMOVE: 移除 NPC
                 session.removeNPC(change.tile_id);

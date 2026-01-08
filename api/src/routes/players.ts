@@ -28,28 +28,26 @@ export async function handlePlayerRoutes(request: Request, env: Env): Promise<Re
             const body = await request.json();
             const signedRequest = parseSignedRequest(body);
 
-            if (signedRequest) {
-                // 签名请求：验证签名
-                const auth = await verifyAndParseSignature(signedRequest);
-                if (!auth.valid) {
-                    return errorResponse(auth.error || 'Invalid signature', 401);
-                }
-
-                // 检查：签名者 === 请求的玩家地址
-                const payload = auth.payload!;
-                if (!checkOwnership(auth.address!, payload.address)) {
-                    return errorResponse('Cannot modify other player', 403);
-                }
-
-                return await createOrUpdatePlayer({
-                    address: payload.address,
-                    ...payload.data
-                }, env);
-            } else {
-                // 非签名请求：暂时允许（向后兼容，后续可移除）
-                const input = body as Partial<PlayerMetadata> & { address: string };
-                return await createOrUpdatePlayer(input, env);
+            if (!signedRequest) {
+                return errorResponse('Signature required', 401);
             }
+
+            // 验证签名（指定 action 防止跨端点重放）
+            const auth = await verifyAndParseSignature(signedRequest, 'create_player');
+            if (!auth.valid) {
+                return errorResponse(auth.error || 'Invalid signature', 401);
+            }
+
+            // 检查：签名者 === 请求的玩家地址
+            const payload = auth.payload!;
+            if (!checkOwnership(auth.address!, payload.address)) {
+                return errorResponse('Cannot modify other player', 403);
+            }
+
+            return await createOrUpdatePlayer({
+                address: payload.address,
+                ...payload.data
+            }, env);
         } catch (error) {
             return errorResponse('Invalid JSON body', 400);
         }
@@ -64,23 +62,22 @@ export async function handlePlayerRoutes(request: Request, env: Env): Promise<Re
                 const body = await request.json();
                 const signedRequest = parseSignedRequest(body);
 
-                if (signedRequest) {
-                    // 签名请求：验证签名
-                    const auth = await verifyAndParseSignature(signedRequest);
-                    if (!auth.valid) {
-                        return errorResponse(auth.error || 'Invalid signature', 401);
-                    }
-
-                    // 检查：签名者 === URL中的地址
-                    if (!checkOwnership(auth.address!, address)) {
-                        return errorResponse('Cannot modify other player', 403);
-                    }
-
-                    return await updatePlayer(address, auth.payload!.data, env);
-                } else {
-                    // 非签名请求：暂时允许（向后兼容，后续可移除）
-                    return await updatePlayer(address, body as Partial<PlayerMetadata>, env);
+                if (!signedRequest) {
+                    return errorResponse('Signature required', 401);
                 }
+
+                // 验证签名（指定 action 防止跨端点重放）
+                const auth = await verifyAndParseSignature(signedRequest, 'update_player');
+                if (!auth.valid) {
+                    return errorResponse(auth.error || 'Invalid signature', 401);
+                }
+
+                // 检查：签名者 === URL中的地址
+                if (!checkOwnership(auth.address!, address)) {
+                    return errorResponse('Cannot modify other player', 403);
+                }
+
+                return await updatePlayer(address, auth.payload!.data, env);
             } catch (error) {
                 return errorResponse('Invalid JSON body', 400);
             }

@@ -34,32 +34,30 @@ export async function handleGameRoutes(request: Request, env: Env): Promise<Resp
             const body = await request.json();
             const signedRequest = parseSignedRequest(body);
 
-            if (signedRequest) {
-                // 签名请求：验证签名
-                const auth = await verifyAndParseSignature(signedRequest);
-                if (!auth.valid) {
-                    return errorResponse(auth.error || 'Invalid signature', 401);
-                }
-
-                // 从 payload 获取数据
-                const payload = auth.payload!;
-                const gameData = payload.data as Partial<GameRoomMetadata> & { gameId: string };
-
-                // 检查：签名者 === hostAddress
-                const hostAddress = gameData.hostAddress || payload.address;
-                if (!checkOwnership(auth.address!, hostAddress)) {
-                    return errorResponse('hostAddress must match signer', 403);
-                }
-
-                return await createGame({
-                    ...gameData,
-                    hostAddress: auth.address!  // 使用签名者地址作为 hostAddress
-                }, env);
-            } else {
-                // 非签名请求：暂时允许（向后兼容，后续可移除）
-                const input = body as Partial<GameRoomMetadata> & { gameId: string };
-                return await createGame(input, env);
+            if (!signedRequest) {
+                return errorResponse('Signature required', 401);
             }
+
+            // 验证签名（指定 action 防止跨端点重放）
+            const auth = await verifyAndParseSignature(signedRequest, 'create_game');
+            if (!auth.valid) {
+                return errorResponse(auth.error || 'Invalid signature', 401);
+            }
+
+            // 从 payload 获取数据
+            const payload = auth.payload!;
+            const gameData = payload.data as Partial<GameRoomMetadata> & { gameId: string };
+
+            // 检查：签名者 === hostAddress
+            const hostAddress = gameData.hostAddress || payload.address;
+            if (!checkOwnership(auth.address!, hostAddress)) {
+                return errorResponse('hostAddress must match signer', 403);
+            }
+
+            return await createGame({
+                ...gameData,
+                hostAddress: auth.address!  // 使用签名者地址作为 hostAddress
+            }, env);
         } catch (error) {
             return errorResponse('Invalid JSON body', 400);
         }
@@ -74,29 +72,28 @@ export async function handleGameRoutes(request: Request, env: Env): Promise<Resp
                 const body = await request.json();
                 const signedRequest = parseSignedRequest(body);
 
-                if (signedRequest) {
-                    // 签名请求：验证签名
-                    const auth = await verifyAndParseSignature(signedRequest);
-                    if (!auth.valid) {
-                        return errorResponse(auth.error || 'Invalid signature', 401);
-                    }
-
-                    // 获取现有游戏，检查权限
-                    const existing = await env.METADATA_KV.get(`game:${gameId}`, 'json') as GameRoomMetadata | null;
-                    if (!existing) {
-                        return errorResponse('Game not found', 404);
-                    }
-
-                    // 检查：签名者 === 游戏的 hostAddress
-                    if (!checkOwnership(auth.address!, existing.hostAddress)) {
-                        return errorResponse('Only host can modify game', 403);
-                    }
-
-                    return await updateGame(gameId, auth.payload!.data, env);
-                } else {
-                    // 非签名请求：暂时允许（向后兼容，后续可移除）
-                    return await updateGame(gameId, body as Partial<GameRoomMetadata>, env);
+                if (!signedRequest) {
+                    return errorResponse('Signature required', 401);
                 }
+
+                // 验证签名（指定 action 防止跨端点重放）
+                const auth = await verifyAndParseSignature(signedRequest, 'update_game');
+                if (!auth.valid) {
+                    return errorResponse(auth.error || 'Invalid signature', 401);
+                }
+
+                // 获取现有游戏，检查权限
+                const existing = await env.METADATA_KV.get(`game:${gameId}`, 'json') as GameRoomMetadata | null;
+                if (!existing) {
+                    return errorResponse('Game not found', 404);
+                }
+
+                // 检查：签名者 === 游戏的 hostAddress
+                if (!checkOwnership(auth.address!, existing.hostAddress)) {
+                    return errorResponse('Only host can modify game', 403);
+                }
+
+                return await updateGame(gameId, auth.payload!.data, env);
             } catch (error) {
                 return errorResponse('Invalid JSON body', 400);
             }

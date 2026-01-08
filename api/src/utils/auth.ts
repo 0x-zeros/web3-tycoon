@@ -48,8 +48,13 @@ const SIGNATURE_EXPIRY_MS = 5 * 60 * 1000;
 
 /**
  * 验证签名并解析消息
+ * @param request 签名请求
+ * @param expectedAction 可选：期望的 action，用于防止跨端点重放
  */
-export async function verifyAndParseSignature(request: SignedRequest): Promise<AuthResult> {
+export async function verifyAndParseSignature(
+    request: SignedRequest,
+    expectedAction?: string
+): Promise<AuthResult> {
     try {
         // 解析消息
         let payload: MessagePayload;
@@ -59,10 +64,20 @@ export async function verifyAndParseSignature(request: SignedRequest): Promise<A
             return { valid: false, error: 'Invalid message format' };
         }
 
+        // 验证 timestamp 存在且为有效数字
+        if (typeof payload.timestamp !== 'number' || !Number.isFinite(payload.timestamp)) {
+            return { valid: false, error: 'Invalid or missing timestamp' };
+        }
+
         // 检查时间戳（防止重放攻击）
         const now = Date.now();
         if (Math.abs(now - payload.timestamp) > SIGNATURE_EXPIRY_MS) {
             return { valid: false, error: 'Message expired' };
+        }
+
+        // 验证 action 匹配（防止跨端点重放）
+        if (expectedAction && payload.action !== expectedAction) {
+            return { valid: false, error: `Invalid action: expected ${expectedAction}, got ${payload.action}` };
         }
 
         // 验证签名

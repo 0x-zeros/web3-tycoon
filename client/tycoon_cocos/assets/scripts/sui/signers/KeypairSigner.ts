@@ -7,7 +7,7 @@
 import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { SignerProvider } from './SignerProvider';
+import { SignerProvider, PersonalMessageSignature } from './SignerProvider';
 
 /**
  * Keypair 签名器
@@ -50,6 +50,27 @@ export class KeypairSigner implements SignerProvider {
 
         } catch (error) {
             console.error('[KeypairSigner] Transaction failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 签名个人消息（用于身份验证）
+     */
+    async signPersonalMessage(message: Uint8Array): Promise<PersonalMessageSignature> {
+        console.log('[KeypairSigner] Signing personal message with keypair:', this.getAddress());
+
+        try {
+            // Ed25519Keypair.signPersonalMessage 返回 { bytes, signature }
+            const result = await this.keypair.signPersonalMessage(message);
+
+            console.log('[KeypairSigner] Personal message signed successfully');
+            return {
+                bytes: result.bytes,
+                signature: result.signature
+            };
+        } catch (error) {
+            console.error('[KeypairSigner] Personal message signing failed:', error);
             throw error;
         }
     }

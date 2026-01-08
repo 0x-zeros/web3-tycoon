@@ -26,9 +26,6 @@ import { CacheManager } from '../http/CacheManager';
 import { MetadataService } from '../http/MetadataService';
 import * as TWEEN from '@tweenjs/tween.js';
 
-// 导入测试脚本（开发环境）
-import '../tests/TestMetadataService';
-
 const { ccclass, property } = _decorator;
 
 /**

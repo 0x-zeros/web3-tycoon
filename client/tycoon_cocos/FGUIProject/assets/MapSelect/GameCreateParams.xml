@@ -38,5 +38,7 @@
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="取消"/>
     </component>
+    <text id="n31_tw76" name="n31" xy="32,13" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="游戏名字（可选）："/>
+    <text id="n32_tw76" name="name" xy="288,14" size="718,39" fontSize="22" color="#ffffff" autoSize="none" text="" input="true" prompt="输入游戏名字（可选）"/>
   </displayList>
 </component>

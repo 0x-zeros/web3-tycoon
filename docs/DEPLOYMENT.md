@@ -275,7 +275,7 @@ A: 可以，在 Cloudflare Pages Dashboard 中选择历史部署记录并回滚�
 
 ### Q: build/web-mobile 会占用很多 Git 空间吗？
 
-A: 是的，建议定期清理历史 commit 或使用 Git LFS。对于黑客松项目，短期内影响不大。
+A: 是的，建议定期清理历史 commit 或使用 Git LFS。
 
 ---
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board game mechanics with modern DeFi protocols. This is an 8-week hackathon project currently in Phase 1 (basic architecture) with an active Cocos Creator client prototype.
+Web3 Tycoon is a Sui blockchain-based Monopoly game that combines classic board game mechanics with modern DeFi protocols. The active Cocos Creator client prototype is in ongoing development.
 
 **Primary Development Focus**: The active Cocos Creator 3.8.7 TypeScript client in `client/tycoon_cocos/` serves as the main deliverable, with blockchain integration planned for later phases.
 
@@ -220,9 +220,7 @@ assets/
 - BTC and SUI coin icons replace traditional Monopoly symbols
 
 ### Development Context
-- 该项目目前是一个黑客松的参赛项目，时间非常紧张，还剩1个半月。所以只实现最核心的功能
+- 只实现最核心的功能，避免过度工程化
 - git commit message 尽量写的简洁一点
 - 每次做修改后，不需要直接帮我commit，我自己还需要修改
-
-This project demonstrates a well-architected hackathon approach: solid client foundation with AIGC-assisted development, clear separation of concerns, and phased blockchain integration strategy.
 - 请使用中文和我对话

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Web3 Tycoon is a Sui blockchain-based Monopoly game with voxel-style 3D graphics (Minecraft-inspired). This is an 8-week hackathon project with ~1.5 months remaining, focusing on rapid client development with blockchain integration.
+Web3 Tycoon is a Sui blockchain-based Monopoly game with voxel-style 3D graphics (Minecraft-inspired), focusing on client development with blockchain integration.
 
 **Current Development Status**:
 - Cocos Creator 3.8.7 client with voxel rendering system is the primary deliverable
@@ -354,11 +354,6 @@ web3-tycoon/
 
 ## Critical Development Notes
 
-### Hackathon Time Constraints
-- **剩余时间**: ~1.5个月，时间极其紧张
-- **优先级**: 客户端功能 > UI完善 > 区块链集成 > DeFi功能
-- **开发策略**: 只实现核心功能，避免过度工程化
-
 ### Voxel System Specifics
 - Uses custom shader for voxel rendering (voxel-block.effect, voxel-overlay.effect等)
 - Chunk-based world management for performance
@@ -550,7 +545,7 @@ All managers follow singleton pattern and are accessed via static `getInstance()
 
 ### Development Priorities
 - **Focus on client development** - Client is the primary deliverable
-- **Time is critical** - 黑客松项目，避免过度设计，只实现核心功能
+- **Avoid over-engineering** - 只实现核心功能，保持代码简洁
 - **Bug fixes**: 尽量使用KISS原则
 - **Refactoring**: 不需要向后兼容，以保持设计架构最优为优先
 - 生成代码时，没有我的指示，不要添加多余的fallback机制，让错误能够早点可见

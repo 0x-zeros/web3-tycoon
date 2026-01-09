@@ -145,6 +145,11 @@ export class UIMinimap extends UIBase {
     private _onCloseClick(): void {
         console.log('[UIMinimap] Close button clicked');
 
+        // 同步panel.visible状态（与UIInGame.toggleMinimap保持一致）
+        if (this._panel) {
+            this._panel.visible = false;
+        }
+
         // 隐藏自己
         this.hide();
 
@@ -187,8 +192,14 @@ export class UIMinimap extends UIBase {
      * 销毁回调
      */
     protected onDestroy(): void {
-        // 清理SpriteFrame
+        // 清理GLoader的texture引用
+        if (this._minimapLoader) {
+            this._minimapLoader.texture = null;
+        }
+
+        // 销毁SpriteFrame
         if (this._spriteFrame) {
+            this._spriteFrame.destroy();
             this._spriteFrame = null;
         }
 

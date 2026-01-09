@@ -22,10 +22,10 @@ import type { GameSession } from '../../../core/GameSession';
 import { CardKind } from '../../types/constants';
 
 /**
- * 格式化游戏货币显示
+ * 格式化游戏货币显示（BigInt-safe）
  */
 function formatGameCurrency(amount: bigint): string {
-    return Number(amount).toLocaleString('zh-CN');
+    return new Intl.NumberFormat('zh-CN').format(amount);
 }
 
 /**

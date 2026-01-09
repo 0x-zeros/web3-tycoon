@@ -38,14 +38,19 @@ export class MinimapCameraController extends Component {
     private readonly PADDING = 2;        // 边缘留白
 
     protected onLoad(): void {
+        console.log('[MinimapCamera] onLoad called');
+
         if (!this.camera) {
             this.camera = this.getComponent(Camera);
+            console.log(`[MinimapCamera] Got camera from getComponent: ${this.camera ? 'success' : 'failed'}`);
         }
 
         // 设置为正交投影
         if (this.camera) {
             this.camera.projection = Camera.ProjectionType.ORTHO;
             console.log('[MinimapCamera] Set to orthographic projection');
+        } else {
+            console.error('[MinimapCamera] Camera is null in onLoad!');
         }
     }
 
@@ -53,10 +58,24 @@ export class MinimapCameraController extends Component {
      * 激活相机
      */
     public activate(): void {
+        console.log('[MinimapCamera] activate() called');
+
+        // 先激活节点
         this.node.active = true;
-        if (this.camera) {
-            this.camera.enabled = true;
+
+        // 确保 camera 引用（因为 onLoad 可能还没执行）
+        if (!this.camera) {
+            this.camera = this.getComponent(Camera);
+            console.log(`[MinimapCamera] Got camera in activate: ${this.camera ? 'success' : 'failed'}`);
         }
+
+        // 设置正交投影
+        if (this.camera) {
+            this.camera.projection = Camera.ProjectionType.ORTHO;
+            this.camera.enabled = true;
+            console.log('[MinimapCamera] Camera enabled and set to orthographic');
+        }
+
         console.log('[MinimapCamera] Activated');
     }
 
@@ -74,8 +93,14 @@ export class MinimapCameraController extends Component {
      * 更新相机位置以覆盖整个地图
      */
     public updatePosition(): void {
+        console.log('[MinimapCamera] updatePosition called');
+
         const mapManager = MapManager.getInstance();
+        console.log(`[MinimapCamera] MapManager: ${mapManager ? 'found' : 'null'}`);
+
         const gameMap = mapManager?.getCurrentGameMap();
+        console.log(`[MinimapCamera] GameMap: ${gameMap ? 'found' : 'null'}`);
+        console.log(`[MinimapCamera] Camera: ${this.camera ? 'found' : 'null'}`);
 
         if (!gameMap || !this.camera) {
             console.warn('[MinimapCamera] GameMap or Camera not available');
@@ -84,7 +109,10 @@ export class MinimapCameraController extends Component {
 
         // 计算地图范围
         const tiles = gameMap.getAllTiles();
+        console.log(`[MinimapCamera] Found ${tiles.length} tiles`);
+
         const bounds = this._calculateBounds(tiles);
+        console.log(`[MinimapCamera] Bounds: minX=${bounds.minX}, maxX=${bounds.maxX}, minZ=${bounds.minZ}, maxZ=${bounds.maxZ}`);
 
         // 应用相机设置
         this._applyCameraSettings(bounds);

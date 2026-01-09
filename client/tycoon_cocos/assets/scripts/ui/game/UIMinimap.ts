@@ -5,7 +5,7 @@
  * 将RenderTexture绑定到GLoader显示小地图内容。
  */
 
-import { _decorator, find, Camera, RenderTexture, SpriteFrame } from 'cc';
+import { _decorator, find, Camera, RenderTexture, SpriteFrame, Size, Rect } from 'cc';
 import { UIBase } from '../core/UIBase';
 import { EventBus } from '../../events/EventBus';
 import { EventTypes } from '../../events/EventTypes';
@@ -95,18 +95,35 @@ export class UIMinimap extends UIBase {
      * 将RenderTexture绑定到GLoader
      */
     private _bindRenderTextureToLoader(): void {
-        if (!this._renderTexture || !this._minimapLoader) {
+        if (!this._renderTexture) {
+            console.error('[UIMinimap] RenderTexture is null');
             return;
         }
+
+        if (!this._minimapLoader) {
+            console.error('[UIMinimap] minimapLoader is null');
+            return;
+        }
+
+        console.log(`[UIMinimap] RenderTexture info: ${this._renderTexture.width}x${this._renderTexture.height}`);
 
         // 创建SpriteFrame包装RenderTexture
         this._spriteFrame = new SpriteFrame();
         this._spriteFrame.texture = this._renderTexture;
 
-        // 设置到GLoader
+        // 设置SpriteFrame的尺寸信息
+        const width = this._renderTexture.width;
+        const height = this._renderTexture.height;
+        this._spriteFrame.originalSize = new Size(width, height);
+        this._spriteFrame.rect = new Rect(0, 0, width, height);
+        // RenderTexture通常需要翻转Y轴
+        this._spriteFrame.flipUVY = true;
+
+        // 设置GLoader
+        this._minimapLoader.fill = fgui.LoaderFillType.ScaleFree;
         this._minimapLoader.texture = this._spriteFrame;
 
-        console.log('[UIMinimap] RenderTexture bound to GLoader');
+        console.log(`[UIMinimap] Bound RenderTexture to GLoader, size: ${width}x${height}`);
     }
 
     /**
@@ -124,6 +141,12 @@ export class UIMinimap extends UIBase {
         // 确保GLoader显示RenderTexture
         if (this._minimapLoader && this._spriteFrame) {
             this._minimapLoader.texture = this._spriteFrame;
+        }
+
+        // 调试：打印相机状态
+        if (this._minimapCamera) {
+            console.log(`[UIMinimap] Camera enabled: ${this._minimapCamera.enabled}, node active: ${this._minimapCamera.node.active}`);
+            console.log(`[UIMinimap] Camera targetTexture: ${this._minimapCamera.targetTexture ? 'set' : 'null'}`);
         }
     }
 

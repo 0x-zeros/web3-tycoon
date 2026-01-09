@@ -34,7 +34,7 @@
       <gearDisplay controller="mode" pages="0"/>
       <relation target="" sidePair="left-left"/>
     </component>
-    <component id="n12_n6n6" name="buildingSelect" src="n6n6oz" fileName="BuildingSelect.xml" xy="583,261">
+    <component id="n12_n6n6" name="buildingSelect" src="n6n6oz" fileName="BuildingSelect.xml" xy="388,291" scale="0.7,0.7">
       <gearDisplay controller="mode" pages="0"/>
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
@@ -51,6 +51,9 @@
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
     <component id="n17_j5iw" name="playerDetail" src="j5iwp7" fileName="components/PlayerDetail.xml" xy="526,190" scale="0.7,0.7" visible="false">
+      <relation target="" sidePair="center-center,middle-middle"/>
+    </component>
+    <component id="n18_jztv" name="minimap" src="jztvpa" fileName="components/Minimap.xml" xy="556,176" visible="false">
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
   </displayList>

@@ -16,5 +16,8 @@
     <component id="n24_mrxi" name="btn_debug" src="mrxiow6" fileName="components/Button33.xml" xy="35,138" size="190,52" visible="false">
       <Button title="调试"/>
     </component>
+    <component id="n26_jztv" name="btn_minimap" src="mrxiow6" fileName="components/Button33.xml" xy="36,199" size="190,52" visible="false">
+      <Button title="小地图"/>
+    </component>
   </displayList>
 </component>

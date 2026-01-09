@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,800">
+  <displayList>
+    <image id="n1_jztv" name="n1" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="800,800">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <component id="n0_jztv" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="623,2" size="174,64">
+      <Button title="关闭"/>
+    </component>
+    <graph id="n3_jztv" name="minimap_graph" xy="100,100" size="600,600" type="rect">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <loader id="n2_jztv" name="minimap_loader" xy="100,100" size="600,600">
+      <relation target="" sidePair="width-width,height-height"/>
+    </loader>
+  </displayList>
+</component>

@@ -32,6 +32,7 @@
     <component id="j5iwp7" name="PlayerDetail.xml" path="/components/"/>
     <component id="lizyp8" name="CardList2.xml" path="/components/"/>
     <component id="lizyp9" name="PlayerInfo2.xml" path="/components/"/>
+    <component id="jztvpa" name="Minimap.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

@@ -80,13 +80,14 @@ export class UIMinimap extends UIBase {
 
         // 获取RenderTexture
         this._renderTexture = this._minimapCamera.targetTexture;
-        if (!this._renderTexture) {
-            console.error('[UIMinimap] RenderTexture not set on Minimap Camera');
-            return;
+        if (this._renderTexture) {
+            // 绑定RenderTexture到GLoader
+            this._bindRenderTextureToLoader();
+        } else if (this._minimapLoader) {
+            // RenderTexture移除后，使用相机直接渲染输出
+            this._minimapLoader.visible = false;
+            console.log('[UIMinimap] RenderTexture not set, using direct camera output');
         }
-
-        // 绑定RenderTexture到GLoader
-        this._bindRenderTextureToLoader();
 
         console.log('[UIMinimap] Minimap camera setup complete');
     }
@@ -95,8 +96,8 @@ export class UIMinimap extends UIBase {
      * 将RenderTexture绑定到GLoader
      */
     private _bindRenderTextureToLoader(): void {
-        if (!this._renderTexture) {
-            console.error('[UIMinimap] RenderTexture is null');
+        if (!this._minimapCamera) {
+            console.error('[UIMinimap] Minimap camera is null');
             return;
         }
 
@@ -105,21 +106,34 @@ export class UIMinimap extends UIBase {
             return;
         }
 
-        console.log(`[UIMinimap] RenderTexture info: ${this._renderTexture.width}x${this._renderTexture.height}`);
+        this._renderTexture = this._minimapCamera.targetTexture;
+        if (!this._renderTexture) {
+            return;
+        }
 
-        // 创建SpriteFrame包装RenderTexture
-        this._spriteFrame = new SpriteFrame();
+        const fallbackWidth = Math.round(this._minimapLoader.width);
+        const fallbackHeight = Math.round(this._minimapLoader.height);
+        const width = this._renderTexture.width || fallbackWidth;
+        const height = this._renderTexture.height || fallbackHeight;
+
+        if (width <= 0 || height <= 0) {
+            console.warn('[UIMinimap] RenderTexture size is invalid, skip binding');
+            return;
+        }
+
+        console.log(`[UIMinimap] RenderTexture info: ${width}x${height}`);
+
+        if (!this._spriteFrame) {
+            this._spriteFrame = new SpriteFrame();
+            this._spriteFrame.packable = false;
+        }
+
         this._spriteFrame.texture = this._renderTexture;
-
-        // 设置SpriteFrame的尺寸信息
-        const width = this._renderTexture.width;
-        const height = this._renderTexture.height;
         this._spriteFrame.originalSize = new Size(width, height);
         this._spriteFrame.rect = new Rect(0, 0, width, height);
-        // RenderTexture通常需要翻转Y轴
+        // RenderTexture usually needs Y flip in UI
         this._spriteFrame.flipUVY = true;
 
-        // 设置GLoader
         this._minimapLoader.fill = fgui.LoaderFillType.ScaleFree;
         this._minimapLoader.texture = this._spriteFrame;
 
@@ -138,9 +152,14 @@ export class UIMinimap extends UIBase {
             this._cameraController.updatePosition();
         }
 
-        // 确保GLoader显示RenderTexture
-        if (this._minimapLoader && this._spriteFrame) {
-            this._minimapLoader.texture = this._spriteFrame;
+        // 确保RenderTexture在相机激活后绑定到GLoader
+        if (this._minimapCamera?.targetTexture) {
+            this._bindRenderTextureToLoader();
+            this.scheduleOnce(() => {
+                this._bindRenderTextureToLoader();
+            }, 0);
+        } else if (this._minimapLoader) {
+            this._minimapLoader.visible = false;
         }
 
         // 调试：打印相机状态

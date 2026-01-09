@@ -5,14 +5,11 @@
  * 根据地图范围自动调整视野，保持固定的等距视角。
  */
 
-import { _decorator, Component, Camera, Vec3 } from 'cc';
+import { _decorator, Component, Camera, Vec3, view } from 'cc';
 import { MapManager } from '../map/MapManager';
 import { MapTile } from '../map/core/MapTile';
 
 const { ccclass, property } = _decorator;
-
-// 角度转弧度
-const DEG2RAD = Math.PI / 180;
 
 // 地图边界信息
 interface MapBounds {
@@ -36,6 +33,7 @@ export class MinimapCameraController extends Component {
     private readonly PITCH_ANGLE = -45;  // 俯视角度
     private readonly YAW_ANGLE = -45;    // 水平旋转
     private readonly PADDING = 2;        // 边缘留白
+    private readonly HEIGHT_PADDING = 2; // 建筑高度留白
 
     protected onLoad(): void {
         console.log('[MinimapCamera] onLoad called');
@@ -158,33 +156,77 @@ export class MinimapCameraController extends Component {
      * 应用相机设置
      */
     private _applyCameraSettings(bounds: MapBounds): void {
-        // 计算正交相机的orthoHeight（视野半高）
-        const maxRange = Math.max(bounds.width, bounds.depth) + this.PADDING * 2;
-        const orthoHeight = maxRange / 2;
+        const heightPad = this.HEIGHT_PADDING;
+        const center = new Vec3(bounds.centerX, heightPad * 0.5, bounds.centerZ);
 
-        // 计算相机位置（45度等距视角）
-        const pitchRad = this.PITCH_ANGLE * DEG2RAD;
-        const yawRad = this.YAW_ANGLE * DEG2RAD;
-
-        // 相机距离（正交投影下距离不影响缩放，但影响近远裁面）
-        const distance = orthoHeight * 2;
-
-        // 计算相机位置
-        // 在等距视角下，相机应该在目标点的"右上方"（从上方看）
-        const cameraX = bounds.centerX - distance * Math.sin(yawRad);
-        const cameraY = distance * Math.sin(-pitchRad);
-        const cameraZ = bounds.centerZ + distance * Math.cos(yawRad);
-
-        // 应用位置和旋转
-        this.node.setPosition(new Vec3(cameraX, cameraY, cameraZ));
+        // 固定等距视角
         this.node.setRotationFromEuler(this.PITCH_ANGLE, this.YAW_ANGLE, 0);
 
-        // 设置正交高度
+        const minX = bounds.minX - this.PADDING;
+        const maxX = bounds.maxX + this.PADDING;
+        const minZ = bounds.minZ - this.PADDING;
+        const maxZ = bounds.maxZ + this.PADDING;
+        const minY = 0;
+        const maxY = heightPad;
+
+        // 计算相机空间下的边界尺寸，确保45度视角下能完整覆盖地图
+        const corners = [
+            new Vec3(minX, minY, minZ),
+            new Vec3(minX, minY, maxZ),
+            new Vec3(maxX, minY, minZ),
+            new Vec3(maxX, minY, maxZ),
+            new Vec3(minX, maxY, minZ),
+            new Vec3(minX, maxY, maxZ),
+            new Vec3(maxX, maxY, minZ),
+            new Vec3(maxX, maxY, maxZ)
+        ];
+
+        const right = this.node.right;
+        const up = this.node.up;
+
+        let minLocalX = Infinity;
+        let maxLocalX = -Infinity;
+        let minLocalY = Infinity;
+        let maxLocalY = -Infinity;
+        const offset = new Vec3();
+
+        for (const corner of corners) {
+            Vec3.subtract(offset, corner, center);
+            const localX = Vec3.dot(offset, right);
+            const localY = Vec3.dot(offset, up);
+            minLocalX = Math.min(minLocalX, localX);
+            maxLocalX = Math.max(maxLocalX, localX);
+            minLocalY = Math.min(minLocalY, localY);
+            maxLocalY = Math.max(maxLocalY, localY);
+        }
+
+        const halfWidth = (maxLocalX - minLocalX) * 0.5;
+        const halfHeight = (maxLocalY - minLocalY) * 0.5;
+        const aspect = this._getViewAspect();
+        let orthoHeight = Math.max(halfHeight, halfWidth / aspect);
+
+        if (!isFinite(orthoHeight) || orthoHeight <= 0) {
+            orthoHeight = Math.max(bounds.width, bounds.depth) * 0.5 + this.PADDING;
+        }
+
         if (this.camera) {
             this.camera.orthoHeight = orthoHeight;
         }
 
-        console.log(`[MinimapCamera] Position: (${cameraX.toFixed(1)}, ${cameraY.toFixed(1)}, ${cameraZ.toFixed(1)})`);
+        const distance = orthoHeight * 2;
+        const forward = this.node.forward;
+        this.node.setPosition(
+            center.x - forward.x * distance,
+            center.y - forward.y * distance,
+            center.z - forward.z * distance
+        );
+
+        console.log(`[MinimapCamera] Position: (${this.node.position.x.toFixed(1)}, ${this.node.position.y.toFixed(1)}, ${this.node.position.z.toFixed(1)})`);
         console.log(`[MinimapCamera] OrthoHeight: ${orthoHeight.toFixed(1)}, MapCenter: (${bounds.centerX.toFixed(1)}, ${bounds.centerZ.toFixed(1)})`);
+    }
+
+    private _getViewAspect(): number {
+        const size = view.getVisibleSize();
+        return size.height > 0 ? size.width / size.height : 1;
     }
 }

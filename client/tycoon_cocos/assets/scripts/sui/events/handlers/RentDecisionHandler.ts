@@ -22,6 +22,13 @@ import type { GameSession } from '../../../core/GameSession';
 import { CardKind } from '../../types/constants';
 
 /**
+ * 格式化游戏货币显示
+ */
+function formatGameCurrency(amount: bigint): string {
+    return Number(amount).toLocaleString('zh-CN');
+}
+
+/**
  * RentDecisionHandler 类
  */
 export class RentDecisionHandler {
@@ -170,10 +177,10 @@ export class RentDecisionHandler {
                 if (myPlayer) {
                     if (payer === myPlayer) {
                         // 我是付款者，显示减钱
-                        UINotification.info(`-${rentAmount}`, undefined, 2000, 'center');
+                        UINotification.info(`-${formatGameCurrency(rentAmount)}`, undefined, 2000, 'center');
                     } else if (owner === myPlayer) {
                         // 我是收款者，显示加钱
-                        UINotification.info(`+${rentAmount}`, undefined, 2000, 'center');
+                        UINotification.info(`+${formatGameCurrency(rentAmount)}`, undefined, 2000, 'center');
                     }
                 }
             }

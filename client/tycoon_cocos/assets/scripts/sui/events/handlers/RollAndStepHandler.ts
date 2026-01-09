@@ -19,7 +19,7 @@ import { EventBus } from '../../../events/EventBus';
 import { EventTypes } from '../../../events/EventTypes';
 import { Blackboard } from '../../../events/Blackboard';
 import { UINotification } from '../../../ui/utils/UINotification';
-import { DecisionType } from '../../types/constants';
+import { DecisionType, StopType } from '../../types/constants';
 import { getCardName } from '../../types/cards';
 import type { Player } from '../../types/game';
 
@@ -346,6 +346,11 @@ export class RollAndStepHandler {
                         cards: cards  // 最多3张
                     });
                 }
+            }
+
+            // 免租通过提示
+            if (step.stop_effect.stop_type === StopType.BUILDING_NO_RENT) {
+                UINotification.info('免租通过', undefined, 2000, 'center');
             }
         }
 

@@ -14,6 +14,7 @@ import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { UIInGamePlaySetting } from "./UIInGamePlaySetting";
 import { UIPlayerDetail } from "./UIPlayerDetail";
+import { UIMinimap } from "./UIMinimap";
 import { MapManager } from "../../map/MapManager";
 import { DecisionType, BuildingSize } from "../../sui/types/constants";
 import type { PendingDecisionInfo } from "../../core/GameSession";
@@ -38,6 +39,7 @@ export class UIInGame extends UIBase {
     private m_buildingSelectUI: UIInGameBuildingSelect | null = null;
     private m_playSettingUI: UIInGamePlaySetting | null = null;
     private m_playerDetailUI: UIPlayerDetail | null = null;
+    private m_minimapUI: UIMinimap | null = null;
 
     // ================ 控制器 ================
     private m_modeController: fgui.Controller;
@@ -178,6 +180,17 @@ export class UIInGame extends UIBase {
             this.m_playerDetailUI.init();
             this.m_playerDetailUI.hide();
             console.log('[UIInGame] PlayerDetail UI component created');
+        }
+
+        // m_minimapUI
+        const minimapComponent = this.getChild('minimap')?.asCom;
+        if (minimapComponent) {
+            this.m_minimapUI = minimapComponent.node.addComponent(UIMinimap);
+            this.m_minimapUI.setUIName("Minimap");
+            this.m_minimapUI.setPanel(minimapComponent);
+            this.m_minimapUI.init();
+            // 默认隐藏（Main.xml中已设置visible="false"）
+            console.log('[UIInGame] Minimap UI component created');
         }
 
         // 初始化时主动设置一次 mode 控制器（防止错过 EditModeChanged 事件）
@@ -709,6 +722,59 @@ export class UIInGame extends UIBase {
      */
     private _onShowPlayerDetail(data: { playerIndex: number }): void {
         this.showPlayerDetail(data.playerIndex);
+    }
+
+    // ================== 小地图控制方法 ==================
+
+    /**
+     * 显示小地图
+     */
+    public showMinimap(): void {
+        if (!this.m_minimapUI || !this.m_minimapUI.panel) {
+            console.warn('[UIInGame] Minimap UI not initialized');
+            return;
+        }
+
+        this.m_minimapUI.panel.visible = true;
+        this.m_minimapUI.show(undefined, false);
+        console.log('[UIInGame] Minimap shown');
+    }
+
+    /**
+     * 隐藏小地图
+     */
+    public hideMinimap(): void {
+        if (this.m_minimapUI?.panel) {
+            this.m_minimapUI.panel.visible = false;
+        }
+        this.m_minimapUI?.hide();
+    }
+
+    /**
+     * 切换小地图显示/隐藏
+     */
+    public toggleMinimap(): boolean {
+        if (!this.m_minimapUI || !this.m_minimapUI.panel) {
+            console.warn('[UIInGame] Minimap UI not initialized');
+            return false;
+        }
+
+        const newVisible = !this.m_minimapUI.panel.visible;
+        if (newVisible) {
+            this.showMinimap();
+        } else {
+            this.hideMinimap();
+        }
+
+        console.log('[UIInGame] Minimap toggled:', newVisible);
+        return newVisible;
+    }
+
+    /**
+     * 获取小地图可见性状态
+     */
+    public isMinimapVisible(): boolean {
+        return this.m_minimapUI?.panel?.visible || false;
     }
 
     /**

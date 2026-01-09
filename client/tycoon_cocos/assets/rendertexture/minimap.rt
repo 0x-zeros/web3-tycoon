@@ -1,9 +1,9 @@
 {
   "__type__": "cc.RenderTexture",
   "content": {
-    "base": "2,2,0,0,0,0",
-    "w": 256,
-    "h": 256,
+    "base": "2,2,2,2,0,0",
+    "w": 512,
+    "h": 512,
     "n": "minimap"
   }
 }

@@ -15,8 +15,8 @@
       "name": "spriteFrame",
       "userData": {
         "imageUuidOrDatabaseUri": "bf9ea60a-01a4-48fc-9db9-f30a3daa4beb",
-        "width": 256,
-        "height": 256
+        "width": 512,
+        "height": 512
       },
       "ver": "1.0.0",
       "imported": true,
@@ -27,8 +27,8 @@
     }
   },
   "userData": {
-    "width": 256,
-    "height": 256,
+    "width": 512,
+    "height": 512,
     "anisotropy": 0,
     "minfilter": "linear",
     "magfilter": "linear",

@@ -26,6 +26,7 @@ export class UICommonSetting extends UIBase {
     private btn_env!: fgui.GButton;
     private btn_playSetting!: fgui.GButton;
     private btn_debug!: fgui.GButton;
+    private btn_minimap!: fgui.GButton;
 
     /**
      * UI 包名和组件名
@@ -47,12 +48,14 @@ export class UICommonSetting extends UIBase {
         this.btn_env = this.getButton('btn_env')!;
         this.btn_playSetting = this.getButton('btn_playSetting')!;
         this.btn_debug = this.getButton('btn_debug')!;
+        this.btn_minimap = this.getButton('btn_minimap')!;
 
         // 绑定事件
         this.btn_gameConfig.onClick(this.onGameConfigClick, this);
         this.btn_env.onClick(this.onEnvClick, this);
         this.btn_playSetting.onClick(this.onPlaySettingClick, this);
         this.btn_debug.onClick(this.onDebugClick, this);
+        this.btn_minimap.onClick(this.onMinimapClick, this);
 
         // 默认隐藏特殊按钮
         this.btn_env.visible = false;        // 只在 ModeSelect 显示
@@ -61,6 +64,7 @@ export class UICommonSetting extends UIBase {
         // 监听事件
         EventBus.on(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
         EventBus.on(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
+        EventBus.on(EventTypes.UI.MinimapClosed, this.onMinimapClosed, this);
 
         console.log('[UICommonSetting] Initialized');
     }
@@ -146,6 +150,33 @@ export class UICommonSetting extends UIBase {
         this.btn_env.selected = false;
     }
 
+    /**
+     * 小地图按钮点击（Toggle 按钮）
+     * 控制 UIInGame.minimap 显示/隐藏
+     */
+    private onMinimapClick(): void {
+        console.log('[UICommonSetting] Minimap button clicked');
+
+        // 获取 UIInGame 实例并切换 minimap
+        const uiInGame = UIManager.instance.getActiveUI('InGame');
+        if (uiInGame && 'toggleMinimap' in uiInGame) {
+            const newVisible = (uiInGame as any).toggleMinimap();
+
+            // 同步按钮状态
+            this.btn_minimap.selected = newVisible;
+        } else {
+            console.warn('[UICommonSetting] UIInGame not found or toggleMinimap not available');
+        }
+    }
+
+    /**
+     * 小地图关闭事件（用于同步按钮状态）
+     */
+    private onMinimapClosed(): void {
+        console.log('[UICommonSetting] Minimap closed event received');
+        this.btn_minimap.selected = false;
+    }
+
     // ================== 显示/隐藏游戏内按钮 ==================
 
     /**
@@ -163,6 +194,11 @@ export class UICommonSetting extends UIBase {
             this.btn_debug.visible = true;
             this.btn_debug.selected = false;
         }
+
+        if (this.btn_minimap) {
+            this.btn_minimap.visible = true;
+            this.btn_minimap.selected = false;
+        }
     }
 
     /**
@@ -179,6 +215,11 @@ export class UICommonSetting extends UIBase {
         if (this.btn_debug) {
             this.btn_debug.visible = false;
             this.btn_debug.selected = false;
+        }
+
+        if (this.btn_minimap) {
+            this.btn_minimap.visible = false;
+            this.btn_minimap.selected = false;
         }
     }
 
@@ -228,9 +269,14 @@ export class UICommonSetting extends UIBase {
             this.btn_debug.offClick(this.onDebugClick, this);
         }
 
+        if (this.btn_minimap) {
+            this.btn_minimap.offClick(this.onMinimapClick, this);
+        }
+
         // 移除事件监听
         EventBus.off(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
         EventBus.off(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
+        EventBus.off(EventTypes.UI.MinimapClosed, this.onMinimapClosed, this);
 
         super.unbindEvents();
     }

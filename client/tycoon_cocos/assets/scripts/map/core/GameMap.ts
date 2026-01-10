@@ -37,6 +37,7 @@ import { NumberTextureGenerator } from '../../voxel/overlay/NumberTextureGenerat
 import { convertMapTemplateToSaveData } from '../../sui/utils/MapTemplateConverter';
 import { GameSession } from '../../core/GameSession';
 import { Player } from '../../role/Player';
+import { PriceCalculator } from '../../utils/PriceCalculator';
 
 // Building信息接口
 interface BuildingInfo {
@@ -118,7 +119,10 @@ export class GameMap extends Component {
 
     /** 地块类型 overlay 是否正在显示 */
     private _isShowingTileTypes: boolean = false;
-    
+
+    /** 价格 overlay 是否正在显示 */
+    private _isShowingPrices: boolean = false;
+
     /** 体素系统 */
     private _voxelSystem: VoxelSystem | null = null;
     
@@ -3436,6 +3440,141 @@ export class GameMap extends Component {
         this._isShowingTileTypes = false;
 
         console.log('[GameMap] Tile type overlays cleared');
+    }
+
+    // ========================= 价格 Overlay（Layer 6） =========================
+
+    /**
+     * 显示价格 Overlay（Layer 6）
+     * 为建筑显示租金/购买/升级价格，为特殊地块显示奖励/费用
+     *
+     * 注意：计算逻辑与 Move 端保持同步（参见 PriceCalculator.ts）
+     */
+    public async showPriceOverlays(): Promise<void> {
+        console.log('[GameMap] Showing price overlays...');
+
+        // 1. 清除旧的价格 overlay
+        this.clearPriceOverlays();
+
+        // 2. 获取 GameSession
+        const session = Blackboard.instance.get<GameSession>('currentGameSession');
+        if (!session) {
+            console.warn('[GameMap] No GameSession found, cannot show price overlays');
+            return;
+        }
+
+        const buildings = session.getBuildings();
+        const tiles = session.getTiles();
+
+        // 3. 为建筑添加价格 overlay
+        for (const building of buildings) {
+            const hasOwner = building.owner !== NO_OWNER;
+
+            // 计算租金（连街+土地庙加成）
+            const rentAmount = hasOwner
+                ? PriceCalculator.calculateToll(building, session)
+                : BigInt(0);
+
+            // 计算购买价格
+            const buyAmount = !hasOwner
+                ? PriceCalculator.calculateBuyPrice(building, session)
+                : BigInt(0);
+
+            // 计算升级价格（如果可升级）
+            const canUpgrade = PriceCalculator.canUpgrade(building);
+            const upgradeAmount = canUpgrade
+                ? PriceCalculator.calculateUpgradePrice(building, session)
+                : BigInt(0);
+
+            // 如果没有任何价格要显示，跳过
+            if (rentAmount === BigInt(0) && buyAmount === BigInt(0) && upgradeAmount === BigInt(0)) {
+                continue;
+            }
+
+            // 生成价格纹理
+            const priceTexture = NumberTextureGenerator.getBuildingPriceTexture(
+                hasOwner,
+                rentAmount,
+                buyAmount,
+                upgradeAmount,
+                { size: 64, fontSize: 14 }
+            );
+
+            // 在建筑位置添加 overlay
+            const pos = building.getPosition();
+            await this.addTileOverlay(new Vec2(pos.x, pos.z), {
+                texture: priceTexture,
+                faces: [OverlayFace.UP],
+                inflate: 0.003,
+                layerIndex: 6,  // 价格专用层
+                techniqueIndex: 1  // 透明渲染
+            });
+        }
+
+        // 4. 为特殊地块添加金额 overlay（TILE_BONUS=4, TILE_FEE=5）
+        for (const tile of tiles) {
+            const typeId = tile.typeId;
+
+            // 只处理 TILE_BONUS 和 TILE_FEE
+            if (typeId !== 4 && typeId !== 5) continue;
+
+            // 获取基础金额（tile.special）
+            const baseAmount = tile.special || 0;
+            if (baseAmount === 0) continue;
+
+            // 动态计算金额
+            const actualAmount = PriceCalculator.calculateSpecialTileAmount(baseAmount, session);
+
+            // 生成金额纹理
+            const isBonus = typeId === 4;
+            const amountTexture = NumberTextureGenerator.getSpecialTileAmountTexture(
+                isBonus,
+                actualAmount,
+                { size: 64, fontSize: 18 }
+            );
+
+            // 在tile位置添加 overlay
+            await this.addTileOverlay(new Vec2(tile.x, tile.y), {
+                texture: amountTexture,
+                faces: [OverlayFace.UP],
+                inflate: 0.003,
+                layerIndex: 6,
+                techniqueIndex: 1
+            });
+        }
+
+        // 5. 设置显示状态
+        this._isShowingPrices = true;
+
+        console.log('[GameMap] Price overlays created');
+    }
+
+    /**
+     * 清除价格 Overlay（Layer 6）
+     */
+    public clearPriceOverlays(): void {
+        console.log('[GameMap] Clearing price overlays...');
+
+        // 清除所有 Layer 6 的 overlay
+        this._tileOverlays.forEach((overlays, key) => {
+            const overlayNode = overlays.get(6);
+            if (overlayNode && overlayNode.isValid) {
+                overlayNode.destroy();
+                overlays.delete(6);
+            }
+        });
+
+        // 设置显示状态
+        this._isShowingPrices = false;
+
+        console.log('[GameMap] Price overlays cleared');
+    }
+
+    /**
+     * 获取价格 overlay 显示状态
+     */
+    public isShowingPrices(): boolean {
+        return this._isShowingPrices;
     }
 
     /**

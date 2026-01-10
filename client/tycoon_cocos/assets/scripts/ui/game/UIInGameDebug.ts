@@ -21,6 +21,9 @@ export class UIInGameDebug extends UIBase {
     /** 显示地块类型按钮 */
     private m_btn_showTileType: fgui.GButton;
 
+    /** 显示价格按钮 */
+    private m_btn_showPrice: fgui.GButton;
+
     /** Round/Turn 显示标签 */
     private m_label_roundTurn: fgui.GTextField;
 
@@ -32,6 +35,9 @@ export class UIInGameDebug extends UIBase {
 
     /** 地块类型显示状态 */
     private _isShowingTileTypes: boolean = false;
+
+    /** 价格显示状态 */
+    private _isShowingPrices: boolean = false;
 
     /**
      * 初始化回调
@@ -46,12 +52,14 @@ export class UIInGameDebug extends UIBase {
     private _setupComponents(): void {
         this.m_btn_showIds = this.getButton('btn_showIds');
         this.m_btn_showTileType = this.getButton('btn_showTileType');
+        this.m_btn_showPrice = this.getButton('btn_showPrice');
         this.m_label_roundTurn = this.getText('roundTurn');
         this.m_label_debugInfo = this.getText('debugInfo');
 
         console.log('[UIInGameDebug] Components setup', {
             btn_showIds: !!this.m_btn_showIds,
             btn_showTileType: !!this.m_btn_showTileType,
+            btn_showPrice: !!this.m_btn_showPrice,
             label_roundTurn: !!this.m_label_roundTurn,
             label_debugInfo: !!this.m_label_debugInfo
         });
@@ -67,6 +75,10 @@ export class UIInGameDebug extends UIBase {
 
         if (this.m_btn_showTileType) {
             this.m_btn_showTileType.onClick(this._onShowTileTypeClick, this);
+        }
+
+        if (this.m_btn_showPrice) {
+            this.m_btn_showPrice.onClick(this._onShowPriceClick, this);
         }
 
         // 监听回合变化
@@ -90,6 +102,10 @@ export class UIInGameDebug extends UIBase {
 
         if (this.m_btn_showTileType) {
             this.m_btn_showTileType.offClick(this._onShowTileTypeClick, this);
+        }
+
+        if (this.m_btn_showPrice) {
+            this.m_btn_showPrice.offClick(this._onShowPriceClick, this);
         }
 
         EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
@@ -118,6 +134,12 @@ export class UIInGameDebug extends UIBase {
             this.m_btn_showTileType.title = "隐藏类型";
         }
 
+        // 初始化价格显示状态为隐藏
+        this._isShowingPrices = false;
+        if (this.m_btn_showPrice) {
+            this.m_btn_showPrice.title = "显示价格";
+        }
+
         // 确保ID标签被隐藏（但不清除地块类型，因为默认显示）
         const gameMap = MapManager.getInstance()?.getCurrentGameMap();
         if (gameMap) {
@@ -138,11 +160,12 @@ export class UIInGameDebug extends UIBase {
     protected onHide(): void {
         console.log("[UIInGameDebug] Hiding debug UI");
 
-        // 清理ID标签和地块类型并重置状态
+        // 清理ID标签、地块类型和价格overlay
         const gameMap = MapManager.getInstance()?.getCurrentGameMap();
         if (gameMap) {
             gameMap.hideIdsWithOverlay();
             gameMap.clearTileTypeOverlays();
+            gameMap.clearPriceOverlays();
         }
 
         // 重置显示状态
@@ -154,6 +177,11 @@ export class UIInGameDebug extends UIBase {
         this._isShowingTileTypes = false;
         if (this.m_btn_showTileType) {
             this.m_btn_showTileType.title = "显示类型";
+        }
+
+        this._isShowingPrices = false;
+        if (this.m_btn_showPrice) {
+            this.m_btn_showPrice.title = "显示价格";
         }
     }
 
@@ -229,6 +257,41 @@ export class UIInGameDebug extends UIBase {
         }
 
         console.log(`[UIInGameDebug] Tile types ${this._isShowingTileTypes ? 'shown' : 'hidden'}`);
+    }
+
+    /**
+     * 显示/隐藏价格按钮点击事件
+     * 每次点击显示时都会重新计算价格（因为round等可能已变化）
+     */
+    private async _onShowPriceClick(): Promise<void> {
+        console.log("[UIInGameDebug] Price button clicked");
+
+        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+
+        if (!gameMap) {
+            console.error('[UIInGameDebug] No GameMap found!');
+            return;
+        }
+
+        this._isShowingPrices = !this._isShowingPrices;
+
+        if (this._isShowingPrices) {
+            // 显示价格（每次都重新计算）
+            await gameMap.showPriceOverlays();
+
+            if (this.m_btn_showPrice) {
+                this.m_btn_showPrice.title = "隐藏价格";
+            }
+        } else {
+            // 隐藏价格
+            gameMap.clearPriceOverlays();
+
+            if (this.m_btn_showPrice) {
+                this.m_btn_showPrice.title = "显示价格";
+            }
+        }
+
+        console.log(`[UIInGameDebug] Prices ${this._isShowingPrices ? 'shown' : 'hidden'}`);
     }
 
     /**

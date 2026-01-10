@@ -629,6 +629,16 @@ All managers follow singleton pattern and are accessed via static `getInstance()
 - **模板模型**: web3:block/cube_all, web3:block/cross, web3:block/cube_column
 - **所有web3 model的parent引用**: 必须指向web3命名空间，不能指向minecraft
 
+### 价格计算同步（客户端↔Move）
+- **PriceCalculator.ts** 必须与 **game.move** 保持完全一致
+- 涉及函数对应关系：
+  - `calculatePriceIndex()` → `calculate_price_index()` (game.move:2625-2629)
+  - `calculateSingleTileRent()` → `calculate_single_tile_rent()` (game.move:2634-2649)
+  - `calculateTempleBonus()` → `calculate_temple_bonus()` (game.move:2653-2673)
+  - `calculateToll()` → `calculate_toll()` (game.move:2681-2725)
+  - `calculateBuildingPrice()` → `calculate_building_price()` (game.move:2760-2830)
+- **修改Move端价格算法时，必须同步更新 PriceCalculator.ts！**
+
 ### 节点命名规范
 - **Tile**: `T_x_z` (如 `T_-2_-10`)
 - **Building**: `B_size_x_z` (如 `B_1x1_5_3`, `B_2x2_10_8`)

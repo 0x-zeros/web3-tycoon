@@ -464,5 +464,228 @@ export class NumberTextureGenerator {
             default:  return '#FFD700';  // 其他：金黄（兼容）
         }
     }
+
+    // ========================= 价格纹理生成 =========================
+
+    /**
+     * 价格类型枚举
+     */
+    static PriceType = {
+        RENT: 'rent',           // 租金（红色）
+        UPGRADE: 'upgrade',     // 升级价格（蓝色）
+        BUY: 'buy',             // 购买价格（绿色）
+        BONUS: 'bonus',         // 奖励（金色）
+        FEE: 'fee'              // 费用（橙色）
+    } as const;
+
+    /**
+     * 价格信息接口
+     */
+    static PriceInfo: { type: string; amount: bigint }[] = [];
+
+    /**
+     * 获取价格类型的颜色
+     */
+    private static getPriceTypeColor(type: string): string {
+        switch (type) {
+            case this.PriceType.RENT:    return '#FF5252';  // 红色
+            case this.PriceType.UPGRADE: return '#2196F3';  // 蓝色
+            case this.PriceType.BUY:     return '#4CAF50';  // 绿色
+            case this.PriceType.BONUS:   return '#FFD700';  // 金色
+            case this.PriceType.FEE:     return '#FF9800';  // 橙色
+            default:                     return '#FFFFFF';  // 白色
+        }
+    }
+
+    /**
+     * 获取价格类型的前缀
+     */
+    private static getPriceTypePrefix(type: string): string {
+        switch (type) {
+            case this.PriceType.RENT:    return '租';
+            case this.PriceType.UPGRADE: return '升';
+            case this.PriceType.BUY:     return '购';
+            case this.PriceType.BONUS:   return '+';
+            case this.PriceType.FEE:     return '-';
+            default:                     return '';
+        }
+    }
+
+    /**
+     * 格式化金额（简短形式）
+     */
+    private static formatShortAmount(amount: bigint): string {
+        const num = Number(amount);
+        if (num >= 1000000) {
+            return `${(num / 1000000).toFixed(1)}M`;
+        } else if (num >= 10000) {
+            return `${(num / 1000).toFixed(0)}K`;
+        } else if (num >= 1000) {
+            return `${(num / 1000).toFixed(1)}K`;
+        }
+        return num.toString();
+    }
+
+    /**
+     * 生成价格纹理（支持多行、不同颜色）
+     *
+     * @param prices 价格信息数组 [{ type: 'rent'|'upgrade'|'buy'|'bonus'|'fee', amount: bigint }]
+     * @param options 可选配置
+     * @returns Texture2D
+     */
+    static getPriceTexture(
+        prices: Array<{ type: string; amount: bigint }>,
+        options?: {
+            size?: number;
+            fontSize?: number;
+        }
+    ): Texture2D {
+        const size = options?.size || 64;
+        const fontSize = options?.fontSize || 14;
+
+        // 生成缓存键（包含所有价格信息）
+        const priceKey = prices.map(p => `${p.type}:${p.amount}`).join('|');
+        const cacheKey = `price_${priceKey}_${size}_${fontSize}`;
+
+        // 检查缓存
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey)!;
+        }
+
+        // 创建Canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+
+        // 清空画布（透明背景）
+        ctx.clearRect(0, 0, size, size);
+
+        // 绘制半透明黑色背景（提高可读性）
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.drawRoundRect(ctx, 2, 2, size - 4, size - 4, 4);
+        ctx.fill();
+
+        // 计算行高和起始位置
+        const lineHeight = fontSize * 1.3;
+        const totalHeight = prices.length * lineHeight;
+        const startY = size / 2 - totalHeight / 2 + lineHeight / 2;
+
+        // 绘制每行价格
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        prices.forEach((price, index) => {
+            const y = startY + index * lineHeight;
+            const color = this.getPriceTypeColor(price.type);
+            const prefix = this.getPriceTypePrefix(price.type);
+            const amountStr = this.formatShortAmount(price.amount);
+
+            // 绘制文字（带描边提高可读性）
+            const text = `${prefix}${amountStr}`;
+
+            // 描边
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.strokeText(text, size / 2, y);
+
+            // 填充
+            ctx.fillStyle = color;
+            ctx.fillText(text, size / 2, y);
+        });
+
+        // 转换为Cocos Texture2D
+        const image = new ImageAsset();
+        image.reset({
+            _data: canvas,
+            width: size,
+            height: size,
+            format: Texture2D.PixelFormat.RGBA8888,
+            _compressed: false
+        });
+
+        const texture = new Texture2D();
+        texture.image = image;
+
+        // 缓存
+        this.cache.set(cacheKey, texture);
+
+        return texture;
+    }
+
+    /**
+     * 生成建筑价格纹理（根据建筑状态自动计算显示内容）
+     *
+     * @param hasOwner 是否有主人
+     * @param rentAmount 租金（有主人时显示）
+     * @param buyAmount 购买价格（无主人时显示）
+     * @param upgradeAmount 升级价格（可升级时显示，0表示不显示）
+     * @param options 可选配置
+     * @returns Texture2D
+     */
+    static getBuildingPriceTexture(
+        hasOwner: boolean,
+        rentAmount: bigint,
+        buyAmount: bigint,
+        upgradeAmount: bigint,
+        options?: {
+            size?: number;
+            fontSize?: number;
+        }
+    ): Texture2D {
+        const prices: Array<{ type: string; amount: bigint }> = [];
+
+        if (hasOwner) {
+            // 有主人：显示租金
+            if (rentAmount > 0) {
+                prices.push({ type: this.PriceType.RENT, amount: rentAmount });
+            }
+        } else {
+            // 无主人：显示购买价格
+            if (buyAmount > 0) {
+                prices.push({ type: this.PriceType.BUY, amount: buyAmount });
+            }
+        }
+
+        // 可升级时显示升级价格
+        if (upgradeAmount > 0) {
+            prices.push({ type: this.PriceType.UPGRADE, amount: upgradeAmount });
+        }
+
+        // 如果没有要显示的价格，返回空纹理
+        if (prices.length === 0) {
+            return this.getNumberTexture(0, {
+                size: options?.size || 64,
+                bgColor: 'rgba(0, 0, 0, 0)',
+                customText: ''
+            });
+        }
+
+        return this.getPriceTexture(prices, options);
+    }
+
+    /**
+     * 生成特殊地块金额纹理（奖励/费用）
+     *
+     * @param isBonus 是否为奖励（true=奖励，false=费用）
+     * @param amount 金额
+     * @param options 可选配置
+     * @returns Texture2D
+     */
+    static getSpecialTileAmountTexture(
+        isBonus: boolean,
+        amount: bigint,
+        options?: {
+            size?: number;
+            fontSize?: number;
+        }
+    ): Texture2D {
+        const type = isBonus ? this.PriceType.BONUS : this.PriceType.FEE;
+        return this.getPriceTexture([{ type, amount }], {
+            size: options?.size || 64,
+            fontSize: options?.fontSize || 18
+        });
+    }
 }
 

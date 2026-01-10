@@ -2645,7 +2645,7 @@ fun calculate_single_tile_rent(
         100
     };
 
-    (((price as u128) * (multiplier as u128) * (price_index as u128)) / 10000) as u64
+    (((price as u128) * (multiplier as u128) * (price_index as u128)) / 100) as u64
 }
 
 /// 计算土地庙加成（分别相加模式）

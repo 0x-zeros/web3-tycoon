@@ -67,7 +67,8 @@ export class PriceCalculator {
 
     /**
      * 计算单块地的基础租金
-     * 公式：rent = (price × rentMultiplier × priceIndex) / 10000
+     * 公式：rent = (price × rentMultiplier × priceIndex) / 100
+     * 注：rentMultiplier 以 ×100 存储（如 0.5→50, 1→100），所以需要 /100 还原
      *
      * @param price 建筑基础价格
      * @param level 建筑等级
@@ -85,8 +86,8 @@ export class PriceCalculator {
             ? rentMultipliers[level]
             : 100;
 
-        // (price × multiplier × priceIndex) / 10000
-        return (price * BigInt(multiplier) * BigInt(priceIndex)) / BigInt(10000);
+        // (price × multiplier × priceIndex) / 100
+        return (price * BigInt(multiplier) * BigInt(priceIndex)) / BigInt(100);
     }
 
     /**

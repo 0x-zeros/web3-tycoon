@@ -131,8 +131,8 @@ export class UIMinimap extends UIBase {
         this._spriteFrame.texture = this._renderTexture;
         this._spriteFrame.originalSize = new Size(width, height);
         this._spriteFrame.rect = new Rect(0, 0, width, height);
-        // RenderTexture usually needs Y flip in UI
-        this._spriteFrame.flipUVY = true;
+        // RenderTexture Y flip - 根据实际显示调整
+        this._spriteFrame.flipUVY = false;
 
         this._minimapLoader.fill = fgui.LoaderFillType.ScaleFree;
         this._minimapLoader.texture = this._spriteFrame;
@@ -203,6 +203,11 @@ export class UIMinimap extends UIBase {
      * 绑定事件
      */
     protected bindEvents(): void {
+        // 重新绑定关闭按钮事件
+        if (this._btnClose) {
+            this._btnClose.onClick(this._onCloseClick, this);
+        }
+
         // 监听地图加载完成事件，更新相机位置
         EventBus.on(EventTypes.Map.MapLoaded, this._onMapLoaded, this);
     }

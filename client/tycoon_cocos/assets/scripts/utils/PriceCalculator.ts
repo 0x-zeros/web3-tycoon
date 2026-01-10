@@ -325,14 +325,19 @@ export class PriceCalculator {
     }
 
     /**
-     * 计算购买空地价格（L0→L1）
+     * 计算购买空地价格（获得 L0 所有权）
+     * 公式：base_price × F / 100
+     * 注：购买后 level 保持 0，需要再次升级才变成 L1
      *
      * @param building 建筑
      * @param session 游戏会话
      * @returns 购买价格
      */
     static calculateBuyPrice(building: GameBuilding, session: GameSession): bigint {
-        return this.calculateBuildingPrice(building, 1, session);
+        const round = session.getRound();
+        const priceRiseDays = session.getPriceRiseDays();
+        const priceFactor = this.calculatePriceFactor(round, priceRiseDays);
+        return (building.price * BigInt(priceFactor)) / BigInt(100);
     }
 
     /**

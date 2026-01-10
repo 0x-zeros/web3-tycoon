@@ -845,10 +845,8 @@ entry fun buy_building(
 
     let building_static = map::get_building(map, building_id);
 
-    let base_price = map::building_price(building_static);
-    assert!(base_price > 0, EInvalidPrice);
-    let price_index = calculate_price_index(game);
-    let price = ((base_price as u128) * (price_index as u128)) as u64;
+    let price = calculate_buy_price(building_static, game);
+    assert!(price > 0, EInvalidPrice);
     assert!(player.cash > price, EInsufficientCash);
 
     let (success, _cash_delta_opt) = try_execute_buy_building(
@@ -1395,9 +1393,7 @@ fun handle_tile_stop_with_collector(
         let building_static = map::get_building(map, building_id);
 
         if (building.owner == NO_OWNER) {
-                let base_price = map::building_price(building_static);
-                let price_index = calculate_price_index(game);
-                let price = ((base_price as u128) * (price_index as u128)) as u64;
+                let price = calculate_buy_price(building_static, game);
 
                 if (auto_buy) {
                     let (success, cash_delta_opt) = try_execute_buy_building(
@@ -2752,6 +2748,18 @@ fun rebuild_temple_levels_cache(game: &mut Game, player_index: u8) {
 fun calculate_price_factor(game: &Game): u64 {
     let price_index = calculate_price_index(game);
     price_index * 20
+}
+
+/// 计算购买空地的价格（获得 L0 所有权）
+/// 公式：base_price × F / 100
+/// 注：购买后 level 保持 0，需要再次升级才变成 L1
+fun calculate_buy_price(
+    building_static: &map::BuildingStatic,
+    game: &Game
+): u64 {
+    let base_price = map::building_price(building_static);
+    let price_factor = calculate_price_factor(game);
+    (((base_price as u128) * (price_factor as u128)) / 100) as u64
 }
 
 /// 计算建筑购买/升级价格（统一版本，根据size自动选择价格表）

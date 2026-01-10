@@ -101,12 +101,12 @@ class NotificationToast {
         const msg = this._findFirstText(this._gObject);
 
         // 调试：打印组件类型
-        if (msg) {
-            console.log('[NotificationToast] Message component type:', msg.constructor.name, {
-                isGRichTextField: msg instanceof fgui.GRichTextField,
-                isGTextField: msg instanceof fgui.GTextField
-            });
-        }
+        // if (msg) {
+        //     console.log('[NotificationToast] Message component type:', msg.constructor.name, {
+        //         isGRichTextField: msg instanceof fgui.GRichTextField,
+        //         isGTextField: msg instanceof fgui.GTextField
+        //     });
+        // }
 
         // 设置背景颜色
         if (bg && options.type) {

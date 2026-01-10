@@ -3480,14 +3480,28 @@ export class GameMap extends Component {
                 ? PriceCalculator.calculateBuyPrice(building, session)
                 : BigInt(0);
 
-            // 计算升级价格（如果可升级）
-            const canUpgrade = PriceCalculator.canUpgrade(building);
+            // 计算升级价格（如果可升级且有主人）
+            // 无主建筑不显示升级价格，只显示购买价格
+            const canUpgrade = hasOwner && PriceCalculator.canUpgrade(building);
             const upgradeAmount = canUpgrade
                 ? PriceCalculator.calculateUpgradePrice(building, session)
                 : BigInt(0);
 
             // 如果没有任何价格要显示，跳过
             if (rentAmount === BigInt(0) && buyAmount === BigInt(0) && upgradeAmount === BigInt(0)) {
+                continue;
+            }
+
+            // 获取入口 tile 的位置（building 坐标与 tile 坐标可能不同）
+            const entranceTileId = building.entranceTileIds[0];
+            if (entranceTileId === 65535) {
+                console.warn(`[GameMap] Building ${building.buildingId} has no valid entrance tile`);
+                continue;
+            }
+
+            const entranceTile = session.getTileByIndex(entranceTileId);
+            if (!entranceTile) {
+                console.warn(`[GameMap] Entrance tile ${entranceTileId} not found for building ${building.buildingId}`);
                 continue;
             }
 
@@ -3500,9 +3514,8 @@ export class GameMap extends Component {
                 { size: 64, fontSize: 14 }
             );
 
-            // 在建筑位置添加 overlay
-            const pos = building.getPosition();
-            await this.addTileOverlay(new Vec2(pos.x, pos.z), {
+            // 在入口 tile 位置添加 overlay
+            await this.addTileOverlay(new Vec2(entranceTile.x, entranceTile.y), {
                 texture: priceTexture,
                 faces: [OverlayFace.UP],
                 inflate: 0.003,
@@ -3518,9 +3531,9 @@ export class GameMap extends Component {
             // 只处理 TILE_BONUS 和 TILE_FEE
             if (typeId !== 4 && typeId !== 5) continue;
 
-            // 获取基础金额（tile.special）
-            const baseAmount = tile.special || 0;
-            if (baseAmount === 0) continue;
+            // 获取基础金额（tile.special 是 bigint 类型）
+            const baseAmount = tile.special || 0n;
+            if (baseAmount === 0n) continue;
 
             // 动态计算金额
             const actualAmount = PriceCalculator.calculateSpecialTileAmount(baseAmount, session);

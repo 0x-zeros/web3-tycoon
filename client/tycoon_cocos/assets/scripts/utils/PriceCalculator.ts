@@ -376,16 +376,16 @@ export class PriceCalculator {
      * 计算特殊地块金额（奖励/费用）
      * 公式：amount = baseAmount × priceIndex
      *
-     * @param baseAmount 基础金额（tile.special）
+     * @param baseAmount 基础金额（tile.special，bigint 类型）
      * @param session 游戏会话
      * @returns 实际金额
      */
-    static calculateSpecialTileAmount(baseAmount: number, session: GameSession): bigint {
+    static calculateSpecialTileAmount(baseAmount: bigint, session: GameSession): bigint {
         const round = session.getRound();
         const priceRiseDays = session.getPriceRiseDays();
         const priceIndex = this.calculatePriceIndex(round, priceRiseDays);
 
-        return BigInt(baseAmount) * BigInt(priceIndex);
+        return baseAmount * BigInt(priceIndex);
     }
 
     // ========================= 格式化方法 =========================

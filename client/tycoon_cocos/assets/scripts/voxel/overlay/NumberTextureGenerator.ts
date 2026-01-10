@@ -547,6 +547,13 @@ export class NumberTextureGenerator {
         const priceKey = prices.map(p => `${p.type}:${p.amount}`).join('|');
         const cacheKey = `price_${priceKey}_${size}_${fontSize}`;
 
+        // 调试日志（在缓存检查前输出）
+        console.log(`[NumberTextureGenerator] getPriceTexture called:`, prices.map(p => ({
+            type: p.type,
+            amount: p.amount.toString(),
+            formatted: this.formatShortAmount(p.amount)
+        })));
+
         // 检查缓存
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey)!;

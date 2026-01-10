@@ -288,10 +288,10 @@ export class PriceCalculator {
             if (targetCost === BigInt(0)) return BigInt(0);
 
             // 当前等级总价
-            const currentTotal = ((basePrice + currentCost) * BigInt(priceFactor)) / BigInt(10000);
+            const currentTotal = ((basePrice + currentCost) * BigInt(priceFactor)) / BigInt(100);
 
             // 目标等级总价
-            const targetTotal = ((basePrice + targetCost) * BigInt(priceFactor)) / BigInt(10000);
+            const targetTotal = ((basePrice + targetCost) * BigInt(priceFactor)) / BigInt(100);
 
             return targetTotal > currentTotal ? targetTotal - currentTotal : BigInt(0);
 
@@ -319,7 +319,7 @@ export class PriceCalculator {
                 ? targetCost - currentCost
                 : targetCost;
 
-            return (upgradeDiff * BigInt(priceFactor)) / BigInt(10000);
+            return (upgradeDiff * BigInt(priceFactor)) / BigInt(100);
         }
     }
 

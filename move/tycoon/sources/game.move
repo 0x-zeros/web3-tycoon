@@ -2786,9 +2786,9 @@ fun calculate_building_price(
             return 0
         };
 
-        let current_total = ((((base_price + current_cost) as u128) * (price_factor as u128)) / 10000) as u64;
+        let current_total = ((((base_price + current_cost) as u128) * (price_factor as u128)) / 100) as u64;
 
-        let target_total = ((((base_price + target_cost) as u128) * (price_factor as u128)) / 10000) as u64;
+        let target_total = ((((base_price + target_cost) as u128) * (price_factor as u128)) / 100) as u64;
 
         if (target_total > current_total) {
             target_total - current_total
@@ -2823,7 +2823,7 @@ fun calculate_building_price(
             target_cost
         };
 
-        (((upgrade_diff as u128) * (price_factor as u128)) / 10000) as u64
+        (((upgrade_diff as u128) * (price_factor as u128)) / 100) as u64
     } else {
         0
     }

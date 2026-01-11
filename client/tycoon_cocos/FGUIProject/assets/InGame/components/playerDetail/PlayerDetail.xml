@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1134,1024">
-  <controller name="c1" pages="0,base,1,cashFlow" selected="1"/>
+  <controller name="c1" pages="0,base,1,event" selected="1"/>
   <displayList>
     <image id="n2_j5iw" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1134,1024">
       <relation target="" sidePair="width-width,height-height"/>
@@ -9,22 +9,21 @@
     <component id="n8_j5iw" name="btn_close" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="929,12" size="194,68">
       <Button title="关闭"/>
     </component>
-    <component id="n0_j5iw" name="playerInfo" src="lizyp9" fileName="components/PlayerInfo2.xml" xy="44,219">
+    <component id="n0_j5iw" name="playerInfo" src="lizyp9" fileName="components/playerDetail/PlayerInfo2.xml" xy="44,219">
       <gearDisplay controller="c1" pages="0"/>
       <Button checked="true"/>
     </component>
-    <component id="n1_j5iw" name="cardList" src="lizyp8" fileName="components/CardList2.xml" xy="0,506">
+    <component id="n1_j5iw" name="cardList" src="lizyp8" fileName="components/playerDetail/CardList2.xml" xy="0,506">
       <gearDisplay controller="c1" pages="0"/>
     </component>
-    <richtext id="n11_phtz" name="cashFlow" xy="74,235" size="993,749" fontSize="35" color="#ffffff" autoSize="none" autoClearText="true" text="player cash flow logs">
-      <gearDisplay controller="c1" pages="1"/>
-      <relation target="" sidePair="width-width,height-height"/>
-    </richtext>
     <component id="n14_phtz" name="btn_base" src="mrxiow9" fileName="components/Button23.xml" pkg="82r0pzop" xy="39,126" size="510,62">
-      <Button checked="true" title="基本信息" controller="c1" page="0"/>
+      <Button title="基本信息" controller="c1" page="0"/>
     </component>
-    <component id="n15_phtz" name="btn_cashFlow" src="mrxiow9" fileName="components/Button23.xml" pkg="82r0pzop" xy="587,126" size="510,62">
-      <Button title="cash flow log" controller="c1" page="1"/>
+    <component id="n15_phtz" name="btn_event" src="mrxiow9" fileName="components/Button23.xml" pkg="82r0pzop" xy="587,126" size="510,62">
+      <Button checked="true" title="事件" controller="c1" page="1"/>
+    </component>
+    <component id="n16_mrzh" name="eventLog" src="mrzhpc" fileName="components/playerDetail/EventLogPanel.xml" xy="44,230" size="1047,747">
+      <gearDisplay controller="c1" pages="1"/>
     </component>
   </displayList>
 </component>

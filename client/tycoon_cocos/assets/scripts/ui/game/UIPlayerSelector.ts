@@ -16,6 +16,9 @@ import { resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
  * 玩家选择器
  */
 export class UIPlayerSelector {
+    /** 静态实例引用 */
+    private static _instance: UIPlayerSelector | null = null;
+
     private panel: fgui.GComponent | null = null;
     private playerList: fgui.GList | null = null;
     private btnOk: fgui.GButton | null = null;
@@ -24,15 +27,53 @@ export class UIPlayerSelector {
     private myPlayerIndex: number = -1;
     private resolveCallback: ((index: number | null) => void) | null = null;
 
+    /** 选择状态标记 */
+    private isActive: boolean = false;
+
+    constructor() {
+        UIPlayerSelector._instance = this;
+    }
+
+    /**
+     * 检查是否正在选择
+     */
+    public static isSelecting(): boolean {
+        return UIPlayerSelector._instance?.isActive ?? false;
+    }
+
+    /**
+     * 取消当前选择（供外部调用）
+     */
+    public static cancelSelection(): void {
+        UIPlayerSelector._instance?.cancel();
+    }
+
+    /**
+     * 取消选择
+     */
+    private cancel(): void {
+        if (!this.isActive) return;
+        console.log('[UIPlayerSelector] 取消选择');
+        this.close(null);
+    }
+
     /**
      * 显示玩家选择对话框
      * @param excludeMyself 是否排除自己（冰冻卡不排除，可以对自己使用）
      * @returns 选中的玩家索引，取消返回null
      */
     async showPlayerSelection(excludeMyself: boolean = false): Promise<number | null> {
+        // 防止重复调用
+        if (this.isActive) {
+            console.warn('[UIPlayerSelector] 选择器已激活，忽略重复调用');
+            return null;
+        }
+        this.isActive = true;
+
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             console.error('[UIPlayerSelector] GameSession未初始化');
+            this.isActive = false;
             return null;
         }
 
@@ -46,6 +87,7 @@ export class UIPlayerSelector {
 
         if (selectablePlayers.length === 0) {
             await UIMessage.warning('没有可选择的玩家');
+            this.isActive = false;
             return null;
         }
 
@@ -74,6 +116,9 @@ export class UIPlayerSelector {
 
         // 设置列表
         if (this.playerList) {
+            // 设置列表为单选模式（Radio 按钮需要）
+            this.playerList.selectionMode = fgui.ListSelectionMode.Single;
+
             this.playerList.itemRenderer = this.renderPlayerItem.bind(this);
             this.playerList.on(fgui.Event.CLICK_ITEM, this.onItemClick, this);
             this.playerList.data = players; // 先存储数据
@@ -110,7 +155,7 @@ export class UIPlayerSelector {
         if (!players) return;
 
         const { player, index: playerIndex } = players[index];
-        const item = obj.asCom;
+        const item = obj as fgui.GButton;
         if (!item) return;
 
         // 设置头像
@@ -212,5 +257,6 @@ export class UIPlayerSelector {
         }
 
         this.selectedIndex = -1;
+        this.isActive = false;
     }
 }

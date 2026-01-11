@@ -67,6 +67,19 @@ export class CardUsageManager {
             }
         }
 
+        // 检查是否正在选择玩家目标（冰冻卡等）
+        if (UIPlayerSelector.isSelecting()) {
+            // 如果再次点击同一张卡（需要玩家目标的卡），则取消选择
+            if (this.currentUsingCard &&
+                this.currentUsingCard.kind === card.kind &&
+                card.needsPlayerTarget()) {
+                console.log('[CardUsageManager] 再次点击同一张卡，取消使用');
+                UIPlayerSelector.cancelSelection();
+                this.currentUsingCard = null;
+                return;
+            }
+        }
+
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
             await UIMessage.error('游戏会话未初始化');

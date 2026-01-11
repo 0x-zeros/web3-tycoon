@@ -488,20 +488,33 @@ export class UIPlayerDetail extends UIBase {
                 title.text = EventLogService.formatDateSeparatorText(logItem.dateString);
 
                 // 固定高度
-                item.height = 50;
+                item.setSize(item.width, 50, true);
             } else {
                 // 普通日志
                 title.text = logItem.text;
 
                 // 自适应高度：根据文本实际高度调整item高度
-                if (typeof (title as any).ensureSizeCorrect === 'function') {
-                    (title as any).ensureSizeCorrect();
+                const titleAny = title as any;
+                if (typeof titleAny.singleLine === 'boolean') {
+                    titleAny.singleLine = false;
                 }
-                const rawTextHeight = Number(title.textHeight);
-                const textHeight = Number.isFinite(rawTextHeight) ? rawTextHeight : title.height;
+                if (typeof titleAny.ensureSizeCorrect === 'function') {
+                    titleAny.ensureSizeCorrect();
+                }
+                const rawTextHeight = Number(titleAny.textHeight);
+                let textHeight = Number.isFinite(rawTextHeight) ? rawTextHeight : title.height;
+                const fontSize = typeof titleAny.fontSize === 'number' ? titleAny.fontSize : 30;
+                const leading = typeof titleAny.leading === 'number' ? titleAny.leading : 0;
+                const lineCount = String(logItem.text || '').split('\n').length;
+                const estimatedHeight = Math.max(1, lineCount) * (fontSize + leading);
+                if (estimatedHeight > textHeight) {
+                    textHeight = estimatedHeight;
+                }
                 const padding = 16;  // 上下padding
                 const minHeight = 40;  // 最小高度
-                item.height = Math.max(textHeight + padding, minHeight);
+                const targetHeight = Math.max(textHeight + padding, minHeight);
+                item.setSize(item.width, targetHeight, true);
+                title.setSize(title.width, targetHeight - padding, true);
             }
         } catch (error) {
             console.error('[UIPlayerDetail] 渲染日志项失败:', error);

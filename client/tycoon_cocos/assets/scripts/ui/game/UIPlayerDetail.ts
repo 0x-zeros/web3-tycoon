@@ -444,7 +444,8 @@ export class UIPlayerDetail extends UIBase {
 
         this.m_displayLogs = EventLogService.getInstance().getLogs(filter);
 
-        // 更新列表
+        // 更新列表（先清空，避免长度相同导致不刷新）
+        this.m_logList.numItems = 0;
         this.m_logList.numItems = this.m_displayLogs.length;
 
         // 滚动到最新日志
@@ -482,7 +483,11 @@ export class UIPlayerDetail extends UIBase {
                 title.text = logItem.text;
 
                 // 自适应高度：根据文本实际高度调整item高度
-                const textHeight = title.textHeight;
+                if (typeof (title as any).ensureSizeCorrect === 'function') {
+                    (title as any).ensureSizeCorrect();
+                }
+                const rawTextHeight = Number(title.textHeight);
+                const textHeight = Number.isFinite(rawTextHeight) ? rawTextHeight : title.height;
                 const padding = 16;  // 上下padding
                 const minHeight = 40;  // 最小高度
                 item.height = Math.max(textHeight + padding, minHeight);

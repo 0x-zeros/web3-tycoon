@@ -302,6 +302,26 @@ export class EventLogService {
         let lastDateString = '';
 
         for (const storedEvent of filteredEvents) {
+            // Lazy格式化：如果没有缓存则生成
+            if (!storedEvent.formattedCache) {
+                try {
+                    storedEvent.formattedCache = EventLogFormatter.format(
+                        storedEvent.metadata,
+                        this._session
+                    ) || undefined;
+                } catch (error) {
+                    console.warn('[EventLogService] 格式化事件失败，使用降级格式:', error);
+                }
+
+                if (!storedEvent.formattedCache) {
+                    storedEvent.formattedCache = this._formatFallbackLog(storedEvent.metadata);
+                }
+            }
+
+            if (!storedEvent.formattedCache) {
+                continue;
+            }
+
             // 检查是否需要添加日期分隔符
             const eventDate = new Date(storedEvent.metadata.timestamp);
             const dateString = this._formatDateString(eventDate);
@@ -316,20 +336,34 @@ export class EventLogService {
                 lastDateString = dateString;
             }
 
-            // Lazy格式化：如果没有缓存则生成
-            if (!storedEvent.formattedCache) {
-                storedEvent.formattedCache = EventLogFormatter.format(
-                    storedEvent.metadata,
-                    this._session
-                ) || undefined;
-            }
-
-            if (storedEvent.formattedCache) {
-                result.push(storedEvent.formattedCache);
-            }
+            result.push(storedEvent.formattedCache);
         }
 
         return result;
+    }
+
+    /**
+     * 格式化时间戳为 HH:MM:SS（用于降级日志）
+     */
+    private _formatTime(timestamp: number): string {
+        const date = new Date(timestamp);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        return `[color=${EVENT_COLORS.timestamp}][${hours}:${minutes}:${seconds}][/color]`;
+    }
+
+    /**
+     * 降级格式：事件无法解析时的占位日志
+     */
+    private _formatFallbackLog(metadata: EventMetadata<any>): FormattedLog {
+        const eventType = String(metadata.type || 'UnknownEvent');
+        return {
+            text: `${this._formatTime(metadata.timestamp)} [color=${EVENT_COLORS.neutral}]${eventType}[/color]`,
+            timestamp: metadata.timestamp,
+            playerIndex: -1,
+            eventType: metadata.type,
+        };
     }
 
     /**

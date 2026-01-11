@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<component size="855,667" overflow="scroll">
-  <displayList>
-    <richtext id="n0_mrzh" name="cashFlow" xy="18,20" size="822,628" fontSize="35" color="#ffffff" autoSize="none" autoClearText="true" text="">
-      <relation target="" sidePair="width-width,height-height"/>
-    </richtext>
-  </displayList>
-</component>

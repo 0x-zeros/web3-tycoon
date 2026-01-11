@@ -33,8 +33,7 @@
     <component id="lizyp8" name="CardList2.xml" path="/components/playerDetail/"/>
     <component id="lizyp9" name="PlayerInfo2.xml" path="/components/playerDetail/"/>
     <component id="jztvpa" name="Minimap.xml" path="/components/"/>
-    <component id="mrzhpb" name="EventLog.xml" path="/components/playerDetail/"/>
-    <component id="mrzhpc" name="EventLogPanel.xml" path="/components/playerDetail/"/>
+    <component id="mrzhpc" name="EventLog.xml" path="/components/playerDetail/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

@@ -14,8 +14,9 @@ import { UIBase } from "../core/UIBase";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import * as fgui from "fairygui-cc";
-import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect, Color } from 'cc';
+import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
+import { PlayerColors } from "../../utils/PlayerColors";
 import { Card } from "../../card/Card";
 import { getCardName } from "../../sui/types/cards";
 import { CardConfigManager } from "../../card/CardConfig";
@@ -215,7 +216,7 @@ export class UIPlayerDetail extends UIBase {
         // 玩家名称
         if (this.m_playerName) {
             PlayerDisplayHelper.updatePlayerName(this.m_playerName, player, `玩家 ${this.m_playerIndex + 1}`, player.getOwner());
-            this.m_playerName.color = this._getPlayerColor(this.m_playerIndex);
+            this.m_playerName.color = PlayerColors.getColor(this.m_playerIndex);
         }
 
         // 现金
@@ -408,19 +409,6 @@ export class UIPlayerDetail extends UIBase {
         };
 
         return buffNames[buffKind] || `Buff${buffKind}`;
-    }
-
-    /**
-     * 获取玩家颜色
-     */
-    private _getPlayerColor(playerIndex: number): Color {
-        switch (playerIndex) {
-            case 0: return new Color(255, 193, 7);    // 亮黄
-            case 1: return new Color(255, 82, 82);    // 亮红
-            case 2: return new Color(105, 240, 174);  // 荧光绿
-            case 3: return new Color(224, 64, 251);   // 荧光紫
-            default: return new Color(255, 255, 255);
-        }
     }
 
     /**

@@ -11,7 +11,8 @@ import * as fgui from 'fairygui-cc';
 import { GameInitializer } from '../../core/GameInitializer';
 import { UIMessage } from '../utils/UIMessage';
 import { PlayerDisplayHelper } from '../utils/PlayerDisplayHelper';
-import { resources, Texture2D, SpriteFrame, Size, Rect, Color } from 'cc';
+import { PlayerColors } from '../../utils/PlayerColors';
+import { resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 
 /**
  * 玩家选择器
@@ -173,7 +174,7 @@ export class UIPlayerSelector {
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
             PlayerDisplayHelper.updatePlayerName(title, player, `玩家 ${playerIndex + 1}`, player.getOwner());
-            title.color = this._getPlayerColor(playerIndex);
+            title.color = PlayerColors.getColor(playerIndex);
         }
 
         // 存储玩家索引到item
@@ -264,18 +265,5 @@ export class UIPlayerSelector {
 
         this.selectedIndex = -1;
         this.isActive = false;
-    }
-
-    /**
-     * 获取玩家颜色（与建筑 Owner 颜色一致）
-     */
-    private _getPlayerColor(playerIndex: number): Color {
-        switch (playerIndex) {
-            case 0: return new Color(255, 193, 7);    // #FFC107 亮黄
-            case 1: return new Color(255, 82, 82);    // #FF5252 亮红
-            case 2: return new Color(105, 240, 174);  // #69F0AE 荧光绿
-            case 3: return new Color(224, 64, 251);   // #E040FB 荧光紫
-            default: return new Color(255, 255, 255); // 白色
-        }
     }
 }

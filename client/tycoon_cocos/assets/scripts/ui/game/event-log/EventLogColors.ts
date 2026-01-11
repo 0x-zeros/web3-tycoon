@@ -6,17 +6,10 @@
  * @author Web3 Tycoon Team
  */
 import { GameInitializer } from "../../../core/GameInitializer";
+import { PlayerColors } from "../../../utils/PlayerColors";
 
-/**
- * 玩家颜色（hex格式，用于FairyGUI UBB富文本）
- * 与 NumberTextureGenerator.getBuildingOwnerColor 保持一致
- */
-export const PLAYER_COLORS: string[] = [
-    '#FFC107',  // 玩家0 - 亮黄
-    '#FF5252',  // 玩家1 - 亮红
-    '#69F0AE',  // 玩家2 - 荧光绿
-    '#E040FB',  // 玩家3 - 荧光紫
-];
+// 向后兼容：重新导出 PlayerColors
+export { PlayerColors };
 
 /**
  * 事件类型颜色
@@ -39,16 +32,11 @@ export const EVENT_COLORS = {
 };
 
 /**
- * 获取玩家颜色
+ * 获取玩家颜色（向后兼容别名）
  * @param playerIndex 玩家索引 (0-3)
  * @returns hex颜色字符串
  */
-export function getPlayerColor(playerIndex: number): string {
-    if (playerIndex >= 0 && playerIndex < PLAYER_COLORS.length) {
-        return PLAYER_COLORS[playerIndex];
-    }
-    return EVENT_COLORS.system;
-}
+export const getPlayerColor = PlayerColors.getHex;
 
 /**
  * 生成带颜色的玩家名称UBB标签

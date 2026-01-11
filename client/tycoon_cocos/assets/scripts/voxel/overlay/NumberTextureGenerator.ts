@@ -9,6 +9,7 @@
 
 import { Texture2D, ImageAsset } from 'cc';
 import { BuildingType } from '../../sui/types/constants';
+import { PlayerColors } from '../../utils/PlayerColors';
 
 /**
  * 数字纹理生成选项
@@ -455,14 +456,7 @@ export class NumberTextureGenerator {
      * @returns CSS 颜色字符串
      */
     private static getBuildingOwnerColor(owner: number): string {
-        switch (owner) {
-            case 255: return '#424242';  // 无主：深灰，高对比
-            case 0:   return '#FFC107';  // Player 0：亮黄，醒目
-            case 1:   return '#FF5252';  // Player 1：亮红，热烈
-            case 2:   return '#69F0AE';  // Player 2：荧光绿，财富
-            case 3:   return '#E040FB';  // Player 3：荧光紫，高贵
-            default:  return '#FFD700';  // 其他：金黄（兼容）
-        }
+        return PlayerColors.getBuildingOwnerHex(owner);
     }
 
     // ========================= 价格纹理生成 =========================

@@ -48,7 +48,9 @@ export const EventTypes = {
         /** 显示玩家详情面板 */
         ShowPlayerDetail: "ui_show_player_detail",
         /** 小地图关闭 */
-        MinimapClosed: "ui_minimap_closed"
+        MinimapClosed: "ui_minimap_closed",
+        /** 事件日志更新 */
+        EventLogUpdated: "ui_event_log_updated"
     },
 
     /** 地图相关事件 */

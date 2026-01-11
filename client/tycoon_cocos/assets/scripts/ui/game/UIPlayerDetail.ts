@@ -20,6 +20,7 @@ import { Card } from "../../card/Card";
 import { getCardName } from "../../sui/types/cards";
 import { CardConfigManager } from "../../card/CardConfig";
 import { UINotification } from "../utils/UINotification";
+import { EventLogService, EventLogFilter, DisplayLogItem, isDateSeparator } from "./event-log/EventLogService";
 
 const { ccclass } = _decorator;
 
@@ -44,6 +45,22 @@ export class UIPlayerDetail extends UIBase {
 
     // 卡牌缓存
     private m_cardsCache: Card[] = [];
+
+    // 事件日志组件
+    private m_eventLog: fgui.GComponent | null = null;
+    private m_logList: fgui.GList | null = null;
+    private m_displayLogs: DisplayLogItem[] = [];
+
+    // 日志过滤checkbox按钮
+    private m_btnAllEvent: fgui.GButton | null = null;
+    private m_btnAllPlayer: fgui.GButton | null = null;
+
+    // 日志过滤配置
+    private m_logFilterAllEvents: boolean = false;   // false=仅本次会话，true=所有历史事件
+    private m_logFilterAllPlayers: boolean = false;  // false=仅当前玩家，true=所有玩家
+
+    // 页面控制器（用于检测当前是否在event页面）
+    private m_controller: fgui.Controller | null = null;
 
     protected onInit(): void {
         this._setupComponents();
@@ -73,6 +90,23 @@ export class UIPlayerDetail extends UIBase {
         // 获取关闭按钮（Button13 是组件类型，用 asCom 获取）
         this.m_btnClose = this.getButton('btn_close');
         // console.log('[UIPlayerDetail] btn_close:', this.m_btnClose ? 'found' : 'not found');
+
+        // 获取事件日志组件
+        this.m_eventLog = this.getChild('eventLog')?.asCom || null;
+        if (this.m_eventLog) {
+            this.m_logList = this.m_eventLog.getChild('list') as fgui.GList;
+            if (this.m_logList) {
+                this.m_logList.itemRenderer = this._renderLogItem.bind(this);
+                console.log('[UIPlayerDetail] 事件日志组件初始化成功');
+            }
+        }
+
+        // 获取过滤checkbox按钮
+        this.m_btnAllEvent = this.getButton('btn_allEvent');
+        this.m_btnAllPlayer = this.getButton('btn_allPlayer');
+
+        // 获取页面控制器
+        this.m_controller = this.getController('c1');
     }
 
     protected bindEvents(): void {
@@ -90,11 +124,28 @@ export class UIPlayerDetail extends UIBase {
         EventBus.on(EventTypes.Player.MoneyChange, this._onPlayerUpdate, this);
         EventBus.on(EventTypes.Player.StatusChange, this._onPlayerUpdate, this);
         EventBus.on(EventTypes.Player.BuffsUpdated, this._onPlayerUpdate, this);
+
+        // 监听事件日志更新
+        EventBus.on(EventTypes.UI.EventLogUpdated, this._onEventLogUpdated, this);
+
+        // 过滤checkbox按钮点击
+        if (this.m_btnAllEvent) {
+            this.m_btnAllEvent.onClick(this._onAllEventClick, this);
+        }
+        if (this.m_btnAllPlayer) {
+            this.m_btnAllPlayer.onClick(this._onAllPlayerClick, this);
+        }
     }
 
     protected unbindEvents(): void {
         if (this.m_btnClose) {
             this.m_btnClose.offClick(this._onCloseClick, this);
+        }
+        if (this.m_btnAllEvent) {
+            this.m_btnAllEvent.offClick(this._onAllEventClick, this);
+        }
+        if (this.m_btnAllPlayer) {
+            this.m_btnAllPlayer.offClick(this._onAllPlayerClick, this);
         }
 
         EventBus.off(EventTypes.Player.CardChange, this._onCardChange, this);
@@ -102,6 +153,7 @@ export class UIPlayerDetail extends UIBase {
         EventBus.off(EventTypes.Player.MoneyChange, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.Player.StatusChange, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.Player.BuffsUpdated, this._onPlayerUpdate, this);
+        EventBus.off(EventTypes.UI.EventLogUpdated, this._onEventLogUpdated, this);
 
         super.unbindEvents();
     }
@@ -122,6 +174,7 @@ export class UIPlayerDetail extends UIBase {
 
         this.refreshPlayerInfo();
         this.refreshCardList();
+        this._refreshEventLog();
     }
 
     /**
@@ -374,5 +427,150 @@ export class UIPlayerDetail extends UIBase {
      */
     private _onPlayerUpdate(): void {
         this.refreshPlayerInfo();
+    }
+
+    // ========================= 事件日志相关 =========================
+
+    /**
+     * 刷新事件日志列表
+     */
+    private _refreshEventLog(): void {
+        if (!this.m_logList) return;
+
+        const filter: EventLogFilter = {
+            onlyCurrentSession: !this.m_logFilterAllEvents,
+            playerIndex: this.m_logFilterAllPlayers ? undefined : this.m_playerIndex,
+        };
+
+        this.m_displayLogs = EventLogService.getInstance().getLogs(filter);
+
+        // 更新列表
+        this.m_logList.numItems = this.m_displayLogs.length;
+
+        // 滚动到最新日志
+        if (this.m_displayLogs.length > 0) {
+            this.m_logList.scrollToView(this.m_displayLogs.length - 1, true, false);
+        }
+    }
+
+    /**
+     * 渲染单条日志项
+     */
+    private _renderLogItem(index: number, obj: fgui.GObject): void {
+        const item = obj.asCom;
+        const logItem = this.m_displayLogs[index];
+
+        if (!logItem) return;
+
+        // 获取富文本组件
+        const title = item.getChild('title') as fgui.GRichTextField;
+        if (!title) return;
+
+        // 判断是日期分隔符还是普通日志
+        if (isDateSeparator(logItem)) {
+            // 日期分隔符
+            title.text = EventLogService.formatDateSeparatorText(logItem.dateString);
+
+            // 固定高度
+            item.height = 50;
+        } else {
+            // 普通日志
+            title.text = logItem.text;
+
+            // 自适应高度：根据文本实际高度调整item高度
+            const textHeight = title.textHeight;
+            const padding = 16;  // 上下padding
+            const minHeight = 40;  // 最小高度
+            item.height = Math.max(textHeight + padding, minHeight);
+        }
+    }
+
+    /**
+     * 事件日志更新回调
+     */
+    private _onEventLogUpdated(_data: any): void {
+        // 只有当面板可见且在event页面时才刷新
+        if (this.isVisible() && this._isEventPageActive()) {
+            this._refreshEventLog();
+        }
+    }
+
+    /**
+     * 检查是否在event页面
+     */
+    private _isEventPageActive(): boolean {
+        if (!this.m_controller) return true;  // 如果没有控制器，默认刷新
+        return this.m_controller.selectedIndex === 1;  // 1 = event页面
+    }
+
+    /**
+     * "所有事件"按钮点击（切换是否显示历史事件）
+     */
+    private _onAllEventClick(): void {
+        if (!this.m_btnAllEvent) return;
+
+        // 切换选中状态
+        this.m_logFilterAllEvents = !this.m_logFilterAllEvents;
+        this.m_btnAllEvent.selected = this.m_logFilterAllEvents;
+
+        console.log('[UIPlayerDetail] 切换所有事件过滤:', this.m_logFilterAllEvents);
+
+        if (this.m_logFilterAllEvents) {
+            // 需要加载历史事件
+            const service = EventLogService.getInstance();
+            if (!service.isHistoryLoaded() && !service.isLoadingHistory()) {
+                UINotification.info('正在从链上加载历史事件...', '加载中', 2000);
+                service.loadHistoryFromChain().then(() => {
+                    this._refreshEventLog();
+                });
+            } else {
+                this._refreshEventLog();
+            }
+        } else {
+            this._refreshEventLog();
+        }
+    }
+
+    /**
+     * "所有玩家"按钮点击（切换是否显示所有玩家事件）
+     */
+    private _onAllPlayerClick(): void {
+        if (!this.m_btnAllPlayer) return;
+
+        // 切换选中状态
+        this.m_logFilterAllPlayers = !this.m_logFilterAllPlayers;
+        this.m_btnAllPlayer.selected = this.m_logFilterAllPlayers;
+
+        console.log('[UIPlayerDetail] 切换所有玩家过滤:', this.m_logFilterAllPlayers);
+
+        this._refreshEventLog();
+    }
+
+    /**
+     * 设置日志过滤模式 - 所有事件
+     * @param allEvents true=显示所有历史事件，false=仅本次会话
+     */
+    public setLogFilterAllEvents(allEvents: boolean): void {
+        if (this.m_logFilterAllEvents !== allEvents) {
+            this.m_logFilterAllEvents = allEvents;
+            if (this.m_btnAllEvent) {
+                this.m_btnAllEvent.selected = allEvents;
+            }
+            this._refreshEventLog();
+        }
+    }
+
+    /**
+     * 设置日志过滤模式 - 所有玩家
+     * @param allPlayers true=显示所有玩家，false=仅当前玩家
+     */
+    public setLogFilterAllPlayers(allPlayers: boolean): void {
+        if (this.m_logFilterAllPlayers !== allPlayers) {
+            this.m_logFilterAllPlayers = allPlayers;
+            if (this.m_btnAllPlayer) {
+                this.m_btnAllPlayer.selected = allPlayers;
+            }
+            this._refreshEventLog();
+        }
     }
 }

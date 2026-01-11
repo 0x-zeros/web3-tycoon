@@ -22,8 +22,16 @@
     <component id="n15_phtz" name="btn_event" src="mrxiow9" fileName="components/Button23.xml" pkg="82r0pzop" xy="587,126" size="510,62">
       <Button checked="true" title="事件" controller="c1" page="1"/>
     </component>
-    <component id="n16_mrzh" name="eventLog" src="mrzhpc" fileName="components/playerDetail/EventLog.xml" xy="44,230" size="1048,750">
+    <component id="n16_mrzh" name="eventLog" src="mrzhpc" fileName="components/playerDetail/EventLog.xml" xy="44,261" size="1048,719">
       <gearDisplay controller="c1" pages="1"/>
+    </component>
+    <component id="n17_mrzh" name="btn_allEvent" src="mrxiow6" fileName="components/Button33.xml" pkg="82r0pzop" xy="690,195" size="198,62">
+      <gearDisplay controller="c1" pages="1"/>
+      <Button title="所有事件"/>
+    </component>
+    <component id="n18_mrzh" name="btn_allPlayer" src="mrxiow6" fileName="components/Button33.xml" pkg="82r0pzop" xy="897,195" size="198,62">
+      <gearDisplay controller="c1" pages="1"/>
+      <Button title="所有玩家"/>
     </component>
   </displayList>
 </component>

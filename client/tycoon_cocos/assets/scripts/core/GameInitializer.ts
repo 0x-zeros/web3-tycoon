@@ -21,6 +21,7 @@ import { SuiManager } from '../sui/managers/SuiManager';
 import { SuiEnvConfigManager } from '../config/SuiEnvConfigManager';
 import { GameSession } from './GameSession';
 import { DiceController } from '../game/DiceController';
+import { EventLogService } from '../ui/game/event-log/EventLogService';
 import { HttpClient } from '../http/HttpClient';
 import { CacheManager } from '../http/CacheManager';
 import { MetadataService } from '../http/MetadataService';
@@ -583,6 +584,10 @@ export class GameInitializer extends Component {
                 // 设置到 Blackboard（供 UI 组件访问）
                 Blackboard.instance.set("currentGameSession", this.gameSession);
                 console.log('[GameInitializer] GameSession 设置到 Blackboard');
+
+                // 设置EventLogService会话（供事件日志功能使用）
+                EventLogService.getInstance().setSession(this.gameSession);
+                console.log('[GameInitializer] EventLogService 会话已设置');
 
                 // 初始化 DiceController（确保观战者也能看到骰子动画）
                 try {

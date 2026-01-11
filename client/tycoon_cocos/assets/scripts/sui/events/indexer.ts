@@ -8,6 +8,7 @@ import type { SuiClient } from '@mysten/sui/client';
 import { EventType, EventMetadata, GameEvent } from './types';
 import { loadSuiClient } from '../loader';
 import { RpcConfigManager } from '../config/RpcConfigManager';
+import { EventLogService } from '../../ui/game/event-log/EventLogService';
 
 /**
  * 事件索引器配置
@@ -394,6 +395,13 @@ export class TycoonEventIndexer {
      * 处理事件
      */
     private async handleEvent(metadata: EventMetadata): Promise<void> {
+        // 记录到事件日志服务（如果session已设置）
+        try {
+            EventLogService.getInstance().addEvent(metadata);
+        } catch (e) {
+            // 忽略日志记录错误，不影响主流程
+        }
+
         // 调用特定类型的处理器
         const handlers = this.eventHandlers.get(metadata.type) || [];
 

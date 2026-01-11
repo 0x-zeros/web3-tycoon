@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1048,750" overflow="scroll">
+<component size="1048,750">
   <displayList>
     <list id="n1_mrzh" name="list" xy="7,9" size="1033,733" overflow="scroll" defaultItem="ui://8z385pimmrzhpd" autoClearItems="true">
       <item/>

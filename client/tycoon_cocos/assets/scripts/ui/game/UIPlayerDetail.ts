@@ -466,6 +466,9 @@ export class UIPlayerDetail extends UIBase {
         const title = item.getChild('title') as fgui.GRichTextField;
         if (!title) return;
 
+        // 确保启用UBB解析
+        title.ubbEnabled = true;
+
         // 判断是日期分隔符还是普通日志
         if (isDateSeparator(logItem)) {
             // 日期分隔符

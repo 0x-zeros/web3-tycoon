@@ -3,9 +3,9 @@
   <resources>
     <component id="mumq0" name="Main.xml" path="/" exported="true"/>
     <component id="mumq1" name="GameInfo.xml" path="/components/"/>
-    <component id="mumq2" name="DiceCorner.xml" path="/components/"/>
+    <component id="mumq2" name="DiceCorner.xml" path="/components/dice/"/>
     <image id="mumq4" name="dice10.png" path="/images/"/>
-    <component id="mumq5" name="Dice.xml" path="/components/"/>
+    <component id="mumq5" name="Dice.xml" path="/components/dice/"/>
     <component id="mumq6" name="CardList.xml" path="/components/"/>
     <image id="ue83a" name="card11.png" path="/images/"/>
     <component id="ue83b" name="Card.xml" path="/" exported="true"/>
@@ -13,7 +13,7 @@
     <image id="ue83g" name="capy1.png" path="/images/player/"/>
     <image id="ue83h" name="capy2.png" path="/images/player/"/>
     <image id="ue83i" name="capy3.png" path="/images/player/"/>
-    <component id="ue83j" name="PlayerInfo.xml" path="/components/"/>
+    <component id="ue83j" name="PlayerInfo.xml" path="/components/playerInfo/"/>
     <component id="ue83k" name="PlayerInfoList.xml" path="/images/"/>
     <component id="105vop" name="MapElement.xml" path="/components/"/>
     <component id="105vor" name="Editor.xml" path="/components/"/>
@@ -23,15 +23,15 @@
     <component id="f49aox" name="CardDraws.xml" path="/" exported="true"/>
     <component id="n6n6oy" name="Building.xml" path="/components/"/>
     <component id="n6n6oz" name="BuildingSelect.xml" path="/" exported="true"/>
-    <component id="n6n6p0" name="PlayerBuff.xml" path="/components/"/>
+    <component id="n6n6p0" name="PlayerBuff.xml" path="/components/playerInfo/"/>
     <component id="b9csp2" name="Bankruptcy.xml" path="/" exported="true"/>
     <component id="b9csp3" name="GameEnd.xml" path="/" exported="true"/>
     <component id="t5u9p4" name="Player.xml" path="/components/"/>
     <component id="t5u9p5" name="PlayerSelect.xml" path="/" exported="true"/>
-    <component id="tsphp6" name="Dice_small.xml" path="/components/"/>
-    <component id="j5iwp7" name="PlayerDetail.xml" path="/components/"/>
-    <component id="lizyp8" name="CardList2.xml" path="/components/"/>
-    <component id="lizyp9" name="PlayerInfo2.xml" path="/components/"/>
+    <component id="tsphp6" name="Dice_small.xml" path="/components/dice/"/>
+    <component id="j5iwp7" name="PlayerDetail.xml" path="/components/playerDetail/"/>
+    <component id="lizyp8" name="CardList2.xml" path="/components/playerDetail/"/>
+    <component id="lizyp9" name="PlayerInfo2.xml" path="/components/playerDetail/"/>
     <component id="jztvpa" name="Minimap.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>

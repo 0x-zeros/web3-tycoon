@@ -106,10 +106,27 @@ export class EventLogService {
      * 应在游戏开始时调用
      */
     setSession(session: GameSession): void {
+        const newGameId = session.getGameId();
+
+        // 如果gameId变化，清空旧数据
+        if (this._gameId && this._gameId !== newGameId) {
+            console.log('[EventLogService] 游戏ID变化，重置服务', {
+                oldGameId: this._gameId,
+                newGameId
+            });
+            this.reset();
+        } else if (this._events.length > 0) {
+            // 同一局游戏重新设置session，只清除格式化缓存
+            for (const e of this._events) {
+                e.formattedCache = undefined;
+            }
+        }
+
         this._session = session;
-        this._gameId = session.getGameId();
+        this._gameId = newGameId;
         this._sessionStartTime = Date.now();
         this._historyLoaded = false;
+
         console.log('[EventLogService] 会话已设置', {
             gameId: this._gameId,
             startTime: new Date(this._sessionStartTime).toLocaleTimeString()
@@ -154,7 +171,8 @@ export class EventLogService {
     addEvent(event: EventMetadata<any>, session?: GameSession): void {
         const useSession = session || this._session;
         if (!useSession) {
-            // 会话未设置，静默忽略
+            // 会话未设置，记录警告（可能是indexer在GameInitializer之前收到事件）
+            console.warn('[EventLogService] addEvent: 会话未设置，事件被丢弃', event.type);
             return;
         }
 
@@ -214,8 +232,14 @@ export class EventLogService {
         const data = event.data;
         if (!data) return -1;
 
-        // 尝试从事件数据中获取玩家地址
-        const playerAddress = data.player || data.starting_player || data.payer;
+        // 顶层字段
+        let playerAddress = data.player || data.starting_player || data.payer;
+
+        // 嵌套在 decision 中的字段 (RentDecisionEvent, BuildingDecisionEvent)
+        if (!playerAddress && data.decision) {
+            playerAddress = data.decision.payer || data.decision.player;
+        }
+
         if (playerAddress) {
             const players = session.getAllPlayers();
             for (let i = 0; i < players.length; i++) {
@@ -425,7 +449,11 @@ export class EventLogService {
                             const eventData = this._normalizeEventData(parsedContent);
 
                             // 检查是否属于当前游戏
-                            const eventGameId = eventData.game;
+                            // 处理game字段可能是对象的情况（如 { id: "xxx" }）
+                            let eventGameId = eventData.game;
+                            if (typeof eventGameId === 'object' && eventGameId !== null) {
+                                eventGameId = eventGameId.id || eventGameId.objectId || String(eventGameId);
+                            }
                             if (eventGameId && eventGameId !== targetGameId) {
                                 continue;
                             }
@@ -464,9 +492,10 @@ export class EventLogService {
             // 按时间排序
             allEvents.sort((a, b) => a.metadata.timestamp - b.metadata.timestamp);
 
-            // 合并到现有事件（去重）
-            const existingTimestamps = new Set(this._events.map(e => e.metadata.timestamp));
-            const newEvents = allEvents.filter(e => !existingTimestamps.has(e.metadata.timestamp));
+            // 合并到现有事件（使用txHash+eventType去重，避免同一交易多事件被误删）
+            const getEventKey = (e: StoredEvent) => `${e.metadata.txHash}:${e.metadata.type}`;
+            const existingKeys = new Set(this._events.map(getEventKey));
+            const newEvents = allEvents.filter(e => !existingKeys.has(getEventKey(e)));
 
             // 将历史事件插入到开头
             this._events = [...newEvents, ...this._events];

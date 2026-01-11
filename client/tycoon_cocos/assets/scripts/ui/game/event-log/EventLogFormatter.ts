@@ -69,6 +69,15 @@ function getNpcName(kind: number): string {
 }
 
 /**
+ * 获取卡牌类型（兼容 fields 嵌套）
+ */
+function getCardKind(raw: any): number | undefined {
+    if (!raw) return undefined;
+    const fields = (raw as any).fields || raw;
+    return fields.kind ?? fields.card_kind ?? fields.card_type;
+}
+
+/**
  * 格式化时间戳为 HH:MM:SS
  */
 function formatTime(timestamp: number): string {
@@ -332,7 +341,12 @@ export class EventLogFormatter {
 
             // 路过获得卡牌
             if (step.pass_draws && step.pass_draws.length > 0) {
-                const cardNames = step.pass_draws.map(c => getCardName(c.kind)).join('、');
+                const cardNames = step.pass_draws
+                    .map(c => {
+                        const kind = getCardKind(c);
+                        return getCardName(typeof kind === 'number' ? kind : -1);
+                    })
+                    .join('、');
                 lines.push(`  └ 路过获得 ${colored(cardNames, 'positive')}`);
             }
 
@@ -372,7 +386,12 @@ export class EventLogFormatter {
 
         // 获得卡牌
         if (stop.card_gains && stop.card_gains.length > 0) {
-            const cardNames = stop.card_gains.map((c: any) => getCardName(c.kind)).join('、');
+            const cardNames = stop.card_gains
+                .map((c: any) => {
+                    const kind = getCardKind(c);
+                    return getCardName(typeof kind === 'number' ? kind : -1);
+                })
+                .join('、');
             lines.push(`  └ 获得 ${colored(cardNames, 'positive')}`);
         }
 

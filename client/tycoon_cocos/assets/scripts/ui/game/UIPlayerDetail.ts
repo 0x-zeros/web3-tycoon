@@ -97,6 +97,10 @@ export class UIPlayerDetail extends UIBase {
             this.m_logList = this.m_eventLog.getChild('list') as fgui.GList;
             if (this.m_logList) {
                 this.m_logList.itemRenderer = this._renderLogItem.bind(this);
+                const listAny = this.m_logList as any;
+                if (typeof listAny.setVirtual === 'function') {
+                    listAny.setVirtual();
+                }
                 console.log('[UIPlayerDetail] 事件日志组件初始化成功');
             }
         }
@@ -447,6 +451,13 @@ export class UIPlayerDetail extends UIBase {
         // 更新列表（先清空，避免长度相同导致不刷新）
         this.m_logList.numItems = 0;
         this.m_logList.numItems = this.m_displayLogs.length;
+        const listAny = this.m_logList as any;
+        if (typeof listAny.refreshVirtualList === 'function') {
+            listAny.refreshVirtualList();
+        }
+        if (typeof listAny.ensureBoundsCorrect === 'function') {
+            listAny.ensureBoundsCorrect();
+        }
 
         // 滚动到最新日志
         if (this.m_displayLogs.length > 0) {

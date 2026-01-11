@@ -59,6 +59,8 @@ const NPC_NAMES: { [key: number]: string } = {
     [NpcKind.DOG]: '恶犬',
     [NpcKind.LAND_GOD]: '土地神',
     [NpcKind.WEALTH_GOD]: '财神',
+    [NpcKind.FORTUNE_GOD]: '福神',
+    [NpcKind.POOR_GOD]: '穷神',
 };
 
 /**

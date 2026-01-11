@@ -318,6 +318,7 @@ export class EventLogFormatter {
         lines.push(`${formatTime(timestamp)} ${playerName} 掷出 ${colored(diceTotal.toString(), 'highlight')} 点`);
 
         // 2. 处理每一步的效果
+        if (data.steps && data.steps.length > 0) {
         for (const step of data.steps) {
             // NPC交互
             if (step.npc_event) {
@@ -340,6 +341,7 @@ export class EventLogFormatter {
                 const stopLines = this.formatStopEffect(step.stop_effect, session, playerIdx);
                 lines.push(...stopLines);
             }
+        }
         }
 
         // 3. 现金变动汇总（如果有多个）
@@ -365,6 +367,8 @@ export class EventLogFormatter {
         actorIdx: number
     ): string[] {
         const lines: string[] = [];
+
+        if (!stop) return lines;
 
         // 获得卡牌
         if (stop.card_gains && stop.card_gains.length > 0) {

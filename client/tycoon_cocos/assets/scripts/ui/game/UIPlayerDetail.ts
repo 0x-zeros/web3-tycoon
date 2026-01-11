@@ -457,34 +457,38 @@ export class UIPlayerDetail extends UIBase {
      * 渲染单条日志项
      */
     private _renderLogItem(index: number, obj: fgui.GObject): void {
-        const item = obj.asCom;
-        const logItem = this.m_displayLogs[index];
+        try {
+            const item = obj.asCom;
+            const logItem = this.m_displayLogs[index];
 
-        if (!logItem) return;
+            if (!logItem) return;
 
-        // 获取富文本组件
-        const title = item.getChild('title') as fgui.GRichTextField;
-        if (!title) return;
+            // 获取富文本组件
+            const title = item.getChild('title') as fgui.GRichTextField;
+            if (!title) return;
 
-        // 确保启用UBB解析
-        title.ubbEnabled = true;
+            // 确保启用UBB解析
+            title.ubbEnabled = true;
 
-        // 判断是日期分隔符还是普通日志
-        if (isDateSeparator(logItem)) {
-            // 日期分隔符
-            title.text = EventLogService.formatDateSeparatorText(logItem.dateString);
+            // 判断是日期分隔符还是普通日志
+            if (isDateSeparator(logItem)) {
+                // 日期分隔符
+                title.text = EventLogService.formatDateSeparatorText(logItem.dateString);
 
-            // 固定高度
-            item.height = 50;
-        } else {
-            // 普通日志
-            title.text = logItem.text;
+                // 固定高度
+                item.height = 50;
+            } else {
+                // 普通日志
+                title.text = logItem.text;
 
-            // 自适应高度：根据文本实际高度调整item高度
-            const textHeight = title.textHeight;
-            const padding = 16;  // 上下padding
-            const minHeight = 40;  // 最小高度
-            item.height = Math.max(textHeight + padding, minHeight);
+                // 自适应高度：根据文本实际高度调整item高度
+                const textHeight = title.textHeight;
+                const padding = 16;  // 上下padding
+                const minHeight = 40;  // 最小高度
+                item.height = Math.max(textHeight + padding, minHeight);
+            }
+        } catch (error) {
+            console.error('[UIPlayerDetail] 渲染日志项失败:', error);
         }
     }
 

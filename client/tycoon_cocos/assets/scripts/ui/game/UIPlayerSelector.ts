@@ -11,7 +11,7 @@ import * as fgui from 'fairygui-cc';
 import { GameInitializer } from '../../core/GameInitializer';
 import { UIMessage } from '../utils/UIMessage';
 import { PlayerDisplayHelper } from '../utils/PlayerDisplayHelper';
-import { resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
+import { resources, Texture2D, SpriteFrame, Size, Rect, Color } from 'cc';
 
 /**
  * 玩家选择器
@@ -156,20 +156,24 @@ export class UIPlayerSelector {
         if (!players) return;
 
         const { player, index: playerIndex } = players[index];
+        console.log(`[UIPlayerSelector] 渲染玩家 listIndex=${index} playerIndex=${playerIndex}`);
+
         const item = obj as fgui.GButton;
         if (!item) return;
 
         // 设置头像
         const avatar = item.getChild('avatar') as fgui.GLoader;
         if (avatar) {
+            console.log(`[UIPlayerSelector] 加载头像 playerIndex=${playerIndex}`);
             this.loadPlayerAvatar(avatar, playerIndex);
             PlayerDisplayHelper.updatePlayerAvatar(avatar, player, player.getOwner());
         }
 
-        // 设置名称
+        // 设置名称（颜色与建筑 Owner 颜色一致，便于识别）
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
-            PlayerDisplayHelper.updatePlayerName(title, player, `玩家${playerIndex + 1}号`, player.getOwner());
+            PlayerDisplayHelper.updatePlayerName(title, player, `玩家 ${playerIndex + 1}`, player.getOwner());
+            title.color = this._getPlayerColor(playerIndex);
         }
 
         // 存储玩家索引到item
@@ -180,8 +184,8 @@ export class UIPlayerSelector {
      * 加载玩家头像
      */
     private loadPlayerAvatar(loader: fgui.GLoader, playerIndex: number): void {
-        const avatarPath = `textures/player/capy${(playerIndex % 3) + 1}`;
-        resources.load(avatarPath, Texture2D, (err, texture) => {
+        const texturePath = `web3/actors/player_${playerIndex}/texture`;
+        resources.load(texturePath, Texture2D, (err, texture) => {
             if (!err && texture) {
                 const spriteFrame = new SpriteFrame();
                 spriteFrame.texture = texture;
@@ -189,7 +193,7 @@ export class UIPlayerSelector {
                 spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
                 loader.texture = spriteFrame;
             } else {
-                console.warn(`[UIPlayerSelector] 加载头像失败: ${avatarPath}`);
+                console.warn(`[UIPlayerSelector] 加载头像失败: ${texturePath}`);
             }
         });
     }
@@ -260,5 +264,18 @@ export class UIPlayerSelector {
 
         this.selectedIndex = -1;
         this.isActive = false;
+    }
+
+    /**
+     * 获取玩家颜色（与建筑 Owner 颜色一致）
+     */
+    private _getPlayerColor(playerIndex: number): Color {
+        switch (playerIndex) {
+            case 0: return new Color(255, 193, 7);    // #FFC107 亮黄
+            case 1: return new Color(255, 82, 82);    // #FF5252 亮红
+            case 2: return new Color(105, 240, 174);  // #69F0AE 荧光绿
+            case 3: return new Color(224, 64, 251);   // #E040FB 荧光紫
+            default: return new Color(255, 255, 255); // 白色
+        }
     }
 }

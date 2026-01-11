@@ -4,7 +4,7 @@
     <image id="n3_tsph" name="n3" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="256,256">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
-    <loader id="n1_ue83" name="avatar" xy="0,0" size="256,256" url="ui://8z385pimue83g" align="center" vAlign="middle" fill="scale"/>
+    <loader id="n1_ue83" name="avatar" xy="0,0" size="256,256" url="ui://8z385pimue83g" align="center" vAlign="middle" fill="scale" clearOnPublish="true"/>
     <text id="n2_t5u9" name="title" xy="137,213" size="117,42" fontSize="28" color="#ffffff" autoSize="none" text="玩家1号、"/>
   </displayList>
   <Button mode="Radio" downEffect="scale" downEffectValue="1.2"/>

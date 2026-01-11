@@ -4,7 +4,7 @@
     <graph id="n10_ue83" name="n10" xy="0,0" size="512,256" type="rect" lineColor="#ff66cccc" fillColor="#ff666768">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <loader id="n0_ue83" name="avatar" xy="21,33" size="192,192" url="ui://8z385pimue83g" fill="scale"/>
+    <loader id="n0_ue83" name="avatar" xy="21,33" size="192,192" url="ui://8z385pimue83g" fill="scale" clearOnPublish="true"/>
     <text id="n1_ue83" name="index" xy="10,10" size="17,34" fontSize="24" color="#ffffff" text="1"/>
     <text id="n2_ue83" name="n2" xy="248,33" size="52,34" fontSize="24" color="#ffffff" text="现金"/>
     <text id="n4_ue83" name="cash" xy="318,33" size="84,34" fontSize="24" color="#ffffff" autoClearText="true" text="100000"/>

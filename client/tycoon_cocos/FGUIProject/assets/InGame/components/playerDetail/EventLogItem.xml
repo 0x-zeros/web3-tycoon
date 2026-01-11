@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,128">
+  <displayList>
+    <image id="n1_mrzh" name="n1" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="800,128">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <richtext id="n0_mrzh" name="title" xy="8,8" size="786,112" fontSize="35" color="#ffffff" autoSize="none" autoClearText="true" text="[日期时间] 玩家1 事件">
+      <relation target="" sidePair="width-width,height-height"/>
+    </richtext>
+  </displayList>
+</component>

@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="855,667" overflow="scroll">
+<component size="1048,750" overflow="scroll">
   <displayList>
-    <richtext id="n0_mrzh" name="msg" xy="18,20" size="822,628" fontSize="35" color="#ffffff" autoSize="none" autoClearText="true" text="">
-      <relation target="" sidePair="width-width,height-height"/>
-    </richtext>
+    <list id="n1_mrzh" name="list" xy="7,9" size="1033,733" overflow="scroll" defaultItem="ui://8z385pimmrzhpd" autoClearItems="true">
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+    </list>
   </displayList>
 </component>

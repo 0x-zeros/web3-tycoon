@@ -35,8 +35,8 @@ interface StoredEvent {
     metadata: EventMetadata<any>;
     /** 缓存的格式化结果（lazy生成） */
     formattedCache?: FormattedLog;
-    /** 相关玩家索引（用于过滤，在添加时计算） */
-    playerIndex: number;
+    /** 相关玩家索引数组（用于过滤，支持多玩家关联如租金事件的payer和owner） */
+    playerIndices: number[];
 }
 
 /**
@@ -176,8 +176,8 @@ export class EventLogService {
             return;
         }
 
-        // 计算相关玩家索引（用于过滤）
-        const playerIndex = this._extractPlayerIndex(event, useSession);
+        // 计算相关玩家索引数组（用于过滤）
+        const playerIndices = this._extractPlayerIndices(event, useSession);
 
         // 检查事件是否需要记录（某些事件类型不需要）
         if (!this._shouldRecordEvent(event.type)) {
@@ -187,7 +187,7 @@ export class EventLogService {
         // 存储事件
         const storedEvent: StoredEvent = {
             metadata: event,
-            playerIndex,
+            playerIndices,
         };
 
         this._events.push(storedEvent);
@@ -226,31 +226,40 @@ export class EventLogService {
     }
 
     /**
-     * 从事件中提取相关玩家索引
+     * 从事件中提取相关玩家索引数组
+     * 支持多玩家关联（如租金事件的payer和owner都可见）
      */
-    private _extractPlayerIndex(event: EventMetadata<any>, session: GameSession): number {
+    private _extractPlayerIndices(event: EventMetadata<any>, session: GameSession): number[] {
         const data = event.data;
-        if (!data) return -1;
+        if (!data) return [-1];
+
+        const indices: number[] = [];
+        const players = session.getAllPlayers();
+
+        // 辅助函数：查找玩家索引
+        const findIndex = (address: string | undefined): number => {
+            if (!address) return -1;
+            for (let i = 0; i < players.length; i++) {
+                if (players[i].getOwner() === address) return i;
+            }
+            return -1;
+        };
 
         // 顶层字段
-        let playerAddress = data.player || data.starting_player || data.payer;
+        const topLevelAddr = data.player || data.starting_player || data.payer;
+        const topIdx = findIndex(topLevelAddr);
+        if (topIdx >= 0) indices.push(topIdx);
 
         // 嵌套在 decision 中的字段 (RentDecisionEvent, BuildingDecisionEvent)
-        if (!playerAddress && data.decision) {
-            playerAddress = data.decision.payer || data.decision.player;
+        if (data.decision) {
+            const payerIdx = findIndex(data.decision.payer);
+            const ownerIdx = findIndex(data.decision.owner);
+            if (payerIdx >= 0 && !indices.includes(payerIdx)) indices.push(payerIdx);
+            if (ownerIdx >= 0 && !indices.includes(ownerIdx)) indices.push(ownerIdx);
         }
 
-        if (playerAddress) {
-            const players = session.getAllPlayers();
-            for (let i = 0; i < players.length; i++) {
-                if (players[i].getOwner() === playerAddress) {
-                    return i;
-                }
-            }
-        }
-
-        // 系统事件
-        return -1;
+        // 如果没有找到任何玩家，标记为系统事件
+        return indices.length > 0 ? indices : [-1];
     }
 
     /**
@@ -278,8 +287,8 @@ export class EventLogService {
         // 过滤特定玩家
         if (filter?.playerIndex !== undefined && filter.playerIndex >= 0) {
             filteredEvents = filteredEvents.filter(e =>
-                e.playerIndex === filter.playerIndex ||
-                e.playerIndex === -1  // 系统事件对所有玩家可见
+                e.playerIndices.includes(filter.playerIndex!) ||
+                e.playerIndices.includes(-1)  // 系统事件对所有玩家可见
             );
         }
 
@@ -465,19 +474,19 @@ export class EventLogService {
                                 type: eventType,
                                 data: eventData,
                                 timestamp: Number((ev as any).timestampMs || Date.now()),
-                                sequence: 0,
+                                sequence: Number((ev as any).id?.eventSeq ?? 0),  // 从eventSeq填充，用于精确去重
                                 txHash: (ev as any).id?.txDigest || '',
                                 blockHeight: 0,
                             };
 
-                            // 计算玩家索引
-                            const playerIndex = this._session
-                                ? this._extractPlayerIndex(metadata, this._session)
-                                : -1;
+                            // 计算玩家索引数组
+                            const playerIndices = this._session
+                                ? this._extractPlayerIndices(metadata, this._session)
+                                : [-1];
 
                             allEvents.push({
                                 metadata,
-                                playerIndex,
+                                playerIndices,
                             });
                         }
 
@@ -492,8 +501,8 @@ export class EventLogService {
             // 按时间排序
             allEvents.sort((a, b) => a.metadata.timestamp - b.metadata.timestamp);
 
-            // 合并到现有事件（使用txHash+eventType去重，避免同一交易多事件被误删）
-            const getEventKey = (e: StoredEvent) => `${e.metadata.txHash}:${e.metadata.type}`;
+            // 合并到现有事件（使用txHash+eventSeq去重，同一交易多个事件都保留）
+            const getEventKey = (e: StoredEvent) => `${e.metadata.txHash}:${e.metadata.sequence}`;
             const existingKeys = new Set(this._events.map(getEventKey));
             const newEvents = allEvents.filter(e => !existingKeys.has(getEventKey(e)));
 

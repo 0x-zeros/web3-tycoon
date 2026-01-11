@@ -195,11 +195,7 @@ export class RotorRouter {
             neighbors.push(neighbor);
         }
 
-        // Fallback：如果排除端点后没有可选邻居，允许走入端点
-        if (neighbors.length === 0) {
-            return allNeighbors.filter(n => n !== lastTile);
-        }
-
+        // 不使用fallback，让calculatePath()的回溯机制处理死胡同
         return neighbors;
     }
 

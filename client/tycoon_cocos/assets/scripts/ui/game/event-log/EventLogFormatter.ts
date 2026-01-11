@@ -314,7 +314,8 @@ export class EventLogFormatter {
         const lines: string[] = [];
 
         // 1. 掷骰信息
-        lines.push(`${formatTime(timestamp)} ${playerName} 掷出 ${colored(data.dice.toString(), 'highlight')} 点`);
+        const diceTotal = data.dice_values?.reduce((a: number, b: number) => a + b, 0) ?? 0;
+        lines.push(`${formatTime(timestamp)} ${playerName} 掷出 ${colored(diceTotal.toString(), 'highlight')} 点`);
 
         // 2. 处理每一步的效果
         for (const step of data.steps) {

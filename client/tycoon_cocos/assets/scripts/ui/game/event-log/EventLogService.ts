@@ -413,8 +413,8 @@ export class EventLogService {
                 throw new Error('SuiManager未初始化');
             }
 
-            const client = suiManager.getClient();
-            const packageId = suiManager.getPackageId();
+            const client = suiManager.client;
+            const packageId = suiManager.config.packageId;
 
             if (!client || !packageId) {
                 throw new Error('Sui客户端或包ID未设置');

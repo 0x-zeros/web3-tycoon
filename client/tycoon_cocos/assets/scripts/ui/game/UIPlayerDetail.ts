@@ -490,7 +490,7 @@ export class UIPlayerDetail extends UIBase {
      */
     private _onEventLogUpdated(_data: any): void {
         // 只有当面板可见且在event页面时才刷新
-        if (this.isVisible() && this._isEventPageActive()) {
+        if (this.isShowing && this._isEventPageActive()) {
             this._refreshEventLog();
         }
     }

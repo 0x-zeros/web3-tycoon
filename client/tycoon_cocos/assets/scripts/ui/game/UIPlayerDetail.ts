@@ -57,7 +57,7 @@ export class UIPlayerDetail extends UIBase {
 
     // 日志过滤配置
     private m_logFilterAllEvents: boolean = false;   // false=仅本次会话，true=所有历史事件
-    private m_logFilterAllPlayers: boolean = false;  // false=仅当前玩家，true=所有玩家
+    private m_logFilterAllPlayers: boolean = true;   // false=仅当前玩家，true=所有玩家（默认显示所有玩家）
 
     // 页面控制器（用于检测当前是否在event页面）
     private m_controller: fgui.Controller | null = null;
@@ -111,6 +111,16 @@ export class UIPlayerDetail extends UIBase {
 
         // 获取页面控制器
         this.m_controller = this.getController('c1');
+
+        // 初始化过滤按钮状态和标题
+        if (this.m_btnAllEvent) {
+            this.m_btnAllEvent.selected = this.m_logFilterAllEvents;
+            this._updateAllEventButtonTitle();
+        }
+        if (this.m_btnAllPlayer) {
+            this.m_btnAllPlayer.selected = this.m_logFilterAllPlayers;
+            this._updateAllPlayerButtonTitle();
+        }
     }
 
     protected bindEvents(): void {
@@ -540,6 +550,22 @@ export class UIPlayerDetail extends UIBase {
     }
 
     /**
+     * 更新"所有事件"按钮标题
+     */
+    private _updateAllEventButtonTitle(): void {
+        if (!this.m_btnAllEvent) return;
+        this.m_btnAllEvent.title = this.m_logFilterAllEvents ? '所有事件' : '本次事件';
+    }
+
+    /**
+     * 更新"所有玩家"按钮标题
+     */
+    private _updateAllPlayerButtonTitle(): void {
+        if (!this.m_btnAllPlayer) return;
+        this.m_btnAllPlayer.title = this.m_logFilterAllPlayers ? '所有玩家' : '当前玩家';
+    }
+
+    /**
      * "所有事件"按钮点击（切换是否显示历史事件）
      */
     private _onAllEventClick(): void {
@@ -548,6 +574,7 @@ export class UIPlayerDetail extends UIBase {
         // 切换选中状态
         this.m_logFilterAllEvents = !this.m_logFilterAllEvents;
         this.m_btnAllEvent.selected = this.m_logFilterAllEvents;
+        this._updateAllEventButtonTitle();
 
         console.log('[UIPlayerDetail] 切换所有事件过滤:', this.m_logFilterAllEvents);
 
@@ -576,6 +603,7 @@ export class UIPlayerDetail extends UIBase {
         // 切换选中状态
         this.m_logFilterAllPlayers = !this.m_logFilterAllPlayers;
         this.m_btnAllPlayer.selected = this.m_logFilterAllPlayers;
+        this._updateAllPlayerButtonTitle();
 
         console.log('[UIPlayerDetail] 切换所有玩家过滤:', this.m_logFilterAllPlayers);
 
@@ -592,6 +620,7 @@ export class UIPlayerDetail extends UIBase {
             if (this.m_btnAllEvent) {
                 this.m_btnAllEvent.selected = allEvents;
             }
+            this._updateAllEventButtonTitle();
             this._refreshEventLog();
         }
     }
@@ -606,6 +635,7 @@ export class UIPlayerDetail extends UIBase {
             if (this.m_btnAllPlayer) {
                 this.m_btnAllPlayer.selected = allPlayers;
             }
+            this._updateAllPlayerButtonTitle();
             this._refreshEventLog();
         }
     }

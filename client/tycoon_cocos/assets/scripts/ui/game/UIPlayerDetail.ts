@@ -21,6 +21,7 @@ import { getCardName } from "../../sui/types/cards";
 import { CardConfigManager } from "../../card/CardConfig";
 import { UINotification } from "../utils/UINotification";
 import { EventLogService, EventLogFilter, DisplayLogItem, isDateSeparator } from "./event-log/EventLogService";
+import { PlayerDisplayHelper } from "../utils/PlayerDisplayHelper";
 
 const { ccclass } = _decorator;
 
@@ -203,6 +204,7 @@ export class UIPlayerDetail extends UIBase {
         // 头像
         if (this.m_avatar) {
             this.loadPlayerAvatar(this.m_avatar, this.m_playerIndex);
+            PlayerDisplayHelper.updatePlayerAvatar(this.m_avatar, player, player.getOwner());
         }
 
         // 编号
@@ -212,7 +214,7 @@ export class UIPlayerDetail extends UIBase {
 
         // 玩家名称
         if (this.m_playerName) {
-            this.m_playerName.text = `玩家 ${this.m_playerIndex + 1}`;
+            PlayerDisplayHelper.updatePlayerName(this.m_playerName, player, `玩家 ${this.m_playerIndex + 1}`, player.getOwner());
             this.m_playerName.color = this._getPlayerColor(this.m_playerIndex);
         }
 

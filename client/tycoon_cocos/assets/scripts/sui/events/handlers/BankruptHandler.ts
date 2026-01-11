@@ -88,10 +88,10 @@ export class BankruptHandler {
             });
 
             // 3. 显示破产通知（5秒后自动消失）
-            const playerName = `玩家 ${player.getPlayerIndex() + 1}`;
-            const creditorName = event.creditor
-                ? `玩家 ${session.getPlayerByAddress(event.creditor)?.getPlayerIndex() ?? '?'}`
-                : '银行';
+            const playerName = player.getName() || `玩家 ${player.getPlayerIndex() + 1}`;
+            const creditorPlayer = event.creditor ? session.getPlayerByAddress(event.creditor) : null;
+            const creditorName = creditorPlayer?.getName()
+                || (event.creditor ? `玩家 ${creditorPlayer?.getPlayerIndex() ?? '?'}` : '银行');
 
             // 动态导入 UIManager（避免循环依赖）
             const { UIManager } = await import('../../../ui/core/UIManager');

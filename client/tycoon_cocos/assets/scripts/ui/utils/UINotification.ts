@@ -1,6 +1,8 @@
 import { _decorator, Color, resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 import { UIBase } from "../core/UIBase";
 import * as fgui from "fairygui-cc";
+import { GameInitializer } from "../../core/GameInitializer";
+import { PlayerDisplayHelper } from "./PlayerDisplayHelper";
 
 const { ccclass } = _decorator;
 
@@ -225,6 +227,12 @@ class NotificationToast {
                 loader.url = null;
             }
         });
+
+        const session = GameInitializer.getInstance()?.getGameSession();
+        const player = session?.getPlayerByIndex(playerIndex);
+        if (player) {
+            PlayerDisplayHelper.updatePlayerAvatar(loader, player, player.getOwner());
+        }
     }
 
     /**

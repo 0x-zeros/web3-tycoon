@@ -10,7 +10,7 @@
       <item/>
       <item/>
     </list>
-    <text id="n1_n6n6" name="title" xy="270,11" size="601,74" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="请选择卡牌要使用在哪个玩家身上" input="true"/>
+    <text id="n1_n6n6" name="title" xy="270,11" size="601,74" fontSize="32" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="请选择卡牌要使用在哪个玩家身上"/>
     <component id="n2_n6n6" name="btn_ok" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="872,422" size="248,74">
       <Button title="使用"/>
     </component>

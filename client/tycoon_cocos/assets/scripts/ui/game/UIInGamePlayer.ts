@@ -16,6 +16,7 @@ import { EventTypes } from "../../events/EventTypes";
 import * as fgui from "fairygui-cc";
 import { _decorator, resources, Texture2D, SpriteFrame, Size, Rect, Color } from 'cc';
 import { GameInitializer } from "../../core/GameInitializer";
+import { PlayerDisplayHelper } from "../utils/PlayerDisplayHelper";
 
 const { ccclass } = _decorator;
 
@@ -120,6 +121,7 @@ export class UIInGamePlayer extends UIBase {
 
         const playerIndex = player.getPlayerIndex();
         this.loadPlayerAvatar(this.m_myPlayerAvatar, playerIndex);
+        PlayerDisplayHelper.updatePlayerAvatar(this.m_myPlayerAvatar, player, player.getOwner());
 
         console.log('[UIInGamePlayer] Refresh myPlayer', {
             isSpectator,
@@ -155,6 +157,7 @@ export class UIInGamePlayer extends UIBase {
         const avatar = item.getChild('avatar') as fgui.GLoader;
         if (avatar) {
             this.loadPlayerAvatar(avatar, index);
+            PlayerDisplayHelper.updatePlayerAvatar(avatar, player, player.getOwner());
         }
 
         // 玩家编号
@@ -166,7 +169,7 @@ export class UIInGamePlayer extends UIBase {
         // 玩家名称（颜色与建筑 Owner 颜色一致，便于识别）
         const playerName = item.getChild('playerName') as fgui.GTextField;
         if (playerName) {
-            playerName.text = `玩家 ${index + 1}`;
+            PlayerDisplayHelper.updatePlayerName(playerName, player, `玩家 ${index + 1}`, player.getOwner());
             playerName.color = this._getPlayerColor(index);
         }
 

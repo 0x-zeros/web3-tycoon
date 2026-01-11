@@ -5,6 +5,7 @@
  *
  * @author Web3 Tycoon Team
  */
+import { GameInitializer } from "../../../core/GameInitializer";
 
 /**
  * 玩家颜色（hex格式，用于FairyGUI UBB富文本）
@@ -56,7 +57,9 @@ export function getPlayerColor(playerIndex: number): string {
  */
 export function coloredPlayerName(playerIndex: number): string {
     const color = getPlayerColor(playerIndex);
-    return `[color=${color}]玩家${playerIndex + 1}[/color]`;
+    const session = GameInitializer.getInstance()?.getGameSession();
+    const playerName = session?.getPlayerByIndex(playerIndex)?.getName() || `玩家${playerIndex + 1}`;
+    return `[color=${color}]${playerName}[/color]`;
 }
 
 /**

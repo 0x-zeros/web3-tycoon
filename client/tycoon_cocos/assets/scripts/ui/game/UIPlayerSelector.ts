@@ -10,6 +10,7 @@
 import * as fgui from 'fairygui-cc';
 import { GameInitializer } from '../../core/GameInitializer';
 import { UIMessage } from '../utils/UIMessage';
+import { PlayerDisplayHelper } from '../utils/PlayerDisplayHelper';
 import { resources, Texture2D, SpriteFrame, Size, Rect } from 'cc';
 
 /**
@@ -162,12 +163,13 @@ export class UIPlayerSelector {
         const avatar = item.getChild('avatar') as fgui.GLoader;
         if (avatar) {
             this.loadPlayerAvatar(avatar, playerIndex);
+            PlayerDisplayHelper.updatePlayerAvatar(avatar, player, player.getOwner());
         }
 
         // 设置名称
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
-            title.text = `玩家${playerIndex + 1}号`;
+            PlayerDisplayHelper.updatePlayerName(title, player, `玩家${playerIndex + 1}号`, player.getOwner());
         }
 
         // 存储玩家索引到item

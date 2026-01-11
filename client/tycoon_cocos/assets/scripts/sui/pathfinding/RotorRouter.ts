@@ -165,27 +165,59 @@ export class RotorRouter {
     }
 
     /**
-     * 获取所有有效邻居（排除上一个 tile）
+     * 获取所有有效邻居（排除上一个 tile，并避开端点 tile）
      */
     private getValidNeighbors(currentTile: number, lastTile: number): number[] {
         const tileStatic = this.template.tiles_static.get(currentTile);
         if (!tileStatic) return [];
 
-        const neighbors: number[] = [];
         const allNeighbors = [
             tileStatic.w,
             tileStatic.n,
             tileStatic.e,
             tileStatic.s
-        ];
+        ].filter(n => n !== INVALID_TILE_ID);
 
+        // 特殊情况：当前在端点tile，只有一个邻居且是lastTile
+        // 必须允许"回头"离开端点
+        if (allNeighbors.length === 1 && allNeighbors[0] === lastTile) {
+            return [lastTile]; // 允许回头
+        }
+
+        const neighbors: number[] = [];
         for (const neighbor of allNeighbors) {
-            if (neighbor !== INVALID_TILE_ID && neighbor !== lastTile) {
-                neighbors.push(neighbor);
-            }
+            // 排除lastTile（避免回头）
+            if (neighbor === lastTile) continue;
+
+            // 排除端点tile（避免走入死胡同）
+            if (this.isTerminalTile(neighbor)) continue;
+
+            neighbors.push(neighbor);
+        }
+
+        // Fallback：如果排除端点后没有可选邻居，允许走入端点
+        if (neighbors.length === 0) {
+            return allNeighbors.filter(n => n !== lastTile);
         }
 
         return neighbors;
+    }
+
+    /**
+     * 判断是否是端点 tile（只有一个有效邻居）
+     */
+    private isTerminalTile(tileId: number): boolean {
+        const tileStatic = this.template.tiles_static.get(tileId);
+        if (!tileStatic) return false;
+
+        const validNeighbors = [
+            tileStatic.w,
+            tileStatic.n,
+            tileStatic.e,
+            tileStatic.s
+        ].filter(n => n !== INVALID_TILE_ID);
+
+        return validNeighbors.length === 1;
     }
 
     /**

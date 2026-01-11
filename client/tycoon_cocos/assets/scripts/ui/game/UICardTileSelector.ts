@@ -14,6 +14,7 @@ import { OverlayFace } from '../../voxel/overlay/OverlayTypes';
 import { BFSPathfinder } from '../../sui/pathfinding/BFSPathfinder';
 import { MapGraph } from '../../sui/pathfinding/MapGraph';
 import { PathExtender } from '../../sui/pathfinding/PathExtender';
+import type { MapTemplate } from '../../sui/types/map';
 import { GameInitializer } from '../../core/GameInitializer';
 import { MapManager } from '../../map/MapManager';
 import { EventBus } from '../../events/EventBus';
@@ -168,8 +169,10 @@ export class UICardTileSelector {
                 { lastTileId, allowBacktrackFirstStep: true }
             );
 
-            console.log(`[UICardTileSelector] 遥控骰子可选tiles数量: ${tiles.length}`);
-            return tiles;
+            // 过滤掉端点tile（医院等特殊tile）
+            const filteredTiles = this.filterTerminalTiles(tiles, mapTemplate);
+            console.log(`[UICardTileSelector] 遥控骰子可选tiles数量: ${filteredTiles.length} (过滤前: ${tiles.length})`);
+            return filteredTiles;
         }
 
         // 使用BFS计算可达范围
@@ -184,7 +187,7 @@ export class UICardTileSelector {
 
         console.log(`[UICardTileSelector] BFS找到 ${allReachableTiles.length} 个可达tiles`);
 
-        // 特殊处理：净化卡需要过滤
+        // 特殊处理：净化卡不过滤端点tile（可以清除医院门口的东西）
         if (card.isCleanseCard()) {
             return this.filterTilesForCleanse(
                 startPos,
@@ -194,7 +197,10 @@ export class UICardTileSelector {
             );
         }
 
-        return allReachableTiles;
+        // 其他tile卡牌：过滤掉端点tile（医院等特殊tile）
+        const filteredTiles = this.filterTerminalTiles(allReachableTiles, mapTemplate);
+        console.log(`[UICardTileSelector] 过滤端点tile后: ${filteredTiles.length} (过滤前: ${allReachableTiles.length})`);
+        return filteredTiles;
     }
 
     /**
@@ -222,6 +228,25 @@ export class UICardTileSelector {
         console.log(`[UICardTileSelector] 净化卡过滤后: ${filteredTiles.length} tiles`);
 
         return filteredTiles;
+    }
+
+    /**
+     * 过滤掉端点tile（只有一个邻居的tile，如医院）
+     */
+    private filterTerminalTiles(tiles: number[], template: MapTemplate): number[] {
+        return tiles.filter(tileId => {
+            const tileStatic = template.tiles_static.get(tileId);
+            if (!tileStatic) return false;
+
+            const validNeighbors = [
+                tileStatic.w,
+                tileStatic.n,
+                tileStatic.e,
+                tileStatic.s
+            ].filter(n => n !== INVALID_TILE_ID);
+
+            return validNeighbors.length > 1; // 保留非端点tile
+        });
     }
 
     /**

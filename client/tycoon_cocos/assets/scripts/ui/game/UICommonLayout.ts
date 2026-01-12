@@ -173,6 +173,9 @@ export class UICommonLayout extends UIBase {
      * 设置 CommonSetting 模式
      */
     public setMode(mode: SettingMode): void {
+        console.log('[UICommonLayout] setMode called with:', SettingMode[mode], '(', mode, ')');
+        console.log('[UICommonLayout] settingUI exists:', !!this.settingUI);
+
         if (!this.settingUI) {
             console.warn('[UICommonLayout] settingUI not initialized');
             return;

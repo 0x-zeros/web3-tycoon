@@ -59,6 +59,9 @@ export class UICommonSetting extends UIBase {
     protected onInit(): void {
         // 获取 mode controller（控制按钮在不同模式下的显示）
         this.m_modeController = this.getController('mode')!;
+        console.log('[UICommonSetting] onInit - m_modeController:', this.m_modeController);
+        console.log('[UICommonSetting] onInit - controller pageCount:', this.m_modeController?.pageCount);
+        console.log('[UICommonSetting] onInit - controller selectedIndex:', this.m_modeController?.selectedIndex);
 
         // 绑定 FairyGUI 组件（使用 UIBase 提供的辅助方法）
         this.btn_gameConfig = this.getButton('btn_gameConfig')!;
@@ -196,9 +199,15 @@ export class UICommonSetting extends UIBase {
      * 设置当前模式（通过 FairyGUI controller 控制按钮显示）
      */
     public setMode(mode: SettingMode): void {
+        console.log('[UICommonSetting] setMode called with:', SettingMode[mode], '(', mode, ')');
+        console.log('[UICommonSetting] m_modeController exists:', !!this.m_modeController);
+
         if (this.m_modeController) {
+            console.log('[UICommonSetting] selectedIndex before:', this.m_modeController.selectedIndex);
             this.m_modeController.selectedIndex = mode;
-            console.log('[UICommonSetting] Mode changed to:', SettingMode[mode]);
+            console.log('[UICommonSetting] selectedIndex after:', this.m_modeController.selectedIndex);
+        } else {
+            console.error('[UICommonSetting] m_modeController is null!');
         }
 
         // 重置所有按钮的选中状态

@@ -314,6 +314,7 @@ export abstract class UIBase extends Component {
         }
 
         this._dragHandle = dragHandle;
+        dragHandle.touchable = true;
 
         // 监听触摸事件
         dragHandle.on(fgui.Event.TOUCH_BEGIN, this._onDragBegin, this);
@@ -343,9 +344,10 @@ export abstract class UIBase extends Component {
         if (!this._panel) return;
 
         // 只响应鼠标左键（button=0）
-        if (evt.button !== 0) return;
+        if (evt.button !== undefined && evt.button !== 0) return;
 
         this._isDragging = true;
+        evt.captureTouch();
         // 记录起始位置
         this._dragStartPos.set(evt.pos.x, evt.pos.y);
         this._panelStartPos.set(this._panel.x, this._panel.y);

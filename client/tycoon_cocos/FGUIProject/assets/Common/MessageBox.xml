@@ -16,6 +16,9 @@
     <richtext id="n7_bk5i" name="message" xy="42,164" size="721,295" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="这是一个message box， 支持阻挡（Modal）与不阻挡（Modeless）**两种形态">
       <relation target="" sidePair="center-center,middle-middle"/>
     </richtext>
+    <component id="n13_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="800,600">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n8_bk5i" name="btn_secondary" src="mumqlc" fileName="components/Button1.xml" xy="45,516" size="218,62">
       <relation target="" sidePair="center-center,middle-middle"/>
       <Button title="2 取消"/>

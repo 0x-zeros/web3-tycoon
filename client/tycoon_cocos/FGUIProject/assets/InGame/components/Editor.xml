@@ -4,10 +4,13 @@
     <image id="n12_6i1j" name="n12" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="280,883">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
+    <text id="n2_105vo" name="n2" xy="2,2" size="263,51" alpha="0.8" fontSize="18" color="#ffffff" align="center" vAlign="middle" text="- F1: 切换到45度Isometric视角&#xA; - F2: 切换到俯视Top-Down视角"/>
+    <component id="n13_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="280,883">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n0_105vo" name="btn_mapElement" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="27,261" size="230,50">
       <Button title="地图元素"/>
     </component>
-    <text id="n2_105vo" name="n2" xy="2,2" size="263,51" alpha="0.8" fontSize="18" color="#ffffff" align="center" vAlign="middle" text="- F1: 切换到45度Isometric视角&#xA; - F2: 切换到俯视Top-Down视角"/>
     <component id="n3_9pk1" name="btn_toMoveMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="17,583" size="250,92">
       <Button title="发布sui地图" selectedTitle="编辑好地图以后点击发布到sui上"/>
     </component>

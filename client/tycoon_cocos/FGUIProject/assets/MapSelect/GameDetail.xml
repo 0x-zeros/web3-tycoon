@@ -4,6 +4,9 @@
     <graph id="n2_qh36" name="bg" xy="512,361" pivot="0.5,0.5" anchor="true" size="1024,722" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
+    <component id="n28_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="1024,722">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,557" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="退出游戏"/>

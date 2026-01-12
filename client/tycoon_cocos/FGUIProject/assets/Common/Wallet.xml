@@ -2,6 +2,9 @@
 <component size="336,250">
   <displayList>
     <text id="n9_su9z" name="chain" xy="6,5" size="316,38" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="mainnet"/>
+    <component id="n19_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="336,250">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n11_pseu" name="btn_balance" src="pseuolp" fileName="components/Button12.xml" xy="5,52" size="320,54">
       <Button title="sui 0"/>
     </component>

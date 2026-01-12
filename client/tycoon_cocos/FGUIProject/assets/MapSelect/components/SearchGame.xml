@@ -8,6 +8,9 @@
     <text id="n1_lizy" name="n1" xy="27,115" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id"/>
     <text id="n2_lizy" name="n2" xy="25,182" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id"/>
     <text id="n7_lizy" name="n7" xy="27,258" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="player id"/>
+    <component id="n10_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="1024,512">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <text id="n3_lizy" name="gameid" xy="153,112" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="game id 或者 子字段"/>
     <text id="n4_lizy" name="mapid" xy="153,179" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="map id 或者 子字段"/>
     <text id="n5_lizy" name="player" xy="153,257" size="856,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece" input="true" prompt="player id 或者 子字段"/>

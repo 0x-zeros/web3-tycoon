@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="1406,519">
-  <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="3"/>
+<component size="1406,600">
+  <controller name="category" pages="0,tiles,1,objects,2,buildings,3,decorations" selected="0"/>
   <displayList>
-    <image id="n11_6i1j" name="n11" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1280,519"/>
-    <list id="n0_105vo" name="tiles" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <image id="n11_6i1j" name="n11" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="-2,0" size="1412,630">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n13_jhxs" name="n13" xy="425,12" size="514,78" fontSize="50" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="地图元素"/>
+    <component id="n12_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="1280,624">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
+    <list id="n0_105vo" name="tiles" xy="-3,108" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="0"/>
       <item title="1"/>
       <item title="地块 01"/>
@@ -14,7 +20,7 @@
       <item/>
       <item title="地块07"/>
     </list>
-    <list id="n3_105vo" name="objects" xy="0,-1" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n3_105vo" name="objects" xy="-3,107" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="1"/>
       <item title="object1"/>
       <item title="object2"/>
@@ -27,7 +33,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n5_ez89" name="buildings" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n5_ez89" name="buildings" xy="-3,108" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="2"/>
       <item title="building 1"/>
       <item/>
@@ -40,7 +46,7 @@
       <item/>
       <item/>
     </list>
-    <list id="n10_w84m" name="decorations" xy="0,0" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
+    <list id="n10_w84m" name="decorations" xy="-3,108" size="1280,519" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimpn5rou" autoClearItems="true">
       <gearDisplay controller="category" pages="3"/>
       <item title="decorations 1"/>
       <item/>
@@ -53,17 +59,17 @@
       <item/>
       <item/>
     </list>
-    <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,3" size="126,180">
-      <Button title="地块" controller="category" page="0"/>
+    <component id="n6_ez89" name="btn_tiles" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,6" size="126,148">
+      <Button checked="true" title="地块" controller="category" page="0"/>
     </component>
-    <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,367" size="126,180" visible="false">
+    <component id="n7_ez89" name="btn_objects" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,314" size="126,148" visible="false">
       <Button title="NPC" controller="category" page="1"/>
     </component>
-    <component id="n8_ez89" name="btn_buildings" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,184" size="126,180">
+    <component id="n8_ez89" name="btn_buildings" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,160" size="126,148">
       <Button title="建筑" controller="category" page="2"/>
     </component>
-    <component id="n9_w84m" name="btn_decorations" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1280,551" size="126,180" visible="false">
-      <Button checked="true" title="装饰" controller="category" page="3"/>
+    <component id="n9_w84m" name="btn_decorations" src="ez89ole" fileName="components/Button2.xml" pkg="82r0pzop" xy="1285,468" size="126,148" visible="false">
+      <Button title="装饰" controller="category" page="3"/>
     </component>
   </displayList>
 </component>

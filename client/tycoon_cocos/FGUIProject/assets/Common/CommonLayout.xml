@@ -4,7 +4,7 @@
     <component id="n0_mrxi" name="wallet" src="lambos" fileName="Wallet.xml" xy="1294,21">
       <relation target="" sidePair="right-right,top-top"/>
     </component>
-    <component id="n1_mrxi" name="commonSetting" src="mrxiow5" fileName="CommonSetting.xml" xy="1652,68">
+    <component id="n1_mrxi" name="commonSetting" src="mrxiow5" fileName="CommonSetting.xml" xy="1652,67">
       <relation target="" sidePair="right-right,top-top"/>
     </component>
     <component id="n2_mrxi" name="gameConfig" src="mrxip4" fileName="GameConfig.xml" xy="504,349" visible="false"/>

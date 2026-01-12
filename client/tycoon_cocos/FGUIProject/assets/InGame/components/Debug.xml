@@ -7,6 +7,9 @@
     <text id="n2_105vo" name="n2" xy="2,2" size="263,86" alpha="0.8" fontSize="18" color="#ffffff" vAlign="middle" autoSize="none" text="- F1: 切换到45度Isometric视角&#xA;- F2: 切换到俯视Top-Down视角&#xA;- 鼠标滚轮拉近/远"/>
     <text id="n10_f49a" name="roundTurn" xy="5,101" size="261,68" alpha="0.8" fontSize="25" color="#ffffff" vAlign="middle" autoSize="none" text="round: 0&#xA;turn: 0"/>
     <text id="n13_qnmx" name="debugInfo" xy="5,184" size="261,186" alpha="0.8" fontSize="18" color="#ffffff" autoSize="none" text="debug info"/>
+    <component id="n15_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="280,523">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n9_w84m" name="btn_showIds" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="30,372" size="224,44">
       <Button title="显示编号"/>
     </component>

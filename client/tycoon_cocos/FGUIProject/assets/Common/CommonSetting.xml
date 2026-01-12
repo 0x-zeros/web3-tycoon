@@ -4,6 +4,9 @@
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="256,256">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
+    <component id="n27_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="256,256">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n22_mrxi" name="btn_gameConfig" src="mrxiow6" fileName="components/Button33.xml" xy="35,14" size="190,52">
       <Button title="设置"/>
     </component>

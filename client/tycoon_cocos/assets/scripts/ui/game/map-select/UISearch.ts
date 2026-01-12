@@ -80,9 +80,17 @@ export class UISearch extends UIBase {
 
     /**
      * 同步 controller（供父组件调用）
-     * @param index 0=game_id, 1=map_id
+     * @param index 0=game_id, 1=map_id, 2+=隐藏搜索
      */
     public syncController(index: number): void {
+        // Search 组件只有 0 和 1 两个页面，category >= 2 时隐藏
+        if (index >= 2) {
+            this._panel.visible = false;
+            console.log(`[UISearch] Hidden (category=${index})`);
+            return;
+        }
+
+        this._panel.visible = true;
         if (this.m_categoryController) {
             this.m_categoryController.selectedIndex = index;
             console.log(`[UISearch] Controller synced to: ${index}`);
@@ -120,15 +128,21 @@ export class UISearch extends UIBase {
 
     /**
      * 清除过滤按钮点击
+     * 只清空当前 category 显示的输入框
      */
     private _onNoFilterClick(): void {
         const category = this.currentCategory;
         console.log(`[UISearch] Clear filter clicked, category: ${category}`);
 
-        // 清空输入框
-        if (this.m_gameidInput) this.m_gameidInput.text = '';
-        if (this.m_mapidInput) this.m_mapidInput.text = '';
-        if (this.m_playerInput) this.m_playerInput.text = '';
+        if (category === 0) {
+            // Game 列表：清空 gameid, mapid, player
+            if (this.m_gameidInput) this.m_gameidInput.text = '';
+            if (this.m_mapidInput) this.m_mapidInput.text = '';
+            if (this.m_playerInput) this.m_playerInput.text = '';
+        } else if (category === 1) {
+            // Map 列表：只清空 mapid
+            if (this.m_mapidInput) this.m_mapidInput.text = '';
+        }
 
         // 发送清除事件
         EventBus.emit(EventTypes.Search.FilterCleared, { category });

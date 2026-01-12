@@ -50,6 +50,9 @@ export class UIGameList extends UIBase {
     private _selectedGameId: string | null = null;
     private _selectedIndex: number = -1;
 
+    // 当前过滤条件（用于 refresh 时重新应用）
+    private _currentFilter: { gameid: string; mapid: string; player: string } = { gameid: '', mapid: '', player: '' };
+
     /**
      * 初始化回调
      */
@@ -110,8 +113,27 @@ export class UIGameList extends UIBase {
 
         console.log(`[UIGameList] Loaded ${this._games.length} games`);
 
-        // 显示全部数据
-        this._renderList(this._games);
+        // 重新应用当前过滤条件
+        this._applyCurrentFilter();
+    }
+
+    /**
+     * 应用当前过滤条件
+     */
+    private _applyCurrentFilter(): void {
+        const { gameid, mapid, player } = this._currentFilter;
+        const hasFilter = gameid || mapid || player;
+
+        if (hasFilter) {
+            const searchValues = new Map<string, string>();
+            searchValues.set('gameid', gameid);
+            searchValues.set('mapid', mapid);
+            searchValues.set('player', player);
+            const filtered = this._filter.filter(searchValues);
+            this._renderList(filtered);
+        } else {
+            this._renderList(this._games);
+        }
     }
 
     /**
@@ -119,6 +141,9 @@ export class UIGameList extends UIBase {
      */
     private _onFilterChanged(data: { gameid: string; mapid: string; player: string }): void {
         console.log('[UIGameList] Filter changed:', data);
+
+        // 存储当前过滤条件
+        this._currentFilter = { ...data };
 
         const searchValues = new Map<string, string>();
         searchValues.set('gameid', data.gameid);
@@ -137,6 +162,10 @@ export class UIGameList extends UIBase {
         if (data.category !== 0) return;
 
         console.log('[UIGameList] Filter cleared');
+
+        // 清空存储的过滤条件
+        this._currentFilter = { gameid: '', mapid: '', player: '' };
+
         const all = this._filter.reset();
         this._renderList(all);
     }

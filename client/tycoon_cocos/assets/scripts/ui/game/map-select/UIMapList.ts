@@ -47,6 +47,9 @@ export class UIMapList extends UIBase {
     private _selectedTemplateId: string | null = null;
     private _selectedIndex: number = -1;
 
+    // 当前过滤条件（用于 refresh 时重新应用）
+    private _currentFilter: { mapid: string } = { mapid: '' };
+
     /**
      * 初始化回调
      */
@@ -111,8 +114,24 @@ export class UIMapList extends UIBase {
 
         console.log(`[UIMapList] Loaded ${this._templates.length} templates`);
 
-        // 显示全部数据
-        this._renderList(this._templates);
+        // 重新应用当前过滤条件
+        this._applyCurrentFilter();
+    }
+
+    /**
+     * 应用当前过滤条件
+     */
+    private _applyCurrentFilter(): void {
+        const { mapid } = this._currentFilter;
+
+        if (mapid) {
+            const searchValues = new Map<string, string>();
+            searchValues.set('mapid', mapid);
+            const filtered = this._filter.filter(searchValues);
+            this._renderList(filtered);
+        } else {
+            this._renderList(this._templates);
+        }
     }
 
     /**
@@ -120,6 +139,9 @@ export class UIMapList extends UIBase {
      */
     private _onFilterChanged(data: { mapid: string }): void {
         console.log('[UIMapList] Filter changed:', data);
+
+        // 存储当前过滤条件
+        this._currentFilter = { ...data };
 
         const searchValues = new Map<string, string>();
         searchValues.set('mapid', data.mapid);
@@ -136,6 +158,10 @@ export class UIMapList extends UIBase {
         if (data.category !== 1) return;
 
         console.log('[UIMapList] Filter cleared');
+
+        // 清空存储的过滤条件
+        this._currentFilter = { mapid: '' };
+
         const all = this._filter.reset();
         this._renderList(all);
     }

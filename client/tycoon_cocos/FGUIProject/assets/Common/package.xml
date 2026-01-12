@@ -400,6 +400,7 @@
     <component id="mrxiow8" name="SuiConfig.xml" path="/"/>
     <component id="mrxiow9" name="Button23.xml" path="/components/" exported="true"/>
     <component id="mrxiowa" name="Keypair.xml" path="/components/"/>
+    <component id="jhxsowb" name="draggable.xml" path="/components/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

@@ -303,6 +303,7 @@ export abstract class UIBase extends Component {
     /**
      * 自动设置可拖动功能
      * 检测panel_draggable组件，有则启用
+     * panel_draggable组件 的层次需要注意，需要在bg等全覆盖层的上面（当然，需要在按钮，list等控件层的下面）
      */
     private _setupDraggable(): void {
         // 如果禁用了拖拽或已经设置过，跳过

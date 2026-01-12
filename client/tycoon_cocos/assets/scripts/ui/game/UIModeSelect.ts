@@ -64,9 +64,9 @@ export class UIModeSelect extends UIBase {
             (window as any).hideBootSplash();
         }
 
-        // 显示 env 按钮（允许切换网络）
-        const { UIManager } = await import("../core/UIManager");
-        UIManager.instance?.showEnvButton();
+        // 设置 CommonSetting 为 ModeSelect 模式
+        const { UIManager, SettingMode } = await import("../core/UIManager");
+        UIManager.instance?.setCommonSettingMode(SettingMode.ModeSelect);
 
         // 播放背景音乐
         EventBus.emit(EventTypes.Audio.PlayBGM, {
@@ -83,10 +83,6 @@ export class UIModeSelect extends UIBase {
      */
     protected async onHide(): Promise<void> {
         console.log("[UIModeSelect] Hiding mode select UI");
-
-        // 隐藏 env 按钮
-        const { UIManager } = await import("../core/UIManager");
-        UIManager.instance?.hideEnvButton();
 
         // 停止背景音乐
         EventBus.emit(EventTypes.Audio.StopBGM);

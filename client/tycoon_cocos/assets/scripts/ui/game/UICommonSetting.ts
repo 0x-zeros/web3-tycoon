@@ -19,6 +19,17 @@ import { EventTypes } from '../../events/EventTypes';
 
 const { ccclass } = _decorator;
 
+/**
+ * CommonSetting 模式枚举
+ * 对应 FairyGUI 中 mode controller 的 4 种状态
+ */
+export enum SettingMode {
+    ModeSelect = 0,   // 模式选择界面
+    MapSelect = 1,    // 地图选择界面
+    GamePlay = 2,     // 游戏进行中
+    GameEditor = 3    // 游戏编辑器
+}
+
 @ccclass('UICommonSetting')
 export class UICommonSetting extends UIBase {
     // FairyGUI 组件引用
@@ -27,6 +38,9 @@ export class UICommonSetting extends UIBase {
     private btn_playSetting!: fgui.GButton;
     private btn_debug!: fgui.GButton;
     private btn_minimap!: fgui.GButton;
+
+    // Mode Controller（控制按钮在不同模式下的显示）
+    private m_modeController!: fgui.Controller;
 
     /**
      * UI 包名和组件名
@@ -43,6 +57,9 @@ export class UICommonSetting extends UIBase {
      * 初始化（绑定组件）
      */
     protected onInit(): void {
+        // 获取 mode controller（控制按钮在不同模式下的显示）
+        this.m_modeController = this.fguiComponent.getController('mode');
+
         // 绑定 FairyGUI 组件（使用 UIBase 提供的辅助方法）
         this.btn_gameConfig = this.getButton('btn_gameConfig')!;
         this.btn_env = this.getButton('btn_env')!;
@@ -56,10 +73,6 @@ export class UICommonSetting extends UIBase {
         this.btn_playSetting.onClick(this.onPlaySettingClick, this);
         this.btn_debug.onClick(this.onDebugClick, this);
         this.btn_minimap.onClick(this.onMinimapClick, this);
-
-        // 默认隐藏特殊按钮
-        this.btn_env.visible = false;        // 只在 ModeSelect 显示
-        this.hideInGameButtons();             // InGame 按钮默认隐藏
 
         // 监听事件
         EventBus.on(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
@@ -177,76 +190,23 @@ export class UICommonSetting extends UIBase {
         this.btn_minimap.selected = false;
     }
 
-    // ================== 显示/隐藏游戏内按钮 ==================
+    // ================== 模式控制 ==================
 
     /**
-     * 显示游戏内按钮（在 UIInGame 显示时调用）
+     * 设置当前模式（通过 FairyGUI controller 控制按钮显示）
      */
-    public showInGameButtons(): void {
-        console.log('[UICommonSetting] Showing in-game buttons');
-
-        if (this.btn_playSetting) {
-            this.btn_playSetting.visible = true;
-            this.btn_playSetting.selected = false;
+    public setMode(mode: SettingMode): void {
+        if (this.m_modeController) {
+            this.m_modeController.selectedIndex = mode;
+            console.log('[UICommonSetting] Mode changed to:', SettingMode[mode]);
         }
 
-        if (this.btn_debug) {
-            this.btn_debug.visible = true;
-            this.btn_debug.selected = false;
-        }
-
-        if (this.btn_minimap) {
-            this.btn_minimap.visible = true;
-            this.btn_minimap.selected = false;
-        }
-    }
-
-    /**
-     * 隐藏游戏内按钮（在 UIInGame 隐藏时调用）
-     */
-    public hideInGameButtons(): void {
-        console.log('[UICommonSetting] Hiding in-game buttons');
-
-        if (this.btn_playSetting) {
-            this.btn_playSetting.visible = false;
-            this.btn_playSetting.selected = false;
-        }
-
-        if (this.btn_debug) {
-            this.btn_debug.visible = false;
-            this.btn_debug.selected = false;
-        }
-
-        if (this.btn_minimap) {
-            this.btn_minimap.visible = false;
-            this.btn_minimap.selected = false;
-        }
-    }
-
-    // ================== 显示/隐藏环境按钮 ==================
-
-    /**
-     * 显示环境按钮（在 UIModeSelect 显示时调用）
-     */
-    public showEnvButton(): void {
-        console.log('[UICommonSetting] Showing env button');
-
-        if (this.btn_env) {
-            this.btn_env.visible = true;
-            this.btn_env.selected = false;
-        }
-    }
-
-    /**
-     * 隐藏环境按钮（在 UIModeSelect 隐藏时调用）
-     */
-    public hideEnvButton(): void {
-        console.log('[UICommonSetting] Hiding env button');
-
-        if (this.btn_env) {
-            this.btn_env.visible = false;
-            this.btn_env.selected = false;
-        }
+        // 重置所有按钮的选中状态
+        this.btn_gameConfig && (this.btn_gameConfig.selected = false);
+        this.btn_env && (this.btn_env.selected = false);
+        this.btn_playSetting && (this.btn_playSetting.selected = false);
+        this.btn_debug && (this.btn_debug.selected = false);
+        this.btn_minimap && (this.btn_minimap.selected = false);
     }
 
     /**

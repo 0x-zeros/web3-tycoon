@@ -20,13 +20,18 @@ import { UIMapElement } from "../game/UIMapElement";
 import { UIMapSelect } from "../game/UIMapSelect";
 import { UIWallet } from "../game/UIWallet";
 import { UIGameConfig } from "../game/UIGameConfig";
-import { UICommonSetting } from "../game/UICommonSetting";
+import { UICommonSetting, SettingMode } from "../game/UICommonSetting";
 import { UICommonLayout } from "../game/UICommonLayout";
+
 import { UIGameEnd } from "../game/UIGameEnd";
 import { UIBankruptcy } from "../game/UIBankruptcy";
+
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
+
+// 重新导出 SettingMode（便于其他模块统一从 UIManager 导入）
+export { SettingMode };
 
 /**
  * UI构造函数接口 - Component类构造函数
@@ -1092,48 +1097,12 @@ export class UIManager {
     }
 
     /**
-     * 显示游戏内按钮（btn_playSetting, btn_debug）
-     * 由 UIInGame.onShow() 调用
+     * 设置 CommonSetting 模式
+     * 由各 UI 界面在 onShow 时调用
      */
-    public showInGameButtons(): void {
+    public setCommonSettingMode(mode: SettingMode): void {
         if (this._commonLayoutUI) {
-            this._commonLayoutUI.showInGameButtons();
-        } else {
-            console.warn('[UIManager] CommonLayout not initialized');
-        }
-    }
-
-    /**
-     * 隐藏游戏内按钮（btn_playSetting, btn_debug）
-     * 由 UIInGame.onHide() 调用
-     */
-    public hideInGameButtons(): void {
-        if (this._commonLayoutUI) {
-            this._commonLayoutUI.hideInGameButtons();
-        } else {
-            console.warn('[UIManager] CommonLayout not initialized');
-        }
-    }
-
-    /**
-     * 显示环境按钮（btn_env）
-     * 由 UIModeSelect.onShow() 调用
-     */
-    public showEnvButton(): void {
-        if (this._commonLayoutUI) {
-            this._commonLayoutUI.showEnvButton();
-        } else {
-            console.warn('[UIManager] CommonLayout not initialized');
-        }
-    }
-
-    /**
-     * 隐藏环境按钮（btn_env）
-     * 由 UIModeSelect.onHide() 调用
-     */
-    public hideEnvButton(): void {
-        if (this._commonLayoutUI) {
-            this._commonLayoutUI.hideEnvButton();
+            this._commonLayoutUI.setMode(mode);
         } else {
             console.warn('[UIManager] CommonLayout not initialized');
         }

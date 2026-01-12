@@ -350,9 +350,11 @@ export class UIInGame extends UIBase {
         // 标记已初始化
         this._isInitialized = true;
 
-        // 通知 CommonLayout 显示游戏内按钮
-        const { UIManager } = await import("../core/UIManager");
-        UIManager.instance?.showInGameButtons();
+        // 设置 CommonSetting 模式（根据是否为编辑模式）
+        const { UIManager, SettingMode } = await import("../core/UIManager");
+        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+        const isEditMode = gameMap?.isEditMode || false;
+        UIManager.instance?.setCommonSettingMode(isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
 
         // 主动检查是否有待决策需要显示（异步，不阻塞）
         this._showDecisionDialogIfNeeded().catch(error => {
@@ -370,10 +372,6 @@ export class UIInGame extends UIBase {
 
         // 停止游戏计时器
         this._stopGameTimer();
-
-        // 通知 CommonLayout 隐藏游戏内按钮
-        const { UIManager } = await import("../core/UIManager");
-        UIManager.instance?.hideInGameButtons();
     }
 
     /**
@@ -449,15 +447,20 @@ export class UIInGame extends UIBase {
     /**
      * 编辑器模式变化事件
      */
-    private _onEditModeChanged(data: any): void {
+    private async _onEditModeChanged(data: any): Promise<void> {
         console.log('[UIInGame] EditModeChanged event received');
         console.log('  isEditMode:', data.isEditMode);
 
+        // 更新 UIInGame 的 mode controller
         if (this.m_modeController) {
             // 0:play, 1:editor
             this.m_modeController.selectedIndex = data.isEditMode ? 1 : 0;
             console.log('[UIInGame] Mode controller set to:', this.m_modeController.selectedIndex);
         }
+
+        // 更新 CommonSetting 模式
+        const { UIManager, SettingMode } = await import("../core/UIManager");
+        UIManager.instance?.setCommonSettingMode(data.isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
     }
 
     /**

@@ -230,9 +230,13 @@ export class UIMapSelect extends UIBase {
     /**
      * 显示回调
      */
-    protected onShow(data?: any): void {
+    protected async onShow(data?: any): Promise<void> {
         console.log("[UIMapSelect] Showing");
         console.log("  Data:", data);
+
+        // 设置 CommonSetting 为 MapSelect 模式
+        const { UIManager, SettingMode } = await import("../core/UIManager");
+        UIManager.instance?.setCommonSettingMode(SettingMode.MapSelect);
 
         // 播放背景音乐
         EventBus.emit(EventTypes.Audio.PlayBGM, {

@@ -10,7 +10,7 @@
 import { _decorator } from 'cc';
 import { UIBase } from '../core/UIBase';
 import { UIWallet } from './UIWallet';
-import { UICommonSetting } from './UICommonSetting';
+import { UICommonSetting, SettingMode } from './UICommonSetting';
 
 const { ccclass } = _decorator;
 
@@ -167,55 +167,17 @@ export class UICommonLayout extends UIBase {
         return this.suiConfigUI;
     }
 
-    // ================== 游戏内按钮控制（转发到 CommonSetting） ==================
+    // ================== 模式控制（转发到 CommonSetting） ==================
 
     /**
-     * 显示游戏内按钮（在 UIInGame 显示时调用）
+     * 设置 CommonSetting 模式
      */
-    public showInGameButtons(): void {
+    public setMode(mode: SettingMode): void {
         if (!this.settingUI) {
             console.warn('[UICommonLayout] settingUI not initialized');
             return;
         }
 
-        this.settingUI.showInGameButtons();
-    }
-
-    /**
-     * 隐藏游戏内按钮（在 UIInGame 隐藏时调用）
-     */
-    public hideInGameButtons(): void {
-        if (!this.settingUI) {
-            console.warn('[UICommonLayout] settingUI not initialized');
-            return;
-        }
-
-        this.settingUI.hideInGameButtons();
-    }
-
-    // ================== 环境按钮控制（转发到 CommonSetting） ==================
-
-    /**
-     * 显示环境按钮（在 UIModeSelect 显示时调用）
-     */
-    public showEnvButton(): void {
-        if (!this.settingUI) {
-            console.warn('[UICommonLayout] settingUI not initialized');
-            return;
-        }
-
-        this.settingUI.showEnvButton();
-    }
-
-    /**
-     * 隐藏环境按钮（在 UIModeSelect 隐藏时调用）
-     */
-    public hideEnvButton(): void {
-        if (!this.settingUI) {
-            console.warn('[UICommonLayout] settingUI not initialized');
-            return;
-        }
-
-        this.settingUI.hideEnvButton();
+        this.settingUI.setMode(mode);
     }
 }

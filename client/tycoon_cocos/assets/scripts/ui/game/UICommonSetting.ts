@@ -203,9 +203,14 @@ export class UICommonSetting extends UIBase {
         console.log('[UICommonSetting] m_modeController exists:', !!this.m_modeController);
 
         if (this.m_modeController) {
-            console.log('[UICommonSetting] selectedIndex before:', this.m_modeController.selectedIndex);
+            console.log('[UICommonSetting] selectedIndex before:', this.m_modeController.selectedIndex
+                , this.m_modeController.selectedPage
+            );
             this.m_modeController.selectedIndex = mode;
-            console.log('[UICommonSetting] selectedIndex after:', this.m_modeController.selectedIndex);
+            
+            console.log('[UICommonSetting] selectedIndex after:', this.m_modeController.selectedIndex
+                , this.m_modeController.selectedPage
+            );
         } else {
             console.error('[UICommonSetting] m_modeController is null!');
         }

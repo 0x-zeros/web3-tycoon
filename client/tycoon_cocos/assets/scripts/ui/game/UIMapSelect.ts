@@ -6,6 +6,7 @@ import { UIMapList } from "./map-select/UIMapList";
 import { UIMapAssetList } from "./map-select/UIMapAssetList";
 import { UIGameDetail } from "./map-select/UIGameDetail";
 import { UIGameCreateParams } from "./map-select/UIGameCreateParams";
+import { UISearch } from "./map-select/UISearch";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import { SuiManager } from "../../sui/managers/SuiManager";
@@ -30,6 +31,9 @@ export class UIMapSelect extends UIBase {
     // GameCreateParams 组件容器
     private m_gameCreateParamsComponent: fgui.GComponent;
 
+    // Search 组件容器
+    private m_searchComponent: fgui.GComponent;
+
     // Controller（在 data 组件中）
     private m_categoryController: fgui.Controller;
 
@@ -39,6 +43,7 @@ export class UIMapSelect extends UIBase {
     private m_mapAssetListUI: UIMapAssetList;
     private m_gameDetailUI: UIGameDetail;
     private m_gameCreateParamsUI: UIGameCreateParams;
+    private m_searchUI: UISearch;
 
     /**
      * 初始化回调
@@ -75,6 +80,13 @@ export class UIMapSelect extends UIBase {
         } else {
             // 默认隐藏
             this.m_gameCreateParamsComponent.visible = false;
+        }
+
+        // 获取 search 组件
+        this.m_searchComponent = this.getChild('search').asCom;
+
+        if (!this.m_searchComponent) {
+            console.error('[UIMapSelect] search component not found');
         }
 
         // 获取 controller（在 data 组件中）
@@ -119,6 +131,13 @@ export class UIMapSelect extends UIBase {
         this.m_gameCreateParamsUI.setPanel(this.m_gameCreateParamsComponent);
         this.m_gameCreateParamsUI.setParentUI(this);
 
+        // 子模块 6: UISearch（搜索过滤）
+        if (this.m_searchComponent) {
+            this.m_searchUI = this.m_searchComponent.node.addComponent(UISearch);
+            this.m_searchUI.setUIName("Search");
+            this.m_searchUI.setPanel(this.m_searchComponent);
+        }
+
         console.log('[UIMapSelect] Sub-modules initialized');
     }
 
@@ -140,6 +159,9 @@ export class UIMapSelect extends UIBase {
 
         // 监听显示游戏创建参数配置事件（由 UIMapList 触发）
         EventBus.on(EventTypes.Game.ShowGameCreateParams, this._onShowGameCreateParams, this);
+
+        // 监听 category controller 变化，同步到 UISearch
+        this.m_categoryController?.on(fgui.Event.STATUS_CHANGED, this._onCategoryChanged, this);
     }
 
     /**
@@ -151,6 +173,7 @@ export class UIMapSelect extends UIBase {
         EventBus.off(EventTypes.Move.GameCreated, this._onMoveGameCreated, this);
         EventBus.off(EventTypes.Game.ShowGameDetail, this._onShowGameDetail, this);
         EventBus.off(EventTypes.Game.ShowGameCreateParams, this._onShowGameCreateParams, this);
+        this.m_categoryController?.off(fgui.Event.STATUS_CHANGED, this._onCategoryChanged, this);
         super.unbindEvents();
     }
 
@@ -231,6 +254,9 @@ export class UIMapSelect extends UIBase {
             this.m_categoryController.selectedIndex = category;
             console.log('  Category set to:', category);
         }
+
+        // 同步 category 到 UISearch
+        this.m_searchUI?.syncController(category);
 
         // 刷新所有子模块数据
         this.m_gameListUI?.refresh();
@@ -341,5 +367,15 @@ export class UIMapSelect extends UIBase {
         if (this.m_gameCreateParamsComponent) {
             this.m_gameCreateParamsComponent.visible = false;
         }
+    }
+
+    /**
+     * category controller 变化回调
+     * 同步到 UISearch
+     */
+    private _onCategoryChanged(): void {
+        const index = this.m_categoryController?.selectedIndex ?? 0;
+        console.log(`[UIMapSelect] Category changed to: ${index}`);
+        this.m_searchUI?.syncController(index);
     }
 }

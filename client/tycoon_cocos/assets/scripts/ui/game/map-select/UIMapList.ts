@@ -38,12 +38,6 @@ export class UIMapList extends UIBase {
     private m_list: fgui.GList;
     private m_btn_createGame: fgui.GButton;
 
-    // 搜索组件引用
-    private m_searchComponent: fgui.GComponent | null = null;
-    private m_btnFilter: fgui.GButton | null = null;
-    private m_btnNoFilter: fgui.GButton | null = null;
-    private m_mapidInput: fgui.GTextInput | null = null;
-
     // 过滤器
     private _filter: ListFilter<MapTemplatePublishedEvent> = new ListFilter<MapTemplatePublishedEvent>(MAP_FILTER_CONFIG);
 
@@ -70,18 +64,9 @@ export class UIMapList extends UIBase {
         // 获取列表
         this.m_list = this.getList("map_id");
 
-        // 获取搜索组件
-        this.m_searchComponent = this.getFGuiComponent('searchMap');
-        if (this.m_searchComponent) {
-            this.m_mapidInput = this.m_searchComponent.getChild('mapid') as fgui.GTextInput;
-            this.m_btnFilter = this.m_searchComponent.getChild('btn_filter') as fgui.GButton;
-            this.m_btnNoFilter = this.m_searchComponent.getChild('btn_noFilter') as fgui.GButton;
-        }
-
         console.log('[UIMapList] Components setup');
         console.log('  m_btn_createGame:', !!this.m_btn_createGame);
         console.log('  m_list:', !!this.m_list);
-        console.log('  m_searchComponent:', !!this.m_searchComponent);
     }
 
     /**
@@ -96,12 +81,9 @@ export class UIMapList extends UIBase {
         // 监听创建游戏参数确认事件
         EventBus.on(EventTypes.Game.CreateGameWithParams, this._onCreateGameWithParams, this);
 
-        // 搜索组件事件绑定
-        this.m_btnFilter?.onClick(this._onFilterClick, this);
-        this.m_btnNoFilter?.onClick(this._onNoFilterClick, this);
-
-        // 实时过滤：监听输入框变化
-        this.m_mapidInput?.on(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+        // 监听搜索过滤事件
+        EventBus.on(EventTypes.Search.MapFilterChanged, this._onFilterChanged, this);
+        EventBus.on(EventTypes.Search.FilterCleared, this._onFilterCleared, this);
     }
 
     /**
@@ -111,11 +93,8 @@ export class UIMapList extends UIBase {
         this.m_btn_createGame?.offClick(this._onCreateGameClick, this);
         EventBus.off(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
         EventBus.off(EventTypes.Game.CreateGameWithParams, this._onCreateGameWithParams, this);
-
-        // 搜索组件事件解绑
-        this.m_btnFilter?.offClick(this._onFilterClick, this);
-        this.m_btnNoFilter?.offClick(this._onNoFilterClick, this);
-        this.m_mapidInput?.off(fgui.Event.TEXT_CHANGE, this._onFilterClick, this);
+        EventBus.off(EventTypes.Search.MapFilterChanged, this._onFilterChanged, this);
+        EventBus.off(EventTypes.Search.FilterCleared, this._onFilterCleared, this);
 
         super.unbindEvents();
     }
@@ -132,19 +111,33 @@ export class UIMapList extends UIBase {
 
         console.log(`[UIMapList] Loaded ${this._templates.length} templates`);
 
-        // 重新应用当前过滤条件（保持输入框状态）
-        this._applyCurrentFilter();
+        // 显示全部数据
+        this._renderList(this._templates);
     }
 
     /**
-     * 应用当前输入框的过滤条件
+     * 搜索过滤条件变化（由 UISearch 发送）
      */
-    private _applyCurrentFilter(): void {
+    private _onFilterChanged(data: { mapid: string }): void {
+        console.log('[UIMapList] Filter changed:', data);
+
         const searchValues = new Map<string, string>();
-        searchValues.set('mapid', this.m_mapidInput?.text ?? '');
+        searchValues.set('mapid', data.mapid);
 
         const filtered = this._filter.filter(searchValues);
         this._renderList(filtered);
+    }
+
+    /**
+     * 搜索过滤条件清空（由 UISearch 发送）
+     */
+    private _onFilterCleared(data: { category: number }): void {
+        // 只响应 Map 列表的清除（category=1）
+        if (data.category !== 1) return;
+
+        console.log('[UIMapList] Filter cleared');
+        const all = this._filter.reset();
+        this._renderList(all);
     }
 
     /**
@@ -182,26 +175,6 @@ export class UIMapList extends UIBase {
             this._selectedIndex = -1;
             this._selectedTemplateId = null;
         }
-    }
-
-    /**
-     * 过滤按钮点击 / 输入框变化
-     */
-    private _onFilterClick(): void {
-        console.log('[UIMapList] Filter triggered');
-        this._applyCurrentFilter();
-    }
-
-    /**
-     * 恢复按钮点击（清空过滤）
-     */
-    private _onNoFilterClick(): void {
-        // 清空输入框
-        if (this.m_mapidInput) this.m_mapidInput.text = '';
-
-        const all = this._filter.reset();
-        console.log(`[UIMapList] Filter cleared, showing all ${all.length} templates`);
-        this._renderList(all);
     }
 
     /**

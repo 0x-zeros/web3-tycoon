@@ -472,6 +472,16 @@ export const EventTypes = {
         MapTemplatePublished: "move_map_template_published"
     },
 
+    /** 搜索过滤事件 */
+    Search: {
+        /** Game 过滤条件变化 */
+        GameFilterChanged: "search_game_filter_changed",
+        /** Map 过滤条件变化 */
+        MapFilterChanged: "search_map_filter_changed",
+        /** 过滤条件清空 */
+        FilterCleared: "search_filter_cleared"
+    },
+
     /** 3D输入事件 - 通过UI3DInteractionManager转发到3D系统 */
     Input3D: {
         /** 鼠标按下 */

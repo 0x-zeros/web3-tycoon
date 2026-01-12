@@ -1,4 +1,4 @@
-import { Component, _decorator } from 'cc';
+import { Component, _decorator, Vec2 } from 'cc';
 import { EventBus } from "../../events/EventBus";
 import { Blackboard } from "../../events/Blackboard";
 import * as fgui from "fairygui-cc";
@@ -23,6 +23,18 @@ export abstract class UIBase extends Component {
     /** UI数据 */
     protected _data: any = null;
 
+    // === 拖拽相关属性 ===
+    /** 是否启用拖拽功能（子类可在onInit中设为false禁用） */
+    protected _draggableEnabled: boolean = true;
+    /** 拖拽手柄 */
+    private _dragHandle: fgui.GObject | null = null;
+    /** 是否正在拖拽 */
+    private _isDragging: boolean = false;
+    /** 拖拽起始触摸位置 */
+    private _dragStartPos: Vec2 = new Vec2();
+    /** 拖拽起始面板位置 */
+    private _panelStartPos: Vec2 = new Vec2();
+
     /**
      * Cocos组件生命周期 - 加载
      */
@@ -36,20 +48,22 @@ export abstract class UIBase extends Component {
      */
     protected onEnable(): void {
         if (!this._inited) return;
-        
+
+        this._setupDraggable();  // 绑定拖拽事件
         this.bindEvents();
         this._isShowing = true;
         this.onShow(this._data);
     }
 
     /**
-     * Cocos组件生命周期 - 禁用  
+     * Cocos组件生命周期 - 禁用
      */
     protected onDisable(): void {
         // console.log("[UIBase] onDisable", this.node.name);
-        
+
         if (!this._inited) return;
-        
+
+        this._clearDraggable();  // 清理拖拽事件
         this.unbindEvents();
         this._isShowing = false;
         this.onHide();
@@ -96,6 +110,9 @@ export abstract class UIBase extends Component {
         try {
             this.onInit();
             this._inited = true;
+
+            // 自动检测并启用拖拽功能
+            this._setupDraggable();
         } catch (e) {
             console.error(`[UIBase] Error initializing UI ${this._uiName}:`, e);
         }
@@ -279,6 +296,101 @@ export abstract class UIBase extends Component {
      */
     protected getTransition(name: string): fgui.Transition | null {
         return this._panel ? this._panel.getTransition(name) : null;
+    }
+
+    // ================== 拖拽功能 ==================
+
+    /**
+     * 自动设置可拖动功能
+     * 检测panel_draggable组件，有则启用
+     */
+    private _setupDraggable(): void {
+        // 如果禁用了拖拽或已经设置过，跳过
+        if (!this._draggableEnabled || this._dragHandle) return;
+
+        const dragHandle = this.getChild('panel_draggable');
+        if (!dragHandle || !this._panel) {
+            return; // 没有panel_draggable，静默跳过
+        }
+
+        this._dragHandle = dragHandle;
+
+        // 监听触摸事件
+        dragHandle.on(fgui.Event.TOUCH_BEGIN, this._onDragBegin, this);
+        dragHandle.on(fgui.Event.TOUCH_MOVE, this._onDragMove, this);
+        dragHandle.on(fgui.Event.TOUCH_END, this._onDragEnd, this);
+
+        console.log(`[UIBase] Draggable enabled for ${this._uiName}`);
+    }
+
+    /**
+     * 清除可拖动功能
+     */
+    private _clearDraggable(): void {
+        if (this._dragHandle) {
+            this._dragHandle.off(fgui.Event.TOUCH_BEGIN, this._onDragBegin, this);
+            this._dragHandle.off(fgui.Event.TOUCH_MOVE, this._onDragMove, this);
+            this._dragHandle.off(fgui.Event.TOUCH_END, this._onDragEnd, this);
+            this._dragHandle = null;
+        }
+        this._isDragging = false;
+    }
+
+    /**
+     * 拖拽开始
+     */
+    private _onDragBegin(evt: fgui.Event): void {
+        if (!this._panel) return;
+
+        // 只响应鼠标左键（button=0）
+        if (evt.button !== 0) return;
+
+        this._isDragging = true;
+        // 记录起始位置
+        this._dragStartPos.set(evt.pos.x, evt.pos.y);
+        this._panelStartPos.set(this._panel.x, this._panel.y);
+    }
+
+    /**
+     * 拖拽移动
+     */
+    private _onDragMove(evt: fgui.Event): void {
+        if (!this._isDragging || !this._panel) return;
+
+        // 计算偏移量
+        const dx = evt.pos.x - this._dragStartPos.x;
+        const dy = evt.pos.y - this._dragStartPos.y;
+
+        // 计算新位置
+        let newX = this._panelStartPos.x + dx;
+        let newY = this._panelStartPos.y + dy;
+
+        // 边界限制：确保面板不会完全移出屏幕
+        const screenWidth = fgui.GRoot.inst.width;
+        const screenHeight = fgui.GRoot.inst.height;
+        const panelWidth = this._panel.width;
+        const panelHeight = this._panel.height;
+
+        // 至少保留50像素在屏幕内，方便用户拖回来
+        const margin = 50;
+        const minX = margin - panelWidth;
+        const maxX = screenWidth - margin;
+        const minY = margin - panelHeight;
+        const maxY = screenHeight - margin;
+
+        newX = Math.max(minX, Math.min(maxX, newX));
+        newY = Math.max(minY, Math.min(maxY, newY));
+
+        // 更新面板位置
+        this._panel.x = newX;
+        this._panel.y = newY;
+    }
+
+    /**
+     * 拖拽结束
+     */
+    private _onDragEnd(_evt: fgui.Event): void {
+        this._isDragging = false;
     }
 
     // ================== 生命周期回调（子类重写） ==================

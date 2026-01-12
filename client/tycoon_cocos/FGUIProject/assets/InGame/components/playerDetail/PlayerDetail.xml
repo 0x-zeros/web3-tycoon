@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1134,1024">
-  <controller name="c1" pages="0,base,1,event" selected="1"/>
+  <controller name="c1" pages="0,base,1,event" selected="0"/>
   <displayList>
+    <graph id="n19_mrzh" name="panel_draggable" xy="7,6" size="1122,1012" type="rect" lineSize="0" fillColor="#00ffffff">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
     <image id="n2_j5iw" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="1134,1024">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
@@ -17,10 +20,10 @@
       <gearDisplay controller="c1" pages="0"/>
     </component>
     <component id="n14_phtz" name="btn_base" src="mrxiow9" fileName="components/Button23.xml" pkg="82r0pzop" xy="39,126" size="510,62">
-      <Button title="基本信息" controller="c1" page="0"/>
+      <Button checked="true" title="基本信息" controller="c1" page="0"/>
     </component>
     <component id="n15_phtz" name="btn_event" src="mrxiow9" fileName="components/Button23.xml" pkg="82r0pzop" xy="587,126" size="510,62">
-      <Button checked="true" title="事件" controller="c1" page="1"/>
+      <Button title="事件" controller="c1" page="1"/>
     </component>
     <component id="n16_mrzh" name="eventLog" src="mrzhpc" fileName="components/playerDetail/EventLog.xml" xy="44,261" size="1048,719">
       <gearDisplay controller="c1" pages="1"/>

@@ -58,7 +58,7 @@ export class UICommonSetting extends UIBase {
      */
     protected onInit(): void {
         // 获取 mode controller（控制按钮在不同模式下的显示）
-        this.m_modeController = this.fguiComponent.getController('mode');
+        this.m_modeController = this.getController('mode')!;
 
         // 绑定 FairyGUI 组件（使用 UIBase 提供的辅助方法）
         this.btn_gameConfig = this.getButton('btn_gameConfig')!;

@@ -1,20 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="336,250">
+<component size="356,351">
   <displayList>
-    <text id="n9_su9z" name="chain" xy="6,5" size="316,38" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="mainnet"/>
-    <component id="n19_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="336,250">
+    <image id="n20_jhxs" name="n20" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="356,351">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n9_su9z" name="chain" xy="20,17" size="316,38" fontSize="25" color="#ffffff" autoSize="none" autoClearText="true" text="mainnet"/>
+    <component id="n19_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="356,351">
       <relation target="" sidePair="width-width,height-height"/>
     </component>
-    <component id="n11_pseu" name="btn_balance" src="pseuolp" fileName="components/Button12.xml" xy="5,52" size="320,54">
+    <component id="n11_pseu" name="btn_balance" src="pseuolp" fileName="components/Button12.xml" xy="19,64" size="320,54">
       <Button title="sui 0"/>
     </component>
-    <component id="n8_nev8" name="btn_wallet" src="mumqlc" fileName="components/Button1.xml" xy="5,111" size="320,66">
+    <component id="n8_nev8" name="btn_wallet" src="mumqlc" fileName="components/Button1.xml" xy="19,123" size="320,66">
       <Button title="Connect "/>
     </component>
-    <component id="n18_nxs8" name="btn_disconnect" src="nev8olo" fileName="components/Button11.xml" xy="6,183" size="320,66" visible="false">
+    <component id="n18_nxs8" name="btn_disconnect" src="nev8olo" fileName="components/Button11.xml" xy="20,195" size="320,66" visible="false">
       <Button title="Disconnect"/>
     </component>
-    <component id="n12_6i1j" name="btn_faucet" src="nev8olo" fileName="components/Button11.xml" xy="5,261" size="320,66" visible="false">
+    <component id="n12_6i1j" name="btn_faucet" src="nev8olo" fileName="components/Button11.xml" xy="19,273" size="320,66" visible="false">
       <Button title="获取测试SUI"/>
     </component>
   </displayList>

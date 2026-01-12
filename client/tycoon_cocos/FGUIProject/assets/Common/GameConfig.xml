@@ -4,6 +4,9 @@
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="800,600"/>
     <text id="n13_mrxi" name="n1" xy="77,135" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="RPC限速（刷新会稍慢）"/>
     <text id="n11_mrxi" name="n11" xy="8,269" size="364,54" visible="false" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="使用自定义RPC"/>
+    <component id="n15_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="800,600">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n12_mrxi" name="btn_rateLimitRPC" src="mrxiow4" fileName="components/Button32.xml" xy="11,133"/>
     <component id="n10_mrxi" name="btn_useCustomPRC" src="mrxiow4" fileName="components/Button32.xml" xy="79,329" visible="false"/>
     <text id="n1_f49a" name="rpcUrl" xy="144,334" size="640,49" visible="false" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="https://fullnode.mainnet.sui.io:443" input="true" prompt="输入自定义 RPC URL..."/>

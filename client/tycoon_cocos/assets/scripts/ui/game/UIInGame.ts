@@ -352,6 +352,9 @@ export class UIInGame extends UIBase {
 
         // 设置 CommonSetting 模式（根据是否为编辑模式）
         const { UIManager, SettingMode } = await import("../core/UIManager");
+        if (!this.isShowing) {
+            return;
+        }
         const gameMap = MapManager.getInstance()?.getCurrentGameMap();
         const isEditMode = gameMap?.isEditMode || false;
         UIManager.instance?.setCommonSettingMode(isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
@@ -460,6 +463,9 @@ export class UIInGame extends UIBase {
 
         // 更新 CommonSetting 模式
         const { UIManager, SettingMode } = await import("../core/UIManager");
+        if (!this.isShowing) {
+            return;
+        }
         UIManager.instance?.setCommonSettingMode(data.isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
     }
 

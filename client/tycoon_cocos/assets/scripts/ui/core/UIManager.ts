@@ -472,6 +472,7 @@ export class UIManager {
             // 刷新现有UI的数据
             existingUI.refresh(data);
             existingUI.show(data, true);
+            this._syncCommonSettingMode(uiName);
             return existingUI as T;
         } else if (existingUI) {
             if (this._config.debug) {
@@ -510,6 +511,7 @@ export class UIManager {
 
             uiInstance.show(data, true);
             this._activeUIs.set(uiName, uiInstance);
+            this._syncCommonSettingMode(uiName);
 
             // 发送显示事件
             EventBus.emit(EventTypes.UI.ManagerStateChange, {
@@ -1200,6 +1202,23 @@ export class UIManager {
     }
 
     // ================== 私有方法 ==================
+    private _syncCommonSettingMode(uiName: string): void {
+        if (uiName === "ModeSelect") {
+            this.setCommonSettingMode(SettingMode.ModeSelect);
+            return;
+        }
+
+        if (uiName === "MapSelect") {
+            this.setCommonSettingMode(SettingMode.MapSelect);
+            return;
+        }
+
+        if (uiName === "InGame") {
+            const gameMap = MapManager.getInstance()?.getCurrentGameMap();
+            const isEditMode = gameMap?.isEditMode || false;
+            this.setCommonSettingMode(isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
+        }
+    }
 
     /**
      * 尝试从缓存获取UI

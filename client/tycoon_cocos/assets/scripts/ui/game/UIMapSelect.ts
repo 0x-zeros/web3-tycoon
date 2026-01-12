@@ -236,6 +236,9 @@ export class UIMapSelect extends UIBase {
 
         // 设置 CommonSetting 为 MapSelect 模式
         const { UIManager, SettingMode } = await import("../core/UIManager");
+        if (!this.isShowing) {
+            return;
+        }
         UIManager.instance?.setCommonSettingMode(SettingMode.MapSelect);
 
         // 播放背景音乐

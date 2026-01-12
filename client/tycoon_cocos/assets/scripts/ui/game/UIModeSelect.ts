@@ -66,6 +66,9 @@ export class UIModeSelect extends UIBase {
 
         // 设置 CommonSetting 为 ModeSelect 模式
         const { UIManager, SettingMode } = await import("../core/UIManager");
+        if (!this.isShowing) {
+            return;
+        }
         UIManager.instance?.setCommonSettingMode(SettingMode.ModeSelect);
 
         // 播放背景音乐

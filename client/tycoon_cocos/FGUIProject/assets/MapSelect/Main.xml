@@ -4,5 +4,6 @@
     <component id="n10_pseu" name="data" src="pseuo2" fileName="Map.xml" xy="107,199"/>
     <component id="n11_qh36" name="gameDetail" src="qh36o5" fileName="GameDetail.xml" xy="509,202"/>
     <component id="n12_y9h6" name="gameCreateParams" src="y9h6o6" fileName="GameCreateParams.xml" xy="519,203"/>
+    <component id="n13_jhxs" name="search" src="jhxsof" fileName="Search.xml" xy="873,535"/>
   </displayList>
 </component>

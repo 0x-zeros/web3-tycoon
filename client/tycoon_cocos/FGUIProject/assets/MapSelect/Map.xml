@@ -59,11 +59,5 @@
     <text id="n15_pseu" name="n15" xy="935,806" size="463,61" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="优先从浏览器localStorage加载">
       <gearDisplay controller="category" pages="2"/>
     </text>
-    <component id="n16_lizy" name="searchGame" src="lizyod" fileName="components/SearchGame.xml" xy="1050,132">
-      <gearDisplay controller="category" pages="0"/>
-    </component>
-    <component id="n17_lizy" name="searchMap" src="lizyoe" fileName="components/SearchMap.xml" xy="1051,130">
-      <gearDisplay controller="category" pages="1"/>
-    </component>
   </displayList>
 </component>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1024,512">
+  <controller name="category" pages="0,game_id,1,map_id" selected="0"/>
+  <displayList>
+    <image id="n2_jhxs" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="2,1" size="1024,512">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n3_jhxs" name="n3" xy="40,23" size="165,36" fontSize="22" color="#ffffff" autoSize="none" text="filter："/>
+    <text id="n4_jhxs" name="n4" xy="28,116" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id">
+      <gearDisplay controller="category" pages="0"/>
+    </text>
+    <text id="n5_jhxs" name="n5" xy="26,183" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="map id">
+      <gearDisplay controller="category" pages="0,1"/>
+    </text>
+    <text id="n6_jhxs" name="n6" xy="28,259" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="player id">
+      <gearDisplay controller="category" pages="0"/>
+    </text>
+    <component id="n7_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="1,1" size="1024,512">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
+    <text id="n8_jhxs" name="gameid" xy="154,113" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="game id 或者 子字段">
+      <gearDisplay controller="category" pages="0"/>
+    </text>
+    <text id="n9_jhxs" name="mapid" xy="154,180" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece" input="true" prompt="map id 或者 子字段">
+      <gearDisplay controller="category" pages="0,1"/>
+    </text>
+    <text id="n10_jhxs" name="player" xy="154,258" size="856,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece" input="true" prompt="player id 或者 子字段">
+      <gearDisplay controller="category" pages="0"/>
+    </text>
+    <component id="n11_jhxs" name="btn_noFilter" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="302,403" size="448,76">
+      <Button title="清除 filter"/>
+    </component>
+  </displayList>
+</component>

@@ -12,6 +12,7 @@
     <component id="y9h6oc" name="ParamSlider.xml" path="/components/"/>
     <component id="lizyod" name="SearchGame.xml" path="/components/"/>
     <component id="lizyoe" name="SearchMap.xml" path="/components/"/>
+    <component id="jhxsof" name="Search.xml" path="/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>

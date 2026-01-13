@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="256,256">
-  <controller name="mode" pages="0,modeSelect,1,mapSelect,2,gamePlay,3,gameEditor" selected="2"/>
+  <controller name="mode" pages="0,modeSelect,1,mapSelect,2,gamePlay,3,gameEditor" selected="3"/>
   <displayList>
     <image id="n8_mrxi" name="n8" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" xy="0,0" size="256,256">
       <relation target="" sidePair="width-width,height-height"/>
@@ -17,8 +17,12 @@
       <Button title="切换网络"/>
     </component>
     <component id="n23_mrxi" name="btn_playSetting" src="mrxiow6" fileName="components/Button33.xml" xy="35,77" size="190,52">
-      <gearDisplay controller="mode" pages="2,3"/>
+      <gearDisplay controller="mode" pages="2"/>
       <Button title="play设置"/>
+    </component>
+    <component id="n28_uas2" name="btn_editorSetting" src="mrxiow6" fileName="components/Button33.xml" xy="35,77" size="190,52">
+      <gearDisplay controller="mode" pages="3"/>
+      <Button title="editor设置"/>
     </component>
     <component id="n26_jztv" name="btn_minimap" src="mrxiow6" fileName="components/Button33.xml" xy="35,138" size="190,52">
       <gearDisplay controller="mode" pages="2,3"/>

@@ -40,12 +40,12 @@ export interface NpcChangeItem {
 }
 
 /**
- * Buff 变化项
+ * Buff 变化项（对应 Move 端 BuffChangeItem）
  */
 export interface BuffChangeItem {
-    buff_kind: number;      // u8
-    player: string;         // address
-    first_inactive_round: number | null; // option<u16>
+    buff_type: number;      // u8 - Buff类型
+    target: string;         // address - 目标玩家
+    last_active_round: number | null; // option<u16> - 最后激活回合（null表示移除）
 }
 
 /**
@@ -113,9 +113,20 @@ export class UseCardHandler {
             this.updatePlayerNextTileId(session, event);
 
             // 3. 应用 buff 变化
+            console.log('[UseCardHandler] 原始buff_changes数据:', JSON.stringify(event.buff_changes, null, 2));
             await this.applyBuffChanges(session, event.buff_changes);
 
-            // 3. 应用 NPC 变化
+            // 打印所有受buff影响的玩家状态
+            const affectedPlayers = new Set<string>();
+            affectedPlayers.add(event.player);  // 使用卡牌的玩家
+            for (const change of event.buff_changes) {
+                affectedPlayers.add(change.target);  // buff目标玩家
+            }
+            for (const addr of affectedPlayers) {
+                this.logPlayerBuffs(session, addr);
+            }
+
+            // 4. 应用 NPC 变化
             await this.applyNpcChanges(session, event.npc_changes);
 
             // 4. 应用现金变化
@@ -155,29 +166,76 @@ export class UseCardHandler {
     }
 
     /**
+     * 打印玩家当前所有buff状态（调试用）
+     */
+    private logPlayerBuffs(session: any, playerAddress: string): void {
+        const player = session.getPlayerByAddress(playerAddress);
+        if (!player) {
+            console.warn('[UseCardHandler] logPlayerBuffs: 玩家未找到:', playerAddress);
+            return;
+        }
+
+        const allBuffs = player.getAllBuffs();
+        const currentRound = session.getRound();
+        const playerIndex = player.getPlayerIndex();
+
+        console.log(`[UseCardHandler] ========== 玩家${playerIndex} Buff状态 ==========`);
+        console.log(`[UseCardHandler] 当前回合: ${currentRound}`);
+        console.log(`[UseCardHandler] Buff总数: ${allBuffs.length}`);
+
+        if (allBuffs.length === 0) {
+            console.log('[UseCardHandler] 该玩家没有任何buff');
+        } else {
+            const buffNames: { [key: number]: string } = {
+                1: '遥控骰子',
+                2: '冰冻',
+                3: '免租',
+                4: '土地神祝福',
+                5: '福神幸运',
+                6: '机车卡'
+            };
+
+            allBuffs.forEach((buff: any, index: number) => {
+                const name = buffNames[buff.kind] || `Buff${buff.kind}`;
+                const isActive = currentRound <= buff.last_active_round;
+                const remaining = buff.last_active_round - currentRound + 1;
+
+                console.log(`[UseCardHandler] Buff[${index}]: ${name}(kind=${buff.kind})`, {
+                    last_active_round: buff.last_active_round,
+                    value: buff.value,
+                    spawn_index: buff.spawn_index,
+                    isActive,
+                    remainingRounds: isActive ? remaining : 0
+                });
+            });
+        }
+        console.log('[UseCardHandler] ================================================');
+    }
+
+    /**
      * 应用 buff 变化
      */
     private async applyBuffChanges(session: any, buffChanges: BuffChangeItem[]): Promise<void> {
         for (const change of buffChanges) {
-            const player = session.getPlayerByAddress(change.player);
+            const player = session.getPlayerByAddress(change.target);
             if (!player) {
-                console.warn('[UseCardHandler] 玩家未找到（buff）:', change.player);
+                console.warn('[UseCardHandler] 玩家未找到（buff）:', change.target);
                 continue;
             }
 
-            if (change.first_inactive_round !== null) {
+            if (change.last_active_round !== null) {
                 // ✅ 添加 buff - 构建完整的MoveBuffEntry对象
                 player.addBuff({
-                    kind: change.buff_kind,
-                    last_active_round: change.first_inactive_round,
+                    kind: change.buff_type,
+                    last_active_round: change.last_active_round,
                     value: 0,  // 默认值，根据实际需求调整
                     spawn_index: 0  // 默认值
                 });
-                console.log(`[UseCardHandler] 玩家 ${change.player} 获得buff ${change.buff_kind}, 失效回合: ${change.first_inactive_round}`);
+                console.log(`[UseCardHandler] 玩家 ${change.target} 获得buff ${change.buff_type}, 最后激活回合: ${change.last_active_round}`);
             } else {
                 // 移除 buff
-                player.removeBuff(change.buff_kind);
-                console.log(`[UseCardHandler] 玩家 ${change.player} 移除buff ${change.buff_kind}`);
+                player.removeBuff(change.buff_type);
+                console.log(`[UseCardHandler] 玩家 ${change.target} 移除buff ${change.buff_type}`);
             }
         }
     }

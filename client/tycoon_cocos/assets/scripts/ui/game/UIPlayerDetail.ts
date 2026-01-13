@@ -372,17 +372,19 @@ export class UIPlayerDetail extends UIBase {
      * 渲染 Buffs 列表
      */
     private renderBuffsList(buffsList: fgui.GList, player: any, session: any): void {
-        const allBuffs = player.getAllBuffs();
+        const allBuffs = player.getAllBuffs() || [];
         const currentRound = session.getRound();
 
         // 过滤激活的 buffs
-        const activeBuffs = allBuffs.filter((buff: any) => currentRound <= buff.last_active_round);
+        const activeBuffs = allBuffs.filter((buff: any) => buff && currentRound <= buff.last_active_round);
 
-        buffsList.numItems = activeBuffs.length;
-
+        // 先设置 itemRenderer，再设置 numItems
         buffsList.itemRenderer = (index: number, obj: fgui.GObject) => {
             const buffItem = obj.asCom;
             const buff = activeBuffs[index];
+
+            // 防护：buff可能为undefined
+            if (!buff) return;
 
             // 图标（使用resources加载）
             const icon = buffItem.getChild('icon') as fgui.GLoader;
@@ -398,6 +400,8 @@ export class UIPlayerDetail extends UIBase {
                 titleLabel.text = `${name} ${remainingRounds}`;
             }
         };
+
+        buffsList.numItems = activeBuffs.length;
     }
 
     /**

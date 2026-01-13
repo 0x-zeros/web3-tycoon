@@ -379,6 +379,10 @@ web3-tycoon/
 - Load via UIManager with package management
 - All UI components extend UIBase class
 - Packages: InGame, MapSelect, ModeSelect, Common
+- **调试经验**:
+  - 当 gearDisplay/controller 设置正确但组件不显示时，检查 XML 中是否有 `visible="false"` 属性覆盖
+  - gearDisplay 只控制"在哪些页面显示"，前提是组件本身 visible 不为 false
+  - 同步 mode 时注意过滤非场景 UI（Loading、Notification 等），避免干扰
 
 ### Map Editor Mode
 - Toggle edit mode via GameMap.isEditMode

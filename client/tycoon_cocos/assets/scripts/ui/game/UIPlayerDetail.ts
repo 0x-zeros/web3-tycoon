@@ -139,6 +139,8 @@ export class UIPlayerDetail extends UIBase {
         EventBus.on(EventTypes.Player.CardRemoved, this._onCardChange, this);
         EventBus.on(EventTypes.Player.MoneyChange, this._onPlayerUpdate, this);
         EventBus.on(EventTypes.Player.StatusChange, this._onPlayerUpdate, this);
+        EventBus.on(EventTypes.Player.BuffAdded, this._onPlayerUpdate, this);
+        EventBus.on(EventTypes.Player.BuffRemoved, this._onPlayerUpdate, this);
         EventBus.on(EventTypes.Player.BuffsUpdated, this._onPlayerUpdate, this);
 
         // 监听事件日志更新
@@ -168,6 +170,8 @@ export class UIPlayerDetail extends UIBase {
         EventBus.off(EventTypes.Player.CardRemoved, this._onCardChange, this);
         EventBus.off(EventTypes.Player.MoneyChange, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.Player.StatusChange, this._onPlayerUpdate, this);
+        EventBus.off(EventTypes.Player.BuffAdded, this._onPlayerUpdate, this);
+        EventBus.off(EventTypes.Player.BuffRemoved, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.Player.BuffsUpdated, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.UI.EventLogUpdated, this._onEventLogUpdated, this);
 

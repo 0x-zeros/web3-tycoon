@@ -570,8 +570,8 @@ export class QueryService {
                 last_tile_id: Number(f.last_tile_id) || 0,
                 next_tile_id: Number(f.next_tile_id) || 0,
                 temple_levels: f.temple_levels || [],
-                buffs: f.buffs || [],
-                cards: this.parseCardEntries(f.cards || [])  // ✅ 正确解析
+                buffs: this.parseBuffEntries(f.buffs || []),  // ✅ 正确解析buff
+                cards: this.parseCardEntries(f.cards || [])   // ✅ 正确解析
             };
 
             // console.log('[QueryService] parsePlayers:', player);
@@ -591,6 +591,25 @@ export class QueryService {
                 kind: Number(f.kind),
                 count: Number(f.count)
             };
+        });
+    }
+
+    /**
+     * 解析 BuffEntry 数组
+     */
+    private parseBuffEntries(buffsData: any[]): BuffEntry[] {
+        if (!buffsData || !Array.isArray(buffsData)) return [];
+
+        return buffsData.map((buff: any): BuffEntry => {
+            const f = buff.fields || buff;
+            const entry = {
+                kind: Number(f.kind),
+                last_active_round: Number(f.last_active_round),
+                value: BigInt(f.value || 0),
+                spawn_index: Number(f.spawn_index ?? 65535)
+            };
+            console.log('[QueryService] parseBuffEntry:', entry);
+            return entry;
         });
     }
 

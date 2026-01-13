@@ -5,6 +5,6 @@
       <relation target="" sidePair="width-width,height-height"/>
     </image>
     <text id="n0_n6n6" name="title" xy="2,73" size="126,48" fontSize="25" color="#ffffff" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="乌龟卡 2&#xA;"/>
-    <loader id="n1_uas2" name="icon" xy="0,0" size="128,128"/>
+    <loader id="n1_uas2" name="icon" xy="0,0" size="128,128" fill="scaleFree"/>
   </displayList>
 </component>

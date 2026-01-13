@@ -558,6 +558,9 @@ All managers follow singleton pattern and are accessed via static `getInstance()
 - **TypeScript Target**: DO NOT modify `tsconfig.json` target (ES2020) - Cocos Creator has specific requirements
 - **Library/Temp Folders**: Never edit `library/` or `temp/` - these are auto-generated
 - **资源加载**: Use `resources.load()` callback style (no `loadAsync()`), wrap in Promise if needed
+- **Texture2D加载路径**: 加载图片的 Texture2D 子资源时，路径需要加 `/texture` 后缀
+  - 例如：`resources.load('web3/ui/buff/buff_frozen/texture', Texture2D, ...)`
+  - 原因：Cocos Creator 3.x 中图片资源的 Texture2D 是子资源，名称为 `texture`
 
 ### 构建系统特殊处理
 - **Sui SDK 兼容性**: 项目使用 postinstall hook 自动修复 @mysten/sui 模块兼容性问题

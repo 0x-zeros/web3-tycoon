@@ -329,7 +329,7 @@ export class UIInGamePlayer extends UIBase {
             return;
         }
 
-        const texturePath = `web3/ui/buff/${iconName}`;
+        const texturePath = `web3/ui/buff/${iconName}/texture`;
 
         resources.load(texturePath, Texture2D, (err, texture) => {
             // 竞态保护：检查loader是否仍期望这个buffKind

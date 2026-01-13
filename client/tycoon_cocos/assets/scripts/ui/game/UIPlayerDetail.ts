@@ -417,8 +417,11 @@ export class UIPlayerDetail extends UIBase {
         return buffNames[buffKind] || `Buff${buffKind}`;
     }
 
+    // Buff图标SpriteFrame缓存（避免重复创建）
+    private static _buffIconCache: Map<number, SpriteFrame> = new Map();
+
     /**
-     * 加载Buff图标
+     * 加载Buff图标（带缓存和竞态保护）
      */
     private loadBuffIcon(loader: fgui.GLoader, buffKind: number): void {
         const iconMap: { [key: number]: string } = {
@@ -433,14 +436,30 @@ export class UIPlayerDetail extends UIBase {
         const iconName = iconMap[buffKind];
         if (!iconName) return;
 
+        // 标记loader当前期望的buffKind（用于竞态检查）
+        (loader as any).__expectedBuffKind = buffKind;
+
+        // 检查缓存
+        const cached = UIPlayerDetail._buffIconCache.get(buffKind);
+        if (cached) {
+            loader.texture = cached;
+            return;
+        }
+
         const texturePath = `web3/ui/buff/${iconName}`;
 
         resources.load(texturePath, Texture2D, (err, texture) => {
+            // 竞态保护：检查loader是否仍期望这个buffKind
+            if ((loader as any).__expectedBuffKind !== buffKind) return;
+
             if (!err && texture) {
                 const spriteFrame = new SpriteFrame();
                 spriteFrame.texture = texture;
                 spriteFrame.originalSize = new Size(texture.width, texture.height);
                 spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+
+                // 缓存SpriteFrame
+                UIPlayerDetail._buffIconCache.set(buffKind, spriteFrame);
                 loader.texture = spriteFrame;
             }
         });

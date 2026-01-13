@@ -646,16 +646,34 @@ All managers follow singleton pattern and are accessed via static `getInstance()
   - `calculateBuildingPrice()` → `calculate_building_price()` (game.move:2760-2830)
 - **修改Move端价格算法时，必须同步更新 PriceCalculator.ts！**
 
+### Buff 回合计算系统
+
+**统一公式**（game.move `calculate_buff_last_active_round`）：
+```move
+if (target_index < player_index) {
+    current_round + duration           // 目标已行动
+} else {
+    current_round + (duration - 1)     // 目标未行动
+}
+```
+
+**所有 buff 都使用此公式**：
+- MOVE_CTRL (遥控骰子)：duration=1
+- FROZEN (冰冻)：duration=1
+- RENT_FREE (免租)：duration=1
+
+**客户端剩余回合计算**：
+```typescript
+const hasActedThisRound = buffOwnerIndex < activePlayerIndex;
+const remaining = (last_active_round - currentRound) + (hasActedThisRound ? 0 : 1);
+// 结果始终等于 duration
+```
+
 ### 冰冻卡设计意图
 - **冰冻效果**: "停在原地"而非"跳过回合"
 - **被冰冻时可以**：掷骰子、使用卡牌、升级建筑、购买等（仍可触发当前位置效果）
 - **使用场景**: 有时玩家故意冻结自己，想停在原地继续升级建筑或购买
-- **持续时间**: 只持续1回合
-  - 对自己使用：当前回合生效
-  - 对别人使用：下一次轮到该玩家的回合生效
-- **精确计算**（Move端 game.move:1964-1968）：
-  - `target_index < player_index`：目标已行动，`last_active_round = game.round + 1`
-  - `target_index >= player_index`：目标未行动（含自己），`last_active_round = game.round`
+- **持续时间**: 只持续1回合（使用统一公式计算 last_active_round）
 
 ### 节点命名规范
 - **Tile**: `T_x_z` (如 `T_-2_-10`)

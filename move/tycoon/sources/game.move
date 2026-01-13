@@ -1938,14 +1938,18 @@ fun apply_card_effect_with_collectors(
             ));
         };
 
-        apply_buff(target_player, types::BUFF_MOVE_CTRL(), game.round, dice_sum);
+        let last_active_round = calculate_buff_last_active_round(
+            target_index, player_index, game.round, 1
+        );
+        apply_buff(target_player, types::BUFF_MOVE_CTRL(), last_active_round, dice_sum);
 
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_MOVE_CTRL(),
             target_addr,
-            option::some(game.round)
+            option::some(last_active_round)
         ));
     } else if (kind == types::CARD_RENT_FREE()) {
+        // 免租卡：立即生效，持续1回合
         let target_index = if (params.length() > 0) {
             (params[0] as u8)
         } else {
@@ -1953,14 +1957,17 @@ fun apply_card_effect_with_collectors(
         };
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
+        let last_active_round = calculate_buff_last_active_round(
+            target_index, player_index, game.round, 1
+        );
         let target_player = &mut game.players[target_index as u64];
-        apply_buff(target_player, types::BUFF_RENT_FREE(), game.round + 1, 0);
+        apply_buff(target_player, types::BUFF_RENT_FREE(), last_active_round, 0);
 
         let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_RENT_FREE(),
             target_addr,
-            option::some(game.round + 1)
+            option::some(last_active_round)
         ));
     } else if (kind == types::CARD_FREEZE()) {
         // 冰冻卡可以对自己或其他玩家使用
@@ -1969,14 +1976,9 @@ fun apply_card_effect_with_collectors(
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
-        // 精确计算生效回合：只激活一个回合
-        // - 目标在自己之前行动（target < player）：当前Round已行动，下一Round生效
-        // - 目标在自己之后行动（target >= player，包括自己）：当前Round生效
-        let last_active_round = if (target_index < player_index) {
-            game.round + 1
-        } else {
-            game.round
-        };
+        let last_active_round = calculate_buff_last_active_round(
+            target_index, player_index, game.round, 1
+        );
 
         let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
@@ -2044,6 +2046,32 @@ fun apply_card_effect_with_collectors(
 }
 
 // ===== Buff管理API函数 =====
+
+/// 计算 buff 的 last_active_round（统一公式）
+///
+/// 设计原则：
+/// - 如果目标玩家在使用者之前行动（本回合已行动），buff 从下一回合开始算
+/// - 如果目标玩家在使用者之后行动（本回合未行动），buff 从当前回合开始算
+///
+/// 参数：
+/// - target_index: 目标玩家索引
+/// - player_index: 使用者玩家索引
+/// - current_round: 当前回合
+/// - duration: 持续回合数
+///
+/// 返回：last_active_round（buff 激活的最后一个回合）
+fun calculate_buff_last_active_round(
+    target_index: u8,
+    player_index: u8,
+    current_round: u16,
+    duration: u16
+): u16 {
+    if (target_index < player_index) {
+        current_round + duration           // 目标已行动，从下一回合开始算
+    } else {
+        current_round + (duration - 1)     // 目标未行动，从当前回合开始算
+    }
+}
 
 // 为玩家应用一个buff效果
 //

@@ -18,7 +18,7 @@ import { EventTypes } from '../events/EventTypes';
 import { BFSPathfinder } from '../sui/pathfinding/BFSPathfinder';
 import { MapGraph } from '../sui/pathfinding/MapGraph';
 import { PathExtender } from '../sui/pathfinding/PathExtender';
-import { INVALID_TILE_ID } from '../sui/types/constants';
+import { INVALID_TILE_ID, BuffKind, CardKind } from '../sui/types/constants';
 
 /**
  * 卡片使用管理器
@@ -223,6 +223,17 @@ export class CardUsageManager {
         const session = GameInitializer.getInstance()?.getGameSession();
         const targetPlayer = session?.getPlayerByIndex(selectedPlayerIndex);
         const targetName = targetPlayer?.getName() || `玩家${selectedPlayerIndex + 1}`;
+
+        // 检测冰冻卡覆盖遥控骰子的情况
+        const currentRound = session?.getRound() || 0;
+        if (card.kind === CardKind.FREEZE && targetPlayer?.hasActiveBuff(BuffKind.MOVE_CTRL, currentRound)) {
+            UINotification.warning(
+                '目标玩家已使用遥控骰子，冰冻后该效果将被覆盖失效',
+                undefined,
+                3000,
+                'rightbottom'
+            );
+        }
 
         console.log(`[CardUsageManager] ${card.name} 参数:`, params);
 

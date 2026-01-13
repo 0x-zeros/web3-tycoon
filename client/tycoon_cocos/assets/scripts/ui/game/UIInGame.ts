@@ -1,4 +1,6 @@
 import { UIBase } from "../core/UIBase";
+import { SettingMode } from "../core/UITypes";
+import { UIManager } from "../core/UIManager";
 import { EventBus } from "../../events/EventBus";
 import { EventTypes } from "../../events/EventTypes";
 import { Blackboard } from "../../events/Blackboard";
@@ -335,9 +337,7 @@ export class UIInGame extends UIBase {
     /**
      * 显示回调
      */
-    protected async onShow(data?: any): Promise<void> {
-        console.log("[UIInGame] Showing in-game UI");
-
+    protected onShow(data?: any): void {
         // 开始游戏计时器
         this._startGameTimer();
 
@@ -350,21 +350,10 @@ export class UIInGame extends UIBase {
         // 标记已初始化
         this._isInitialized = true;
 
-        // 设置 CommonSetting 模式（根据是否为编辑模式）
-        const { UIManager, SettingMode } = await import("../core/UIManager");
-        if (!this.isShowing) {
-            return;
-        }
-        const gameMap = MapManager.getInstance()?.getCurrentGameMap();
-        const isEditMode = gameMap?.isEditMode || false;
-        UIManager.instance?.setCommonSettingMode(isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
-
         // 主动检查是否有待决策需要显示（异步，不阻塞）
         this._showDecisionDialogIfNeeded().catch(error => {
             console.error('[UIInGame] Failed to show decision dialog:', error);
         });
-
-        console.log('[UIInGame] 界面初始化完成，已检查待决策状态');
     }
 
     /**
@@ -450,22 +439,14 @@ export class UIInGame extends UIBase {
     /**
      * 编辑器模式变化事件
      */
-    private async _onEditModeChanged(data: any): Promise<void> {
-        console.log('[UIInGame] EditModeChanged event received');
-        console.log('  isEditMode:', data.isEditMode);
-
+    private _onEditModeChanged(data: any): void {
         // 更新 UIInGame 的 mode controller
         if (this.m_modeController) {
             // 0:play, 1:editor
             this.m_modeController.selectedIndex = data.isEditMode ? 1 : 0;
-            console.log('[UIInGame] Mode controller set to:', this.m_modeController.selectedIndex);
         }
 
         // 更新 CommonSetting 模式
-        const { UIManager, SettingMode } = await import("../core/UIManager");
-        if (!this.isShowing) {
-            return;
-        }
         UIManager.instance?.setCommonSettingMode(data.isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
     }
 

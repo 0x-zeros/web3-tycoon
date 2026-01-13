@@ -39,7 +39,7 @@
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
     <component id="n13_mrxi" name="playSetting" src="f49aov" fileName="components/PlaySetting.xml" xy="528,211" visible="false">
-      <gearDisplay controller="mode" pages="0"/>
+      <gearDisplay controller="mode" pages="0,1"/>
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
     <component id="n14_nxs8" name="btn_defiReward" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="281,47" size="272,92" visible="false">

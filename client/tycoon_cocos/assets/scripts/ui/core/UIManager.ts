@@ -1103,9 +1103,6 @@ export class UIManager {
      * 由各 UI 界面在 onShow 时调用
      */
     public setCommonSettingMode(mode: SettingMode): void {
-        console.log('[UIManager] setCommonSettingMode called with:', SettingMode[mode], '(', mode, ')');
-        console.log('[UIManager] _commonLayoutUI exists:', !!this._commonLayoutUI);
-
         if (this._commonLayoutUI) {
             this._commonLayoutUI.setMode(mode);
         } else {
@@ -1215,8 +1212,6 @@ export class UIManager {
             return;
         }
 
-        console.log('[UIManager] _syncCommonSettingMode called with:', uiName);
-
         if (uiName === "ModeSelect") {
             this.setCommonSettingMode(SettingMode.ModeSelect);
             return;
@@ -1230,7 +1225,6 @@ export class UIManager {
         if (uiName === "InGame") {
             const gameMap = MapManager.getInstance()?.getCurrentGameMap();
             const isEditMode = gameMap?.isEditMode || false;
-            console.log('[UIManager] _syncCommonSettingMode InGame - isEditMode:', isEditMode);
             this.setCommonSettingMode(isEditMode ? SettingMode.GameEditor : SettingMode.GamePlay);
         }
     }

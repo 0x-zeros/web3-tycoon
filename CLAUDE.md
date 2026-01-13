@@ -639,6 +639,17 @@ All managers follow singleton pattern and are accessed via static `getInstance()
   - `calculateBuildingPrice()` → `calculate_building_price()` (game.move:2760-2830)
 - **修改Move端价格算法时，必须同步更新 PriceCalculator.ts！**
 
+### 冰冻卡设计意图
+- **冰冻效果**: "停在原地"而非"跳过回合"
+- **被冰冻时可以**：掷骰子、使用卡牌、升级建筑、购买等（仍可触发当前位置效果）
+- **使用场景**: 有时玩家故意冻结自己，想停在原地继续升级建筑或购买
+- **持续时间**: 只持续1回合
+  - 对自己使用：当前回合生效
+  - 对别人使用：下一次轮到该玩家的回合生效
+- **精确计算**（Move端 game.move:1964-1968）：
+  - `target_index < player_index`：目标已行动，`last_active_round = game.round + 1`
+  - `target_index >= player_index`：目标未行动（含自己），`last_active_round = game.round`
+
 ### 节点命名规范
 - **Tile**: `T_x_z` (如 `T_-2_-10`)
 - **Building**: `B_size_x_z` (如 `B_1x1_5_3`, `B_2x2_10_8`)

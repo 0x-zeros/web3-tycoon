@@ -224,11 +224,30 @@ export class CardUsageManager {
         const targetPlayer = session?.getPlayerByIndex(selectedPlayerIndex);
         const targetName = targetPlayer?.getName() || `玩家${selectedPlayerIndex + 1}`;
 
-        // 检测冰冻卡覆盖遥控骰子的情况
+        // 冰冻卡相关提示
         const currentRound = session?.getRound() || 0;
-        if (card.kind === CardKind.FREEZE && targetPlayer?.hasActiveBuff(BuffKind.MOVE_CTRL, currentRound)) {
-            UINotification.warning(
-                '目标玩家已使用遥控骰子，冰冻后该效果将被覆盖失效',
+        const myPlayerIndex = session?.getMyPlayerIndex() || 0;
+
+        if (card.kind === CardKind.FREEZE) {
+            // 检测冰冻卡覆盖遥控骰子的情况
+            if (targetPlayer?.hasActiveBuff(BuffKind.MOVE_CTRL, currentRound)) {
+                UINotification.warning(
+                    '目标玩家已使用遥控骰子，冰冻后该效果将被覆盖失效',
+                    undefined,
+                    3000,
+                    'rightbottom'
+                );
+            }
+
+            // 提示冰冻生效回合（与Move端逻辑一致）
+            // - 目标在自己之前行动（target < player）：下一Round生效
+            // - 目标在自己之后行动（target >= player，包括自己）：当前Round生效
+            const effectiveRound = selectedPlayerIndex < myPlayerIndex
+                ? currentRound + 1
+                : currentRound;
+            const roundDesc = effectiveRound === currentRound ? '本回合' : '下一回合';
+            UINotification.info(
+                `${targetName}将在${roundDesc}被冻结（停在原地）`,
                 undefined,
                 3000,
                 'rightbottom'

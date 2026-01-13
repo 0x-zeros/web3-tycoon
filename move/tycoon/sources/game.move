@@ -1953,18 +1953,28 @@ fun apply_card_effect_with_collectors(
         ));
     } else if (kind == types::CARD_FREEZE()) {
         // 冰冻卡可以对自己或其他玩家使用
+        // 冰冻效果：停在原地，但仍可掷骰子、使用卡牌、升级建筑、购买等
         assert!(params.length() >= 1, EInvalidParams);
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
+        // 精确计算生效回合：只激活一个回合
+        // - 目标在自己之前行动（target < player）：当前Round已行动，下一Round生效
+        // - 目标在自己之后行动（target >= player，包括自己）：当前Round生效
+        let last_active_round = if (target_index < player_index) {
+            game.round + 1
+        } else {
+            game.round
+        };
+
         let target_player = &mut game.players[target_index as u64];
-        apply_buff(target_player, types::BUFF_FROZEN(), game.round + 1, 0);
+        apply_buff(target_player, types::BUFF_FROZEN(), last_active_round, 0);
 
         let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_FROZEN(),
             target_addr,
-            option::some(game.round + 1)
+            option::some(last_active_round)
         ));
     } else if (kind == types::CARD_BARRIER() || kind == types::CARD_BOMB() || kind == types::CARD_DOG()) {
         assert!(params.length() >= 1, EInvalidParams);

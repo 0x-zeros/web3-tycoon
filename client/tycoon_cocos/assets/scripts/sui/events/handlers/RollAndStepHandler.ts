@@ -269,8 +269,11 @@ export class RollAndStepHandler {
 
         // ✅ 更新玩家位置到最新的 tile（修复掷骰子使用过时位置的问题）
         if (player) {
-            player.setPos(step.to_tile);
-            console.log(`[RollAndStepHandler] 玩家位置已更新: ${step.from_tile} -> ${step.to_tile}`);
+            // 如果 from == to（冻结/原地停留），不更新 lastTileId
+            // 原因：Move 端冻结时也不更新 last_tile_id，需保持同步
+            const updateLastTile = step.from_tile !== step.to_tile;
+            player.setPos(step.to_tile, updateLastTile);
+            console.log(`[RollAndStepHandler] 玩家位置已更新: ${step.from_tile} -> ${step.to_tile}${!updateLastTile ? ' (冻结，lastTile不变)' : ''}`);
         }
 
         // 处理停留效果（如收租、奖金等）

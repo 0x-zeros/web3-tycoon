@@ -1926,6 +1926,10 @@ fun apply_card_effect_with_collectors(
         };
 
         let target_player = &mut game.players[target_index as u64];
+
+        // 移除冰冻buff（遥控骰子覆盖冰冻）
+        remove_buff(target_player, types::BUFF_FROZEN());
+
         apply_buff(target_player, types::BUFF_MOVE_CTRL(), game.round, dice_sum);
 
         let target_addr = (&game.players[target_index as u64]).owner;
@@ -1968,6 +1972,10 @@ fun apply_card_effect_with_collectors(
         };
 
         let target_player = &mut game.players[target_index as u64];
+
+        // 移除遥控骰子buff（冰冻覆盖遥控骰子）
+        remove_buff(target_player, types::BUFF_MOVE_CTRL());
+
         apply_buff(target_player, types::BUFF_FROZEN(), last_active_round, 0);
 
         let target_addr = (&game.players[target_index as u64]).owner;
@@ -2044,6 +2052,18 @@ fun apply_buff(player: &mut Player, kind: u8, last_active_round: u16, value: u64
 
     let buff = BuffEntry { kind, last_active_round, value, spawn_index: 0xFFFF };
     player.buffs.push_back(buff);
+}
+
+// 移除指定类型的buff（用于buff互相覆盖的场景）
+fun remove_buff(player: &mut Player, kind: u8) {
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        if (player.buffs[i].kind == kind) {
+            player.buffs.remove(i);
+            return
+        };
+        i = i + 1;
+    };
 }
 
 fun apply_buff_with_source(

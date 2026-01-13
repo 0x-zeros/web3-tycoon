@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component size="512,256" pivot="0.5,0.5" extention="Button">
+<component size="1024,256" pivot="0.5,0.5" extention="Button">
   <displayList>
-    <graph id="n10_ue83" name="n10" xy="0,0" size="512,256" type="rect" lineColor="#ff66cccc" fillColor="#ff666768">
+    <graph id="n10_ue83" name="n10" xy="0,0" size="1024,256" type="rect" lineColor="#ff66cccc" fillColor="#ff666768">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
     <loader id="n0_ue83" name="avatar" xy="21,33" size="192,192" url="ui://8z385pimue83g" fill="scale" clearOnPublish="true"/>
-    <text id="n1_ue83" name="index" xy="10,10" size="0,28" fontSize="24" color="#ffffff" text="1"/>
-    <text id="n2_ue83" name="n2" xy="248,33" size="0,28" fontSize="24" color="#ffffff" text="现金"/>
-    <text id="n4_ue83" name="cash" xy="318,33" size="0,28" fontSize="24" color="#ffffff" autoClearText="true" text="100000"/>
+    <text id="n1_ue83" name="index" xy="10,10" size="17,34" fontSize="24" color="#ffffff" text="1"/>
+    <text id="n2_ue83" name="n2" xy="248,33" size="52,34" fontSize="24" color="#ffffff" text="现金"/>
+    <text id="n4_ue83" name="cash" xy="318,33" size="84,34" fontSize="24" color="#ffffff" autoClearText="true" text="100000"/>
     <text id="n6_ue83" name="status" xy="251,208" size="248,34" fontSize="24" color="#ffffff" autoSize="none" text=""/>
     <text id="n11_ue83" name="playerName" xy="111,196" size="129,44" fontSize="24" color="#ffffff" autoSize="none" autoClearText="true" text="capy1"/>
-    <list id="n12_n6n6" name="buffs" xy="238,78" size="262,119" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimn6n6p0" autoClearItems="true">
+    <list id="n12_n6n6" name="buffs" xy="500,6" size="516,244" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimuas2pe" autoClearItems="true">
       <item/>
       <item/>
       <item/>

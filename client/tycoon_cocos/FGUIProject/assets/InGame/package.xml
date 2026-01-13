@@ -35,6 +35,7 @@
     <component id="jztvpa" name="Minimap.xml" path="/components/"/>
     <component id="mrzhpc" name="EventLog.xml" path="/components/playerDetail/"/>
     <component id="mrzhpd" name="EventLogItem.xml" path="/components/playerDetail/"/>
+    <component id="uas2pe" name="PlayerBuffDetail.xml" path="/components/playerDetail/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

@@ -10,7 +10,7 @@
     <text id="n4_ue83" name="cash" xy="318,33" size="84,34" fontSize="24" color="#ffffff" autoClearText="true" text="100000"/>
     <text id="n6_ue83" name="status" xy="251,208" size="248,34" fontSize="24" color="#ffffff" autoSize="none" text=""/>
     <text id="n11_ue83" name="playerName" xy="111,196" size="129,44" fontSize="24" color="#ffffff" autoSize="none" autoClearText="true" text="capy1"/>
-    <list id="n12_n6n6" name="buffs" xy="238,78" size="262,119" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimn6n6p0" autoClearItems="true">
+    <list id="n12_n6n6" name="buffs" xy="238,78" size="262,119" layout="pagination" overflow="scroll" defaultItem="ui://8z385pimn6n6p0" autoClearItems="true">
       <item/>
       <item/>
       <item/>

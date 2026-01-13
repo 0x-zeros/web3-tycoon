@@ -142,6 +142,7 @@ export class UIPlayerDetail extends UIBase {
         EventBus.on(EventTypes.Player.BuffAdded, this._onPlayerUpdate, this);
         EventBus.on(EventTypes.Player.BuffRemoved, this._onPlayerUpdate, this);
         EventBus.on(EventTypes.Player.BuffsUpdated, this._onPlayerUpdate, this);
+        EventBus.on(EventTypes.Game.TurnChanged, this._onPlayerUpdate, this);
 
         // 监听事件日志更新
         EventBus.on(EventTypes.UI.EventLogUpdated, this._onEventLogUpdated, this);
@@ -173,6 +174,7 @@ export class UIPlayerDetail extends UIBase {
         EventBus.off(EventTypes.Player.BuffAdded, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.Player.BuffRemoved, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.Player.BuffsUpdated, this._onPlayerUpdate, this);
+        EventBus.off(EventTypes.Game.TurnChanged, this._onPlayerUpdate, this);
         EventBus.off(EventTypes.UI.EventLogUpdated, this._onEventLogUpdated, this);
 
         super.unbindEvents();
@@ -374,21 +376,40 @@ export class UIPlayerDetail extends UIBase {
 
     /**
      * 渲染 Buffs 列表
+     *
+     * 剩余回合计算逻辑（与Move端一致）：
+     * - 如果buff拥有者在本回合已行动（playerIndex < activePlayerIndex），剩余 = last_active_round - currentRound
+     * - 如果buff拥有者在本回合未行动（playerIndex >= activePlayerIndex），剩余 = last_active_round - currentRound + 1
+     * - 剩余回合 <= 0 时从显示中过滤掉
      */
     private renderBuffsList(buffsList: fgui.GList, player: any, session: any): void {
         const allBuffs = player.getAllBuffs() || [];
         const currentRound = session.getRound();
+        const activePlayerIndex = session.getActivePlayerIndex();
+        const buffOwnerIndex = player.getPlayerIndex();
 
-        // 过滤激活的 buffs
-        const activeBuffs = allBuffs.filter((buff: any) => buff && currentRound <= buff.last_active_round);
+        // 判断buff拥有者是否在本回合已行动
+        const hasActedThisRound = buffOwnerIndex < activePlayerIndex;
+
+        // 计算每个buff的剩余回合数，并过滤掉已失效的
+        const activeBuffsWithRemaining = allBuffs
+            .filter((buff: any) => buff != null)
+            .map((buff: any) => {
+                const baseRemaining = buff.last_active_round - currentRound;
+                const remaining = hasActedThisRound ? baseRemaining : baseRemaining + 1;
+                return { buff, remaining };
+            })
+            .filter((item: any) => item.remaining > 0);
 
         // 先设置 itemRenderer，再设置 numItems
         buffsList.itemRenderer = (index: number, obj: fgui.GObject) => {
             const buffItem = obj.asCom;
-            const buff = activeBuffs[index];
+            const item = activeBuffsWithRemaining[index];
 
-            // 防护：buff可能为undefined
-            if (!buff) return;
+            // 防护：item可能为undefined
+            if (!item) return;
+
+            const { buff, remaining } = item;
 
             // 图标（使用resources加载）
             const icon = buffItem.getChild('icon') as fgui.GLoader;
@@ -400,12 +421,11 @@ export class UIPlayerDetail extends UIBase {
             const titleLabel = buffItem.getChild('title') as fgui.GTextField;
             if (titleLabel) {
                 const name = this.getBuffDisplayName(buff.kind);
-                const remainingRounds = buff.last_active_round - currentRound + 1;
-                titleLabel.text = `${name} ${remainingRounds}`;
+                titleLabel.text = `${name} ${remaining}`;
             }
         };
 
-        buffsList.numItems = activeBuffs.length;
+        buffsList.numItems = activeBuffsWithRemaining.length;
     }
 
     /**
@@ -491,8 +511,11 @@ export class UIPlayerDetail extends UIBase {
     /**
      * 玩家信息更新事件
      */
-    private _onPlayerUpdate(): void {
-        this.refreshPlayerInfo();
+    private _onPlayerUpdate(data?: any): void {
+        console.log('[UIPlayerDetail] _onPlayerUpdate triggered', { isShowing: this.isShowing, data });
+        if (this.isShowing) {
+            this.refreshPlayerInfo();
+        }
     }
 
     // ========================= 事件日志相关 =========================

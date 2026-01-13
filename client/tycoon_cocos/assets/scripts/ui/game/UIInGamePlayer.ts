@@ -231,21 +231,40 @@ export class UIInGamePlayer extends UIBase {
 
     /**
      * 渲染玩家的Buffs列表
+     *
+     * 剩余回合计算逻辑（与Move端一致）：
+     * - 如果buff拥有者在本回合已行动（playerIndex < activePlayerIndex），剩余 = last_active_round - currentRound
+     * - 如果buff拥有者在本回合未行动（playerIndex >= activePlayerIndex），剩余 = last_active_round - currentRound + 1
+     * - 剩余回合 <= 0 时从显示中过滤掉
      */
     private renderBuffsList(buffsList: fgui.GList, player: any, session: any): void {
         const allBuffs = player.getAllBuffs() || [];
         const currentRound = session.getRound();
+        const activePlayerIndex = session.getActivePlayerIndex();
+        const buffOwnerIndex = player.getPlayerIndex();
 
-        // 过滤激活的buffs
-        const activeBuffs = allBuffs.filter(buff => buff && currentRound <= buff.last_active_round);
+        // 判断buff拥有者是否在本回合已行动
+        const hasActedThisRound = buffOwnerIndex < activePlayerIndex;
+
+        // 计算每个buff的剩余回合数，并过滤掉已失效的
+        const activeBuffsWithRemaining = allBuffs
+            .filter((buff: any) => buff != null)
+            .map((buff: any) => {
+                const baseRemaining = buff.last_active_round - currentRound;
+                const remaining = hasActedThisRound ? baseRemaining : baseRemaining + 1;
+                return { buff, remaining };
+            })
+            .filter((item: any) => item.remaining > 0);
 
         // 先设置itemRenderer，再设置numItems
         buffsList.itemRenderer = (index: number, obj: fgui.GObject) => {
             const buffItem = obj.asCom;
-            const buff = activeBuffs[index];
+            const item = activeBuffsWithRemaining[index];
 
-            // 防护：buff可能为undefined
-            if (!buff) return;
+            // 防护：item可能为undefined
+            if (!item) return;
+
+            const { buff, remaining } = item;
 
             // 图标（使用resources加载）
             const icon = buffItem.getChild('icon') as fgui.GLoader;
@@ -257,12 +276,11 @@ export class UIInGamePlayer extends UIBase {
             const titleLabel = buffItem.getChild('title') as fgui.GTextField;
             if (titleLabel) {
                 const name = this.getBuffDisplayName(buff.kind);
-                const remainingRounds = buff.last_active_round - currentRound + 1;
-                titleLabel.text = `${name} ${remainingRounds}`;
+                titleLabel.text = `${name} ${remaining}`;
             }
         };
 
-        buffsList.numItems = activeBuffs.length;
+        buffsList.numItems = activeBuffsWithRemaining.length;
     }
 
     /**

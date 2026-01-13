@@ -2066,6 +2066,7 @@ fun calculate_buff_last_active_round(
     current_round: u16,
     duration: u16
 ): u16 {
+    assert!(duration > 0, EInvalidParams);  // 防止 duration - 1 下溢
     if (target_index < player_index) {
         current_round + duration           // 目标已行动，从下一回合开始算
     } else {

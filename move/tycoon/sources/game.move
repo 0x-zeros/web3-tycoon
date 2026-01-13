@@ -1925,14 +1925,21 @@ fun apply_card_effect_with_collectors(
             i = i + 1;
         };
 
+        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
 
-        // 移除冰冻buff（遥控骰子覆盖冰冻）
-        remove_buff(target_player, types::BUFF_FROZEN());
+        // 移除冰冻buff（遥控骰子覆盖冰冻），并发出移除事件
+        if (has_buff(target_player, types::BUFF_FROZEN())) {
+            remove_buff(target_player, types::BUFF_FROZEN());
+            buff_changes.push_back(events::make_buff_change(
+                types::BUFF_FROZEN(),
+                target_addr,
+                option::none()  // none表示移除
+            ));
+        };
 
         apply_buff(target_player, types::BUFF_MOVE_CTRL(), game.round, dice_sum);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_MOVE_CTRL(),
             target_addr,
@@ -1971,14 +1978,21 @@ fun apply_card_effect_with_collectors(
             game.round
         };
 
+        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
 
-        // 移除遥控骰子buff（冰冻覆盖遥控骰子）
-        remove_buff(target_player, types::BUFF_MOVE_CTRL());
+        // 移除遥控骰子buff（冰冻覆盖遥控骰子），并发出移除事件
+        if (has_buff(target_player, types::BUFF_MOVE_CTRL())) {
+            remove_buff(target_player, types::BUFF_MOVE_CTRL());
+            buff_changes.push_back(events::make_buff_change(
+                types::BUFF_MOVE_CTRL(),
+                target_addr,
+                option::none()  // none表示移除
+            ));
+        };
 
         apply_buff(target_player, types::BUFF_FROZEN(), last_active_round, 0);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_FROZEN(),
             target_addr,
@@ -2064,6 +2078,18 @@ fun remove_buff(player: &mut Player, kind: u8) {
         };
         i = i + 1;
     };
+}
+
+// 检查是否存在指定类型的buff
+fun has_buff(player: &Player, kind: u8): bool {
+    let mut i = 0;
+    while (i < player.buffs.length()) {
+        if (player.buffs[i].kind == kind) {
+            return true
+        };
+        i = i + 1;
+    };
+    false
 }
 
 fun apply_buff_with_source(

@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1920,1080">
+  <controller name="mode" pages="0,normal,1,with filter" selected="0"/>
   <displayList>
     <component id="n10_pseu" name="data" src="pseuo2" fileName="Map.xml" xy="107,199"/>
     <component id="n11_qh36" name="gameDetail" src="qh36o5" fileName="GameDetail.xml" xy="509,202"/>
     <component id="n12_y9h6" name="gameCreateParams" src="y9h6o6" fileName="GameCreateParams.xml" xy="519,203"/>
-    <component id="n13_jhxs" name="search" src="jhxsof" fileName="Search.xml" xy="873,535"/>
+    <component id="n13_jhxs" name="search" src="jhxsof" fileName="Search.xml" xy="496,513">
+      <gearDisplay controller="mode" pages="1"/>
+    </component>
+    <component id="n14_uas2" name="btn_filter" src="mrxiow6" fileName="components/Button33.xml" pkg="82r0pzop" xy="1179,208" size="212,80">
+      <Button title="filter" controller="mode" page="1"/>
+    </component>
   </displayList>
 </component>

@@ -384,9 +384,18 @@ export class UIPlayerDetail extends UIBase {
             const buffItem = obj.asCom;
             const buff = activeBuffs[index];
 
+            // 图标（使用resources加载）
+            const icon = buffItem.getChild('icon') as fgui.GLoader;
+            if (icon) {
+                this.loadBuffIcon(icon, buff.kind);
+            }
+
+            // 名称 + 剩余回合数
             const titleLabel = buffItem.getChild('title') as fgui.GTextField;
             if (titleLabel) {
-                titleLabel.text = this.getBuffDisplayName(buff.kind);
+                const name = this.getBuffDisplayName(buff.kind);
+                const remainingRounds = buff.last_active_round - currentRound + 1;
+                titleLabel.text = `${name} ${remainingRounds}`;
             }
         };
     }
@@ -395,20 +404,46 @@ export class UIPlayerDetail extends UIBase {
      * 获取 Buff 中文名称
      */
     private getBuffDisplayName(buffKind: number): string {
+        // Buff类型映射（对应Move端 types.move 的 BUFF_* 常量）
         const buffNames: { [key: number]: string } = {
-            1: '移动控制',
-            2: '冻结',
-            3: '免租',
-            4: '停止',
-            5: '转向',
-            6: '飞行',
-            7: '隐身',
-            8: '加速',
-            9: '减速',
-            10: '护盾'
+            1: '遥控骰子',      // BUFF_MOVE_CTRL
+            2: '冰冻',          // BUFF_FROZEN
+            3: '免租',          // BUFF_RENT_FREE
+            4: '土地神祝福',    // BUFF_LAND_BLESSING
+            5: '福神幸运',      // BUFF_FORTUNE
+            6: '机车卡'         // BUFF_LOCOMOTIVE
         };
 
         return buffNames[buffKind] || `Buff${buffKind}`;
+    }
+
+    /**
+     * 加载Buff图标
+     */
+    private loadBuffIcon(loader: fgui.GLoader, buffKind: number): void {
+        const iconMap: { [key: number]: string } = {
+            1: 'buff_move_ctrl',      // 遥控骰子
+            2: 'buff_frozen',         // 冰冻
+            3: 'buff_rent_free',      // 免租
+            4: 'buff_land_blessing',  // 土地神祝福
+            5: 'buff_fortune',        // 福神幸运
+            6: 'buff_locomotive'      // 机车卡
+        };
+
+        const iconName = iconMap[buffKind];
+        if (!iconName) return;
+
+        const texturePath = `web3/ui/buff/${iconName}`;
+
+        resources.load(texturePath, Texture2D, (err, texture) => {
+            if (!err && texture) {
+                const spriteFrame = new SpriteFrame();
+                spriteFrame.texture = texture;
+                spriteFrame.originalSize = new Size(texture.width, texture.height);
+                spriteFrame.rect = new Rect(0, 0, texture.width, texture.height);
+                loader.texture = spriteFrame;
+            }
+        });
     }
 
     /**

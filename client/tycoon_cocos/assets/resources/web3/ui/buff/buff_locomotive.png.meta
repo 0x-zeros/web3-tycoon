@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "1e9ae9fd-bb0e-4c24-98a3-2ddc5d4103cf",
+  "uuid": "d2fe0dd0-396c-4a73-bd68-a18988bac69b",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "1e9ae9fd-bb0e-4c24-98a3-2ddc5d4103cf@6c48a",
-      "displayName": "buff_locomotiv",
+      "uuid": "d2fe0dd0-396c-4a73-bd68-a18988bac69b@6c48a",
+      "displayName": "buff_locomotive",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "1e9ae9fd-bb0e-4c24-98a3-2ddc5d4103cf",
+        "imageUuidOrDatabaseUri": "d2fe0dd0-396c-4a73-bd68-a18988bac69b",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "1e9ae9fd-bb0e-4c24-98a3-2ddc5d4103cf@6c48a"
+    "redirect": "d2fe0dd0-396c-4a73-bd68-a18988bac69b@6c48a"
   }
 }

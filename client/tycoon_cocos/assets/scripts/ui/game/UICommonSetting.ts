@@ -36,6 +36,7 @@ export class UICommonSetting extends UIBase {
     private btn_gameConfig!: fgui.GButton;
     private btn_env!: fgui.GButton;
     private btn_playSetting!: fgui.GButton;
+    private btn_editorSetting!: fgui.GButton;
     private btn_debug!: fgui.GButton;
     private btn_minimap!: fgui.GButton;
 
@@ -64,18 +65,21 @@ export class UICommonSetting extends UIBase {
         this.btn_gameConfig = this.getButton('btn_gameConfig')!;
         this.btn_env = this.getButton('btn_env')!;
         this.btn_playSetting = this.getButton('btn_playSetting')!;
+        this.btn_editorSetting = this.getButton('btn_editorSetting')!;
         this.btn_debug = this.getButton('btn_debug')!;
         this.btn_minimap = this.getButton('btn_minimap')!;
 
-        // 绑定事件
-        this.btn_gameConfig.onClick(this.onGameConfigClick, this);
-        this.btn_env.onClick(this.onEnvClick, this);
-        this.btn_playSetting.onClick(this.onPlaySettingClick, this);
-        this.btn_debug.onClick(this.onDebugClick, this);
-        this.btn_minimap.onClick(this.onMinimapClick, this);
+        // 绑定事件（按钮可能在某些模式下不存在，需要检查）
+        this.btn_gameConfig?.onClick(this.onGameConfigClick, this);
+        this.btn_env?.onClick(this.onEnvClick, this);
+        this.btn_playSetting?.onClick(this.onPlaySettingClick, this);
+        this.btn_editorSetting?.onClick(this.onEditorSettingClick, this);
+        this.btn_debug?.onClick(this.onDebugClick, this);
+        this.btn_minimap?.onClick(this.onMinimapClick, this);
 
         // 监听事件
         EventBus.on(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
+        EventBus.on(EventTypes.UI.EditorSettingClosed, this.onEditorSettingClosed, this);
         EventBus.on(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
         EventBus.on(EventTypes.UI.MinimapClosed, this.onMinimapClosed, this);
     }
@@ -90,7 +94,9 @@ export class UICommonSetting extends UIBase {
         UIManager.instance.toggleGameConfig();
 
         // 同步按钮状态
-        this.btn_gameConfig.selected = UIManager.instance.isGameConfigVisible();
+        if (this.btn_gameConfig) {
+            this.btn_gameConfig.selected = UIManager.instance.isGameConfigVisible();
+        }
     }
 
     /**
@@ -104,7 +110,9 @@ export class UICommonSetting extends UIBase {
         UIManager.instance.toggleSuiConfig();
 
         // 同步按钮状态
-        this.btn_env.selected = UIManager.instance.isSuiConfigVisible();
+        if (this.btn_env) {
+            this.btn_env.selected = UIManager.instance.isSuiConfigVisible();
+        }
     }
 
     /**
@@ -120,7 +128,9 @@ export class UICommonSetting extends UIBase {
             const newVisible = (uiInGame as any).togglePlaySetting();
 
             // 同步按钮状态
-            this.btn_playSetting.selected = newVisible;
+            if (this.btn_playSetting) {
+                this.btn_playSetting.selected = newVisible;
+            }
         } else {
             console.warn('[UICommonSetting] UIInGame not found or togglePlaySetting not available');
         }
@@ -139,7 +149,9 @@ export class UICommonSetting extends UIBase {
             const newVisible = (uiInGame as any).toggleDebug();
 
             // 同步按钮状态
-            this.btn_debug.selected = newVisible;
+            if (this.btn_debug) {
+                this.btn_debug.selected = newVisible;
+            }
         } else {
             console.warn('[UICommonSetting] UIInGame not found or toggleDebug not available');
         }
@@ -150,7 +162,40 @@ export class UICommonSetting extends UIBase {
      */
     private onPlaySettingClosed(): void {
         console.log('[UICommonSetting] PlaySetting closed event received');
-        this.btn_playSetting.selected = false;
+        if (this.btn_playSetting) {
+            this.btn_playSetting.selected = false;
+        }
+    }
+
+    /**
+     * EditorSetting 按钮点击（Toggle 按钮）
+     * 控制 UIInGame.editorSetting 显示/隐藏
+     */
+    private onEditorSettingClick(): void {
+        console.log('[UICommonSetting] EditorSetting button clicked');
+
+        // 获取 UIInGame 实例并切换 editorSetting
+        const uiInGame = UIManager.instance.getActiveUI('InGame');
+        if (uiInGame && 'toggleEditorSetting' in uiInGame) {
+            const newVisible = (uiInGame as any).toggleEditorSetting();
+
+            // 同步按钮状态
+            if (this.btn_editorSetting) {
+                this.btn_editorSetting.selected = newVisible;
+            }
+        } else {
+            console.warn('[UICommonSetting] UIInGame not found or toggleEditorSetting not available');
+        }
+    }
+
+    /**
+     * EditorSetting 关闭事件（用于同步按钮状态）
+     */
+    private onEditorSettingClosed(): void {
+        console.log('[UICommonSetting] EditorSetting closed event received');
+        if (this.btn_editorSetting) {
+            this.btn_editorSetting.selected = false;
+        }
     }
 
     /**
@@ -158,7 +203,9 @@ export class UICommonSetting extends UIBase {
      */
     private onSuiConfigClosed(): void {
         console.log('[UICommonSetting] SuiConfig closed event received');
-        this.btn_env.selected = false;
+        if (this.btn_env) {
+            this.btn_env.selected = false;
+        }
     }
 
     /**
@@ -174,7 +221,9 @@ export class UICommonSetting extends UIBase {
             const newVisible = (uiInGame as any).toggleMinimap();
 
             // 同步按钮状态
-            this.btn_minimap.selected = newVisible;
+            if (this.btn_minimap) {
+                this.btn_minimap.selected = newVisible;
+            }
         } else {
             console.warn('[UICommonSetting] UIInGame not found or toggleMinimap not available');
         }
@@ -185,7 +234,9 @@ export class UICommonSetting extends UIBase {
      */
     private onMinimapClosed(): void {
         console.log('[UICommonSetting] Minimap closed event received');
-        this.btn_minimap.selected = false;
+        if (this.btn_minimap) {
+            this.btn_minimap.selected = false;
+        }
     }
 
     // ================== 模式控制 ==================
@@ -202,6 +253,7 @@ export class UICommonSetting extends UIBase {
         this.btn_gameConfig && (this.btn_gameConfig.selected = false);
         this.btn_env && (this.btn_env.selected = false);
         this.btn_playSetting && (this.btn_playSetting.selected = false);
+        this.btn_editorSetting && (this.btn_editorSetting.selected = false);
         this.btn_debug && (this.btn_debug.selected = false);
         this.btn_minimap && (this.btn_minimap.selected = false);
     }
@@ -222,6 +274,10 @@ export class UICommonSetting extends UIBase {
             this.btn_playSetting.offClick(this.onPlaySettingClick, this);
         }
 
+        if (this.btn_editorSetting) {
+            this.btn_editorSetting.offClick(this.onEditorSettingClick, this);
+        }
+
         if (this.btn_debug) {
             this.btn_debug.offClick(this.onDebugClick, this);
         }
@@ -232,6 +288,7 @@ export class UICommonSetting extends UIBase {
 
         // 移除事件监听
         EventBus.off(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
+        EventBus.off(EventTypes.UI.EditorSettingClosed, this.onEditorSettingClosed, this);
         EventBus.off(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
         EventBus.off(EventTypes.UI.MinimapClosed, this.onMinimapClosed, this);
 

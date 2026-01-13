@@ -1,12 +1,13 @@
 /**
- * UIInGamePlaySetting - 游戏内设置面板
+ * UIInGameEditorSetting - 游戏内编辑器设置面板
  *
  * 功能:
  * - 退出游戏
+ * - 强制结束游戏（弹出确认对话框）
  * - 关闭设置面板
  *
- * 位置: UIInGame.playSetting 子组件
- * 控制: 由 CommonSetting.btn_playSetting toggle 按钮控制显示/隐藏
+ * 位置: UIInGame.editorSetting 子组件
+ * 控制: 由 CommonSetting.btn_editorSetting toggle 按钮控制显示/隐藏
  */
 
 import { _decorator } from 'cc';
@@ -18,8 +19,8 @@ import { UIMessage } from '../utils/UIMessage';
 
 const { ccclass } = _decorator;
 
-@ccclass('UIInGamePlaySetting')
-export class UIInGamePlaySetting extends UIBase {
+@ccclass('UIInGameEditorSetting')
+export class UIInGameEditorSetting extends UIBase {
     // FairyGUI 组件引用
     private btn_exitGame!: fgui.GButton;
     private btn_close!: fgui.GButton;
@@ -38,11 +39,11 @@ export class UIInGamePlaySetting extends UIBase {
         this.btn_forceEndGame = this.getButton('btn_forceEndGame')!;
 
         if (!this.btn_exitGame || !this.btn_close) {
-            console.error('[UIInGamePlaySetting] Failed to get buttons');
+            console.error('[UIInGameEditorSetting] Failed to get buttons');
             return;
         }
 
-        console.log('[UIInGamePlaySetting] Initialized');
+        console.log('[UIInGameEditorSetting] Initialized');
     }
 
     /**
@@ -51,7 +52,7 @@ export class UIInGamePlaySetting extends UIBase {
     protected bindEvents(): void {
         // 防止重复绑定
         if (this._eventsBound) {
-            console.log('[UIInGamePlaySetting] Events already bound, skipping');
+            console.log('[UIInGameEditorSetting] Events already bound, skipping');
             return;
         }
 
@@ -69,16 +70,16 @@ export class UIInGamePlaySetting extends UIBase {
         }
 
         this._eventsBound = true;
-        console.log('[UIInGamePlaySetting] Events bound');
+        console.log('[UIInGameEditorSetting] Events bound');
     }
 
     /**
      * 显示回调
      */
     protected onShow(data?: any): void {
-        console.log('[UIInGamePlaySetting] Showing play setting panel');
+        console.log('[UIInGameEditorSetting] Showing editor setting panel');
 
-        // ✅ 手动绑定事件（因为 visible 切换不触发 onEnable）
+        // 手动绑定事件（因为 visible 切换不触发 onEnable）
         this.bindEvents();
     }
 
@@ -86,9 +87,9 @@ export class UIInGamePlaySetting extends UIBase {
      * 隐藏回调
      */
     protected onHide(): void {
-        console.log('[UIInGamePlaySetting] Hiding play setting panel');
+        console.log('[UIInGameEditorSetting] Hiding editor setting panel');
 
-        // ✅ 手动解绑事件（防止内存泄漏）
+        // 手动解绑事件（防止内存泄漏）
         this.unbindEvents();
     }
 
@@ -97,16 +98,16 @@ export class UIInGamePlaySetting extends UIBase {
      * 调用 UIManager.exitGame() 统一处理退出逻辑
      */
     private async onExitGameClick(): Promise<void> {
-        console.log('[UIInGamePlaySetting] Exit game button clicked');
+        console.log('[UIInGameEditorSetting] Exit game button clicked');
 
-        // 1. 先关闭 PlaySetting 面板
+        // 1. 先关闭 EditorSetting 面板
         if (this.panel) {
             this.panel.visible = false;
-            console.log('[UIInGamePlaySetting] Panel closed before exit');
+            console.log('[UIInGameEditorSetting] Panel closed before exit');
         }
 
         // 通知 CommonSetting 更新按钮状态
-        EventBus.emit(EventTypes.UI.PlaySettingClosed);
+        EventBus.emit(EventTypes.UI.EditorSettingClosed);
 
         // 2. 退出游戏
         const { UIManager } = await import('../core/UIManager');
@@ -114,28 +115,11 @@ export class UIInGamePlaySetting extends UIBase {
     }
 
     /**
-     * 关闭按钮点击
-     */
-    private onCloseClick(): void {
-        console.log('[UIInGamePlaySetting] Close button clicked');
-
-        // 直接设置 FairyGUI panel 的 visible（而不是调用 hide()）
-        // 参考 UICommonLayout.toggleGameConfig() 的实现
-        if (this.panel) {
-            this.panel.visible = false;
-            console.log('[UIInGamePlaySetting] Panel hidden');
-        }
-
-        // 通知 CommonSetting 更新按钮状态
-        EventBus.emit(EventTypes.UI.PlaySettingClosed);
-    }
-
-    /**
      * 强制结束游戏按钮点击
      * 弹出确认对话框
      */
     private async onForceEndGameClick(): Promise<void> {
-        console.log('[UIInGamePlaySetting] Force end game button clicked');
+        console.log('[UIInGameEditorSetting] Force end game button clicked');
 
         const confirmed = await UIMessage.confirm({
             title: '确认',
@@ -145,11 +129,27 @@ export class UIInGamePlaySetting extends UIBase {
         });
 
         if (confirmed) {
-            console.log('[UIInGamePlaySetting] Force end game confirmed');
+            console.log('[UIInGameEditorSetting] Force end game confirmed');
             // TODO: 实现强制结束游戏的具体逻辑
         } else {
-            console.log('[UIInGamePlaySetting] Force end game cancelled');
+            console.log('[UIInGameEditorSetting] Force end game cancelled');
         }
+    }
+
+    /**
+     * 关闭按钮点击
+     */
+    private onCloseClick(): void {
+        console.log('[UIInGameEditorSetting] Close button clicked');
+
+        // 直接设置 FairyGUI panel 的 visible
+        if (this.panel) {
+            this.panel.visible = false;
+            console.log('[UIInGameEditorSetting] Panel hidden');
+        }
+
+        // 通知 CommonSetting 更新按钮状态
+        EventBus.emit(EventTypes.UI.EditorSettingClosed);
     }
 
     /**
@@ -173,7 +173,7 @@ export class UIInGamePlaySetting extends UIBase {
         }
 
         this._eventsBound = false;
-        console.log('[UIInGamePlaySetting] Events unbound');
+        console.log('[UIInGameEditorSetting] Events unbound');
 
         super.unbindEvents();
     }

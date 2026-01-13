@@ -15,6 +15,7 @@ import { UIInGamePlayer } from "./UIInGamePlayer";
 import { UIInGameInfo } from "./UIInGameInfo";
 import { UIInGameBuildingSelect } from "./UIInGameBuildingSelect";
 import { UIInGamePlaySetting } from "./UIInGamePlaySetting";
+import { UIInGameEditorSetting } from "./UIInGameEditorSetting";
 import { UIPlayerDetail } from "./UIPlayerDetail";
 import { UIMinimap } from "./UIMinimap";
 import { MapManager } from "../../map/MapManager";
@@ -40,6 +41,7 @@ export class UIInGame extends UIBase {
     private m_infoUI: UIInGameInfo | null = null;
     private m_buildingSelectUI: UIInGameBuildingSelect | null = null;
     private m_playSettingUI: UIInGamePlaySetting | null = null;
+    private m_editorSettingUI: UIInGameEditorSetting | null = null;
     private m_playerDetailUI: UIPlayerDetail | null = null;
     private m_minimapUI: UIMinimap | null = null;
 
@@ -166,6 +168,16 @@ export class UIInGame extends UIBase {
             this.m_playSettingUI.setPanel(playSettingComponent);
             this.m_playSettingUI.init();
             console.log('[UIInGame] PlaySetting UI component created');
+        }
+
+        // m_editorSettingUI
+        const editorSettingComponent = this.getChild('editorSetting')?.asCom;
+        if (editorSettingComponent) {
+            this.m_editorSettingUI = editorSettingComponent.node.addComponent(UIInGameEditorSetting);
+            this.m_editorSettingUI.setUIName("InGameEditorSetting");
+            this.m_editorSettingUI.setPanel(editorSettingComponent);
+            this.m_editorSettingUI.init();
+            console.log('[UIInGame] EditorSetting UI component created');
         }
 
         // 功能按钮
@@ -657,6 +669,29 @@ export class UIInGame extends UIBase {
     }
 
     /**
+     * 切换 EditorSetting 面板显示/隐藏
+     * 由 CommonSetting.btn_editorSetting 调用
+     */
+    public toggleEditorSetting(): boolean {
+        if (!this.m_editorSettingUI || !this.m_editorSettingUI.panel) {
+            console.warn('[UIInGame] EditorSetting UI not initialized');
+            return false;
+        }
+
+        const newVisible = !this.m_editorSettingUI.panel.visible;
+        this.m_editorSettingUI.panel.visible = newVisible;
+
+        console.log('[UIInGame] EditorSetting toggled:', newVisible);
+
+        // 关闭时发送事件，同步按钮状态
+        if (!newVisible) {
+            EventBus.emit(EventTypes.UI.EditorSettingClosed);
+        }
+
+        return newVisible;
+    }
+
+    /**
      * 切换 Debug 面板显示/隐藏
      * 由 CommonSetting.btn_debug 调用
      */
@@ -678,6 +713,13 @@ export class UIInGame extends UIBase {
      */
     public isPlaySettingVisible(): boolean {
         return this.m_playSettingUI?.panel?.visible || false;
+    }
+
+    /**
+     * 获取 EditorSetting 可见性状态
+     */
+    public isEditorSettingVisible(): boolean {
+        return this.m_editorSettingUI?.panel?.visible || false;
     }
 
     /**

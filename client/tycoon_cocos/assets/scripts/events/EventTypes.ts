@@ -43,6 +43,8 @@ export const EventTypes = {
         CardFlyOut: "ui_card_fly_out",
         /** PlaySetting 面板关闭 */
         PlaySettingClosed: "ui_play_setting_closed",
+        /** EditorSetting 面板关闭 */
+        EditorSettingClosed: "ui_editor_setting_closed",
         /** SuiConfig 面板关闭 */
         SuiConfigClosed: "ui_sui_config_closed",
         /** 显示玩家详情面板 */

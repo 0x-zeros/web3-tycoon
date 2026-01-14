@@ -1574,44 +1574,47 @@ export class SuiManager {
 
                 if (!shouldSwitch) {
                     console.log('[SuiManager] User chose to stay in current game');
-                    UINotification.info(`游戏 ${shortNewGameId} 已开始，你可以稍后加入`);
-
-                    // 仍然更新缓存：将已开始的游戏从列表移除
-                    const index = this._cachedGames.findIndex(g => g.id === gameId);
-                    if (index >= 0) {
-                        this._cachedGames.splice(index, 1);
+                    // 只更新状态，不移除（用户可能之后想加入）
+                    const cachedGame = this._cachedGames.find(g => g.id === gameId);
+                    if (cachedGame) {
+                        cachedGame.status = GameStatus.ACTIVE;
                         EventBus.emit(EventTypes.Sui.GamesListUpdated, {
                             games: this._cachedGames
                         });
                     }
+                    UINotification.info(`游戏 ${shortNewGameId} 已开始，你可以稍后加入`);
                     return;
                 }
             }
 
-            // 从列表移除已开始的游戏
-            const index = this._cachedGames.findIndex(g => g.id === gameId);
-            if (index >= 0) {
-                this._cachedGames.splice(index, 1);
-                EventBus.emit(EventTypes.Sui.GamesListUpdated, {
-                    games: this._cachedGames
-                });
-            }
-
             console.log('[SuiManager] I am a player, loading game scene...');
-            await this.loadGameScene(gameId, templateMapId);
+            try {
+                await this.loadGameScene(gameId, templateMapId);
+                // 成功后才从列表移除
+                const index = this._cachedGames.findIndex(g => g.id === gameId);
+                if (index >= 0) {
+                    this._cachedGames.splice(index, 1);
+                    EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                        games: this._cachedGames
+                    });
+                }
+            } catch (error) {
+                console.error('[SuiManager] Failed to load game scene:', error);
+                // 加载失败，只更新状态，不移除
+                const cachedGame = this._cachedGames.find(g => g.id === gameId);
+                if (cachedGame) {
+                    cachedGame.status = GameStatus.ACTIVE;
+                    EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                        games: this._cachedGames
+                    });
+                }
+            }
         } else {
             console.log('[SuiManager] Not a player, updating cache');
-
-            // 更新缓存状态
+            // 非玩家：只更新状态，不移除（允许观战）
             const cachedGame = this._cachedGames.find(g => g.id === gameId);
             if (cachedGame) {
                 cachedGame.status = GameStatus.ACTIVE;
-            }
-
-            // 从列表移除
-            const index = this._cachedGames.findIndex(g => g.id === gameId);
-            if (index >= 0) {
-                this._cachedGames.splice(index, 1);
                 EventBus.emit(EventTypes.Sui.GamesListUpdated, {
                     games: this._cachedGames
                 });
@@ -1628,10 +1631,6 @@ export class SuiManager {
      */
     public async loadGameScene(gameId: string, templateMapId: string): Promise<void> {
         console.log('[SuiManager] Loading game scene...');
-
-        // 清空 MessageBox 队列，避免之前未关闭的对话框阻塞新的对话框
-        UIMessage.clearQueue();
-
         UINotification.info("正在加载游戏场景...");
 
         // ✅ 加载数据前：注册游戏事件监听

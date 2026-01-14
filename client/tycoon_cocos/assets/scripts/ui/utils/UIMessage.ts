@@ -150,11 +150,32 @@ class MessageBoxQueue {
         });
     }
 
+    private _recoverIfCurrentBoxHidden(): void {
+        if (!this._isProcessing || !this._currentBox) {
+            return;
+        }
+        if (this._currentBox.isShowing) {
+            return;
+        }
+
+        console.warn('[MessageBoxQueue] Current MessageBox not showing, forcing close');
+        try {
+            this._currentBox.close(MessageBoxResult.CLOSE);
+        } catch (error) {
+            console.warn('[MessageBoxQueue] Failed to force close MessageBox:', error);
+        }
+        this._currentBox = null;
+        this._isProcessing = false;
+    }
+
     /**
      * 处理下一个
      */
     private async _processNext(): Promise<void> {
         // 如果正在处理或队列为空，直接返回
+        if (this._isProcessing) {
+            this._recoverIfCurrentBoxHidden();
+        }
         if (this._isProcessing || this._queue.length === 0) {
             console.log(`[MessageBoxQueue] _processNext skip: isProcessing=${this._isProcessing}, queueLen=${this._queue.length}`);
             return;
@@ -320,8 +341,12 @@ export class UIMessage extends UIBase {
     }
 
     protected onHide(): void {
+        if (this._closeCallback) {
+            this._closeCallback(MessageBoxResult.CLOSE);
+            this._closeCallback = null;
+        }
+
         this._currentOptions = null;
-        this._closeCallback = null;
     }
 
     // ==================== 私有方法 ====================
@@ -574,6 +599,7 @@ export class UIMessage extends UIBase {
         // 触发关闭回调
         if (this._closeCallback) {
             this._closeCallback(result);
+            this._closeCallback = null;
         }
 
         // 隐藏UI

@@ -1568,6 +1568,15 @@ export class SuiManager {
                 if (!shouldSwitch) {
                     console.log('[SuiManager] User chose to stay in current game');
                     UINotification.info(`游戏 ${shortNewGameId} 已开始，你可以稍后加入`);
+
+                    // 仍然更新缓存：将已开始的游戏从列表移除
+                    const index = this._cachedGames.findIndex(g => g.id === gameId);
+                    if (index >= 0) {
+                        this._cachedGames.splice(index, 1);
+                        EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                            games: this._cachedGames
+                        });
+                    }
                     return;
                 }
             }

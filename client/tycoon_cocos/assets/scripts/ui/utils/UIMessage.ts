@@ -143,6 +143,7 @@ class MessageBoxQueue {
      * 入队
      */
     public enqueue(options: MessageBoxOptions): Promise<MessageBoxResult> {
+        console.log(`[MessageBoxQueue] enqueue: queueLen=${this._queue.length}, isProcessing=${this._isProcessing}, hasCurrentBox=${!!this._currentBox}`);
         return new Promise<MessageBoxResult>((resolve) => {
             this._queue.push({ options, resolve });
             this._processNext();
@@ -155,8 +156,10 @@ class MessageBoxQueue {
     private async _processNext(): Promise<void> {
         // 如果正在处理或队列为空，直接返回
         if (this._isProcessing || this._queue.length === 0) {
+            console.log(`[MessageBoxQueue] _processNext skip: isProcessing=${this._isProcessing}, queueLen=${this._queue.length}`);
             return;
         }
+        console.log('[MessageBoxQueue] _processNext starting...');
 
         this._isProcessing = true;
 

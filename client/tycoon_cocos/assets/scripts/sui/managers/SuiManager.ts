@@ -1552,10 +1552,17 @@ export class SuiManager {
 
         if (isPlayer) {
             // 检查是否已在其他游戏中
+            console.log('[SuiManager] Checking if already in game:', {
+                currentGameId: this._currentGame?.id,
+                newGameId: gameId,
+                shouldShowDialog: this._currentGame && this._currentGame.id !== gameId
+            });
+
             if (this._currentGame && this._currentGame.id !== gameId) {
                 const shortCurrentGameId = this._currentGame.id.slice(0, 6) + '...' + this._currentGame.id.slice(-4);
                 const shortNewGameId = gameId.slice(0, 6) + '...' + gameId.slice(-4);
 
+                console.log('[SuiManager] About to show confirm dialog...');
                 const shouldSwitch = await UIMessage.confirm({
                     title: '游戏开始',
                     message: `你加入的另一个游戏 ${shortNewGameId} 已开始！\n\n` +
@@ -1579,6 +1586,15 @@ export class SuiManager {
                     }
                     return;
                 }
+            }
+
+            // 从列表移除已开始的游戏
+            const index = this._cachedGames.findIndex(g => g.id === gameId);
+            if (index >= 0) {
+                this._cachedGames.splice(index, 1);
+                EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                    games: this._cachedGames
+                });
             }
 
             console.log('[SuiManager] I am a player, loading game scene...');
@@ -1612,6 +1628,10 @@ export class SuiManager {
      */
     public async loadGameScene(gameId: string, templateMapId: string): Promise<void> {
         console.log('[SuiManager] Loading game scene...');
+
+        // 清空 MessageBox 队列，避免之前未关闭的对话框阻塞新的对话框
+        UIMessage.clearQueue();
+
         UINotification.info("正在加载游戏场景...");
 
         // ✅ 加载数据前：注册游戏事件监听

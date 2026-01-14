@@ -1238,11 +1238,13 @@ fun execute_step_movement_with_choices(
                     player.pos = next_pos;
                 };
 
+                let consumed = consume_npc_if_consumable(game, next_pos, &npc);
+
                 npc_event_opt = option::some(events::make_npc_step_event(
                     next_pos,
                     npc.kind,
                     events::npc_result_barrier_stop(),
-                    false,
+                    consumed,
                     option::none()
                 ));
 

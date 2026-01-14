@@ -1729,13 +1729,13 @@ export class GameMap extends Component {
      */
     private getNPCBlockId(npcKind: number): string {
         switch (npcKind) {
-            case NpcKind.BARRIER:     return 'web3:barrier';       // 路障
+            case NpcKind.BARRIER:     return 'web3:roadblock';     // 路障
             case NpcKind.BOMB:        return 'web3:bomb';          // 炸弹
             case NpcKind.DOG:         return 'web3:dog';           // 恶犬
             case NpcKind.LAND_GOD:    return 'web3:land_god';      // 土地神
             case NpcKind.WEALTH_GOD:  return 'web3:wealth_god';    // 财神
             case NpcKind.FORTUNE_GOD: return 'web3:fortune_god';   // 福神
-            case NpcKind.POOR_GOD:    return 'web3:poor_god';      // 穷神
+            case NpcKind.POOR_GOD:    return 'web3:poverty_god';   // 穷神
             default:                  return 'web3:land_god';      // 默认：土地神
         }
     }

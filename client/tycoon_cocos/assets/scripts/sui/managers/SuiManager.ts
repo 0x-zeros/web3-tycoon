@@ -1552,17 +1552,17 @@ export class SuiManager {
 
         if (isPlayer) {
             // 检查是否已在其他游戏中
-            console.log('[SuiManager] Checking if already in game:', {
-                currentGameId: this._currentGame?.id,
-                newGameId: gameId,
-                shouldShowDialog: this._currentGame && this._currentGame.id !== gameId
-            });
+            // console.log('[SuiManager] Checking if already in game:', {
+            //     currentGameId: this._currentGame?.id,
+            //     newGameId: gameId,
+            //     shouldShowDialog: this._currentGame && this._currentGame.id !== gameId
+            // });
 
             if (this._currentGame && this._currentGame.id !== gameId) {
                 const shortCurrentGameId = this._currentGame.id.slice(0, 6) + '...' + this._currentGame.id.slice(-4);
                 const shortNewGameId = gameId.slice(0, 6) + '...' + gameId.slice(-4);
 
-                console.log('[SuiManager] About to show confirm dialog...');
+                // console.log('[SuiManager] About to show confirm dialog...');
                 const shouldSwitch = await UIMessage.confirm({
                     title: '游戏开始',
                     message: `你加入的另一个游戏 ${shortNewGameId} 已开始！\n\n` +

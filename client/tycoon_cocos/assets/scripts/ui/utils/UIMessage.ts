@@ -143,7 +143,7 @@ class MessageBoxQueue {
      * 入队
      */
     public enqueue(options: MessageBoxOptions): Promise<MessageBoxResult> {
-        console.log(`[MessageBoxQueue] enqueue: queueLen=${this._queue.length}, isProcessing=${this._isProcessing}, hasCurrentBox=${!!this._currentBox}`);
+        // console.log(`[MessageBoxQueue] enqueue: queueLen=${this._queue.length}, isProcessing=${this._isProcessing}, hasCurrentBox=${!!this._currentBox}`);
         return new Promise<MessageBoxResult>((resolve) => {
             this._queue.push({ options, resolve });
             this._processNext();
@@ -177,10 +177,10 @@ class MessageBoxQueue {
             this._recoverIfCurrentBoxHidden();
         }
         if (this._isProcessing || this._queue.length === 0) {
-            console.log(`[MessageBoxQueue] _processNext skip: isProcessing=${this._isProcessing}, queueLen=${this._queue.length}`);
+            // console.log(`[MessageBoxQueue] _processNext skip: isProcessing=${this._isProcessing}, queueLen=${this._queue.length}`);
             return;
         }
-        console.log('[MessageBoxQueue] _processNext starting...');
+        // console.log('[MessageBoxQueue] _processNext starting...');
 
         this._isProcessing = true;
 

@@ -1551,8 +1551,29 @@ export class SuiManager {
         console.log('  Is player:', isPlayer);
 
         if (isPlayer) {
+            // 检查是否已在其他游戏中
+            if (this._currentGame && this._currentGame.id !== gameId) {
+                const shortCurrentGameId = this._currentGame.id.slice(0, 6) + '...' + this._currentGame.id.slice(-4);
+                const shortNewGameId = gameId.slice(0, 6) + '...' + gameId.slice(-4);
+
+                const shouldSwitch = await UIMessage.confirm({
+                    title: '游戏开始',
+                    message: `你加入的另一个游戏 ${shortNewGameId} 已开始！\n\n` +
+                             `当前游戏: ${shortCurrentGameId}\n\n` +
+                             `是否切换到新游戏？`,
+                    confirmText: '切换到新游戏',
+                    cancelText: '留在当前游戏'
+                });
+
+                if (!shouldSwitch) {
+                    console.log('[SuiManager] User chose to stay in current game');
+                    UINotification.info(`游戏 ${shortNewGameId} 已开始，你可以稍后加入`);
+                    return;
+                }
+            }
+
             console.log('[SuiManager] I am a player, loading game scene...');
-            await this.loadGameScene(gameId, templateMapId);  // ← 传入 templateMapId
+            await this.loadGameScene(gameId, templateMapId);
         } else {
             console.log('[SuiManager] Not a player, updating cache');
 

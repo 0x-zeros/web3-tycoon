@@ -1516,6 +1516,19 @@ export class SuiManager {
             this._currentGame = game;
             console.log('[SuiManager] Current game updated');
         }
+
+        // 6. 显示通知（仅当前游戏或大厅页面时显示）
+        if (this._currentGame?.id === gameId || !this._currentGame) {
+            const shortAddress = playerAddress.slice(0, 6) + '...' + playerAddress.slice(-4);
+            const shortGameId = gameId.slice(0, 6) + '...' + gameId.slice(-4);
+            UINotification.info(
+                `${shortAddress} 加入了游戏 ${shortGameId}`,
+                undefined,
+                2000,
+                'rightbottom',
+                { playerIndex }
+            );
+        }
     }
 
     /**

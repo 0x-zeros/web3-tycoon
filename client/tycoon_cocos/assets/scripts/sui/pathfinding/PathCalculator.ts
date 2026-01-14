@@ -61,9 +61,12 @@ export class PathCalculator {
             steps,
             preference,
             lastTile = INVALID_TILE_ID,
-            nextTileId = INVALID_TILE_ID,
+            nextTileId: nextTileIdParam = INVALID_TILE_ID,
             rotorHistory
         } = config;
+
+        // 使用 let 变量，允许在 fallback 时修改
+        let nextTileId = nextTileIdParam;
 
         // 验证参数
         if (steps <= 0) {

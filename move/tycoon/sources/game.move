@@ -1389,6 +1389,34 @@ fun handle_tile_stop_with_collector(
     let mut building_decision_opt = option::none<events::BuildingDecisionInfo>();
     let mut rent_decision_opt = option::none<events::RentDecisionInfo>();
 
+    // ===== 处理停留格的NPC（土地神等）=====
+    let tile_npc_index = game.tiles[tile_id as u64].npc_on;
+    if (tile_npc_index != NO_NPC) {
+        let npc = game.npc_on[tile_npc_index as u64];
+
+        if (npc.kind == types::NPC_LAND_GOD()) {
+            // 土地神触发 - 给玩家 7 回合的"土地神附身" buff
+            // at_turn_end = true，从下一回合开始生效
+            let last_active_round = calculate_buff_last_active_round(
+                player_index, player_index, game.round, 7, true
+            );
+            {
+                let player = &mut game.players[player_index as u64];
+                apply_buff_with_source(
+                    player,
+                    types::BUFF_LAND_BLESSING(),
+                    last_active_round,
+                    0,
+                    npc.spawn_index
+                );
+            };
+
+            // 消耗NPC
+            consume_npc_if_consumable(game, tile_id, &npc);
+            handle_npc_consumed(game, &npc, true);
+        }
+    };
+
     let building_id = map::tile_building_id(tile);
     if (building_id != map::no_building()) {
         let building =&game.buildings[building_id as u64];
@@ -1443,14 +1471,51 @@ fun handle_tile_stop_with_collector(
             } else {
                 let owner_index = building.owner;
                 if (owner_index != player_index) {
-                    let level = building.level;
-                    let toll = calculate_toll(game, tile_id, map, game_data);
-
+                    // 先检查土地神附身buff
                     let player = &game.players[player_index as u64];
-                    let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
-                    let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
+                    let has_land_blessing = is_buff_active(player, types::BUFF_LAND_BLESSING(), game.round);
 
-                    if (has_rent_free_buff) {
+                    if (has_land_blessing) {
+                        // ===== 土地神附身 - 直接抢夺地产 =====
+                        let level = building.level;
+                        let old_owner_addr = (&game.players[owner_index as u64]).owner;
+
+                        // 转移所有权（保持原等级）
+                        let building_mut = &mut game.buildings[building_id as u64];
+                        let building_type = building_mut.building_type;
+                        building_mut.owner = player_index;
+
+                        // 如果是神殿，需要更新两边玩家的temple_levels缓存
+                        if (building_type == types::BUILDING_TEMPLE()) {
+                            rebuild_temple_levels_cache(game, owner_index);
+                            rebuild_temple_levels_cache(game, player_index);
+                        };
+
+                        stop_type = events::stop_land_seize();
+                        owner_opt = option::some(old_owner_addr);  // 记录原主人
+                        level_opt = option::some(level);
+
+                        // 生成建筑决策事件
+                        let decision_info = events::make_building_decision_info(
+                            types::DECISION_BUY_PROPERTY(),
+                            building_id,
+                            tile_id,
+                            0,  // 价格为0（免费抢夺）
+                            level,
+                            building_type
+                        );
+                        building_decision_opt = option::some(decision_info);
+
+                    } else {
+                        // ===== 原有租金逻辑 =====
+                        let level = building.level;
+                        let toll = calculate_toll(game, tile_id, map, game_data);
+
+                        let player = &game.players[player_index as u64];
+                        let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
+                        let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
+
+                        if (has_rent_free_buff) {
                         stop_type = events::stop_building_no_rent();
                         let owner_addr = (&game.players[owner_index as u64]).owner;
                         owner_opt = option::some(owner_addr);
@@ -1577,6 +1642,7 @@ fun handle_tile_stop_with_collector(
                         let owner_addr = (&game.players[owner_index as u64]).owner;
                         owner_opt = option::some(owner_addr);
                         level_opt = option::some(level);
+                        }
                     }
             } else {
                 let level = building.level;
@@ -1941,7 +2007,7 @@ fun apply_card_effect_with_collectors(
         };
 
         let last_active_round = calculate_buff_last_active_round(
-            target_index, player_index, game.round, 1
+            target_index, player_index, game.round, 1, false
         );
         apply_buff(target_player, types::BUFF_MOVE_CTRL(), last_active_round, dice_sum);
 
@@ -1960,7 +2026,7 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
         let last_active_round = calculate_buff_last_active_round(
-            target_index, player_index, game.round, 1
+            target_index, player_index, game.round, 1, false
         );
         let target_player = &mut game.players[target_index as u64];
         apply_buff(target_player, types::BUFF_RENT_FREE(), last_active_round, 0);
@@ -1979,7 +2045,7 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
         let last_active_round = calculate_buff_last_active_round(
-            target_index, player_index, game.round, 1
+            target_index, player_index, game.round, 1, false
         );
 
         let target_addr = (&game.players[target_index as u64]).owner;
@@ -2054,25 +2120,31 @@ fun apply_card_effect_with_collectors(
 /// 设计原则：
 /// - 如果目标玩家在使用者之前行动（本回合已行动），buff 从下一回合开始算
 /// - 如果目标玩家在使用者之后行动（本回合未行动），buff 从当前回合开始算
+/// - 如果是在回合结束时获得的buff（at_turn_end=true），当前回合不算在内
 ///
 /// 参数：
 /// - target_index: 目标玩家索引
 /// - player_index: 使用者玩家索引
 /// - current_round: 当前回合
 /// - duration: 持续回合数
+/// - at_turn_end: 是否在回合结束时获得buff
+///   - false: 卡牌使用场景（回合进行中），当前回合可能算在内
+///   - true: NPC停留触发场景（回合结束），当前回合不算在内
 ///
 /// 返回：last_active_round（buff 激活的最后一个回合）
 fun calculate_buff_last_active_round(
     target_index: u8,
     player_index: u8,
     current_round: u16,
-    duration: u16
+    duration: u16,
+    at_turn_end: bool
 ): u16 {
     assert!(duration > 0, EInvalidParams);  // 防止 duration - 1 下溢
-    if (target_index < player_index) {
-        current_round + duration           // 目标已行动，从下一回合开始算
+    // 如果在回合结束时获得，或者目标已行动，当前回合不算在内
+    if (at_turn_end || target_index < player_index) {
+        current_round + duration           // 从下一回合开始算
     } else {
-        current_round + (duration - 1)     // 目标未行动，从当前回合开始算
+        current_round + (duration - 1)     // 从当前回合开始算
     }
 }
 
@@ -2606,7 +2678,7 @@ fun handle_npc_consumed(
     let pool_entry = &mut game.npc_spawn_pool[npc.spawn_index as u64];
 
     if (is_buff_npc) {
-        // Buff型NPC需要更长冷却
+        pool_entry.next_active_round = current_round + 3;  // Buff型NPC冷却3轮
     } else {
         pool_entry.next_active_round = current_round + 2;
     }

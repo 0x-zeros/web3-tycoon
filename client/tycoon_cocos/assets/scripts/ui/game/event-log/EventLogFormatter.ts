@@ -425,6 +425,10 @@ export class EventLogFormatter {
 
             case 8: // 可购买地产（不记录，由decision事件处理）
                 break;
+
+            case 9: // LAND_SEIZE - 土地神附身抢地
+                lines.push(`  └ ${colored('土地神附身', 'warning')}，免费占有地产`);
+                break;
         }
 
         return lines;

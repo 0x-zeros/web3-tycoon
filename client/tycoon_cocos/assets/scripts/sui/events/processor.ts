@@ -393,6 +393,15 @@ export class TycoonEventProcessor {
                     description: '可以购买地产'
                 });
                 break;
+            case StopType.LAND_SEIZE:
+                // 土地神附身抢地 - 记录效果（建筑更新由 building_decision 处理）
+                effects.push({
+                    type: GameEffectType.BUY_BUILDING,  // 复用购买效果类型
+                    player,
+                    position: { tile: stop.tile_id },
+                    description: '土地神附身，免费占有地产'
+                });
+                break;
         }
     }
 }

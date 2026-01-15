@@ -380,6 +380,11 @@ export class RollAndStepHandler {
                         spawn_index: 0xFFFF  // 从事件中无法获取，使用默认值
                     });
                 }
+
+                // Buff 型 NPC（土地神、福神）触发后会被消耗，需要移除
+                // stop_effect.tile_id 就是当前停留格，也是 NPC 所在位置
+                session.removeNPC(step.stop_effect.tile_id);
+                console.log('[RollAndStepHandler] Buff NPC 已消耗并删除:', step.stop_effect.tile_id);
             }
         }
 

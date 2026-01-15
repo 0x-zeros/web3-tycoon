@@ -361,6 +361,15 @@ export class TycoonEventIndexer {
                                 ...normalizedStep.stop_effect.rent_decision.fields
                             };
                         }
+
+                        // 递归展开 npc_buff.fields
+                        if (normalizedStep.stop_effect.npc_buff &&
+                            typeof normalizedStep.stop_effect.npc_buff === 'object' &&
+                            normalizedStep.stop_effect.npc_buff.fields) {
+                            normalizedStep.stop_effect.npc_buff = {
+                                ...normalizedStep.stop_effect.npc_buff.fields
+                            };
+                        }
                     }
 
                     // 展开 npc_event.fields

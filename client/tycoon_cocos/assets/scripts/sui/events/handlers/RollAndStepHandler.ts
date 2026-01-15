@@ -363,14 +363,19 @@ export class RollAndStepHandler {
 
             // 处理 NPC 触发的 Buff（土地神等）
             if (step.stop_effect.npc_buff) {
-                const buffName = this._getBuffName(step.stop_effect.npc_buff.buff_type);
+                const npcBuff = step.stop_effect.npc_buff;
+                const buffName = this._getBuffName(npcBuff.buff_type);
                 UINotification.info(`获得 ${buffName}！`, 'NPC祝福', 3000, 'center');
 
-                // 更新玩家 buff 状态
-                if (player) {
-                    player.addBuff({
-                        kind: step.stop_effect.npc_buff.buff_type,
-                        last_active_round: step.stop_effect.npc_buff.last_active_round ?? 0,
+                // 根据 target 地址查找目标玩家（可能不是当前行动玩家）
+                const targetPlayer = npcBuff.target
+                    ? session.getPlayerByAddress(npcBuff.target)
+                    : player;  // fallback 到当前玩家
+
+                if (targetPlayer) {
+                    targetPlayer.addBuff({
+                        kind: npcBuff.buff_type,
+                        last_active_round: npcBuff.last_active_round ?? 0,
                         value: BigInt(0),
                         spawn_index: 0xFFFF  // 从事件中无法获取，使用默认值
                     });

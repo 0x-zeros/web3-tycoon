@@ -165,7 +165,12 @@ export class RotorRouter {
     }
 
     /**
-     * 获取所有有效邻居（排除上一个 tile，并避开端点 tile）
+     * 获取所有有效邻居（使用优先级筛选：避开 terminal 优先于避免回头）
+     *
+     * 优先级（从高到低）：
+     * 1. 非 terminal 且非 lastTile（最佳选择）
+     * 2. lastTile（回头，但不是 terminal）- 比走入死胡同好
+     * 3. terminal（走入死胡同，最后手段）
      */
     private getValidNeighbors(currentTile: number, lastTile: number): number[] {
         const tileStatic = this.template.tiles_static.get(currentTile);
@@ -181,22 +186,31 @@ export class RotorRouter {
         // 特殊情况：当前在端点tile，只有一个邻居且是lastTile
         // 必须允许"回头"离开端点
         if (allNeighbors.length === 1 && allNeighbors[0] === lastTile) {
-            return [lastTile]; // 允许回头
+            return [lastTile];
         }
 
-        const neighbors: number[] = [];
+        // 分类所有邻居
+        const ideal: number[] = [];      // 非 terminal 且非 lastTile
+        const backtrack: number[] = [];  // lastTile（回头，但非 terminal）
+        const terminal: number[] = [];   // terminal tiles
+
         for (const neighbor of allNeighbors) {
-            // 排除lastTile（避免回头）
-            if (neighbor === lastTile) continue;
+            const isLast = neighbor === lastTile;
+            const isTerm = this.isTerminalTile(neighbor);
 
-            // 排除端点tile（避免走入死胡同）
-            if (this.isTerminalTile(neighbor)) continue;
-
-            neighbors.push(neighbor);
+            if (!isLast && !isTerm) {
+                ideal.push(neighbor);
+            } else if (isLast && !isTerm) {
+                backtrack.push(neighbor);
+            } else if (isTerm) {
+                terminal.push(neighbor);
+            }
         }
 
-        // 不使用fallback，让calculatePath()的回溯机制处理死胡同
-        return neighbors;
+        // 按优先级返回：ideal > backtrack > terminal
+        if (ideal.length > 0) return ideal;
+        if (backtrack.length > 0) return backtrack;
+        return terminal;
     }
 
     /**

@@ -211,7 +211,8 @@ export enum NpcAction {
 export enum NpcResult {
     NONE = 0,              // 无效果
     SEND_HOSPITAL = 1,     // 送往医院
-    BARRIER_STOP = 2       // 路障阻挡
+    BARRIER_STOP = 2,      // 路障阻挡
+    BUFF = 3               // 增益型NPC触发（土地神等）
 }
 
 // ===== 停留类型常量 =====
@@ -223,7 +224,8 @@ export enum StopType {
     BONUS = 5,                 // 奖金
     FEE = 6,                   // 罚款
     CARD_STOP = 7,             // 卡片停留
-    BUILDING_UNOWNED = 8       // 无主建筑（可购买）
+    BUILDING_UNOWNED = 8,      // 无主建筑（可购买）
+    LAND_SEIZE = 9             // 土地神附身抢地
 }
 
 // ===== 现金变动原因 =====

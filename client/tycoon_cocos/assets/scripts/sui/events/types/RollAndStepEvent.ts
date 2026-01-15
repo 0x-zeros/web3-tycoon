@@ -5,6 +5,8 @@
  * Move源文件: move/tycoon/sources/events.move
  */
 
+import { BuffChangeItem } from '../aggregated';
+
 // 现金变动项
 export interface CashDelta {
     player: string;
@@ -55,7 +57,7 @@ export interface NpcStepEvent {
 export interface StopEffect {
     tile_id: number;
     tile_kind: number;
-    stop_type: number;  // 0=none, 1=toll, 2=no_rent, 3=hospital, 5=bonus, 6=fee, 7=card_stop, 8=unowned
+    stop_type: number;  // 0=none, 1=toll, 2=no_rent, 3=hospital, 5=bonus, 6=fee, 7=card_stop, 8=unowned, 9=land_seize
     amount: bigint;
     owner: string | null;
     level: number | null;
@@ -66,6 +68,7 @@ export interface StopEffect {
     decision_amount: bigint;
     building_decision: BuildingDecisionInfo | null;  // 建筑决策信息（自动决策时）
     rent_decision: RentDecisionInfo | null;          // 租金决策信息（自动决策时）
+    npc_buff: BuffChangeItem | null;                 // NPC触发的buff（土地神等）
 }
 
 // 步骤效果（核心）
@@ -103,7 +106,8 @@ export enum NpcAction {
 export enum NpcResult {
     NONE = 0,
     SEND_HOSPITAL = 1,
-    BARRIER_STOP = 2
+    BARRIER_STOP = 2,
+    BUFF = 3             // 增益型NPC触发（土地神等）
 }
 
 export enum StopType {
@@ -114,7 +118,8 @@ export enum StopType {
     BONUS = 5,
     FEE = 6,
     CARD_STOP = 7,
-    BUILDING_UNOWNED = 8
+    BUILDING_UNOWNED = 8,
+    LAND_SEIZE = 9       // 土地神附身抢地
 }
 
 export enum CashReason {

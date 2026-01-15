@@ -355,6 +355,27 @@ export class RollAndStepHandler {
             if (step.stop_effect.stop_type === StopType.BUILDING_NO_RENT) {
                 UINotification.info('免租通过', undefined, 2000, 'center');
             }
+
+            // 土地神抢地提示
+            if (step.stop_effect.stop_type === StopType.LAND_SEIZE) {
+                UINotification.info('土地神附身，免费占有地产！', '土地神', 3000, 'center');
+            }
+
+            // 处理 NPC 触发的 Buff（土地神等）
+            if (step.stop_effect.npc_buff) {
+                const buffName = this._getBuffName(step.stop_effect.npc_buff.buff_type);
+                UINotification.info(`获得 ${buffName}！`, 'NPC祝福', 3000, 'center');
+
+                // 更新玩家 buff 状态
+                if (player) {
+                    player.addBuff({
+                        kind: step.stop_effect.npc_buff.buff_type,
+                        last_active_round: step.stop_effect.npc_buff.last_active_round ?? 0,
+                        value: BigInt(0),
+                        spawn_index: 0xFFFF  // 从事件中无法获取，使用默认值
+                    });
+                }
+            }
         }
 
         // 处理 NPC 交互
@@ -775,6 +796,21 @@ export class RollAndStepHandler {
             case 25: return '福神';
             case 26: return '穷神';
             default: return 'NPC';
+        }
+    }
+
+    /**
+     * Buff 类型中文名称
+     */
+    private _getBuffName(buffType: number): string {
+        switch (buffType) {
+            case 1: return '遥控骰子';      // BUFF_MOVE_CTRL
+            case 2: return '冰冻';          // BUFF_FROZEN
+            case 3: return '免租';          // BUFF_RENT_FREE
+            case 4: return '土地神附身';    // BUFF_LAND_BLESSING
+            case 5: return '福神祝福';      // BUFF_FORTUNE
+            case 6: return '机车';          // BUFF_LOCOMOTIVE
+            default: return `效果(${buffType})`;
         }
     }
 

@@ -206,7 +206,8 @@ public struct StopEffect has copy, drop, store {
     decision_tile: u16,
     decision_amount: u64,
     building_decision: option::Option<BuildingDecisionInfo>,
-    rent_decision: option::Option<RentDecisionInfo>
+    rent_decision: option::Option<RentDecisionInfo>,
+    npc_buff: option::Option<BuffChangeItem>   // NPC触发的buff（土地神等）
 }
 
 public struct StepEffect has copy, drop, store {
@@ -471,7 +472,8 @@ public(package) fun make_stop_effect(
     decision_tile: u16,
     decision_amount: u64,
     building_decision: option::Option<BuildingDecisionInfo>,
-    rent_decision: option::Option<RentDecisionInfo>
+    rent_decision: option::Option<RentDecisionInfo>,
+    npc_buff: option::Option<BuffChangeItem>
 ): StopEffect {
     StopEffect {
         tile_id,
@@ -486,7 +488,8 @@ public(package) fun make_stop_effect(
         decision_tile,
         decision_amount,
         building_decision,
-        rent_decision
+        rent_decision,
+        npc_buff
     }
 }
 

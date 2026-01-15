@@ -1388,6 +1388,7 @@ fun handle_tile_stop_with_collector(
     let mut card_gains = vector<events::CardDrawItem>[];
     let mut building_decision_opt = option::none<events::BuildingDecisionInfo>();
     let mut rent_decision_opt = option::none<events::RentDecisionInfo>();
+    let mut npc_buff_opt = option::none<events::BuffChangeItem>();
 
     // ===== 处理停留格的NPC（土地神等）=====
     let tile_npc_index = game.tiles[tile_id as u64].npc_on;
@@ -1396,7 +1397,7 @@ fun handle_tile_stop_with_collector(
 
         if (npc.kind == types::NPC_LAND_GOD()) {
             // 土地神触发 - 给玩家 7 回合的"土地神附身" buff
-            // at_turn_end = true，从下一回合开始生效
+            // include_current_round = true，当回合立即生效
             let last_active_round = calculate_buff_last_active_round(
                 player_index, player_index, game.round, 7, true
             );
@@ -1410,6 +1411,13 @@ fun handle_tile_stop_with_collector(
                     npc.spawn_index
                 );
             };
+
+            // 记录NPC触发的buff变化
+            npc_buff_opt = option::some(events::make_buff_change(
+                types::BUFF_LAND_BLESSING(),
+                player_addr,
+                option::some(last_active_round)
+            ));
 
             // 消耗NPC
             consume_npc_if_consumable(game, tile_id, &npc);
@@ -1504,6 +1512,16 @@ fun handle_tile_stop_with_collector(
                             level,
                             building_type
                         );
+
+                        events::emit_building_decision_event(
+                            game.id.to_inner(),
+                            player_addr,
+                            game.round,
+                            game.turn,
+                            true,
+                            decision_info
+                        );
+
                         building_decision_opt = option::some(decision_info);
 
                     } else {
@@ -1801,7 +1819,8 @@ fun handle_tile_stop_with_collector(
         game.decision_tile,
         game.decision_amount,
         building_decision_opt,
-        rent_decision_opt
+        rent_decision_opt,
+        npc_buff_opt
     )
 }
 
@@ -2007,7 +2026,7 @@ fun apply_card_effect_with_collectors(
         };
 
         let last_active_round = calculate_buff_last_active_round(
-            target_index, player_index, game.round, 1, false
+            target_index, player_index, game.round, 1, true
         );
         apply_buff(target_player, types::BUFF_MOVE_CTRL(), last_active_round, dice_sum);
 
@@ -2026,7 +2045,7 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
         let last_active_round = calculate_buff_last_active_round(
-            target_index, player_index, game.round, 1, false
+            target_index, player_index, game.round, 1, true
         );
         let target_player = &mut game.players[target_index as u64];
         apply_buff(target_player, types::BUFF_RENT_FREE(), last_active_round, 0);
@@ -2045,7 +2064,7 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
         let last_active_round = calculate_buff_last_active_round(
-            target_index, player_index, game.round, 1, false
+            target_index, player_index, game.round, 1, true
         );
 
         let target_addr = (&game.players[target_index as u64]).owner;
@@ -2120,16 +2139,16 @@ fun apply_card_effect_with_collectors(
 /// 设计原则：
 /// - 如果目标玩家在使用者之前行动（本回合已行动），buff 从下一回合开始算
 /// - 如果目标玩家在使用者之后行动（本回合未行动），buff 从当前回合开始算
-/// - 如果是在回合结束时获得的buff（at_turn_end=true），当前回合不算在内
+/// - include_current_round 控制当前回合是否算入持续时间
 ///
 /// 参数：
 /// - target_index: 目标玩家索引
 /// - player_index: 使用者玩家索引
 /// - current_round: 当前回合
 /// - duration: 持续回合数
-/// - at_turn_end: 是否在回合结束时获得buff
-///   - false: 卡牌使用场景（回合进行中），当前回合可能算在内
-///   - true: NPC停留触发场景（回合结束），当前回合不算在内
+/// - include_current_round: 当前回合是否算入持续时间
+///   - true: 当前回合算在内（默认场景）
+///   - false: 当前回合不算在内
 ///
 /// 返回：last_active_round（buff 激活的最后一个回合）
 fun calculate_buff_last_active_round(
@@ -2137,11 +2156,11 @@ fun calculate_buff_last_active_round(
     player_index: u8,
     current_round: u16,
     duration: u16,
-    at_turn_end: bool
+    include_current_round: bool
 ): u16 {
     assert!(duration > 0, EInvalidParams);  // 防止 duration - 1 下溢
-    // 如果在回合结束时获得，或者目标已行动，当前回合不算在内
-    if (at_turn_end || target_index < player_index) {
+    // 如果不包含当前回合，或者目标已行动，当前回合不算在内
+    if (!include_current_round || target_index < player_index) {
         current_round + duration           // 从下一回合开始算
     } else {
         current_round + (duration - 1)     // 从当前回合开始算

@@ -1431,50 +1431,85 @@ fun handle_tile_stop_with_collector(
         let building_static = map::get_building(map, building_id);
 
         if (building.owner == NO_OWNER) {
-                let price = calculate_buy_price(building_static, game);
+                // 检查土地神buff，免费获得无主地产
+                let player = &game.players[player_index as u64];
+                let has_land_blessing = is_buff_active(player, types::BUFF_LAND_BLESSING(), game.round);
 
-                if (auto_buy) {
-                    let (success, cash_delta_opt) = try_execute_buy_building(
-                        game, player_index, building_id, tile_id, price, building_static
+                if (has_land_blessing) {
+                    // ===== 土地神附身 - 免费获得无主地产 =====
+                    let building_mut = &mut game.buildings[building_id as u64];
+                    let building_type = building_mut.building_type;
+                    building_mut.owner = player_index;
+
+                    stop_type = events::stop_land_seize();
+                    level_opt = option::some(0);  // 无主地产level为0
+
+                    let decision_info = events::make_building_decision_info(
+                        types::DECISION_BUY_PROPERTY(),
+                        building_id,
+                        tile_id,
+                        0,  // 价格为0（免费获得）
+                        0,
+                        building_type
                     );
 
-                    if (success) {
-                        stop_type = events::stop_building_unowned();
-                        if (cash_delta_opt.is_some()) {
-                            cash_changes.push_back(cash_delta_opt.destroy_some());
-                        };
+                    events::emit_building_decision_event(
+                        game.id.to_inner(),
+                        player_addr,
+                        game.round,
+                        game.turn,
+                        true,
+                        decision_info
+                    );
 
-                        let purchased_building = &game.buildings[building_id as u64];
-                        let decision_info = events::make_building_decision_info(
-                            types::DECISION_BUY_PROPERTY(),
-                            building_id,
-                            tile_id,
-                            price,
-                            0,  // 购买后保持 level 0（空地状态）
-                            purchased_building.building_type
+                    building_decision_opt = option::some(decision_info);
+                } else {
+                    // ===== 原有购买逻辑 =====
+                    let price = calculate_buy_price(building_static, game);
+
+                    if (auto_buy) {
+                        let (success, cash_delta_opt) = try_execute_buy_building(
+                            game, player_index, building_id, tile_id, price, building_static
                         );
 
-                        events::emit_building_decision_event(
-                            game.id.to_inner(),
-                            player_addr,
-                            game.round,
-                            game.turn,
-                            true,
-                            decision_info
-                        );
+                        if (success) {
+                            stop_type = events::stop_building_unowned();
+                            if (cash_delta_opt.is_some()) {
+                                cash_changes.push_back(cash_delta_opt.destroy_some());
+                            };
 
-                        building_decision_opt = option::some(decision_info);
+                            let purchased_building = &game.buildings[building_id as u64];
+                            let decision_info = events::make_building_decision_info(
+                                types::DECISION_BUY_PROPERTY(),
+                                building_id,
+                                tile_id,
+                                price,
+                                0,  // 购买后保持 level 0（空地状态）
+                                purchased_building.building_type
+                            );
+
+                            events::emit_building_decision_event(
+                                game.id.to_inner(),
+                                player_addr,
+                                game.round,
+                                game.turn,
+                                true,
+                                decision_info
+                            );
+
+                            building_decision_opt = option::some(decision_info);
+                        } else {
+                            stop_type = events::stop_building_unowned();
+                            game.pending_decision = types::DECISION_BUY_PROPERTY();
+                            game.decision_tile = tile_id;
+                            game.decision_amount = price;
+                        }
                     } else {
                         stop_type = events::stop_building_unowned();
                         game.pending_decision = types::DECISION_BUY_PROPERTY();
                         game.decision_tile = tile_id;
                         game.decision_amount = price;
                     }
-                } else {
-                    stop_type = events::stop_building_unowned();
-                    game.pending_decision = types::DECISION_BUY_PROPERTY();
-                    game.decision_tile = tile_id;
-                    game.decision_amount = price;
                 }
             } else {
                 let owner_index = building.owner;

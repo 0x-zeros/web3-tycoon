@@ -6,9 +6,9 @@
     <component id="mumq2" name="DiceCorner.xml" path="/components/dice/"/>
     <image id="mumq4" name="dice10.png" path="/images/"/>
     <component id="mumq5" name="Dice.xml" path="/components/dice/"/>
-    <component id="mumq6" name="CardList.xml" path="/components/"/>
+    <component id="mumq6" name="CardList.xml" path="/components/card/"/>
     <image id="ue83a" name="card11.png" path="/images/"/>
-    <component id="ue83b" name="Card.xml" path="/" exported="true"/>
+    <component id="ue83b" name="Card.xml" path="/components/card/"/>
     <component id="ue83f" name="MyPlayer.xml" path="/components/"/>
     <image id="ue83g" name="capy1.png" path="/images/player/"/>
     <image id="ue83h" name="capy2.png" path="/images/player/"/>
@@ -37,6 +37,8 @@
     <component id="mrzhpd" name="EventLogItem.xml" path="/components/playerDetail/"/>
     <component id="uas2pe" name="PlayerBuffDetail.xml" path="/components/playerDetail/"/>
     <component id="uas2pg" name="EditorSetting.xml" path="/components/"/>
+    <component id="la01ph" name="CardShop.xml" path="/components/card/"/>
+    <component id="la01pi" name="CardShopItem.xml" path="/components/card/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

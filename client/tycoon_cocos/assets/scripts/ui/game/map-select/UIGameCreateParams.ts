@@ -41,6 +41,9 @@ export class UIGameCreateParams extends UIBase {
     private m_controllerMaxRounds: fgui.Controller;
     private m_btnMaxRoundsMode: fgui.GButton;
 
+    // GM模式按钮
+    private m_btnGm: fgui.GButton;
+
     // 数据
     private _mapTemplateId: string;
 
@@ -75,6 +78,9 @@ export class UIGameCreateParams extends UIBase {
 
         this.m_controllerMaxRounds = this.getController('max_rounds');
         this.m_btnMaxRoundsMode = this.getButton('btn_max_rounds_mode');
+
+        // GM模式按钮
+        this.m_btnGm = this.getButton('btn_gm');
 
         // 检查组件是否正确获取
         if (!this.m_btnCreateGame) {
@@ -343,12 +349,14 @@ export class UIGameCreateParams extends UIBase {
             priceRiseDays: parseInt(this.m_textPriceRiseDays.text),
             maxRounds: this.m_controllerMaxRounds.selectedIndex === 0
                 ? 0  // 无限期
-                : parseInt(this.m_textMaxRounds.text)  // 有限期
+                : parseInt(this.m_textMaxRounds.text),  // 有限期
+            gmMode: this.m_btnGm?.selected || false  // GM模式
         };
 
         console.log('[UIGameCreateParams] Create game with params:', {
             ...params,
-            startingCash: params.startingCash.toString()  // BigInt需要转为string才能log
+            startingCash: params.startingCash.toString(),  // BigInt需要转为string才能log
+            gmMode: params.gmMode
         });
 
         // 发送事件，让UIMapList处理实际创建

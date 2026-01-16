@@ -52,11 +52,13 @@ export class GameInteraction {
         // params[0] = starting_cash
         // params[1] = price_rise_days
         // params[2] = max_rounds
+        // params[3] = gm_mode (0=关闭, 1=开启)
         // 注意：上层 SuiManager 已确保传入正确的默认值，这里直接使用
         const params = [
             Number(config.starting_cash),     // 上层已填充 GameData.starting_cash
             config.price_rise_days,           // 上层已填充 15
-            config.max_rounds                 // 上层已填充 0
+            config.max_rounds,                // 上层已填充 0
+            config.gm_mode ? 1 : 0            // GM模式
         ];
 
         console.log('[GameInteraction] buildCreateGameTx params:', params);

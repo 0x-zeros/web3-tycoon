@@ -67,6 +67,9 @@ const ETileOccupiedByNpc: u64 = 2001;
 const ENpcNotFound: u64 = 2002;
 const ENoSuchTile: u64 = 2002;
 
+const EGMPassRequired: u64 = 5006;
+const EGMPassGameMismatch: u64 = 5007;
+
 
 // Buff激活逻辑（包含语义）：current_round <= last_active_round时激活
 public struct BuffEntry has store, copy, drop {
@@ -108,6 +111,15 @@ public struct Seat has key {
     player_index: u8
 }
 
+/// GMPass - GM模式权限凭证
+/// 持有者可以在卡片商店购买高级卡片
+/// game_id绑定防止跨游戏使用
+public struct GMPass has key {
+    id: UID,
+    game_id: ID,
+    player: address
+}
+
 
 public struct Building has store, copy, drop {
     owner: u8,
@@ -144,10 +156,11 @@ public struct Game has key, store {
     winner: Option<address>,
     pending_decision: u8,
     decision_tile: u16,
-    decision_amount: u64
+    decision_amount: u64,
+    gm_mode: bool  // GM模式：启用后玩家可以购买高级卡片
 }
 
-fun parse_game_params(params: &vector<u64>): (u64, u8, u8) {
+fun parse_game_params(params: &vector<u64>): (u64, u8, u8, bool) {
     let starting_cash = if (params.length() > 0) {
         tycoon::validate_starting_cash(params[0])
     } else {
@@ -166,7 +179,14 @@ fun parse_game_params(params: &vector<u64>): (u64, u8, u8) {
         0
     };
 
-    (starting_cash, price_rise_days, max_rounds)
+    // params[3] = gm_mode（0=关闭，1=开启）
+    let gm_mode = if (params.length() > 3) {
+        params[3] == 1
+    } else {
+        false
+    };
+
+    (starting_cash, price_rise_days, max_rounds, gm_mode)
 }
 
 entry fun create_game(
@@ -175,7 +195,7 @@ entry fun create_game(
     params: vector<u64>,
     ctx: &mut TxContext
 ) {
-    let (starting_cash, price_rise_days, max_rounds) = parse_game_params(&params);
+    let (starting_cash, price_rise_days, max_rounds, gm_mode) = parse_game_params(&params);
 
     let game_id = object::new(ctx);
     let game_id_copy = game_id.to_inner();
@@ -221,7 +241,8 @@ entry fun create_game(
         winner: option::none(),
         pending_decision: types::DECISION_NONE(),
         decision_tile: 0,
-        decision_amount: 0
+        decision_amount: 0,
+        gm_mode
     };
 
     let creator = ctx.sender();
@@ -244,6 +265,16 @@ entry fun create_game(
 
     transfer::share_object(game);
     transfer::transfer(seat, creator);
+
+    // 如果启用GM模式，为创建者发放GMPass
+    if (gm_mode) {
+        let gm_pass = GMPass {
+            id: object::new(ctx),
+            game_id: game_id_copy,
+            player: creator
+        };
+        transfer::transfer(gm_pass, creator);
+    };
 }
 
 entry fun join(
@@ -269,20 +300,32 @@ entry fun join(
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 
+    let game_id_copy = game.id.to_inner();
+
     events::emit_player_joined_event(
-        game.id.to_inner(),
+        game_id_copy,
         player_addr,
         player_index
     );
 
     let seat = Seat {
         id: object::new(ctx),
-        game_id: game.id.to_inner(),
+        game_id: game_id_copy,
         player: player_addr,
         player_index
     };
 
     transfer::transfer(seat, player_addr);
+
+    // 如果是GM模式游戏，为加入者发放GMPass
+    if (game.gm_mode) {
+        let gm_pass = GMPass {
+            id: object::new(ctx),
+            game_id: game_id_copy,
+            player: player_addr
+        };
+        transfer::transfer(gm_pass, player_addr);
+    };
 }
 
 entry fun start(
@@ -423,6 +466,54 @@ entry fun use_card(
         cash_changes,
         game.players[seat.player_index as u64].next_tile_id
     );
+}
+
+/// 购买普通卡片（kind 0-7）
+/// 卡片价格：100/张
+entry fun buy_card(
+    game: &mut Game,
+    seat: &Seat,
+    kind: u8,
+    count: u8,
+    ctx: &mut TxContext
+) {
+    assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
+    assert!(seat.game_id == game.id.to_inner(), EWrongGame);
+    assert!(count > 0 && count <= 10, EInvalidParams);
+    assert!(!types::is_gm_card(kind), EGMPassRequired);  // 普通卡片不允许购买GM卡
+
+    let total_price = 100u64 * (count as u64);
+
+    let player = &mut game.players[seat.player_index as u64];
+    assert!(player.cash >= total_price, EInsufficientFunds);
+    player.cash = player.cash - total_price;
+
+    cards::give_card_to_player(&mut player.cards, kind, count);
+}
+
+/// 购买GM卡片（kind 8-16），需要GMPass
+/// 卡片价格：500/张
+entry fun buy_gm_card(
+    game: &mut Game,
+    seat: &Seat,
+    gm_pass: &GMPass,
+    kind: u8,
+    count: u8,
+    ctx: &mut TxContext
+) {
+    assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
+    assert!(seat.game_id == game.id.to_inner(), EWrongGame);
+    assert!(gm_pass.game_id == game.id.to_inner(), EGMPassGameMismatch);
+    assert!(count > 0 && count <= 10, EInvalidParams);
+    assert!(types::is_gm_card(kind), EInvalidParams);  // 只能购买GM卡
+
+    let total_price = 500u64 * (count as u64);
+
+    let player = &mut game.players[seat.player_index as u64];
+    assert!(player.cash >= total_price, EInsufficientFunds);
+    player.cash = player.cash - total_price;
+
+    cards::give_card_to_player(&mut player.cards, kind, count);
 }
 
 entry fun roll_and_step(
@@ -2164,6 +2255,138 @@ fun apply_card_effect_with_collectors(
         assert!(target_player.last_tile_id != 65535, ECannotTurn);
 
         target_player.next_tile_id = target_player.last_tile_id;
+
+    } else if (kind == types::CARD_TELEPORT()) {
+        // 瞬移卡: params = [target_player_index, tile_id]
+        assert!(params.length() >= 2, EInvalidParams);
+        let target_index = (params[0] as u8);
+        let tile_id = params[1];
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+        assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
+
+        let target_player = &mut game.players[target_index as u64];
+        target_player.pos = tile_id;
+
+    } else if (kind == types::CARD_BONUS_S()) {
+        // 奖励卡（小）: params = [target_player_index]，+1万
+        assert!(params.length() >= 1, EInvalidParams);
+        let target_index = (params[0] as u8);
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        let target_addr = (&game.players[target_index as u64]).owner;
+        let target_player = &mut game.players[target_index as u64];
+        target_player.cash = target_player.cash + 10000;
+
+        cash_changes.push_back(events::make_cash_delta(
+            target_addr,
+            false,   // is_debit=false: 获得金币
+            10000,
+            6,       // reason=6: CARD
+            0        // details
+        ));
+
+    } else if (kind == types::CARD_BONUS_L()) {
+        // 奖励卡（大）: params = [target_player_index]，+10万
+        assert!(params.length() >= 1, EInvalidParams);
+        let target_index = (params[0] as u8);
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        let target_addr = (&game.players[target_index as u64]).owner;
+        let target_player = &mut game.players[target_index as u64];
+        target_player.cash = target_player.cash + 100000;
+
+        cash_changes.push_back(events::make_cash_delta(
+            target_addr,
+            false,   // is_debit=false: 获得金币
+            100000,
+            6,       // reason=6: CARD
+            0        // details
+        ));
+
+    } else if (kind == types::CARD_FEE_S()) {
+        // 费用卡（小）: params = [target_player_index]，-1万
+        assert!(params.length() >= 1, EInvalidParams);
+        let target_index = (params[0] as u8);
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        let target_addr = (&game.players[target_index as u64]).owner;
+        let target_player = &mut game.players[target_index as u64];
+        if (target_player.cash >= 10000) {
+            target_player.cash = target_player.cash - 10000;
+            cash_changes.push_back(events::make_cash_delta(
+                target_addr,
+                true,    // is_debit=true: 扣除金币
+                10000,
+                6,       // reason=6: CARD
+                0        // details
+            ));
+        };
+
+    } else if (kind == types::CARD_FEE_L()) {
+        // 费用卡（大）: params = [target_player_index]，-10万
+        assert!(params.length() >= 1, EInvalidParams);
+        let target_index = (params[0] as u8);
+        assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
+
+        let target_addr = (&game.players[target_index as u64]).owner;
+        let target_player = &mut game.players[target_index as u64];
+        if (target_player.cash >= 100000) {
+            target_player.cash = target_player.cash - 100000;
+            cash_changes.push_back(events::make_cash_delta(
+                target_addr,
+                true,    // is_debit=true: 扣除金币
+                100000,
+                6,       // reason=6: CARD
+                0        // details
+            ));
+        };
+
+    } else if (kind == types::CARD_CONSTRUCTION()) {
+        // 建造卡: params = [building_idx]，升级建筑一级
+        assert!(params.length() >= 1, EInvalidParams);
+        let building_idx = (params[0] as u64);
+        assert!(building_idx < game.buildings.length(), EBuildingNotFound);
+
+        let building = &mut game.buildings[building_idx];
+        if (building.level < 5) {
+            building.level = building.level + 1;
+        };
+
+    } else if (kind == types::CARD_RENOVATION()) {
+        // 改建卡: params = [building_idx, building_type]，更换大建筑类型
+        assert!(params.length() >= 2, EInvalidParams);
+        let building_idx = (params[0] as u64);
+        let new_type = (params[1] as u8);
+        assert!(building_idx < game.buildings.length(), EBuildingNotFound);
+        assert!(types::is_large_building_type(new_type), EInvalidBuildingType);
+
+        let building = &mut game.buildings[building_idx];
+        building.building_type = new_type;
+
+    } else if (kind == types::CARD_SUMMON()) {
+        // 召唤卡: params = [tile_id, npc_type]，放置指定NPC
+        assert!(params.length() >= 2, EInvalidParams);
+        let tile_id = params[0];
+        let npc_kind = (params[1] as u8);
+        assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
+
+        if (game.tiles[tile_id as u64].npc_on == NO_NPC) {
+            place_npc_internal(
+                game,
+                tile_id,
+                npc_kind,
+                is_npc_consumable(npc_kind),
+                npc_changes
+            );
+        };
+
+    } else if (kind == types::CARD_BANISH()) {
+        // 驱逐卡: params = [tile_id]，移除tile上的NPC
+        assert!(params.length() >= 1, EInvalidParams);
+        let tile_id = params[0];
+        assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
+
+        remove_npc_internal(game, tile_id, npc_changes);
     }
 }
 

@@ -328,11 +328,13 @@ export class UIMapList extends UIBase {
         startingCash: bigint;
         priceRiseDays: number;
         maxRounds: number;
+        gmMode?: boolean;
     }): Promise<void> {
         console.log('[UIMapList] CreateGameWithParams event received');
         console.log('  Parameters:', {
             ...data,
-            startingCash: data.startingCash.toString()  // BigInt需要转为string才能log
+            startingCash: data.startingCash.toString(),  // BigInt需要转为string才能log
+            gmMode: data.gmMode
         });
 
         try {
@@ -342,7 +344,8 @@ export class UIMapList extends UIBase {
                 {
                     startingCash: data.startingCash,
                     priceRiseDays: data.priceRiseDays,
-                    maxRounds: data.maxRounds
+                    maxRounds: data.maxRounds,
+                    gmMode: data.gmMode
                 }
             );
 

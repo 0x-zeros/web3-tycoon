@@ -71,7 +71,25 @@ export enum CardKind {
     FREEZE = 4,        // 冰冻卡
     DOG = 5,           // 恶犬卡
     CLEANSE = 6,       // 净化卡
-    TURN = 7           // 转向卡
+    TURN = 7,          // 转向卡
+
+    // GM卡牌（需要GMPass购买）
+    TELEPORT = 8,       // 瞬移卡
+    BONUS_S = 9,        // 奖励卡（小）- 1万
+    BONUS_L = 10,       // 奖励卡（大）- 10万
+    FEE_S = 11,         // 费用卡（小）- 1万
+    FEE_L = 12,         // 费用卡（大）- 10万
+    CONSTRUCTION = 13,  // 建造卡（升级建筑）
+    RENOVATION = 14,    // 改建卡（更换大建筑类型）
+    SUMMON = 15,        // 召唤卡（放置NPC）
+    BANISH = 16         // 驱逐卡（移除NPC）
+}
+
+/**
+ * 判断是否为GM卡片（需要GMPass购买）
+ */
+export function isGMCard(kind: number): boolean {
+    return kind >= CardKind.TELEPORT && kind <= CardKind.BANISH;
 }
 
 // ===== BuffKind Buff类型 =====

@@ -48,6 +48,22 @@ public(package) fun CARD_DOG(): u8 { 5 }
 public(package) fun CARD_CLEANSE(): u8 { 6 }
 public(package) fun CARD_TURN(): u8 { 7 }
 
+// ===== GM卡牌（需要GMPass购买） =====
+public(package) fun CARD_TELEPORT(): u8 { 8 }       // 瞬移卡
+public(package) fun CARD_BONUS_S(): u8 { 9 }        // 奖励卡（小）- 1万
+public(package) fun CARD_BONUS_L(): u8 { 10 }       // 奖励卡（大）- 10万
+public(package) fun CARD_FEE_S(): u8 { 11 }         // 费用卡（小）- 1万
+public(package) fun CARD_FEE_L(): u8 { 12 }         // 费用卡（大）- 10万
+public(package) fun CARD_CONSTRUCTION(): u8 { 13 }  // 建造卡（升级建筑）
+public(package) fun CARD_RENOVATION(): u8 { 14 }    // 改建卡（更换大建筑类型）
+public(package) fun CARD_SUMMON(): u8 { 15 }        // 召唤卡（放置NPC）
+public(package) fun CARD_BANISH(): u8 { 16 }        // 驱逐卡（移除NPC）
+
+// ===== GM卡牌判断辅助函数 =====
+public(package) fun is_gm_card(kind: u8): bool {
+    kind >= CARD_TELEPORT() && kind <= CARD_BANISH()
+}
+
 // ===== BuffKind =====
 public(package) fun BUFF_MOVE_CTRL(): u8 { 1 }
 public(package) fun BUFF_FROZEN(): u8 { 2 }

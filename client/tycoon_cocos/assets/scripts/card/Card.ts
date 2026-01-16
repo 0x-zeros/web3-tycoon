@@ -29,6 +29,8 @@ export class Card {
     static readonly TARGET_NONE = 0;
     static readonly TARGET_PLAYER = 1;
     static readonly TARGET_TILE = 2;
+    static readonly TARGET_PLAYER_TILE = 3;  // 先选玩家，再选地块（瞬移卡）
+    static readonly TARGET_BUILDING = 4;      // 选择建筑（建造卡、改建卡）
 
     constructor(kind: number, count: number) {
         this.kind = kind;
@@ -68,7 +70,7 @@ export class Card {
     }
 
     getRarityName(): string {
-        const names = ['普通', '稀有', '史诗'];
+        const names = ['普通', '稀有', '史诗', 'GM'];
         return names[this.rarity] || '未知';
     }
 
@@ -86,7 +88,7 @@ export class Card {
      * 是否需要选择玩家
      */
     needsPlayerTarget(): boolean {
-        // 冰冻卡(4)
+        // 冰冻卡(4)、奖励卡、费用卡
         return this.targetType === Card.TARGET_PLAYER;
     }
 
@@ -94,8 +96,22 @@ export class Card {
      * 是否需要选择tile
      */
     needsTileTarget(): boolean {
-        // 遥控骰子(0)、路障(1)、炸弹(2)、恶犬(5)、净化卡(6)
+        // 遥控骰子(0)、路障(1)、炸弹(2)、恶犬(5)、净化卡(6)、召唤卡(15)、驱逐卡(16)
         return this.targetType === Card.TARGET_TILE;
+    }
+
+    /**
+     * 是否需要先选玩家再选地块（瞬移卡）
+     */
+    needsPlayerAndTileTarget(): boolean {
+        return this.targetType === Card.TARGET_PLAYER_TILE;
+    }
+
+    /**
+     * 是否需要选择建筑
+     */
+    needsBuildingTarget(): boolean {
+        return this.targetType === Card.TARGET_BUILDING;
     }
 
     /**
@@ -118,6 +134,48 @@ export class Card {
     isSimpleNpcCard(): boolean {
         // CARD_BARRIER(1), CARD_BOMB(2), CARD_DOG(5)
         return [1, 2, 5].includes(this.kind);
+    }
+
+    /**
+     * 是否是GM卡片（需要GMPass购买）
+     */
+    isGMCard(): boolean {
+        return this.kind >= 8 && this.kind <= 16;
+    }
+
+    /**
+     * 是否是瞬移卡
+     */
+    isTeleportCard(): boolean {
+        return this.kind === 8; // CARD_TELEPORT
+    }
+
+    /**
+     * 是否是建造卡
+     */
+    isConstructionCard(): boolean {
+        return this.kind === 13; // CARD_CONSTRUCTION
+    }
+
+    /**
+     * 是否是改建卡
+     */
+    isRenovationCard(): boolean {
+        return this.kind === 14; // CARD_RENOVATION
+    }
+
+    /**
+     * 是否是召唤卡
+     */
+    isSummonCard(): boolean {
+        return this.kind === 15; // CARD_SUMMON
+    }
+
+    /**
+     * 是否是驱逐卡
+     */
+    isBanishCard(): boolean {
+        return this.kind === 16; // CARD_BANISH
     }
 
     /**
@@ -151,7 +209,7 @@ export class Card {
      * 获取稀有度颜色
      */
     getRarityColor(): string {
-        const colors = ['#FFFFFF', '#00FF00', '#FF00FF']; // 普通/稀有/史诗
+        const colors = ['#FFFFFF', '#00FF00', '#FF00FF', '#FFD700']; // 普通/稀有/史诗/GM(金色)
         return colors[this.rarity] || '#FFFFFF';
     }
 

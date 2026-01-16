@@ -102,6 +102,20 @@ export interface Seat {
 }
 
 /**
+ * GMPass - GM模式权限凭证
+ * 持有者可以在卡片商店购买高级卡片
+ * 对应Move: struct GMPass
+ */
+export interface GMPass {
+    /** GMPass ID */
+    id: string;
+    /** 绑定的游戏ID */
+    game_id: string;
+    /** 持有者地址 */
+    player: string;
+}
+
+/**
  * 建筑数据（新的Tile/Building分离架构）
  * 对应Move: struct Building
  * 注意：这是经济实体，与地块（Tile）分离
@@ -228,6 +242,8 @@ export interface GameCreateConfig {
     price_rise_days?: number;
     /** 最大轮数（0表示无限） */
     max_rounds?: number;
+    /** GM模式（启用后玩家可以购买高级卡片） */
+    gm_mode?: boolean;
 }
 
 /**

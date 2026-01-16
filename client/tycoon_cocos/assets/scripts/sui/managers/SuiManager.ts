@@ -762,6 +762,7 @@ export class SuiManager {
             startingCash?: bigint;
             priceRiseDays?: number;
             maxRounds?: number;
+            gmMode?: boolean;
         }
     ): Promise<{ gameId: string; seatId: string; txHash: string }> {
         console.log('[SuiManager] createGameWithTemplate:', templateId);
@@ -787,7 +788,8 @@ export class SuiManager {
                 max_players: options?.maxPlayers || 4,
                 starting_cash: options?.startingCash || defaultStartingCash,  // 从 GameData
                 price_rise_days: options?.priceRiseDays || 15,                // DEFAULT_PRICE_RISE_DAYS
-                max_rounds: options?.maxRounds || 0                           // 0 = 无限
+                max_rounds: options?.maxRounds || 0,                          // 0 = 无限
+                gm_mode: options?.gmMode || false                             // GM模式
             });
 
             console.log('[SuiManager] Game created successfully');

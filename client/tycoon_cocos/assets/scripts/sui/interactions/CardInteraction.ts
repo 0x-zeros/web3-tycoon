@@ -74,6 +74,123 @@ export class CardInteraction {
     }
 
     /**
+     * 购买普通卡片（kind 0-7）
+     * 价格：100/张
+     *
+     * entry fun buy_card(
+     *     game: &mut Game,
+     *     seat: &Seat,
+     *     kind: u8,
+     *     count: u8,
+     *     ctx: &mut TxContext
+     * )
+     */
+    static async buyCard(
+        gameId: string,
+        seatId: string,
+        kind: number,
+        count: number
+    ): Promise<TransactionResult> {
+        try {
+            console.log('[CardInteraction] 购买普通卡片:', { gameId, seatId, kind, count });
+
+            const tx = new Transaction();
+            const config = SuiManager.instance.config;
+
+            if (!config) {
+                throw new Error('SuiManager配置未初始化');
+            }
+
+            const packageId = config.packageId;
+
+            tx.moveCall({
+                target: `${packageId}::game::buy_card`,
+                arguments: [
+                    tx.object(gameId),
+                    tx.object(seatId),
+                    tx.pure.u8(kind),
+                    tx.pure.u8(count)
+                ]
+            });
+
+            const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+            console.log('[CardInteraction] 购买成功:', result.digest);
+            return {
+                success: true,
+                message: '卡片购买成功',
+                digest: result.digest
+            };
+        } catch (error: any) {
+            console.error('[CardInteraction] buyCard失败:', error);
+            return {
+                success: false,
+                message: error.message || '购买卡片失败'
+            };
+        }
+    }
+
+    /**
+     * 购买GM卡片（kind 8-16），需要GMPass
+     * 价格：500/张
+     *
+     * entry fun buy_gm_card(
+     *     game: &mut Game,
+     *     seat: &Seat,
+     *     gm_pass: &GMPass,
+     *     kind: u8,
+     *     count: u8,
+     *     ctx: &mut TxContext
+     * )
+     */
+    static async buyGMCard(
+        gameId: string,
+        seatId: string,
+        gmPassId: string,
+        kind: number,
+        count: number
+    ): Promise<TransactionResult> {
+        try {
+            console.log('[CardInteraction] 购买GM卡片:', { gameId, seatId, gmPassId, kind, count });
+
+            const tx = new Transaction();
+            const config = SuiManager.instance.config;
+
+            if (!config) {
+                throw new Error('SuiManager配置未初始化');
+            }
+
+            const packageId = config.packageId;
+
+            tx.moveCall({
+                target: `${packageId}::game::buy_gm_card`,
+                arguments: [
+                    tx.object(gameId),
+                    tx.object(seatId),
+                    tx.object(gmPassId),
+                    tx.pure.u8(kind),
+                    tx.pure.u8(count)
+                ]
+            });
+
+            const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+            console.log('[CardInteraction] GM卡片购买成功:', result.digest);
+            return {
+                success: true,
+                message: 'GM卡片购买成功',
+                digest: result.digest
+            };
+        } catch (error: any) {
+            console.error('[CardInteraction] buyGMCard失败:', error);
+            return {
+                success: false,
+                message: error.message || '购买GM卡片失败'
+            };
+        }
+    }
+
+    /**
      * 构建use_card交易
      */
     private static buildUseCardTransaction(

@@ -479,7 +479,7 @@ entry fun buy_card(
 ) {
     assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
     assert!(seat.game_id == game.id.to_inner(), EWrongGame);
-    assert!(count > 0 && count <= 10, EInvalidParams);
+    assert!(count > 0, EInvalidParams);  // u8最大255，不再限制单次购买数量
     assert!(!types::is_gm_card(kind), EGMPassRequired);  // 普通卡片不允许购买GM卡
 
     let total_price = 100u64 * (count as u64);
@@ -504,7 +504,7 @@ entry fun buy_gm_card(
     assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
     assert!(seat.game_id == game.id.to_inner(), EWrongGame);
     assert!(gm_pass.game_id == game.id.to_inner(), EGMPassGameMismatch);
-    assert!(count > 0 && count <= 10, EInvalidParams);
+    assert!(count > 0, EInvalidParams);  // u8最大255，不再限制单次购买数量
     assert!(types::is_gm_card(kind), EInvalidParams);  // 只能购买GM卡
 
     let total_price = 500u64 * (count as u64);

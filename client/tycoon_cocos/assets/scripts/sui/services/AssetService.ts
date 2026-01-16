@@ -5,7 +5,7 @@
 
 // 使用 import type 避免打包（SuiClient 由调用者提供）
 import type { SuiClient, SuiObjectResponse } from '@mysten/sui/client';
-import type { Seat } from '../types/game';
+import type { Seat, GMPass } from '../types/game';
 import type { MapTemplateNFT, CoinInfo } from '../types/assets';
 
 /**
@@ -105,6 +105,42 @@ export class AssetService {
     }
 
     /**
+     * 获取玩家持有的 GMPass（用于特定游戏）
+     * @param address 钱包地址
+     * @param gameId 游戏ID
+     * @returns GMPass 或 null
+     */
+    async getPlayerGMPass(address: string, gameId: string): Promise<GMPass | null> {
+        try {
+            const response = await this.client.getOwnedObjects({
+                owner: address,
+                filter: {
+                    StructType: `${this.packageId}::game::GMPass`
+                },
+                options: {
+                    showContent: true,
+                    showType: true
+                }
+            });
+
+            for (const obj of response.data) {
+                const gmPass = this._parseGMPass(obj);
+                if (gmPass && gmPass.game_id === gameId) {
+                    console.log(`[AssetService] Found GMPass for game ${gameId}`);
+                    return gmPass;
+                }
+            }
+
+            console.log(`[AssetService] No GMPass found for game ${gameId}`);
+            return null;
+
+        } catch (error) {
+            console.error('[AssetService] Failed to get GMPass:', error);
+            return null;
+        }
+    }
+
+    /**
      * 获取 Map Template Creator NFT（预留）
      * @param address 钱包地址
      * @returns Map Template NFT 列表
@@ -146,6 +182,28 @@ export class AssetService {
             };
         } catch (error) {
             console.error('[AssetService] Failed to parse Seat:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 解析 GMPass
+     */
+    private _parseGMPass(response: SuiObjectResponse): GMPass | null {
+        if (response.data?.content?.dataType !== 'moveObject') {
+            return null;
+        }
+
+        try {
+            const fields = response.data.content.fields as any;
+
+            return {
+                id: response.data.objectId,
+                game_id: fields.game_id || '',
+                player: fields.player || ''
+            };
+        } catch (error) {
+            console.error('[AssetService] Failed to parse GMPass:', error);
             return null;
         }
     }

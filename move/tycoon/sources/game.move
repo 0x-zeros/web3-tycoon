@@ -469,27 +469,24 @@ entry fun use_card(
     );
 }
 
-/// 购买普通卡片（kind 0-7）
-/// 卡片价格：100/张
-entry fun buy_card(
+/// 购买卡片的内部实现
+fun buy_card_internal(
     game: &mut Game,
     seat: &Seat,
     kind: u8,
     count: u8,
+    price_per_card: u64,
     map: &map::MapTemplate,
-    ctx: &mut TxContext
 ) {
     assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
     assert!(seat.game_id == game.id.to_inner(), EWrongGame);
-    assert!(count > 0, EInvalidParams);  // u8最大255，不再限制单次购买数量
-    assert!(!types::is_gm_card(kind), EGMPassRequired);  // 普通卡片不允许购买GM卡
+    assert!(count > 0, EInvalidParams);
 
-    // 检查玩家位置是否在卡片商店
     let player = &game.players[seat.player_index as u64];
     let tile = map::get_tile(map, player.pos);
     assert!(map::tile_kind(tile) == types::TILE_CARD_SHOP(), ENotAtCardShop);
 
-    let total_price = 100u64 * (count as u64);
+    let total_price = price_per_card * (count as u64);
     assert!(player.cash >= total_price, EInsufficientFunds);
 
     let player = &mut game.players[seat.player_index as u64];
@@ -498,35 +495,41 @@ entry fun buy_card(
     cards::give_card_to_player(&mut player.cards, kind, count);
 }
 
-/// 购买GM卡片（kind 8-16），需要GMPass
+/// 购买普通卡片
+/// 卡片价格：100/张
+entry fun buy_card(
+    game: &mut Game,
+    seat: &Seat,
+    game_data: &GameData,
+    kind: u8,
+    count: u8,
+    map: &map::MapTemplate,
+    _ctx: &mut TxContext
+) {
+    // 验证卡片不需要 GMPass
+    assert!(!tycoon::card_requires_gm_pass(game_data, kind), EGMPassRequired);
+
+    buy_card_internal(game, seat, kind, count, 100, map);
+}
+
+/// 购买GM卡片，需要GMPass
 /// 卡片价格：500/张
 entry fun buy_gm_card(
     game: &mut Game,
     seat: &Seat,
     gm_pass: &GMPass,
+    game_data: &GameData,
     kind: u8,
     count: u8,
     map: &map::MapTemplate,
-    ctx: &mut TxContext
+    _ctx: &mut TxContext
 ) {
-    assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
-    assert!(seat.game_id == game.id.to_inner(), EWrongGame);
+    // 验证 GMPass 绑定
     assert!(gm_pass.game_id == game.id.to_inner(), EGMPassGameMismatch);
-    assert!(count > 0, EInvalidParams);  // u8最大255，不再限制单次购买数量
-    assert!(types::is_gm_card(kind), EInvalidParams);  // 只能购买GM卡
+    // 验证卡片需要 GMPass
+    assert!(tycoon::card_requires_gm_pass(game_data, kind), EInvalidParams);
 
-    // 检查玩家位置是否在卡片商店
-    let player = &game.players[seat.player_index as u64];
-    let tile = map::get_tile(map, player.pos);
-    assert!(map::tile_kind(tile) == types::TILE_CARD_SHOP(), ENotAtCardShop);
-
-    let total_price = 500u64 * (count as u64);
-    assert!(player.cash >= total_price, EInsufficientFunds);
-
-    let player = &mut game.players[seat.player_index as u64];
-    player.cash = player.cash - total_price;
-
-    cards::give_card_to_player(&mut player.cards, kind, count);
+    buy_card_internal(game, seat, kind, count, 500, map);
 }
 
 entry fun roll_and_step(

@@ -222,7 +222,8 @@ export class GameTile {
                this.kind === TileKind.BONUS ||
                this.kind === TileKind.FEE ||
                this.kind === TileKind.CARD ||
-               this.kind === TileKind.NEWS;
+               this.kind === TileKind.NEWS ||
+               this.kind === TileKind.CARD_SHOP;
     }
 
     // ========================= 类型转换（私有静态方法） =========================
@@ -240,6 +241,7 @@ export class GameTile {
             case TileKind.FEE: return 'web3:fee';
             case TileKind.CARD: return 'web3:card';
             case TileKind.NEWS: return 'web3:news';
+            case TileKind.CARD_SHOP: return 'web3:card_shop';
             default:
                 console.warn(`[GameTile] Unknown tile kind: ${kind}, using empty_land`);
                 return 'web3:empty_land';
@@ -259,6 +261,7 @@ export class GameTile {
             case TileKind.FEE: return Web3TileType.FEE;
             case TileKind.CARD: return Web3TileType.CARD;
             case TileKind.NEWS: return Web3TileType.NEWS;
+            case TileKind.CARD_SHOP: return Web3TileType.CARD_SHOP;
             default:
                 console.warn(`[GameTile] Unknown tile kind: ${kind}, using EMPTY_LAND`);
                 return Web3TileType.EMPTY_LAND;
@@ -301,6 +304,7 @@ function getTileKindName(kind: number): string {
         case TileKind.FEE: return '收费站';
         case TileKind.CARD: return '卡片站';
         case TileKind.NEWS: return '新闻站';
+        case TileKind.CARD_SHOP: return '卡片商店';
         default: return `未知(${kind})`;
     }
 }

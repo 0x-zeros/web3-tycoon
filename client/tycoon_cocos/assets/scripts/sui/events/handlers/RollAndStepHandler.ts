@@ -361,6 +361,19 @@ export class RollAndStepHandler {
                 UINotification.info('土地神附身，免费占有地产！', '土地神', 3000, 'center');
             }
 
+            // 卡片商店
+            if (step.stop_effect.stop_type === StopType.CARD_SHOP) {
+                // 只有当前玩家才打开卡片商店 UI
+                const myPlayer = session.getMyPlayer();
+                if (player && myPlayer && player === myPlayer) {
+                    import('../../../ui/core/UIManager').then(({ UIManager }) => {
+                        UIManager.getInstance().show('CardShop');
+                    }).catch(err => {
+                        console.error('[RollAndStepHandler] 打开卡片商店失败', err);
+                    });
+                }
+            }
+
             // 处理 NPC 触发的 Buff（土地神等）
             if (step.stop_effect.npc_buff) {
                 const npcBuff = step.stop_effect.npc_buff;

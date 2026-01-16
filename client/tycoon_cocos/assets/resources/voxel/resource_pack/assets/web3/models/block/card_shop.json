@@ -1,0 +1,6 @@
+{
+  "parent": "web3:block/cube_all",
+  "textures": {
+    "all": "web3:block/chance"
+  }
+}

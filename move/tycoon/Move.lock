@@ -55,6 +55,11 @@ dependencies = [
   { id = "Sui", name = "Sui" },
 ]
 
+[move.toolchain-version]
+compiler-version = "1.62.0"
+edition = "2024.beta"
+flavor = "sui"
+
 [pinned.testnet.tycoon]
 source = { root = true }
 use_environment = "testnet"

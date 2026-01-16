@@ -12,6 +12,7 @@ export enum Web3TileType {
     FEE = 5,             // 费用
     CARD = 6,            // 卡片
     NEWS = 7,            // 新闻
+    CARD_SHOP = 8,       // 卡片商店
 }
 
 // NPC和路面物体枚举（100-199）
@@ -119,7 +120,14 @@ export const WEB3_BLOCKS: Web3BlockInfo[] = [
         typeId: Web3TileType.NEWS,
         description: '触发全局新闻事件'
     },
-    
+    {
+        id: 'web3:card_shop',
+        name: '卡片商店',
+        category: 'tile',
+        typeId: Web3TileType.CARD_SHOP,
+        description: '打开卡片商店购买卡片'
+    },
+
     // ========== NPC和路面物体 (100-255) ==========
     {
         id: 'web3:land_god',

@@ -136,6 +136,7 @@ const STOP_FEE: u8 = 6;
 const STOP_CARD_STOP: u8 = 7;
 const STOP_BUILDING_UNOWNED: u8 = 8;
 const STOP_LAND_SEIZE: u8 = 9;              // 土地神附身抢地
+const STOP_CARD_SHOP: u8 = 10;              // 卡片商店
 
 // ===== Aggregated Event Data Types 聚合事件数据类型 =====
 
@@ -586,6 +587,7 @@ public(package) fun stop_fee(): u8 { STOP_FEE }
 public(package) fun stop_card_stop(): u8 { STOP_CARD_STOP }
 public(package) fun stop_building_unowned(): u8 { STOP_BUILDING_UNOWNED }
 public(package) fun stop_land_seize(): u8 { STOP_LAND_SEIZE }
+public(package) fun stop_card_shop(): u8 { STOP_CARD_SHOP }
 
 // ===== Admin Event Emitters 管理事件发射函数 =====
 

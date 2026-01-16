@@ -1928,6 +1928,9 @@ fun handle_tile_stop_with_collector(
         if (player.cash == 0 && fee > actual_payment) {
             handle_bankruptcy(game, game_data, map, player_addr, option::none());
         }
+    } else if (tile_kind == types::TILE_CARD_SHOP()) {
+        // CARD_SHOP: 客户端打开商店UI，合约端仅记录停留类型
+        stop_type = events::stop_card_shop();
     } else {
         stop_type = events::stop_none();
     };

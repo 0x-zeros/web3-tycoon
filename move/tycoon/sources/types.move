@@ -9,6 +9,7 @@ public(package) fun TILE_BONUS(): u8 { 4 }
 public(package) fun TILE_FEE(): u8 { 5 }
 public(package) fun TILE_CARD(): u8 { 6 }
 public(package) fun TILE_NEWS(): u8 { 7 }
+public(package) fun TILE_CARD_SHOP(): u8 { 8 }
 
 // ===== BuildingType =====
 public(package) fun BUILDING_NONE(): u8 { 0 }

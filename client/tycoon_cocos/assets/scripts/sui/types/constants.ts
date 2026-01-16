@@ -14,7 +14,8 @@ export enum TileKind {
     BONUS = 4,
     FEE = 5,
     CARD = 6,
-    NEWS = 7
+    NEWS = 7,
+    CARD_SHOP = 8
 }
 
 // ===== BuildingType 建筑类型 =====
@@ -243,7 +244,8 @@ export enum StopType {
     FEE = 6,                   // 罚款
     CARD_STOP = 7,             // 卡片停留
     BUILDING_UNOWNED = 8,      // 无主建筑（可购买）
-    LAND_SEIZE = 9             // 土地神附身抢地
+    LAND_SEIZE = 9,            // 土地神附身抢地
+    CARD_SHOP = 10             // 卡片商店
 }
 
 // ===== 现金变动原因 =====

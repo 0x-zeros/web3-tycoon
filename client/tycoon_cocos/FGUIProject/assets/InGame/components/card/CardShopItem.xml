@@ -3,9 +3,8 @@
   <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
   <displayList>
     <loader id="n4_pn5r" name="icon" xy="22,30" size="142,201" url="ui://8z385pimue83a" fill="scaleFree" clearOnPublish="true"/>
-    <graph id="n1_ue83" name="n1" xy="37,96" size="111,108" visible="false" type="eclipse" lineSize="0" fillColor="#b2edf2c0"/>
-    <text id="n2_ue83" name="title" xy="39,90" size="104,107" visible="false" fontSize="40" color="#666600" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="遥控骰子"/>
-    <text id="n5_obwq" name="count" xy="57,37" size="76,54" fontSize="40" color="#ffffff" align="center" vAlign="middle" autoSize="none" bold="true" italic="true" autoClearText="true" text="1"/>
+    <text id="n2_ue83" name="title" xy="41,52" size="104,107" visible="false" fontSize="40" color="#666600" align="center" vAlign="middle" autoSize="none" autoClearText="true" text="遥控骰子"/>
+    <text id="n5_obwq" name="price" xy="24,175" size="138,54" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" bold="true" autoClearText="true" text="6000"/>
   </displayList>
   <Button mode="Check" downEffect="scale" downEffectValue="1.2"/>
 </component>

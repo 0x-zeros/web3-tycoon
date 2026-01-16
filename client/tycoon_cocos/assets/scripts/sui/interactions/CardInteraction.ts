@@ -82,6 +82,7 @@ export class CardInteraction {
      *     seat: &Seat,
      *     kind: u8,
      *     count: u8,
+     *     map: &map::MapTemplate,
      *     ctx: &mut TxContext
      * )
      */
@@ -89,10 +90,11 @@ export class CardInteraction {
         gameId: string,
         seatId: string,
         kind: number,
-        count: number
+        count: number,
+        mapTemplateId: string
     ): Promise<TransactionResult> {
         try {
-            console.log('[CardInteraction] 购买普通卡片:', { gameId, seatId, kind, count });
+            console.log('[CardInteraction] 购买普通卡片:', { gameId, seatId, kind, count, mapTemplateId });
 
             const tx = new Transaction();
             const config = SuiManager.instance.config;
@@ -109,7 +111,8 @@ export class CardInteraction {
                     tx.object(gameId),
                     tx.object(seatId),
                     tx.pure.u8(kind),
-                    tx.pure.u8(count)
+                    tx.pure.u8(count),
+                    tx.object(mapTemplateId)
                 ]
             });
 
@@ -140,6 +143,7 @@ export class CardInteraction {
      *     gm_pass: &GMPass,
      *     kind: u8,
      *     count: u8,
+     *     map: &map::MapTemplate,
      *     ctx: &mut TxContext
      * )
      */
@@ -148,10 +152,11 @@ export class CardInteraction {
         seatId: string,
         gmPassId: string,
         kind: number,
-        count: number
+        count: number,
+        mapTemplateId: string
     ): Promise<TransactionResult> {
         try {
-            console.log('[CardInteraction] 购买GM卡片:', { gameId, seatId, gmPassId, kind, count });
+            console.log('[CardInteraction] 购买GM卡片:', { gameId, seatId, gmPassId, kind, count, mapTemplateId });
 
             const tx = new Transaction();
             const config = SuiManager.instance.config;
@@ -169,7 +174,8 @@ export class CardInteraction {
                     tx.object(seatId),
                     tx.object(gmPassId),
                     tx.pure.u8(kind),
-                    tx.pure.u8(count)
+                    tx.pure.u8(count),
+                    tx.object(mapTemplateId)
                 ]
             });
 

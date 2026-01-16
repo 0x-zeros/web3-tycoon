@@ -368,9 +368,10 @@ export class UICardShop extends UIBase {
 
             const gameId = session.getGameId();
             const mySeat = session.getMySeat();
+            const mapTemplateId = session.getMapTemplateId();
 
-            if (!gameId || !mySeat) {
-                throw new Error('Game ID or Seat not found');
+            if (!gameId || !mySeat || !mapTemplateId) {
+                throw new Error('Game ID, Seat or MapTemplate not found');
             }
 
             // 遍历已选卡片，每种购买1张
@@ -392,14 +393,16 @@ export class UICardShop extends UIBase {
                         mySeat.id,
                         this._gmPass.id,
                         kind,
-                        1  // 每种卡片购买1张
+                        1,  // 每种卡片购买1张
+                        mapTemplateId
                     );
                 } else {
                     result = await CardInteraction.buyCard(
                         gameId,
                         mySeat.id,
                         kind,
-                        1  // 每种卡片购买1张
+                        1,  // 每种卡片购买1张
+                        mapTemplateId
                     );
                 }
 

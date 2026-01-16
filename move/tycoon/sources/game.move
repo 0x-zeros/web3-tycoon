@@ -69,6 +69,7 @@ const ENoSuchTile: u64 = 2002;
 
 const EGMPassRequired: u64 = 5006;
 const EGMPassGameMismatch: u64 = 5007;
+const ENotAtCardShop: u64 = 5008;
 
 
 // Buff激活逻辑（包含语义）：current_round <= last_active_round时激活
@@ -475,6 +476,7 @@ entry fun buy_card(
     seat: &Seat,
     kind: u8,
     count: u8,
+    map: &map::MapTemplate,
     ctx: &mut TxContext
 ) {
     assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
@@ -482,10 +484,15 @@ entry fun buy_card(
     assert!(count > 0, EInvalidParams);  // u8最大255，不再限制单次购买数量
     assert!(!types::is_gm_card(kind), EGMPassRequired);  // 普通卡片不允许购买GM卡
 
+    // 检查玩家位置是否在卡片商店
+    let player = &game.players[seat.player_index as u64];
+    let tile = map::get_tile(map, player.pos);
+    assert!(map::tile_kind(tile) == types::TILE_CARD_SHOP(), ENotAtCardShop);
+
     let total_price = 100u64 * (count as u64);
+    assert!(player.cash >= total_price, EInsufficientFunds);
 
     let player = &mut game.players[seat.player_index as u64];
-    assert!(player.cash >= total_price, EInsufficientFunds);
     player.cash = player.cash - total_price;
 
     cards::give_card_to_player(&mut player.cards, kind, count);
@@ -499,6 +506,7 @@ entry fun buy_gm_card(
     gm_pass: &GMPass,
     kind: u8,
     count: u8,
+    map: &map::MapTemplate,
     ctx: &mut TxContext
 ) {
     assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
@@ -507,10 +515,15 @@ entry fun buy_gm_card(
     assert!(count > 0, EInvalidParams);  // u8最大255，不再限制单次购买数量
     assert!(types::is_gm_card(kind), EInvalidParams);  // 只能购买GM卡
 
+    // 检查玩家位置是否在卡片商店
+    let player = &game.players[seat.player_index as u64];
+    let tile = map::get_tile(map, player.pos);
+    assert!(map::tile_kind(tile) == types::TILE_CARD_SHOP(), ENotAtCardShop);
+
     let total_price = 500u64 * (count as u64);
+    assert!(player.cash >= total_price, EInsufficientFunds);
 
     let player = &mut game.players[seat.player_index as u64];
-    assert!(player.cash >= total_price, EInsufficientFunds);
     player.cash = player.cash - total_price;
 
     cards::give_card_to_player(&mut player.cards, kind, count);

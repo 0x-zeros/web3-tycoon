@@ -85,6 +85,7 @@ public(package) fun DECISION_NONE(): u8 { 0 }
 public(package) fun DECISION_BUY_PROPERTY(): u8 { 1 }
 public(package) fun DECISION_UPGRADE_PROPERTY(): u8 { 2 }
 public(package) fun DECISION_PAY_RENT(): u8 { 3 }
+public(package) fun DECISION_CARD_SHOP(): u8 { 4 }
 
 // ===== SkipReason =====
 public(package) fun SKIP_HOSPITAL(): u8 { 2 }

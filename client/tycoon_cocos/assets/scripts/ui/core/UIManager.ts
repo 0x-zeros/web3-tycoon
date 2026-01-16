@@ -25,6 +25,7 @@ import { UICommonLayout } from "../game/UICommonLayout";
 
 import { UIGameEnd } from "../game/UIGameEnd";
 import { UIBankruptcy } from "../game/UIBankruptcy";
+import { UICardShop } from "../game/UICardShop";
 
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
@@ -865,6 +866,7 @@ export class UIManager {
             UIManager.instance.registerNotificationUI(); // 注册Notification
             UIManager.instance.registerGameEndUI(); // 注册GameEnd
             UIManager.instance.registerBankruptcyUI(); // 注册Bankruptcy
+            UIManager.instance.registerCardShopUI(); // 注册CardShop
             await UIManager.instance.registerLoadingUI(UIManager.PRELOAD_PACKAGES[1]); // 注册Loading（ModeSelect包），等待完成
             // GameConfig 不再单独注册，作为 CommonLayout 的子组件管理
 
@@ -994,6 +996,19 @@ export class UIManager {
             isWindow: false,
             layer: UILayer.NOTIFICATION
         }, UIBankruptcy);
+    }
+
+    /**
+     * 便捷注册方法 - 注册卡片商店UI
+     */
+    public registerCardShopUI(packageName: string = "InGame", componentName: string = "CardShop"): void {
+        this.registerUI<UICardShop>("CardShop", {
+            packageName,
+            componentName,
+            cache: false,
+            isWindow: true,
+            layer: UILayer.MODAL
+        }, UICardShop);
     }
 
     /**

@@ -67,8 +67,8 @@ const ETileOccupiedByNpc: u64 = 2001;
 const ENpcNotFound: u64 = 2002;
 const ENoSuchTile: u64 = 2002;
 
-const EGMPassRequired: u64 = 5006;
-const EGMPassGameMismatch: u64 = 5007;
+const EGMPassRequired: u64 = 5009;
+const EGMPassGameMismatch: u64 = 5010;
 const ENotAtCardShop: u64 = 5008;
 
 
@@ -470,66 +470,104 @@ entry fun use_card(
 }
 
 /// 购买卡片的内部实现
+/// 注意：状态/回合/位置校验由入口函数完成，此处只处理扣款和发卡
 fun buy_card_internal(
     game: &mut Game,
-    seat: &Seat,
+    player_index: u8,
     kind: u8,
-    count: u8,
     price_per_card: u64,
-    map: &map::MapTemplate,
 ) {
-    assert!(game.status == types::STATUS_ACTIVE(), EGameNotActive);
-    assert!(seat.game_id == game.id.to_inner(), EWrongGame);
-    assert!(count > 0, EInvalidParams);
+    let player = &game.players[player_index as u64];
+    assert!(player.cash >= price_per_card, EInsufficientFunds);
 
-    let player = &game.players[seat.player_index as u64];
-    let tile = map::get_tile(map, player.pos);
-    assert!(map::tile_kind(tile) == types::TILE_CARD_SHOP(), ENotAtCardShop);
+    let player = &mut game.players[player_index as u64];
+    player.cash = player.cash - price_per_card;
 
-    let total_price = price_per_card * (count as u64);
-    assert!(player.cash >= total_price, EInsufficientFunds);
-
-    let player = &mut game.players[seat.player_index as u64];
-    player.cash = player.cash - total_price;
-
-    cards::give_card_to_player(&mut player.cards, kind, count);
+    cards::give_card_to_player(&mut player.cards, kind, 1);
 }
 
-/// 购买普通卡片
+/// 批量购买普通卡片
+/// purchases: 要购买的卡片 kind 列表，每个元素表示一张卡（可重复）
+/// 例如 [0, 2, 5] 表示购买 kind=0, kind=2, kind=5 各一张
 /// 卡片价格：100/张
-entry fun buy_card(
+entry fun buy_cards(
     game: &mut Game,
     seat: &Seat,
     game_data: &GameData,
-    kind: u8,
-    count: u8,
+    purchases: vector<u8>,
     map: &map::MapTemplate,
-    _ctx: &mut TxContext
+    r: &Random,
+    ctx: &mut TxContext
 ) {
-    // 验证卡片不需要 GMPass
-    assert!(!tycoon::card_requires_gm_pass(game_data, kind), EGMPassRequired);
+    validate_map(game, map);
+    validate_seat_and_turn(game, seat);
+    assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
+    assert!(purchases.length() > 0 && purchases.length() <= 6, EInvalidParams);
 
-    buy_card_internal(game, seat, kind, count, 100, map);
+    // 逐张购买，复用 buy_card_internal
+    let mut i = 0u64;
+    while (i < purchases.length()) {
+        let kind = purchases[i];
+        // 验证卡片不需要 GMPass
+        assert!(!tycoon::card_requires_gm_pass(game_data, kind), EGMPassRequired);
+        buy_card_internal(game, seat.player_index, kind, 100);
+        i = i + 1;
+    };
+
+    clear_decision_state(game);
+    advance_turn(game, game_data, map, r, ctx);
 }
 
-/// 购买GM卡片，需要GMPass
+/// 批量购买GM卡片，需要GMPass
+/// purchases: 要购买的卡片 kind 列表，每个元素表示一张卡（可重复）
 /// 卡片价格：500/张
-entry fun buy_gm_card(
+entry fun buy_gm_cards(
     game: &mut Game,
     seat: &Seat,
     gm_pass: &GMPass,
     game_data: &GameData,
-    kind: u8,
-    count: u8,
+    purchases: vector<u8>,
     map: &map::MapTemplate,
-    _ctx: &mut TxContext
+    r: &Random,
+    ctx: &mut TxContext
 ) {
+    validate_map(game, map);
+    validate_seat_and_turn(game, seat);
+    assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
+    assert!(purchases.length() > 0 && purchases.length() <= 6, EInvalidParams);
+
     // 验证 GMPass 绑定
     assert!(gm_pass.game_id == game.id.to_inner(), EGMPassGameMismatch);
-    // 验证卡片需要 GMPass
-    assert!(tycoon::card_requires_gm_pass(game_data, kind), EInvalidParams);
 
-    buy_card_internal(game, seat, kind, count, 500, map);
+    // 逐张购买，复用 buy_card_internal
+    let mut i = 0u64;
+    while (i < purchases.length()) {
+        let kind = purchases[i];
+        // 验证卡片需要 GMPass
+        assert!(tycoon::card_requires_gm_pass(game_data, kind), EInvalidParams);
+        buy_card_internal(game, seat.player_index, kind, 500);
+        i = i + 1;
+    };
+
+    clear_decision_state(game);
+    advance_turn(game, game_data, map, r, ctx);
+}
+
+/// 跳过卡片商店（不购买任何卡片）
+entry fun skip_card_shop(
+    game: &mut Game,
+    seat: &Seat,
+    game_data: &GameData,
+    map: &map::MapTemplate,
+    r: &Random,
+    ctx: &mut TxContext
+) {
+    validate_map(game, map);
+    validate_seat_and_turn(game, seat);
+    assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
+
+    clear_decision_state(game);
+    advance_turn(game, game_data, map, r, ctx);
 }
 
 entry fun roll_and_step(
@@ -1945,8 +1983,10 @@ fun handle_tile_stop_with_collector(
             handle_bankruptcy(game, game_data, map, player_addr, option::none());
         }
     } else if (tile_kind == types::TILE_CARD_SHOP()) {
-        // CARD_SHOP: 客户端打开商店UI，合约端仅记录停留类型
+        // CARD_SHOP: 设置 pending_decision，等待玩家购买卡片或跳过
         stop_type = events::stop_card_shop();
+        game.pending_decision = types::DECISION_CARD_SHOP();
+        game.decision_tile = tile_id;
     } else {
         stop_type = events::stop_none();
     };

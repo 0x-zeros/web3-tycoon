@@ -19,6 +19,7 @@ import { GameInitializer } from "../../core/GameInitializer";
 import { CardConfigManager, CardConfig } from "../../card/CardConfig";
 import { CardInteraction } from "../../sui/interactions/CardInteraction";
 import { SuiManager } from "../../sui/managers/SuiManager";
+import { UINotification } from "../utils/UINotification";
 import type { GMPass } from "../../sui/types/game";
 
 const { ccclass } = _decorator;
@@ -141,40 +142,12 @@ export class UICardShop extends UIBase {
 
     /**
      * 查询当前玩家的GMPass
+     * TODO: 目前暂时禁用 GMPass 查询，后续实现
      */
     private async _queryGMPass(): Promise<void> {
-        try {
-            const session = GameInitializer.getInstance()?.getGameSession();
-            if (!session) {
-                console.warn('[UICardShop] GameSession not found');
-                this._gmPass = null;
-                return;
-            }
-
-            const gameId = session.getGameId();
-            const myPlayer = session.getMyPlayer();
-            if (!gameId || !myPlayer) {
-                console.warn('[UICardShop] Game ID or player not found');
-                this._gmPass = null;
-                return;
-            }
-
-            const address = myPlayer.getAddress();
-            const assetService = SuiManager.instance.getAssetService();
-
-            if (!assetService) {
-                console.warn('[UICardShop] AssetService not available');
-                this._gmPass = null;
-                return;
-            }
-
-            this._gmPass = await assetService.getPlayerGMPass(address, gameId);
-            console.log('[UICardShop] GMPass query result:', this._gmPass ? 'found' : 'not found');
-
-        } catch (error) {
-            console.error('[UICardShop] Failed to query GMPass:', error);
-            this._gmPass = null;
-        }
+        // GMPass 功能暂未实现
+        this._gmPass = null;
+        console.log('[UICardShop] GMPass query disabled (not implemented)');
     }
 
     /**
@@ -348,7 +321,7 @@ export class UICardShop extends UIBase {
         const totalPrice = this._getTotalPrice();
         if (BigInt(totalPrice) > this._playerCash) {
             console.log('[UICardShop] 余额不足');
-            EventBus.emit(EventTypes.UI.ShowToast, { message: '余额不足' });
+            UINotification.warning('余额不足', undefined, undefined, 'center');
             return;
         }
 
@@ -368,70 +341,72 @@ export class UICardShop extends UIBase {
 
             const gameId = session.getGameId();
             const mySeat = session.getMySeat();
-            const mapTemplateId = session.getMapTemplateId();
+            const mapTemplate = session.getMapTemplate();
+            const mapTemplateId = mapTemplate?.id;
+            const gameDataId = SuiManager.instance.config?.gameDataId;
 
-            if (!gameId || !mySeat || !mapTemplateId) {
-                throw new Error('Game ID, Seat or MapTemplate not found');
+            if (!gameId || !mySeat || !mapTemplateId || !gameDataId) {
+                throw new Error('Game ID, Seat, MapTemplate or GameData not found');
             }
 
-            // 遍历已选卡片，每种购买1张
-            let successCount = 0;
-            let failCount = 0;
+            // 分离普通卡片和GM卡片
+            const normalCards: number[] = [];
+            const gmCards: number[] = [];
 
             for (const kind of this._selectedKinds) {
-                const isGMCard = kind >= GM_CARD_START_KIND;
-
-                let result;
-                if (isGMCard) {
-                    if (!this._gmPass) {
-                        console.warn(`[UICardShop] 跳过GM卡片 kind=${kind}，无GMPass`);
-                        failCount++;
-                        continue;
-                    }
-                    result = await CardInteraction.buyGMCard(
-                        gameId,
-                        mySeat.id,
-                        this._gmPass.id,
-                        kind,
-                        1,  // 每种卡片购买1张
-                        mapTemplateId
-                    );
+                if (kind >= GM_CARD_START_KIND) {
+                    gmCards.push(kind);
                 } else {
-                    result = await CardInteraction.buyCard(
-                        gameId,
-                        mySeat.id,
-                        kind,
-                        1,  // 每种卡片购买1张
-                        mapTemplateId
-                    );
-                }
-
-                if (result.success) {
-                    console.log(`[UICardShop] 购买成功: kind=${kind}`);
-                    successCount++;
-                } else {
-                    console.error(`[UICardShop] 购买失败: kind=${kind}, error=${result.message}`);
-                    failCount++;
+                    normalCards.push(kind);
                 }
             }
 
-            // 显示结果
-            if (failCount === 0) {
-                EventBus.emit(EventTypes.UI.ShowToast, { message: '购买成功' });
-                // 发送卡片变化事件
-                EventBus.emit(EventTypes.Player.CardChange, {});
-                // 关闭商店
-                this.hide();
-            } else if (successCount > 0) {
-                EventBus.emit(EventTypes.UI.ShowToast, { message: `部分购买成功 (${successCount}成功, ${failCount}失败)` });
-                EventBus.emit(EventTypes.Player.CardChange, {});
-            } else {
-                EventBus.emit(EventTypes.UI.ShowToast, { message: '购买失败' });
+            // 如果有普通卡片，批量购买
+            if (normalCards.length > 0) {
+                const result = await CardInteraction.buyCards(
+                    gameId,
+                    mySeat.id,
+                    gameDataId,
+                    normalCards,
+                    mapTemplateId
+                );
+
+                if (result.success) {
+                    console.log('[UICardShop] 普通卡片购买成功');
+                    UINotification.success('购买成功', undefined, undefined, 'center');
+                    EventBus.emit(EventTypes.Player.CardChange, {});
+                    this.hide();
+                    return;  // 已推进回合，直接返回
+                } else {
+                    console.error('[UICardShop] 普通卡片购买失败:', result.message);
+                    UINotification.error(result.message || '购买失败', undefined, undefined, 'center');
+                }
+            } else if (gmCards.length > 0 && this._gmPass) {
+                // 只有GM卡片，批量购买
+                const result = await CardInteraction.buyGMCards(
+                    gameId,
+                    mySeat.id,
+                    this._gmPass.id,
+                    gameDataId,
+                    gmCards,
+                    mapTemplateId
+                );
+
+                if (result.success) {
+                    console.log('[UICardShop] GM卡片购买成功');
+                    UINotification.success('购买成功', undefined, undefined, 'center');
+                    EventBus.emit(EventTypes.Player.CardChange, {});
+                    this.hide();
+                    return;  // 已推进回合，直接返回
+                } else {
+                    console.error('[UICardShop] GM卡片购买失败:', result.message);
+                    UINotification.error(result.message || '购买失败', undefined, undefined, 'center');
+                }
             }
 
         } catch (error: any) {
             console.error('[UICardShop] 购买出错:', error);
-            EventBus.emit(EventTypes.UI.ShowToast, { message: error.message || '购买失败' });
+            UINotification.error(error.message || '购买失败', undefined, undefined, 'center');
         } finally {
             // 恢复购买按钮
             if (this.m_btnBuy) {
@@ -443,10 +418,55 @@ export class UICardShop extends UIBase {
     }
 
     /**
-     * 取消按钮点击
+     * 取消按钮点击 - 跳过卡片商店
      */
-    private _onCancelClick(): void {
-        console.log('[UICardShop] 取消购买');
-        this.hide();
+    private async _onCancelClick(): Promise<void> {
+        console.log('[UICardShop] 跳过卡片商店');
+
+        // 禁用取消按钮防止重复点击
+        if (this.m_btnCancel) {
+            this.m_btnCancel.enabled = false;
+        }
+
+        try {
+            const session = GameInitializer.getInstance()?.getGameSession();
+            if (!session) {
+                throw new Error('GameSession not found');
+            }
+
+            const gameId = session.getGameId();
+            const mySeat = session.getMySeat();
+            const mapTemplate = session.getMapTemplate();
+            const mapTemplateId = mapTemplate?.id;
+            const gameDataId = SuiManager.instance.config?.gameDataId;
+
+            if (!gameId || !mySeat || !mapTemplateId || !gameDataId) {
+                throw new Error('Game ID, Seat, MapTemplate or GameData not found');
+            }
+
+            const result = await CardInteraction.skipCardShop(
+                gameId,
+                mySeat.id,
+                gameDataId,
+                mapTemplateId
+            );
+
+            if (result.success) {
+                console.log('[UICardShop] 跳过成功');
+                this.hide();
+            } else {
+                console.error('[UICardShop] 跳过失败:', result.message);
+                UINotification.error(result.message || '操作失败', undefined, undefined, 'center');
+            }
+
+        } catch (error: any) {
+            console.error('[UICardShop] 跳过出错:', error);
+            UINotification.error(error.message || '操作失败', undefined, undefined, 'center');
+        } finally {
+            // 恢复取消按钮
+            if (this.m_btnCancel) {
+                this.m_btnCancel.enabled = true;
+            }
+        }
     }
 }

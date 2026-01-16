@@ -74,27 +74,29 @@ export class CardInteraction {
     }
 
     /**
-     * 购买普通卡片（kind 0-7）
+     * 批量购买普通卡片（kind 0-7）
      * 价格：100/张
+     * purchases: 要购买的卡片 kind 列表，每个元素表示一张卡（可重复）
      *
-     * entry fun buy_card(
+     * entry fun buy_cards(
      *     game: &mut Game,
      *     seat: &Seat,
-     *     kind: u8,
-     *     count: u8,
+     *     game_data: &GameData,
+     *     purchases: vector<u8>,
      *     map: &map::MapTemplate,
+     *     r: &Random,
      *     ctx: &mut TxContext
      * )
      */
-    static async buyCard(
+    static async buyCards(
         gameId: string,
         seatId: string,
-        kind: number,
-        count: number,
+        gameDataId: string,
+        purchases: number[],
         mapTemplateId: string
     ): Promise<TransactionResult> {
         try {
-            console.log('[CardInteraction] 购买普通卡片:', { gameId, seatId, kind, count, mapTemplateId });
+            console.log('[CardInteraction] 批量购买普通卡片:', { gameId, seatId, gameDataId, purchases, mapTemplateId });
 
             const tx = new Transaction();
             const config = SuiManager.instance.config;
@@ -106,26 +108,27 @@ export class CardInteraction {
             const packageId = config.packageId;
 
             tx.moveCall({
-                target: `${packageId}::game::buy_card`,
+                target: `${packageId}::game::buy_cards`,
                 arguments: [
                     tx.object(gameId),
                     tx.object(seatId),
-                    tx.pure.u8(kind),
-                    tx.pure.u8(count),
-                    tx.object(mapTemplateId)
+                    tx.object(gameDataId),
+                    tx.pure.vector('u8', purchases),
+                    tx.object(mapTemplateId),
+                    tx.object('0x8'),  // Random
                 ]
             });
 
             const result = await SuiManager.instance.signAndExecuteTransaction(tx);
 
-            console.log('[CardInteraction] 购买成功:', result.digest);
+            console.log('[CardInteraction] 批量购买成功:', result.digest);
             return {
                 success: true,
                 message: '卡片购买成功',
                 digest: result.digest
             };
         } catch (error: any) {
-            console.error('[CardInteraction] buyCard失败:', error);
+            console.error('[CardInteraction] buyCards失败:', error);
             return {
                 success: false,
                 message: error.message || '购买卡片失败'
@@ -134,29 +137,31 @@ export class CardInteraction {
     }
 
     /**
-     * 购买GM卡片（kind 8-16），需要GMPass
+     * 批量购买GM卡片（kind 8-16），需要GMPass
      * 价格：500/张
+     * purchases: 要购买的卡片 kind 列表，每个元素表示一张卡（可重复）
      *
-     * entry fun buy_gm_card(
+     * entry fun buy_gm_cards(
      *     game: &mut Game,
      *     seat: &Seat,
      *     gm_pass: &GMPass,
-     *     kind: u8,
-     *     count: u8,
+     *     game_data: &GameData,
+     *     purchases: vector<u8>,
      *     map: &map::MapTemplate,
+     *     r: &Random,
      *     ctx: &mut TxContext
      * )
      */
-    static async buyGMCard(
+    static async buyGMCards(
         gameId: string,
         seatId: string,
         gmPassId: string,
-        kind: number,
-        count: number,
+        gameDataId: string,
+        purchases: number[],
         mapTemplateId: string
     ): Promise<TransactionResult> {
         try {
-            console.log('[CardInteraction] 购买GM卡片:', { gameId, seatId, gmPassId, kind, count, mapTemplateId });
+            console.log('[CardInteraction] 批量购买GM卡片:', { gameId, seatId, gmPassId, gameDataId, purchases, mapTemplateId });
 
             const tx = new Transaction();
             const config = SuiManager.instance.config;
@@ -168,30 +173,89 @@ export class CardInteraction {
             const packageId = config.packageId;
 
             tx.moveCall({
-                target: `${packageId}::game::buy_gm_card`,
+                target: `${packageId}::game::buy_gm_cards`,
                 arguments: [
                     tx.object(gameId),
                     tx.object(seatId),
                     tx.object(gmPassId),
-                    tx.pure.u8(kind),
-                    tx.pure.u8(count),
-                    tx.object(mapTemplateId)
+                    tx.object(gameDataId),
+                    tx.pure.vector('u8', purchases),
+                    tx.object(mapTemplateId),
+                    tx.object('0x8'),  // Random
                 ]
             });
 
             const result = await SuiManager.instance.signAndExecuteTransaction(tx);
 
-            console.log('[CardInteraction] GM卡片购买成功:', result.digest);
+            console.log('[CardInteraction] GM卡片批量购买成功:', result.digest);
             return {
                 success: true,
                 message: 'GM卡片购买成功',
                 digest: result.digest
             };
         } catch (error: any) {
-            console.error('[CardInteraction] buyGMCard失败:', error);
+            console.error('[CardInteraction] buyGMCards失败:', error);
             return {
                 success: false,
                 message: error.message || '购买GM卡片失败'
+            };
+        }
+    }
+
+    /**
+     * 跳过卡片商店（不购买任何卡片）
+     *
+     * entry fun skip_card_shop(
+     *     game: &mut Game,
+     *     seat: &Seat,
+     *     game_data: &GameData,
+     *     map: &map::MapTemplate,
+     *     r: &Random,
+     *     ctx: &mut TxContext
+     * )
+     */
+    static async skipCardShop(
+        gameId: string,
+        seatId: string,
+        gameDataId: string,
+        mapTemplateId: string
+    ): Promise<TransactionResult> {
+        try {
+            console.log('[CardInteraction] 跳过卡片商店:', { gameId, seatId, gameDataId, mapTemplateId });
+
+            const tx = new Transaction();
+            const config = SuiManager.instance.config;
+
+            if (!config) {
+                throw new Error('SuiManager配置未初始化');
+            }
+
+            const packageId = config.packageId;
+
+            tx.moveCall({
+                target: `${packageId}::game::skip_card_shop`,
+                arguments: [
+                    tx.object(gameId),
+                    tx.object(seatId),
+                    tx.object(gameDataId),
+                    tx.object(mapTemplateId),
+                    tx.object('0x8'),  // Random
+                ]
+            });
+
+            const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+            console.log('[CardInteraction] 跳过卡片商店成功:', result.digest);
+            return {
+                success: true,
+                message: '已跳过卡片商店',
+                digest: result.digest
+            };
+        } catch (error: any) {
+            console.error('[CardInteraction] skipCardShop失败:', error);
+            return {
+                success: false,
+                message: error.message || '跳过卡片商店失败'
             };
         }
     }

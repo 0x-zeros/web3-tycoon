@@ -367,7 +367,7 @@ export class RollAndStepHandler {
                 const myPlayer = session.getMyPlayer();
                 if (player && myPlayer && player === myPlayer) {
                     import('../../../ui/core/UIManager').then(({ UIManager }) => {
-                        UIManager.getInstance().show('CardShop');
+                        UIManager.instance.showUI('CardShop');
                     }).catch(err => {
                         console.error('[RollAndStepHandler] 打开卡片商店失败', err);
                     });

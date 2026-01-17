@@ -110,18 +110,24 @@ export class CardUsageManager {
         }
 
         try {
-            console.log(`[CardUsageManager] 使用卡片: ${card.name} (kind=${card.kind})`);
+            console.log(`[CardUsageManager] 使用卡片: ${card.name} (kind=${card.kind}, targetType=${card.targetType})`);
             this.currentUsingCard = card;  // 记录当前使用的卡片
 
             if (card.canUseDirectly()) {
                 // 直接使用（免租卡、转向卡）
                 await this.handleDirectCard(card);
-            } else if (card.needsTileTarget()) {
-                // 需要选择tile
-                await this.handleTileSelectionCard(card);
+            } else if (card.needsMultipleTargets()) {
+                // 需要多个目标（如瞬移卡：先选玩家再选地块）
+                await this.handleMultiTargetCard(card);
             } else if (card.needsPlayerTarget()) {
-                // 需要选择玩家
+                // 只需要选择玩家
                 await this.handlePlayerSelectionCard(card);
+            } else if (card.needsTileTarget()) {
+                // 只需要选择tile
+                await this.handleTileSelectionCard(card);
+            } else if (card.needsBuildingTarget()) {
+                // 需要选择建筑
+                await this.handleBuildingSelectionCard(card);
             }
         } catch (error: any) {
             console.error('[CardUsageManager] 使用卡片失败:', error);
@@ -129,6 +135,74 @@ export class CardUsageManager {
         } finally {
             this.currentUsingCard = null;  // 清除记录
         }
+    }
+
+    /**
+     * 处理需要多个目标的卡片（如瞬移卡：先选玩家再选地块）
+     */
+    private async handleMultiTargetCard(card: Card): Promise<void> {
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            await UIMessage.error('游戏会话未初始化');
+            return;
+        }
+
+        const params: number[] = [];
+        let targetDesc = '';
+
+        // 按顺序处理各目标类型：Player → Tile → Building
+
+        // 1. 选择玩家（如果需要）
+        if (card.needsPlayerTarget()) {
+            console.log(`[CardUsageManager] ${card.name}: 选择目标玩家`);
+            const playerIndex = await this.playerSelector.showPlayerSelection(false);
+            if (playerIndex === null) {
+                console.log('[CardUsageManager] 用户取消选择玩家');
+                return;
+            }
+            params.push(playerIndex);
+
+            const targetPlayer = session.getPlayerByIndex(playerIndex);
+            targetDesc = targetPlayer?.getName() || `玩家${playerIndex + 1}`;
+            console.log(`[CardUsageManager] 选中玩家: ${targetDesc} (index=${playerIndex})`);
+        }
+
+        // 2. 选择地块（如果需要）
+        if (card.needsTileTarget()) {
+            console.log(`[CardUsageManager] ${card.name}: 选择目标地块`);
+
+            // 对于瞬移卡，目标地块范围是全地图（不限制范围）
+            const selectedTile = await this.tileSelector.showTileSelection(card, 0);
+            if (selectedTile === null) {
+                console.log('[CardUsageManager] 用户取消选择地块');
+                return;
+            }
+
+            // 瞬移卡参数：[player_index, tile_id]
+            params.push(selectedTile);
+            targetDesc += ` → Tile ${selectedTile}`;
+            console.log(`[CardUsageManager] 选中地块: ${selectedTile}`);
+        }
+
+        // 3. 选择建筑（如果需要）
+        if (card.needsBuildingTarget()) {
+            console.log(`[CardUsageManager] ${card.name}: 选择目标建筑`);
+            // TODO: 实现建筑选择器
+            await UIMessage.error('建筑选择功能尚未实现');
+            return;
+        }
+
+        console.log(`[CardUsageManager] ${card.name} 参数:`, params);
+        await this.callUseCard(card.kind, params, card.name, targetDesc);
+    }
+
+    /**
+     * 处理需要选择建筑的卡片
+     */
+    private async handleBuildingSelectionCard(card: Card): Promise<void> {
+        // TODO: 实现建筑选择器
+        console.log(`[CardUsageManager] 建筑选择卡片: ${card.name}`);
+        await UIMessage.error('建筑选择功能尚未实现');
     }
 
     /**

@@ -25,12 +25,12 @@ export class Card {
     // 卡片放置范围（NPC类卡片）
     public readonly placementRange: number = 10;
 
-    // 目标类型常量（与Move端保持一致）
-    static readonly TARGET_NONE = 0;
-    static readonly TARGET_PLAYER = 1;
-    static readonly TARGET_TILE = 2;
-    static readonly TARGET_PLAYER_TILE = 3;  // 已废弃，保留向后兼容
-    static readonly TARGET_BUILDING = 4;      // 选择建筑（建造卡、改建卡）
+    // 目标类型 Bit Flags（与 Move 端保持一致，可组合）
+    // 例如：TARGET_PLAYER | TARGET_TILE = 3 表示先选玩家再选地块
+    static readonly TARGET_NONE = 0;          // 0b0000
+    static readonly TARGET_PLAYER = 1;        // 0b0001
+    static readonly TARGET_TILE = 2;          // 0b0010
+    static readonly TARGET_BUILDING = 4;      // 0b0100
 
     constructor(kind: number, count: number) {
         this.kind = kind;
@@ -74,7 +74,7 @@ export class Card {
         return names[this.rarity] || '未知';
     }
 
-    // === 卡片类型判断方法 ===
+    // === 卡片类型判断方法（使用位运算） ===
 
     /**
      * 是否可以直接使用（不需要选择目标）
@@ -85,33 +85,35 @@ export class Card {
     }
 
     /**
-     * 是否需要选择玩家
+     * 是否需要选择玩家（检测 PLAYER bit）
      */
     needsPlayerTarget(): boolean {
-        // 冰冻卡(4)、奖励卡、费用卡
-        return this.targetType === Card.TARGET_PLAYER;
+        return (this.targetType & Card.TARGET_PLAYER) !== 0;
     }
 
     /**
-     * 是否需要选择tile
+     * 是否需要选择tile（检测 TILE bit）
      */
     needsTileTarget(): boolean {
-        // 遥控骰子(0)、路障(1)、炸弹(2)、恶犬(5)、净化卡(6)、召唤卡(15)、驱逐卡(16)
-        return this.targetType === Card.TARGET_TILE;
+        return (this.targetType & Card.TARGET_TILE) !== 0;
     }
 
     /**
-     * 是否需要先选玩家再选地块（瞬移卡）
-     */
-    needsPlayerAndTileTarget(): boolean {
-        return this.targetType === Card.TARGET_PLAYER_TILE;
-    }
-
-    /**
-     * 是否需要选择建筑
+     * 是否需要选择建筑（检测 BUILDING bit）
      */
     needsBuildingTarget(): boolean {
-        return this.targetType === Card.TARGET_BUILDING;
+        return (this.targetType & Card.TARGET_BUILDING) !== 0;
+    }
+
+    /**
+     * 是否需要多个目标（如瞬移卡需要选玩家+地块）
+     */
+    needsMultipleTargets(): boolean {
+        const count =
+            (this.needsPlayerTarget() ? 1 : 0) +
+            (this.needsTileTarget() ? 1 : 0) +
+            (this.needsBuildingTarget() ? 1 : 0);
+        return count > 1;
     }
 
     /**

@@ -12,13 +12,15 @@
  */
 
 /**
- * 卡牌目标类型枚举
+ * 卡牌目标类型枚举 (Bit Flags)
+ * 可组合：PLAYER | TILE = 3 表示需要选择玩家+地块
  */
 export enum CardTargetType {
-    NONE = 0,              // 无目标
-    PLAYER = 1,            // 玩家
-    TILE = 2,              // 地块
-    PLAYER_OR_TILE = 3     // 玩家或地块
+    NONE = 0,              // 0b0000 无目标
+    PLAYER = 1,            // 0b0001 选择玩家
+    TILE = 2,              // 0b0010 选择地块
+    PLAYER_TILE = 3,       // 0b0011 先选玩家，再选地块（PLAYER | TILE）
+    BUILDING = 4           // 0b0100 选择建筑
 }
 
 /**
@@ -114,7 +116,7 @@ export class Card {
         return '';
     }
 
-    // ========================= 查询方法 =========================
+    // ========================= 查询方法（使用位运算） =========================
 
     /**
      * 是否需要目标
@@ -124,32 +126,49 @@ export class Card {
     }
 
     /**
-     * 是否需要玩家目标
+     * 是否需要玩家目标（检测 PLAYER bit）
      */
     public needsPlayerTarget(): boolean {
-        return this.targetType === CardTargetType.PLAYER ||
-               this.targetType === CardTargetType.PLAYER_OR_TILE;
+        return (this.targetType & CardTargetType.PLAYER) !== 0;
     }
 
     /**
-     * 是否需要地块目标
+     * 是否需要地块目标（检测 TILE bit）
      */
     public needsTileTarget(): boolean {
-        return this.targetType === CardTargetType.TILE ||
-               this.targetType === CardTargetType.PLAYER_OR_TILE;
+        return (this.targetType & CardTargetType.TILE) !== 0;
+    }
+
+    /**
+     * 是否需要建筑目标（检测 BUILDING bit）
+     */
+    public needsBuildingTarget(): boolean {
+        return (this.targetType & CardTargetType.BUILDING) !== 0;
+    }
+
+    /**
+     * 是否需要多个目标
+     */
+    public needsMultipleTargets(): boolean {
+        const count =
+            (this.needsPlayerTarget() ? 1 : 0) +
+            (this.needsTileTarget() ? 1 : 0) +
+            (this.needsBuildingTarget() ? 1 : 0);
+        return count > 1;
     }
 
     /**
      * 获取目标类型名称
      */
     public getTargetTypeName(): string {
-        switch (this.targetType) {
-            case CardTargetType.NONE: return '无目标';
-            case CardTargetType.PLAYER: return '玩家';
-            case CardTargetType.TILE: return '地块';
-            case CardTargetType.PLAYER_OR_TILE: return '玩家或地块';
-            default: return '未知';
-        }
+        if (this.targetType === CardTargetType.NONE) return '无目标';
+
+        const parts: string[] = [];
+        if (this.needsPlayerTarget()) parts.push('玩家');
+        if (this.needsTileTarget()) parts.push('地块');
+        if (this.needsBuildingTarget()) parts.push('建筑');
+
+        return parts.length > 0 ? parts.join('+') : '未知';
     }
 
     /**

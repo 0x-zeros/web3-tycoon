@@ -54,12 +54,24 @@ public struct DropRule has store, drop {
     quantity: u64
 }
 
-// ===== Card Target Types 目标类型常量 =====
-fun target_none(): u8 { 0 }
-fun target_player(): u8 { 1 }
-fun target_tile(): u8 { 2 }
-// 3 已废弃（原 target_player_or_tile）
-fun target_building(): u8 { 4 }
+// ===== Card Target Types (Bit Flags) =====
+// 可组合：TARGET_PLAYER | TARGET_TILE = 3 表示需要选择玩家+地块
+const TARGET_NONE: u8 = 0;      // 0b0000
+const TARGET_PLAYER: u8 = 1;    // 0b0001
+const TARGET_TILE: u8 = 2;      // 0b0010
+const TARGET_BUILDING: u8 = 4;  // 0b0100
+
+// 辅助函数（用于判断是否包含某 flag）
+public(package) fun has_target_player(target_type: u8): bool { (target_type & TARGET_PLAYER) != 0 }
+public(package) fun has_target_tile(target_type: u8): bool { (target_type & TARGET_TILE) != 0 }
+public(package) fun has_target_building(target_type: u8): bool { (target_type & TARGET_BUILDING) != 0 }
+
+// 兼容旧代码的辅助函数
+fun target_none(): u8 { TARGET_NONE }
+fun target_player(): u8 { TARGET_PLAYER }
+fun target_tile(): u8 { TARGET_TILE }
+fun target_building(): u8 { TARGET_BUILDING }
+fun target_player_tile(): u8 { TARGET_PLAYER | TARGET_TILE }  // = 3
 
 // ===== Registry Creation 注册表创建 =====
 
@@ -201,11 +213,12 @@ fun init_basic_cards(registry: &mut CardRegistry) {
     // ===== GM卡片 (kind 8-16, gm=true) =====
 
     // kind=8 瞬移卡：传送玩家到任意位置，价格6000
+    // target_type = PLAYER | TILE = 3（先选玩家，再选地块）
     register_card_internal(registry,
         types::CARD_TELEPORT(),
         b"Teleport",
         b"Teleport a player to any tile",
-        target_player(),
+        target_player_tile(),
         0,
         3,
         6000,

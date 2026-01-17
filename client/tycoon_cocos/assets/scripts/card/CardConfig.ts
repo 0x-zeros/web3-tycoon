@@ -8,7 +8,7 @@ export interface CardConfig {
     kind: number;
     name: string;
     description: string;
-    targetType: number;  // 0=无, 1=玩家, 2=地块, 4=建筑
+    targetType: number;  // Bit Flag: 0=无, 1=玩家, 2=地块, 3=玩家+地块, 4=建筑
     value: number;
     rarity: number;      // 0=common, 1=rare, 2=epic, 3=gm
     price: number;       // 卡片价格（与 Move 端一致）
@@ -16,7 +16,12 @@ export interface CardConfig {
     iconPath: string;
 }
 
-// targetType: 0=无, 1=玩家, 2=地块, 4=建筑 (3 已废弃)
+// Target Type Bit Flags（可组合）
+// 0b0000 (0) = NONE      无目标
+// 0b0001 (1) = PLAYER    选择玩家
+// 0b0010 (2) = TILE      选择地块
+// 0b0011 (3) = PLAYER | TILE   先选玩家，再选地块（如瞬移卡）
+// 0b0100 (4) = BUILDING  选择建筑
 const CARD_CONFIGS: CardConfig[] = [
     // 普通卡片 (0-7, gm=false)
     { kind: 0, name: '遥控骰子', description: '控制下一次移动到指定位置', targetType: 2, value: 3, rarity: 0, price: 3000, gm: false, iconPath: 'web3/cards/move_ctrl' },
@@ -29,7 +34,7 @@ const CARD_CONFIGS: CardConfig[] = [
     { kind: 7, name: '转向卡', description: '改变移动方向', targetType: 0, value: 0, rarity: 0, price: 1000, gm: false, iconPath: 'web3/cards/turn' },
 
     // GM卡片 (8-16, gm=true，需要GMPass购买)
-    { kind: 8, name: '瞬移卡', description: '传送玩家到指定地块', targetType: 1, value: 0, rarity: 3, price: 6000, gm: true, iconPath: 'web3/cards/teleport' },
+    { kind: 8, name: '瞬移卡', description: '传送玩家到指定地块', targetType: 3, value: 0, rarity: 3, price: 6000, gm: true, iconPath: 'web3/cards/teleport' },  // PLAYER | TILE = 3
     { kind: 9, name: '奖励卡（小）', description: '给予玩家1万金币', targetType: 1, value: 10000, rarity: 3, price: 2000, gm: true, iconPath: 'web3/cards/bonus_s' },
     { kind: 10, name: '奖励卡（大）', description: '给予玩家10万金币', targetType: 1, value: 100000, rarity: 3, price: 5000, gm: true, iconPath: 'web3/cards/bonus_l' },
     { kind: 11, name: '费用卡（小）', description: '扣除玩家1万金币', targetType: 1, value: 10000, rarity: 3, price: 2000, gm: true, iconPath: 'web3/cards/fee_s' },

@@ -142,9 +142,9 @@ export class UICardBuildingSelector {
 
         const buildings = session.getBuildings();
 
-        // 建造卡：未满级建筑（level < 5）
+        // 建造卡（GM卡）：所有未满级建筑（不限制所有权）
         if (card.isConstructionCard()) {
-            return buildings.filter(b => b.canUpgrade());
+            return buildings.filter(b => b.level < 5);
         }
 
         // 改建卡：所有2x2建筑（可以更换类型）

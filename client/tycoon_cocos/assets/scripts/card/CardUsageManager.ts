@@ -10,6 +10,7 @@
 import { Card } from './Card';
 import { UICardTileSelector } from '../ui/game/UICardTileSelector';
 import { UIPlayerSelector } from '../ui/game/UIPlayerSelector';
+import { UICardBuildingSelector } from '../ui/game/UICardBuildingSelector';
 import { UIMessage } from '../ui/utils/UIMessage';
 import { UINotification } from '../ui/utils/UINotification';
 import { GameInitializer } from '../core/GameInitializer';
@@ -27,6 +28,7 @@ export class CardUsageManager {
     private static _instance: CardUsageManager;
     private tileSelector: UICardTileSelector;
     private playerSelector: UIPlayerSelector;
+    private buildingSelector: UICardBuildingSelector;
 
     /** 当前正在使用的卡片（用于检测再次点击取消） */
     private currentUsingCard: Card | null = null;
@@ -34,6 +36,7 @@ export class CardUsageManager {
     private constructor() {
         this.tileSelector = new UICardTileSelector();
         this.playerSelector = new UIPlayerSelector();
+        this.buildingSelector = new UICardBuildingSelector();
     }
 
     static get instance(): CardUsageManager {
@@ -75,6 +78,19 @@ export class CardUsageManager {
                 card.needsPlayerTarget()) {
                 console.log('[CardUsageManager] 再次点击同一张卡，取消使用');
                 UIPlayerSelector.cancelSelection();
+                this.currentUsingCard = null;
+                return;
+            }
+        }
+
+        // 检查是否正在选择建筑目标（建造卡、改建卡等）
+        if (UICardBuildingSelector.isSelecting()) {
+            // 如果再次点击同一张卡（需要建筑目标的卡），则取消选择
+            if (this.currentUsingCard &&
+                this.currentUsingCard.kind === card.kind &&
+                card.needsBuildingTarget()) {
+                console.log('[CardUsageManager] 再次点击同一张卡，取消使用');
+                UICardBuildingSelector.cancelSelection();
                 this.currentUsingCard = null;
                 return;
             }
@@ -187,9 +203,16 @@ export class CardUsageManager {
         // 3. 选择建筑（如果需要）
         if (card.needsBuildingTarget()) {
             console.log(`[CardUsageManager] ${card.name}: 选择目标建筑`);
-            // TODO: 实现建筑选择器
-            await UIMessage.error('建筑选择功能尚未实现');
-            return;
+
+            const buildingId = await this.buildingSelector.showBuildingSelection(card);
+            if (buildingId === null) {
+                console.log('[CardUsageManager] 用户取消选择建筑');
+                return;
+            }
+
+            params.push(buildingId);
+            targetDesc += ` → Building #${buildingId}`;
+            console.log(`[CardUsageManager] 选中建筑: ${buildingId}`);
         }
 
         console.log(`[CardUsageManager] ${card.name} 参数:`, params);
@@ -200,9 +223,18 @@ export class CardUsageManager {
      * 处理需要选择建筑的卡片
      */
     private async handleBuildingSelectionCard(card: Card): Promise<void> {
-        // TODO: 实现建筑选择器
         console.log(`[CardUsageManager] 建筑选择卡片: ${card.name}`);
-        await UIMessage.error('建筑选择功能尚未实现');
+
+        const buildingId = await this.buildingSelector.showBuildingSelection(card);
+        if (buildingId === null) {
+            console.log('[CardUsageManager] 用户取消选择建筑');
+            return;
+        }
+
+        console.log(`[CardUsageManager] 选中建筑: ${buildingId}`);
+
+        const params = [buildingId];
+        await this.callUseCard(card.kind, params, card.name, `Building #${buildingId}`);
     }
 
     /**

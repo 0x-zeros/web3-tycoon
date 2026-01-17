@@ -28,7 +28,8 @@ public struct Card has store, copy, drop {
     value: u64,
     rarity: u8,
     price: u64,    // 卡片价格
-    gm: bool       // 是否需要 GMPass
+    gm: bool,      // 是否需要 GMPass
+    range: u8      // 选择范围：0=全地图，255=动态计算（遥控骰子），其他=步数限制
 }
 
 // ===== CardRegistry 全局卡牌注册表 =====
@@ -113,8 +114,9 @@ public(package) fun create_and_share_drop_config(ctx: &mut TxContext) {
 
 fun init_basic_cards(registry: &mut CardRegistry) {
     // ===== 普通卡片 (kind 0-7, gm=false) =====
+    // range: 0=全地图, 255=动态计算(遥控骰子), 其他=步数限制
 
-    // kind=0 遥控骰子：控制移动步数，价格3000
+    // kind=0 遥控骰子：控制移动步数，价格3000，range=255(动态计算)
     register_card_internal(registry,
         types::CARD_MOVE_CTRL(),
         b"Move Control",
@@ -123,10 +125,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         3,
         0,
         3000,   // price
-        false   // gm
+        false,  // gm
+        255     // range: 动态计算
     );
 
-    // kind=1 路障卡：放置路障阻挡，价格1000
+    // kind=1 路障卡：放置路障阻挡，价格1000，range=10
     register_card_internal(registry,
         types::CARD_BARRIER(),
         b"Barrier",
@@ -135,10 +138,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         0,
         1000,
-        false
+        false,
+        10      // range: 10步范围
     );
 
-    // kind=2 炸弹卡：送人去医院，价格2000
+    // kind=2 炸弹卡：送人去医院，价格2000，range=10
     register_card_internal(registry,
         types::CARD_BOMB(),
         b"Bomb",
@@ -147,10 +151,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         1,
         2000,
-        false
+        false,
+        10      // range: 10步范围
     );
 
-    // kind=3 免租卡：免交一次租金，价格2000
+    // kind=3 免租卡：免交一次租金，价格2000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_RENT_FREE(),
         b"Rent Free",
@@ -159,10 +164,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         1,
         1,
         2000,
-        false
+        false,
+        0       // range: 不需要选地块
     );
 
-    // kind=4 冰冻卡：冻结对手一回合，价格2000
+    // kind=4 冰冻卡：冻结对手一回合，价格2000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_FREEZE(),
         b"Freeze",
@@ -171,10 +177,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         1,
         2,
         2000,
-        false
+        false,
+        0       // range: 不需要选地块
     );
 
-    // kind=5 狗狗卡：放置狗改变方向，价格1000
+    // kind=5 狗狗卡：放置狗改变方向，价格1000，range=10
     register_card_internal(registry,
         types::CARD_DOG(),
         b"Dog",
@@ -183,10 +190,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         1,
         1000,
-        false
+        false,
+        10      // range: 10步范围
     );
 
-    // kind=6 净化卡：清除负面效果，价格1000
+    // kind=6 净化卡：清除负面效果，价格1000，range=10
     register_card_internal(registry,
         types::CARD_CLEANSE(),
         b"Cleanse",
@@ -195,10 +203,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         0,
         1000,
-        false
+        false,
+        10      // range: 10步范围
     );
 
-    // kind=7 转向卡：改变方向，价格1000
+    // kind=7 转向卡：改变方向，价格1000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_TURN(),
         b"Turn Card",
@@ -207,12 +216,13 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         0,
         1000,
-        false
+        false,
+        0       // range: 不需要选地块
     );
 
     // ===== GM卡片 (kind 8-16, gm=true) =====
 
-    // kind=8 瞬移卡：传送玩家到任意位置，价格6000
+    // kind=8 瞬移卡：传送玩家到任意位置，价格6000，range=0(全地图)
     // target_type = PLAYER | TILE = 3（先选玩家，再选地块）
     register_card_internal(registry,
         types::CARD_TELEPORT(),
@@ -222,10 +232,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         3,
         6000,
-        true
+        true,
+        0       // range: 全地图
     );
 
-    // kind=9 奖励卡(小)：获得1万金币，价格2000
+    // kind=9 奖励卡(小)：获得1万金币，价格2000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_BONUS_S(),
         b"Small Bonus",
@@ -234,10 +245,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         10000,
         3,
         2000,
-        true
+        true,
+        0       // range: 不需要选地块
     );
 
-    // kind=10 奖励卡(大)：获得10万金币，价格5000
+    // kind=10 奖励卡(大)：获得10万金币，价格5000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_BONUS_L(),
         b"Large Bonus",
@@ -246,10 +258,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         100000,
         3,
         5000,
-        true
+        true,
+        0       // range: 不需要选地块
     );
 
-    // kind=11 费用卡(小)：对手扣1万，价格2000
+    // kind=11 费用卡(小)：对手扣1万，价格2000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_FEE_S(),
         b"Small Fee",
@@ -258,10 +271,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         10000,
         3,
         2000,
-        true
+        true,
+        0       // range: 不需要选地块
     );
 
-    // kind=12 费用卡(大)：对手扣10万，价格5000
+    // kind=12 费用卡(大)：对手扣10万，价格5000，range=0(不需要选地块)
     register_card_internal(registry,
         types::CARD_FEE_L(),
         b"Large Fee",
@@ -270,10 +284,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         100000,
         3,
         5000,
-        true
+        true,
+        0       // range: 不需要选地块
     );
 
-    // kind=13 建造卡：升级建筑，价格4000
+    // kind=13 建造卡：升级建筑，价格4000，range=0(选择建筑，不是地块)
     register_card_internal(registry,
         types::CARD_CONSTRUCTION(),
         b"Construction",
@@ -282,10 +297,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         3,
         4000,
-        true
+        true,
+        0       // range: 选择建筑，不是地块
     );
 
-    // kind=14 改建卡：更换建筑类型，价格4000
+    // kind=14 改建卡：更换建筑类型，价格4000，range=0(选择建筑，不是地块)
     register_card_internal(registry,
         types::CARD_RENOVATION(),
         b"Renovation",
@@ -294,10 +310,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         3,
         4000,
-        true
+        true,
+        0       // range: 选择建筑，不是地块
     );
 
-    // kind=15 召唤卡：放置NPC，价格3000
+    // kind=15 召唤卡：放置NPC，价格3000，range=10
     register_card_internal(registry,
         types::CARD_SUMMON(),
         b"Summon",
@@ -306,10 +323,11 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         3,
         3000,
-        true
+        true,
+        10      // range: 10步范围
     );
 
-    // kind=16 驱逐卡：移除NPC，价格3000
+    // kind=16 驱逐卡：移除NPC，价格3000，range=10
     register_card_internal(registry,
         types::CARD_BANISH(),
         b"Banish",
@@ -318,7 +336,8 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         0,
         3,
         3000,
-        true
+        true,
+        10      // range: 10步范围
     );
 }
 
@@ -369,7 +388,8 @@ fun register_card_internal(
     value: u64,
     rarity: u8,
     price: u64,
-    gm: bool
+    gm: bool,
+    range: u8
 ) {
     let card = Card {
         kind,
@@ -379,7 +399,8 @@ fun register_card_internal(
         value,
         rarity,
         price,
-        gm
+        gm,
+        range
     };
 
     let expected_idx = registry.cards.length();
@@ -399,9 +420,10 @@ public(package) fun register_card_for_admin(
     value: u64,
     rarity: u8,
     price: u64,
-    gm: bool
+    gm: bool,
+    range: u8
 ) {
-    register_card_internal(registry, kind, name, description, target_type, value, rarity, price, gm);
+    register_card_internal(registry, kind, name, description, target_type, value, rarity, price, gm, range);
 }
 
 // ===== Card Management Functions 卡牌管理函数 =====

@@ -126,6 +126,7 @@ entry fun admin_register_card(
     rarity: u8,
     price: u64,
     gm: bool,
+    range: u8,
     _admin: &AdminCap,
     _ctx: &mut TxContext
 ) {
@@ -138,7 +139,8 @@ entry fun admin_register_card(
         value,
         rarity,
         price,
-        gm
+        gm,
+        range
     );
 }
 

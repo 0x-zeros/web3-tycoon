@@ -155,6 +155,13 @@ export class UICardTileSelector {
             return [];
         }
 
+        // 全地图选择（如瞬移卡）
+        if (card.isFullMapSelection()) {
+            const allTiles = this.getAllValidTiles(mapTemplate);
+            console.log(`[UICardTileSelector] 全地图选择，可选tiles数量: ${allTiles.length}`);
+            return allTiles;
+        }
+
         const maxRange = card.getMaxRange();
         const graph = new MapGraph(mapTemplate);
         const pathfinder = new BFSPathfinder(graph);
@@ -201,6 +208,33 @@ export class UICardTileSelector {
         const filteredTiles = this.filterTerminalTiles(allReachableTiles, mapTemplate);
         console.log(`[UICardTileSelector] 过滤端点tile后: ${filteredTiles.length} (过滤前: ${allReachableTiles.length})`);
         return filteredTiles;
+    }
+
+    /**
+     * 获取所有有效的tile（用于全地图选择）
+     * 排除医院等特殊tile
+     */
+    private getAllValidTiles(template: MapTemplate): number[] {
+        const validTiles: number[] = [];
+
+        for (let tileId = 0; tileId < template.tiles_static.size; tileId++) {
+            const tileStatic = template.tiles_static.get(tileId);
+            if (!tileStatic) continue;
+
+            // 检查邻居数量，排除端点tile（如医院，只有一个邻居）
+            const validNeighbors = [
+                tileStatic.w,
+                tileStatic.n,
+                tileStatic.e,
+                tileStatic.s
+            ].filter(n => n !== INVALID_TILE_ID);
+
+            if (validNeighbors.length > 1) {
+                validTiles.push(tileId);
+            }
+        }
+
+        return validTiles;
     }
 
     /**

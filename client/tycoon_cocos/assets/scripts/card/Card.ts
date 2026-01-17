@@ -69,6 +69,14 @@ export class Card {
         return this.config?.targetType || 0;
     }
 
+    /**
+     * 获取卡片范围配置
+     * 0=全地图，255=动态计算，其他=步数限制
+     */
+    get range(): number {
+        return this.config?.range ?? 0;
+    }
+
     getRarityName(): string {
         const names = ['普通', '稀有', '史诗', 'GM'];
         return names[this.rarity] || '未知';
@@ -182,20 +190,25 @@ export class Card {
 
     /**
      * 获取卡片使用的最大步数/范围
-     * 遥控骰子根据当前选择的骰子数量计算范围
+     * 基于 config.range 配置：
+     * - 255: 动态计算（遥控骰子根据骰子数量）
+     * - 0: 全地图（用于瞬移卡等）
+     * - 其他: 固定步数限制
      */
     getMaxRange(): number {
-        if (this.isRemoteControlCard()) {
-            // 遥控骰子：根据当前选择的骰子数量计算
-            // 1个骰子→6步，2个→12步，3个→18步
+        // 255 表示动态计算（遥控骰子）
+        if (this.range === 255) {
             const diceCount = UIInGameDice.getSelectedDiceCount();
             return diceCount * 6;
-        } else if (this.isCleanseCard()) {
-            return 10; // 净化卡10步
-        } else if (this.isSimpleNpcCard()) {
-            return 10; // NPC放置卡10步范围
         }
-        return 0;
+        return this.range;
+    }
+
+    /**
+     * 是否为全地图选择（range=0 且需要选择tile）
+     */
+    isFullMapSelection(): boolean {
+        return this.range === 0 && this.needsTileTarget();
     }
 
     /**

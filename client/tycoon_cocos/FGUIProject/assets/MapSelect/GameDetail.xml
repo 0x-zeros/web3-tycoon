@@ -4,21 +4,6 @@
     <graph id="n2_qh36" name="bg" xy="512,361" pivot="0.5,0.5" anchor="true" size="1024,722" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
-    <component id="n28_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="1024,722">
-      <relation target="" sidePair="width-width,height-height"/>
-    </component>
-    <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,557" size="218,62">
-      <relation target="" sidePair="left-left,bottom-bottom"/>
-      <Button title="退出游戏"/>
-    </component>
-    <component id="n3_qh36" name="btn_ok" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="390,557" size="218,62">
-      <relation target="" sidePair="right-right,bottom-bottom"/>
-      <Button title="确定"/>
-    </component>
-    <component id="n19_qh36" name="btn_startGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,558" size="218,62">
-      <relation target="" sidePair="left-left,bottom-bottom"/>
-      <Button title="开始游戏"/>
-    </component>
     <text id="n8_qh36" name="gameid" xy="158,76" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
     <text id="n9_qh36" name="mapid" xy="158,142" size="856,43" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd0b6e1fad3fea99b4f0b31f25d7e3374c6c02b6d5a17323605236bffe4ece"/>
     <text id="n10_qh36" name="player_0" xy="55,234" size="165,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece"/>
@@ -37,6 +22,23 @@
     <text id="n23_no43" name="starting_cash_desc" xy="32,313" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="初始现金："/>
     <text id="n24_no43" name="price_rise_days_desc" xy="32,367" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="物价提升天数："/>
     <text id="n25_no43" name="max_rounds_desc" xy="31,420" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="天数限制："/>
+    <text id="n29_l4yk" name="gm_desc" xy="31,475" size="221,39" fontSize="22" color="#ffffff" autoSize="none" text="gm权限："/>
+    <text id="n30_l4yk" name="gm" xy="272,475" size="149,43" fontSize="22" color="#ffffff" align="right" autoSize="none" autoClearText="true" text="无"/>
+    <component id="n28_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="1024,722">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
+    <component id="n4_qh36" name="btn_quitGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="61,557" size="218,62">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="退出游戏"/>
+    </component>
+    <component id="n3_qh36" name="btn_ok" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="390,557" size="218,62">
+      <relation target="" sidePair="right-right,bottom-bottom"/>
+      <Button title="确定"/>
+    </component>
+    <component id="n19_qh36" name="btn_startGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="756,558" size="218,62">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="开始游戏"/>
+    </component>
     <component id="n26_lizy" name="btn_watch" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="391,641" size="218,62">
       <relation target="" sidePair="right-right,bottom-bottom"/>
       <Button title="观战"/>

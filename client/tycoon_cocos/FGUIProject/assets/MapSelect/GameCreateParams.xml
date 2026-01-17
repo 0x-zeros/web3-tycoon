@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1024,512">
-  <controller name="max_rounds" pages="0,infinite,1,limited" selected="1"/>
+  <controller name="max_rounds" pages="0,infinite,1,limited" selected="0"/>
   <displayList>
     <graph id="n2_qh36" name="bg" xy="511,255" pivot="0.5,0.5" anchor="true" size="1024,512" type="rect" fillColor="#ff6699cc">
       <relation target="" sidePair="width-width,height-height"/>

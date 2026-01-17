@@ -14,6 +14,7 @@ import {
     MIN_MAX_ROUNDS,
     MAX_MAX_ROUNDS
 } from "../../../sui/types/constants";
+import { SETTING_GM_MODE } from "../../../sui/types/game";
 
 const { ccclass } = _decorator;
 
@@ -350,13 +351,13 @@ export class UIGameCreateParams extends UIBase {
             maxRounds: this.m_controllerMaxRounds.selectedIndex === 0
                 ? 0  // 无限期
                 : parseInt(this.m_textMaxRounds.text),  // 有限期
-            gmMode: this.m_btnGm?.selected || false  // GM模式
+            settings: this.m_btnGm?.selected ? SETTING_GM_MODE : 0  // 游戏设置位字段
         };
 
         console.log('[UIGameCreateParams] Create game with params:', {
             ...params,
             startingCash: params.startingCash.toString(),  // BigInt需要转为string才能log
-            gmMode: params.gmMode
+            settings: params.settings
         });
 
         // 发送事件，让UIMapList处理实际创建

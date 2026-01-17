@@ -546,7 +546,8 @@ export class QueryService {
                 pending_decision: Number(fields.pending_decision) || 0,
                 decision_tile: Number(fields.decision_tile) || 0,
                 decision_amount: BigInt(fields.decision_amount || 0),
-                winner: this.parseOption<string>(fields.winner)  // ✅ 修复 Option 类型解析
+                winner: this.parseOption<string>(fields.winner),  // ✅ 修复 Option 类型解析
+                settings: Number(fields.settings) || 0  // ✅ 游戏设置位字段
             };
         } catch (error) {
             console.error('[QueryService] Failed to parse game object:', error);

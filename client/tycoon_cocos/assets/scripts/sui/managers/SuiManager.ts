@@ -1599,24 +1599,17 @@ export class SuiManager {
             console.log('[SuiManager] I am a player, loading game scene...');
             try {
                 await this.loadGameScene(gameId, templateMapId);
-                // 成功后才从列表移除
-                const index = this._cachedGames.findIndex(g => g.id === gameId);
-                if (index >= 0) {
-                    this._cachedGames.splice(index, 1);
-                    EventBus.emit(EventTypes.Sui.GamesListUpdated, {
-                        games: this._cachedGames
-                    });
-                }
             } catch (error) {
                 console.error('[SuiManager] Failed to load game scene:', error);
-                // 加载失败，只更新状态，不移除
-                const cachedGame = this._cachedGames.find(g => g.id === gameId);
-                if (cachedGame) {
-                    cachedGame.status = GameStatus.ACTIVE;
-                    EventBus.emit(EventTypes.Sui.GamesListUpdated, {
-                        games: this._cachedGames
-                    });
-                }
+            }
+
+            // 统一处理：只更新状态，不从列表移除（退出游戏后仍能在列表中看到）
+            const cachedGame = this._cachedGames.find(g => g.id === gameId);
+            if (cachedGame) {
+                cachedGame.status = GameStatus.ACTIVE;
+                EventBus.emit(EventTypes.Sui.GamesListUpdated, {
+                    games: this._cachedGames
+                });
             }
         } else {
             console.log('[SuiManager] Not a player, updating cache');

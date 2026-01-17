@@ -574,7 +574,24 @@ export class BlockRegistry {
             description: '触发全局新闻事件'
         }
     });
-    
+
+    // 卡片商店
+    this.register({
+        id: 'web3:card_shop',
+        displayName: '卡片商店',
+        isPlant: false,
+        isObstacle: true,
+        isDestructable: false,
+        lightLevel: 0,
+        hardness: 1.0,
+        renderType: BlockRenderType.SOLID,
+        properties: {
+            typeId: Web3TileType.CARD_SHOP,
+            category: 'tile',
+            description: '打开卡片商店购买卡片'
+        }
+    });
+
     // ========== NPC和路面物体 (Objects) ==========
     
     // 土地神

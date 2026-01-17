@@ -29,7 +29,7 @@ export class Card {
     static readonly TARGET_NONE = 0;
     static readonly TARGET_PLAYER = 1;
     static readonly TARGET_TILE = 2;
-    static readonly TARGET_PLAYER_TILE = 3;  // 先选玩家，再选地块（瞬移卡）
+    static readonly TARGET_PLAYER_TILE = 3;  // 已废弃，保留向后兼容
     static readonly TARGET_BUILDING = 4;      // 选择建筑（建造卡、改建卡）
 
     constructor(kind: number, count: number) {
@@ -140,7 +140,7 @@ export class Card {
      * 是否是GM卡片（需要GMPass购买）
      */
     isGMCard(): boolean {
-        return this.kind >= 8 && this.kind <= 16;
+        return this.config?.gm ?? false;
     }
 
     /**

@@ -58,7 +58,8 @@ public struct DropRule has store, drop {
 fun target_none(): u8 { 0 }
 fun target_player(): u8 { 1 }
 fun target_tile(): u8 { 2 }
-fun target_player_or_tile(): u8 { 3 }
+// 3 已废弃（原 target_player_or_tile）
+fun target_building(): u8 { 4 }
 
 // ===== Registry Creation 注册表创建 =====
 
@@ -199,12 +200,12 @@ fun init_basic_cards(registry: &mut CardRegistry) {
 
     // ===== GM卡片 (kind 8-16, gm=true) =====
 
-    // kind=8 瞬移卡：传送到任意位置，价格6000
+    // kind=8 瞬移卡：传送玩家到任意位置，价格6000
     register_card_internal(registry,
         types::CARD_TELEPORT(),
         b"Teleport",
-        b"Teleport to any tile",
-        target_player_or_tile(),
+        b"Teleport a player to any tile",
+        target_player(),
         0,
         3,
         6000,
@@ -264,7 +265,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         types::CARD_CONSTRUCTION(),
         b"Construction",
         b"Upgrade a building",
-        target_tile(),
+        target_building(),
         0,
         3,
         4000,
@@ -276,7 +277,7 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         types::CARD_RENOVATION(),
         b"Renovation",
         b"Change building type",
-        target_tile(),
+        target_building(),
         0,
         3,
         4000,

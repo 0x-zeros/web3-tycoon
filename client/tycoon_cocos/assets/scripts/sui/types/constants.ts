@@ -86,13 +86,6 @@ export enum CardKind {
     BANISH = 16         // 驱逐卡（移除NPC）
 }
 
-/**
- * 判断是否为GM卡片（需要GMPass购买）
- */
-export function isGMCard(kind: number): boolean {
-    return kind >= CardKind.TELEPORT && kind <= CardKind.BANISH;
-}
-
 // ===== BuffKind Buff类型 =====
 export enum BuffKind {
     MOVE_CTRL = 1,          // 遥控骰子buff

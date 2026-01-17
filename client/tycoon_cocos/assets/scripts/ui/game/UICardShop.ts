@@ -136,8 +136,8 @@ export class UICardShop extends UIBase {
             this._displayCards = this._allCards;
             console.log('[UICardShop] GMPass detected, showing all cards');
         } else {
-            // 无 GMPass：只显示普通卡片 (0-7)
-            this._displayCards = this._allCards.filter(c => c.kind < GM_CARD_START_KIND);
+            // 无 GMPass：只显示普通卡片 (gm=false)
+            this._displayCards = this._allCards.filter(c => !c.gm);
             console.log('[UICardShop] No GMPass, showing normal cards only');
         }
 
@@ -166,7 +166,7 @@ export class UICardShop extends UIBase {
         try {
             // 使用 AssetService 查询 GMPass
             const address = myPlayer.getOwner();
-            const assetService = (SuiManager.instance as any)._assetService;
+            const assetService = SuiManager.instance.assetService;
 
             if (assetService) {
                 this._gmPass = await assetService.getPlayerGMPass(address, gameId);

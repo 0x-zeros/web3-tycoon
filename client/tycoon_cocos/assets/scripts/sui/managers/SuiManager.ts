@@ -1032,6 +1032,13 @@ export class SuiManager {
         return this._signer.getType();
     }
 
+    /**
+     * 获取资产服务
+     */
+    public get assetService(): AssetService | null {
+        return this._assetService;
+    }
+
     // ============ 辅助方法 ============
 
     /**

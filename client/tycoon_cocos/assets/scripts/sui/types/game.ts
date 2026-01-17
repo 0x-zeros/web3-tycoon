@@ -195,6 +195,9 @@ export interface Game {
     decision_tile: number;
     /** 决策金额 */
     decision_amount: bigint;
+
+    /** 游戏设置位字段（bit0=GM模式） */
+    settings: number;
 }
 
 /**
@@ -242,8 +245,8 @@ export interface GameCreateConfig {
     price_rise_days?: number;
     /** 最大轮数（0表示无限） */
     max_rounds?: number;
-    /** GM模式（启用后玩家可以购买高级卡片） */
-    gm_mode?: boolean;
+    /** 游戏设置位字段（0x01=GM模式） */
+    settings?: number;
 }
 
 /**
@@ -285,4 +288,23 @@ export function hasBuffActive(player: Player, buffKind: number, currentTurn: big
     return player.buffs.some(buff =>
         buff.kind === buffKind && currentTurn < buff.first_inactive_turn
     );
+}
+
+// ===== 游戏设置常量 =====
+
+/** GM模式设置位 */
+export const SETTING_GM_MODE = 0x01;
+
+/**
+ * 检查游戏设置中是否包含指定标志
+ */
+export function hasSetting(settings: number, flag: number): boolean {
+    return (settings & flag) !== 0;
+}
+
+/**
+ * 判断游戏是否启用了GM模式
+ */
+export function isGmMode(game: Game): boolean {
+    return hasSetting(game.settings, SETTING_GM_MODE);
 }

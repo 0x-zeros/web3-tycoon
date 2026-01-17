@@ -158,10 +158,10 @@ public struct Game has key, store {
     pending_decision: u8,
     decision_tile: u16,
     decision_amount: u64,
-    gm_mode: bool  // GM模式：启用后玩家可以购买高级卡片
+    settings: u8   // 游戏设置位字段（bit0=GM模式）
 }
 
-fun parse_game_params(params: &vector<u64>): (u64, u8, u8, bool) {
+fun parse_game_params(params: &vector<u64>): (u64, u8, u8, u8) {
     let starting_cash = if (params.length() > 0) {
         tycoon::validate_starting_cash(params[0])
     } else {
@@ -180,14 +180,14 @@ fun parse_game_params(params: &vector<u64>): (u64, u8, u8, bool) {
         0
     };
 
-    // params[3] = gm_mode（0=关闭，1=开启）
-    let gm_mode = if (params.length() > 3) {
-        params[3] == 1
+    // params[3] = settings位字段（bit0=GM模式）
+    let settings = if (params.length() > 3) {
+        (params[3] as u8)
     } else {
-        false
+        0
     };
 
-    (starting_cash, price_rise_days, max_rounds, gm_mode)
+    (starting_cash, price_rise_days, max_rounds, settings)
 }
 
 entry fun create_game(
@@ -196,7 +196,7 @@ entry fun create_game(
     params: vector<u64>,
     ctx: &mut TxContext
 ) {
-    let (starting_cash, price_rise_days, max_rounds, gm_mode) = parse_game_params(&params);
+    let (starting_cash, price_rise_days, max_rounds, settings) = parse_game_params(&params);
 
     let game_id = object::new(ctx);
     let game_id_copy = game_id.to_inner();
@@ -243,7 +243,7 @@ entry fun create_game(
         pending_decision: types::DECISION_NONE(),
         decision_tile: 0,
         decision_amount: 0,
-        gm_mode
+        settings
     };
 
     let creator = ctx.sender();
@@ -268,7 +268,7 @@ entry fun create_game(
     transfer::transfer(seat, creator);
 
     // 如果启用GM模式，为创建者发放GMPass
-    if (gm_mode) {
+    if ((settings & types::SETTING_GM_MODE()) != 0) {
         let gm_pass = GMPass {
             id: object::new(ctx),
             game_id: game_id_copy,
@@ -319,7 +319,7 @@ entry fun join(
     transfer::transfer(seat, player_addr);
 
     // 如果是GM模式游戏，为加入者发放GMPass
-    if (game.gm_mode) {
+    if ((game.settings & types::SETTING_GM_MODE()) != 0) {
         let gm_pass = GMPass {
             id: object::new(ctx),
             game_id: game_id_copy,

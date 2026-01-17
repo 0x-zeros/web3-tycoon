@@ -98,3 +98,7 @@ public(package) fun is_large_building_type(building_type: u8): bool {
 // ===== Default Configs =====
 public(package) fun DEFAULT_MAX_PLAYERS(): u8 { 4 }
 public(package) fun DEFAULT_HOSPITAL_TURNS(): u8 { 2 }
+
+// ===== GameSettings 位标志 =====
+public(package) fun SETTING_GM_MODE(): u8 { 0x01 }  // bit 0: GM模式
+// bit 1-7: 预留

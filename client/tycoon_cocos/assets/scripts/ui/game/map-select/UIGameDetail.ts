@@ -11,6 +11,7 @@ import { IdFormatter } from "../../utils/IdFormatter";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
+import { isGmMode } from "../../../sui/types/game";
 import { DEFAULT_MAX_PLAYERS, GameStatus } from "../../../sui/types/constants";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
@@ -37,6 +38,7 @@ export class UIGameDetail extends UIBase {
     private m_starting_cash: fgui.GTextField;
     private m_price_rise_days: fgui.GTextField;
     private m_max_rounds: fgui.GTextField;
+    private m_gm: fgui.GTextField;
 
     // 父容器引用（用于返回）
     private _parentUI: any = null;
@@ -70,6 +72,7 @@ export class UIGameDetail extends UIBase {
         this.m_starting_cash = this.getText('starting_cash');
         this.m_price_rise_days = this.getText('price_rise_days');
         this.m_max_rounds = this.getText('max_rounds');
+        this.m_gm = this.getText('gm');
 
         console.log('[UIGameDetail] Components setup');
         console.log('  Buttons found:', !!this.m_btn_ok, !!this.m_btn_quitGame, !!this.m_btn_startGame);
@@ -164,6 +167,11 @@ export class UIGameDetail extends UIBase {
             this.m_max_rounds.text = game.max_rounds === 0
                 ? '无限'
                 : game.max_rounds.toString();
+        }
+
+        // 显示GM权限
+        if (this.m_gm) {
+            this.m_gm.text = isGmMode(game) ? "有" : "无";
         }
 
         console.log('[UIGameDetail] Game params displayed:', {

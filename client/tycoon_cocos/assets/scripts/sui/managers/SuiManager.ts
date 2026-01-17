@@ -762,7 +762,7 @@ export class SuiManager {
             startingCash?: bigint;
             priceRiseDays?: number;
             maxRounds?: number;
-            gmMode?: boolean;
+            settings?: number;  // 位字段（0x01=GM模式）
         }
     ): Promise<{ gameId: string; seatId: string; txHash: string }> {
         console.log('[SuiManager] createGameWithTemplate:', templateId);
@@ -789,7 +789,7 @@ export class SuiManager {
                 starting_cash: options?.startingCash || defaultStartingCash,  // 从 GameData
                 price_rise_days: options?.priceRiseDays || 15,                // DEFAULT_PRICE_RISE_DAYS
                 max_rounds: options?.maxRounds || 0,                          // 0 = 无限
-                gm_mode: options?.gmMode || false                             // GM模式
+                settings: options?.settings || 0                              // 游戏设置位字段
             });
 
             console.log('[SuiManager] Game created successfully');

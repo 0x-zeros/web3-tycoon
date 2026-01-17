@@ -486,10 +486,10 @@ fun buy_card_internal(
     cards::give_card_to_player(&mut player.cards, kind, 1);
 }
 
-/// 批量购买普通卡片
+/// 批量购买普通卡片（不需要GMPass）
 /// purchases: 要购买的卡片 kind 列表，每个元素表示一张卡（可重复）
 /// 例如 [0, 2, 5] 表示购买 kind=0, kind=2, kind=5 各一张
-/// 卡片价格：100/张
+/// 卡片价格由 CardRegistry 定义
 entry fun buy_cards(
     game: &mut Game,
     seat: &Seat,
@@ -504,13 +504,19 @@ entry fun buy_cards(
     assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
     assert!(purchases.length() > 0 && purchases.length() <= 6, EInvalidParams);
 
-    // 逐张购买，复用 buy_card_internal
+    let card_registry = tycoon::get_card_registry(game_data);
+
+    // 逐张购买，使用 CardRegistry 查询价格
     let mut i = 0u64;
     while (i < purchases.length()) {
         let kind = purchases[i];
-        // 验证卡片不需要 GMPass
-        assert!(!tycoon::card_requires_gm_pass(game_data, kind), EGMPassRequired);
-        buy_card_internal(game, seat.player_index, kind, 100);
+        // 校验 kind 有效
+        assert!(cards::is_valid_kind(card_registry, kind), EInvalidParams);
+        // 校验不是 GM 卡
+        assert!(!cards::is_gm_card(card_registry, kind), EGMPassRequired);
+        // 获取卡片价格并购买
+        let price = cards::get_card_price(card_registry, kind);
+        buy_card_internal(game, seat.player_index, kind, price);
         i = i + 1;
     };
 
@@ -518,9 +524,10 @@ entry fun buy_cards(
     advance_turn(game, game_data, map, r, ctx);
 }
 
-/// 批量购买GM卡片，需要GMPass
+/// 批量购买卡片（需要GMPass），可购买所有卡片（普通卡+GM卡）
+/// GMPass 是"全通行证"，持有者可以一次交易购买所有选中卡片
 /// purchases: 要购买的卡片 kind 列表，每个元素表示一张卡（可重复）
-/// 卡片价格：500/张
+/// 卡片价格由 CardRegistry 定义
 entry fun buy_gm_cards(
     game: &mut Game,
     seat: &Seat,
@@ -539,13 +546,17 @@ entry fun buy_gm_cards(
     // 验证 GMPass 绑定
     assert!(gm_pass.game_id == game.id.to_inner(), EGMPassGameMismatch);
 
-    // 逐张购买，复用 buy_card_internal
+    let card_registry = tycoon::get_card_registry(game_data);
+
+    // 逐张购买，使用 CardRegistry 查询价格（允许购买所有卡片）
     let mut i = 0u64;
     while (i < purchases.length()) {
         let kind = purchases[i];
-        // 验证卡片需要 GMPass
-        assert!(tycoon::card_requires_gm_pass(game_data, kind), EInvalidParams);
-        buy_card_internal(game, seat.player_index, kind, 500);
+        // 只校验 kind 有效
+        assert!(cards::is_valid_kind(card_registry, kind), EInvalidParams);
+        // 获取卡片价格并购买（所有卡片按各自价格计算）
+        let price = cards::get_card_price(card_registry, kind);
+        buy_card_internal(game, seat.player_index, kind, price);
         i = i + 1;
     };
 

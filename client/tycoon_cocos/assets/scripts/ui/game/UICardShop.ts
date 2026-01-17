@@ -24,10 +24,6 @@ import type { GMPass } from "../../sui/types/game";
 
 const { ccclass } = _decorator;
 
-/** 普通卡片价格 */
-const NORMAL_CARD_PRICE = 100;
-/** GM卡片价格 */
-const GM_CARD_PRICE = 500;
 /** 最大选择数量 */
 const MAX_CART_TOTAL = 6;
 /** GM卡片起始kind */
@@ -53,6 +49,8 @@ export class UICardShop extends UIBase {
     private _gmPass: GMPass | null = null;
     /** 所有卡片配置（缓存） */
     private _allCards: CardConfig[] = [];
+    /** 当前显示的卡片列表（根据GMPass过滤） */
+    private _displayCards: CardConfig[] = [];
     /** 当前玩家现金 */
     private _playerCash: bigint = 0n;
 
@@ -132,6 +130,17 @@ export class UICardShop extends UIBase {
         // 查询GMPass
         await this._queryGMPass();
 
+        // 根据 GMPass 过滤卡片
+        if (this._gmPass) {
+            // 有 GMPass：显示所有卡片 (0-16)
+            this._displayCards = this._allCards;
+            console.log('[UICardShop] GMPass detected, showing all cards');
+        } else {
+            // 无 GMPass：只显示普通卡片 (0-7)
+            this._displayCards = this._allCards.filter(c => c.kind < GM_CARD_START_KIND);
+            console.log('[UICardShop] No GMPass, showing normal cards only');
+        }
+
         // 获取玩家现金
         this._updatePlayerCash();
 
@@ -142,12 +151,34 @@ export class UICardShop extends UIBase {
 
     /**
      * 查询当前玩家的GMPass
-     * TODO: 目前暂时禁用 GMPass 查询，后续实现
      */
     private async _queryGMPass(): Promise<void> {
-        // GMPass 功能暂未实现
-        this._gmPass = null;
-        console.log('[UICardShop] GMPass query disabled (not implemented)');
+        const session = GameInitializer.getInstance()?.getGameSession();
+        const gameId = session?.getGameId();
+        const myPlayer = session?.getMyPlayer();
+
+        if (!gameId || !myPlayer) {
+            this._gmPass = null;
+            console.log('[UICardShop] Missing gameId or player, GMPass not available');
+            return;
+        }
+
+        try {
+            // 使用 AssetService 查询 GMPass
+            const address = myPlayer.getOwner();
+            const assetService = (SuiManager.instance as any)._assetService;
+
+            if (assetService) {
+                this._gmPass = await assetService.getPlayerGMPass(address, gameId);
+                console.log('[UICardShop] GMPass query result:', this._gmPass ? 'Found' : 'Not found');
+            } else {
+                this._gmPass = null;
+                console.log('[UICardShop] AssetService not available');
+            }
+        } catch (error) {
+            console.error('[UICardShop] Failed to query GMPass:', error);
+            this._gmPass = null;
+        }
     }
 
     /**
@@ -166,7 +197,7 @@ export class UICardShop extends UIBase {
         if (!this.m_cardList) return;
 
         this.m_cardList.numItems = 0;
-        this.m_cardList.numItems = this._allCards.length;
+        this.m_cardList.numItems = this._displayCards.length;
     }
 
     /**
@@ -176,12 +207,12 @@ export class UICardShop extends UIBase {
         const item = obj as fgui.GButton;
         if (!item) return;
 
-        const cardConfig = this._allCards[index];
+        const cardConfig = this._displayCards[index];
         if (!cardConfig) return;
 
         const kind = cardConfig.kind;
-        const isGMCard = kind >= GM_CARD_START_KIND;
-        const price = isGMCard ? GM_CARD_PRICE : NORMAL_CARD_PRICE;
+        const isGMCard = cardConfig.gm;  // 使用 CardConfig 中的 gm 标志
+        const price = cardConfig.price;   // 使用 CardConfig 中的价格
         const canBuyGM = isGMCard ? (this._gmPass !== null) : true;
 
         // 保存数据到item
@@ -235,9 +266,10 @@ export class UICardShop extends UIBase {
     private _getTotalPrice(): number {
         let total = 0;
         for (const kind of this._selectedKinds) {
-            const isGMCard = kind >= GM_CARD_START_KIND;
-            const price = isGMCard ? GM_CARD_PRICE : NORMAL_CARD_PRICE;
-            total += price;
+            const cardConfig = CardConfigManager.getConfig(kind);
+            if (cardConfig) {
+                total += cardConfig.price;
+            }
         }
         return total;
     }
@@ -310,6 +342,7 @@ export class UICardShop extends UIBase {
 
     /**
      * 购买按钮点击
+     * 简化逻辑：有 GMPass 调用 buyGMCards（可购买所有卡），无 GMPass 调用 buyCards（只能购买普通卡）
      */
     private async _onBuyClick(): Promise<void> {
         const totalCount = this._getTotalCount();
@@ -325,7 +358,8 @@ export class UICardShop extends UIBase {
             return;
         }
 
-        console.log('[UICardShop] 开始购买，已选卡片:', Array.from(this._selectedKinds));
+        const purchases = Array.from(this._selectedKinds);
+        console.log('[UICardShop] 开始购买，已选卡片:', purchases);
 
         // 禁用购买按钮防止重复点击
         if (this.m_btnBuy) {
@@ -349,59 +383,39 @@ export class UICardShop extends UIBase {
                 throw new Error('Game ID, Seat, MapTemplate or GameData not found');
             }
 
-            // 分离普通卡片和GM卡片
-            const normalCards: number[] = [];
-            const gmCards: number[] = [];
+            let result;
 
-            for (const kind of this._selectedKinds) {
-                if (kind >= GM_CARD_START_KIND) {
-                    gmCards.push(kind);
-                } else {
-                    normalCards.push(kind);
-                }
-            }
-
-            // 如果有普通卡片，批量购买
-            if (normalCards.length > 0) {
-                const result = await CardInteraction.buyCards(
-                    gameId,
-                    mySeat.id,
-                    gameDataId,
-                    normalCards,
-                    mapTemplateId
-                );
-
-                if (result.success) {
-                    console.log('[UICardShop] 普通卡片购买成功');
-                    UINotification.success('购买成功', undefined, undefined, 'center');
-                    EventBus.emit(EventTypes.Player.CardChange, {});
-                    this.hide();
-                    return;  // 已推进回合，直接返回
-                } else {
-                    console.error('[UICardShop] 普通卡片购买失败:', result.message);
-                    UINotification.error(result.message || '购买失败', undefined, undefined, 'center');
-                }
-            } else if (gmCards.length > 0 && this._gmPass) {
-                // 只有GM卡片，批量购买
-                const result = await CardInteraction.buyGMCards(
+            if (this._gmPass) {
+                // 有 GMPass：调用 buyGMCards，可购买所有卡片
+                console.log('[UICardShop] Using buyGMCards (has GMPass)');
+                result = await CardInteraction.buyGMCards(
                     gameId,
                     mySeat.id,
                     this._gmPass.id,
                     gameDataId,
-                    gmCards,
+                    purchases,
                     mapTemplateId
                 );
+            } else {
+                // 无 GMPass：调用 buyCards，只能购买普通卡片
+                console.log('[UICardShop] Using buyCards (no GMPass)');
+                result = await CardInteraction.buyCards(
+                    gameId,
+                    mySeat.id,
+                    gameDataId,
+                    purchases,
+                    mapTemplateId
+                );
+            }
 
-                if (result.success) {
-                    console.log('[UICardShop] GM卡片购买成功');
-                    UINotification.success('购买成功', undefined, undefined, 'center');
-                    EventBus.emit(EventTypes.Player.CardChange, {});
-                    this.hide();
-                    return;  // 已推进回合，直接返回
-                } else {
-                    console.error('[UICardShop] GM卡片购买失败:', result.message);
-                    UINotification.error(result.message || '购买失败', undefined, undefined, 'center');
-                }
+            if (result.success) {
+                console.log('[UICardShop] 卡片购买成功');
+                UINotification.success('购买成功', undefined, undefined, 'center');
+                EventBus.emit(EventTypes.Player.CardChange, {});
+                this.hide();
+            } else {
+                console.error('[UICardShop] 卡片购买失败:', result.message);
+                UINotification.error(result.message || '购买失败', undefined, undefined, 'center');
             }
 
         } catch (error: any) {

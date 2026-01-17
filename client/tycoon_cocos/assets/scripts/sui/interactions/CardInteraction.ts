@@ -107,6 +107,9 @@ export class CardInteraction {
 
             const packageId = config.packageId;
 
+            // 从配置获取 Random 对象 ID
+            const randomObjectId = config.randomObjectId || '0x8';
+
             tx.moveCall({
                 target: `${packageId}::game::buy_cards`,
                 arguments: [
@@ -115,7 +118,7 @@ export class CardInteraction {
                     tx.object(gameDataId),
                     tx.pure.vector('u8', purchases),
                     tx.object(mapTemplateId),
-                    tx.object('0x8'),  // Random
+                    tx.object(randomObjectId),
                 ]
             });
 
@@ -172,6 +175,9 @@ export class CardInteraction {
 
             const packageId = config.packageId;
 
+            // 从配置获取 Random 对象 ID
+            const randomObjectId = config.randomObjectId || '0x8';
+
             tx.moveCall({
                 target: `${packageId}::game::buy_gm_cards`,
                 arguments: [
@@ -181,7 +187,7 @@ export class CardInteraction {
                     tx.object(gameDataId),
                     tx.pure.vector('u8', purchases),
                     tx.object(mapTemplateId),
-                    tx.object('0x8'),  // Random
+                    tx.object(randomObjectId),
                 ]
             });
 
@@ -232,6 +238,9 @@ export class CardInteraction {
 
             const packageId = config.packageId;
 
+            // 从配置获取 Random 对象 ID
+            const randomObjectId = config.randomObjectId || '0x8';
+
             tx.moveCall({
                 target: `${packageId}::game::skip_card_shop`,
                 arguments: [
@@ -239,7 +248,7 @@ export class CardInteraction {
                     tx.object(seatId),
                     tx.object(gameDataId),
                     tx.object(mapTemplateId),
-                    tx.object('0x8'),  // Random
+                    tx.object(randomObjectId),
                 ]
             });
 

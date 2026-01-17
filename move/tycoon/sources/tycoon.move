@@ -45,10 +45,6 @@ public struct GameData has key, store {
 
     npc_spawn_weights: vector<u8>,
     map_schema_version: u8,
-
-    /// 卡片是否需要 GMPass 的配置
-    /// gm_card_flags[kind] = true 表示该卡片需要 GMPass
-    gm_card_flags: vector<bool>,
 }
 
 // ===== Package Init 包初始化 =====
@@ -79,12 +75,6 @@ fun init(ctx: &mut TxContext) {
         ],
 
         map_schema_version: 1,
-
-        // 默认配置：kind 8-16 需要 GMPass
-        gm_card_flags: vector[
-            false, false, false, false, false, false, false, false,  // 0-7 普通卡
-            true, true, true, true, true, true, true, true, true     // 8-16 GM卡
-        ],
     };
 
     let game_data_id = object::id(&game_data);
@@ -134,6 +124,8 @@ entry fun admin_register_card(
     target_type: u8,
     value: u64,
     rarity: u8,
+    price: u64,
+    gm: bool,
     _admin: &AdminCap,
     _ctx: &mut TxContext
 ) {
@@ -144,7 +136,9 @@ entry fun admin_register_card(
         description,
         target_type,
         value,
-        rarity
+        rarity,
+        price,
+        gm
     );
 }
 
@@ -194,14 +188,9 @@ public(package) fun get_large_building_costs(game_data: &GameData): &vector<u64>
     &game_data.large_building_costs
 }
 
-/// 检查卡片是否需要 GMPass
-public(package) fun card_requires_gm_pass(game_data: &GameData, kind: u8): bool {
-    let idx = kind as u64;
-    if (idx < game_data.gm_card_flags.length()) {
-        game_data.gm_card_flags[idx]
-    } else {
-        false  // 未配置的卡片默认不需要
-    }
+/// 获取 CardRegistry 的引用
+public(package) fun get_card_registry(game_data: &GameData): &cards::CardRegistry {
+    &game_data.card_registry
 }
 
 // ===== Configuration Validation Functions 配置验证函数 =====

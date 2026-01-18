@@ -584,7 +584,7 @@ export class BlockRegistry {
         isDestructable: false,
         lightLevel: 0,
         hardness: 1.0,
-        renderType: BlockRenderType.SOLID,
+        renderType: BlockRenderType.TRANSLUCENT,
         properties: {
             typeId: Web3TileType.CARD_SHOP,
             category: 'tile',

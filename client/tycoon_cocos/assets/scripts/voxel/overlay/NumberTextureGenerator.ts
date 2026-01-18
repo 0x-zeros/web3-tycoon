@@ -297,6 +297,7 @@ export class NumberTextureGenerator {
             // case 5: return '费用';
             case 6: return '卡片';
             case 7: return '新闻';
+            case 8: return '卡店';   // 卡片商店：简称
             default: return '未知';
         }
     }
@@ -340,6 +341,7 @@ export class NumberTextureGenerator {
             case 5: return '#FF6F00';     // 费用（黄色背景）：深橙，警示但不严肃
             case 6: return '#5E35B1';     // 卡片（白色背景）：紫色，神秘稀有
             case 7: return '#FFD700';     // 新闻（灰色背景）：金黄，醒目
+            case 8: return '#FF69B4';     // 卡片商店（粉色）：购物感
             default: return '#FFFFFF';    // 默认：白色
         }
     }

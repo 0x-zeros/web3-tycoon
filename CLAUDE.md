@@ -687,3 +687,60 @@ const remaining = (last_active_round - currentRound) + (hasActedThisRound ? 0 : 
 - Object: `(1, 1, 1)` - 立体
 - 修改完以后不需要帮我stage，我会check以后自己操作
 - 在我没有明确要求的情况下，一般不需要生成md文档
+
+### PendingDecision 决策系统
+
+**决策类型定义**（types.move:84-88, constants.ts:116-135）：
+| 值 | 常量 | 说明 |
+|----|------|------|
+| 0 | DECISION_NONE | 无待决策 |
+| 1 | DECISION_BUY_PROPERTY | 购买建筑 |
+| 2 | DECISION_UPGRADE_PROPERTY | 升级建筑 |
+| 3 | DECISION_PAY_RENT | 支付租金 |
+| 4 | DECISION_CARD_SHOP | 卡片商店 |
+
+**Game 对象中的决策字段**（game.move:158-160）：
+- `pending_decision: u8` - 当前待决策类型
+- `decision_tile: u16` - 相关地块ID
+- `decision_amount: u64` - 相关金额
+
+**Move 端事件定义**（events.move）：
+| 事件 | 行号 | 用途 |
+|------|------|------|
+| BuildingDecisionEvent | 90-97 | 购买/升级建筑决策 |
+| RentDecisionEvent | 99-105 | 租金支付决策 |
+| DecisionSkippedEvent | 107-114 | 跳过决策 |
+| CardShopDecisionEvent | 116-122 | 卡片商店决策 |
+
+**TypeScript 处理器映射**（sui/events/handlers/）：
+| 决策类型 | Handler | 核心职责 |
+|---------|---------|---------|
+| BUY/UPGRADE | BuildingDecisionHandler.ts | 更新建筑 owner/level，扣钱 |
+| PAY_RENT | RentDecisionHandler.ts | 租金转账或使用免租卡 |
+| CARD_SHOP | CardShopDecisionHandler.ts | 购买卡片，更新卡片数量 |
+| 跳过 | DecisionSkippedHandler.ts | 清除待决策，发 TurnEnd |
+
+**GameSession 待决策管理**（GameSession.ts:763-792）：
+```typescript
+interface PendingDecisionInfo {
+    type: PendingDecision;
+    tileId: number;
+    amount: bigint;
+}
+// 方法：setPendingDecision(), getPendingDecision(), hasPendingDecision()
+// 事件：EventTypes.Game.DecisionPending, EventTypes.Game.DecisionCleared
+```
+
+**UI 决策对话框**（ui/utils/DecisionDialogHelper.ts）：
+- `showBuyDialog()` - 购买建筑
+- `showUpgradeDialog()` - 升级建筑
+- `showRentDialog()` - 支付租金（支持免租卡）
+
+**添加新决策类型步骤**：
+1. Move 端：types.move 添加 `DECISION_XXX()` 常量
+2. Move 端：events.move 添加对应 Event 结构体和 emit 函数
+3. Move 端：game.move 在适当位置设置 pending_decision 并 emit 事件
+4. TS 端：constants.ts 添加 PendingDecision 枚举值
+5. TS 端：handlers/ 创建对应 Handler 类
+6. TS 端：DecisionDialogHelper.ts 添加对应对话框方法
+7. TS 端：UIInGame.ts 的 `_showDecisionDialog()` 添加分支

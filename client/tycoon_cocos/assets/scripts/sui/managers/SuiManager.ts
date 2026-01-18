@@ -42,7 +42,8 @@ import { skipTurnHandler } from '../events/handlers/SkipTurnHandler';
 import { bankruptHandler } from '../events/handlers/BankruptHandler';
 import { gameEndedHandler } from '../events/handlers/GameEndedHandler';
 import { useCardHandler } from '../events/handlers/UseCardHandler';
-import type { BuildingDecisionEvent, RentDecisionEvent, DecisionSkippedEvent, SkipTurnEvent, BankruptEvent, GameEndedEvent } from '../events/types';
+import { cardShopDecisionHandler } from '../events/handlers/CardShopDecisionHandler';
+import type { BuildingDecisionEvent, RentDecisionEvent, CardShopDecisionEvent, DecisionSkippedEvent, SkipTurnEvent, BankruptEvent, GameEndedEvent } from '../events/types';
 import type { UseCardActionEvent } from '../events/handlers/UseCardHandler';
 import type { EventCallback } from '../events/indexer';
 
@@ -1341,7 +1342,15 @@ export class SuiManager {
         this._eventIndexer.on<RentDecisionEvent>(EventType.RENT_DECISION, rentDecisionCallback);
         this._gameEventHandlers.set(EventType.RENT_DECISION, rentDecisionCallback);
 
-        // 4. DecisionSkipped 事件
+        // 4. CardShopDecision 事件
+        const cardShopDecisionCallback: EventCallback<CardShopDecisionEvent> = async (event) => {
+            console.log('[SuiManager] CardShopDecisionEvent from chain:', event.data);
+            await cardShopDecisionHandler.instance.handleEvent(event);
+        };
+        this._eventIndexer.on<CardShopDecisionEvent>(EventType.CARD_SHOP_DECISION, cardShopDecisionCallback);
+        this._gameEventHandlers.set(EventType.CARD_SHOP_DECISION, cardShopDecisionCallback);
+
+        // 5. DecisionSkipped 事件
         const decisionSkippedCallback: EventCallback<DecisionSkippedEvent> = async (event) => {
             console.log('[SuiManager] DecisionSkippedEvent from chain:', event.data);
             await decisionSkippedHandler.instance.handleEvent(event);
@@ -1349,7 +1358,7 @@ export class SuiManager {
         this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, decisionSkippedCallback);
         this._gameEventHandlers.set(EventType.DECISION_SKIPPED, decisionSkippedCallback);
 
-        // 5. SkipTurn 事件
+        // 6. SkipTurn 事件
         const skipTurnCallback: EventCallback<SkipTurnEvent> = async (event) => {
             console.log('[SuiManager] SkipTurnEvent from chain:', event.data);
             await skipTurnHandler.instance.handleEvent(event);
@@ -1357,7 +1366,7 @@ export class SuiManager {
         this._eventIndexer.on<SkipTurnEvent>(EventType.SKIP_TURN, skipTurnCallback);
         this._gameEventHandlers.set(EventType.SKIP_TURN, skipTurnCallback);
 
-        // 6. Bankrupt 事件
+        // 7. Bankrupt 事件
         const bankruptCallback: EventCallback<BankruptEvent> = async (event) => {
             console.log('[SuiManager] BankruptEvent from chain:', event.data);
             await bankruptHandler.instance.handleEvent(event);
@@ -1365,7 +1374,7 @@ export class SuiManager {
         this._eventIndexer.on<BankruptEvent>(EventType.BANKRUPT, bankruptCallback);
         this._gameEventHandlers.set(EventType.BANKRUPT, bankruptCallback);
 
-        // 7. UseCardAction 事件
+        // 8. UseCardAction 事件
         const useCardCallback: EventCallback<UseCardActionEvent> = async (event) => {
             console.log('[SuiManager] UseCardActionEvent from chain:', event.data);
             await useCardHandler.instance.handleEvent(event);
@@ -1373,7 +1382,7 @@ export class SuiManager {
         this._eventIndexer.on<UseCardActionEvent>(EventType.USE_CARD_ACTION, useCardCallback);
         this._gameEventHandlers.set(EventType.USE_CARD_ACTION, useCardCallback);
 
-        // 8. GameEnded 事件
+        // 9. GameEnded 事件
         const gameEndedCallback: EventCallback<GameEndedEvent> = async (event) => {
             console.log('[SuiManager] GameEndedEvent from chain:', event.data);
             await gameEndedHandler.instance.handleEvent(event);
@@ -1381,7 +1390,7 @@ export class SuiManager {
         this._eventIndexer.on<GameEndedEvent>(EventType.GAME_ENDED, gameEndedCallback);
         this._gameEventHandlers.set(EventType.GAME_ENDED, gameEndedCallback);
 
-        console.log('[SuiManager] Game event listeners registered (8 events)');
+        console.log('[SuiManager] Game event listeners registered (9 events)');
     }
 
     /**

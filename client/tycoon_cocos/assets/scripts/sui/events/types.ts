@@ -174,6 +174,30 @@ export interface RentDecisionEvent {
 }
 
 /**
+ * 卡片商店决策事件
+ * 对应Move: struct CardShopDecisionEvent
+ */
+export interface CardShopDecisionEvent {
+    /** 游戏ID */
+    game: string;
+    /** 玩家地址 */
+    player: string;
+    /** 轮次 */
+    round: number;
+    /** 轮内回合 */
+    turn_in_round: number;
+    /** 决策详情 */
+    decision: {
+        /** 商店所在地块ID */
+        tile_id: number;
+        /** 购买的卡片列表 */
+        purchased_cards: Array<{ tile_id: number; kind: number; count: number; is_pass: boolean }>;
+        /** 总花费 */
+        total_cost: string;  // bigint as string
+    };
+}
+
+/**
  * 跳过决策事件
  * 对应Move: struct DecisionSkippedEvent
  */
@@ -218,6 +242,7 @@ export enum EventType {
     // 决策事件
     BUILDING_DECISION = 'BuildingDecisionEvent',
     RENT_DECISION = 'RentDecisionEvent',
+    CARD_SHOP_DECISION = 'CardShopDecisionEvent',
     DECISION_SKIPPED = 'DecisionSkippedEvent',
 
     // 聚合事件（在aggregated.ts中定义）
@@ -239,6 +264,7 @@ export type GameEvent =
     | BankruptEvent
     | BuildingDecisionEvent
     | RentDecisionEvent
+    | CardShopDecisionEvent
     | DecisionSkippedEvent;
 
 /**

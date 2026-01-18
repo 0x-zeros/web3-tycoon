@@ -55,6 +55,7 @@ export class TycoonEventIndexer {
         'BankruptEvent': EventType.BANKRUPT,
         'BuildingDecisionEvent': EventType.BUILDING_DECISION,
         'RentDecisionEvent': EventType.RENT_DECISION,
+        'CardShopDecisionEvent': EventType.CARD_SHOP_DECISION,
         'DecisionSkippedEvent': EventType.DECISION_SKIPPED,
         'UseCardActionEvent': EventType.USE_CARD_ACTION,
         'RollAndStepActionEvent': EventType.ROLL_AND_STEP_ACTION,

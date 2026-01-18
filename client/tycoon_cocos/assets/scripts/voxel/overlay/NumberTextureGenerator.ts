@@ -297,7 +297,7 @@ export class NumberTextureGenerator {
             // case 5: return '费用';
             case 6: return '卡片';
             case 7: return '新闻';
-            case 8: return '卡店';   // 卡片商店：简称
+            case 8: return '卡片商店';   // 卡片商店：简称 卡店
             default: return '未知';
         }
     }

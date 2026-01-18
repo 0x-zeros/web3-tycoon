@@ -379,6 +379,8 @@ export class RollAndStepHandler {
                             console.error('[RollAndStepHandler] 打开卡片商店失败', err);
                         });
                     }
+                }).catch(err => {
+                    console.error('[RollAndStepHandler] 加载 SuiManager 失败', err);
                 });
             }
 

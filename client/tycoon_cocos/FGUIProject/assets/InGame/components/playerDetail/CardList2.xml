@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1131,511">
   <displayList>
-    <list id="n0_mumq" name="cards" xy="0,-1" size="1124,508" layout="flow_hz" overflow="scroll" scroll="horizontal" defaultItem="ui://8z385pimue83b" autoClearItems="true">
+    <list id="n0_mumq" name="cards" xy="0,-1" size="1124,508" layout="flow_hz" overflow="scroll" defaultItem="ui://8z385pimue83b" autoClearItems="true">
       <item title="遥控骰子"/>
       <item title="路障"/>
       <item title="均富卡"/>

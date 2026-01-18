@@ -29,6 +29,7 @@ import { DecisionDialogHelper } from "../utils/DecisionDialogHelper";
 import type { PendingDecisionInfo } from "../../core/GameSession";
 import { UICardTileSelector } from './UICardTileSelector';
 import { CardUsageManager } from '../../card/CardUsageManager';
+import { UIManager } from "../core/UIManager";
 
 const { ccclass } = _decorator;
 
@@ -791,6 +792,11 @@ export class UIInGameDice extends UIBase {
             case DecisionType.PAY_RENT:
                 console.log('[UIInGameDice] 显示租金决策窗口');
                 DecisionDialogHelper.showRentDialog(decision, session);
+                break;
+
+            case DecisionType.CARD_SHOP:
+                console.log('[UIInGameDice] 显示卡片商店');
+                UIManager.instance.showUI('CardShop');
                 break;
 
             default:

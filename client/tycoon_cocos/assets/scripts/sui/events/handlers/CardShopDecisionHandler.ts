@@ -118,6 +118,9 @@ export class CardShopDecisionHandler {
             );
         }
 
+        // 清除待决策状态
+        session.clearPendingDecision();
+
         console.log('[CardShopDecisionHandler] CardShopDecisionEvent 处理完成');
     }
 

@@ -118,7 +118,8 @@ export enum PendingDecision {
     NONE = 0,                   // 无待决策
     BUY_PROPERTY = 1,          // 可以购买地产
     UPGRADE_PROPERTY = 2,      // 可以升级地产
-    PAY_RENT = 3               // 需要决定如何支付租金（有免租卡时）
+    PAY_RENT = 3,              // 需要决定如何支付租金（有免租卡时）
+    CARD_SHOP = 4              // 卡片商店决策
 }
 
 /**
@@ -129,7 +130,8 @@ export enum DecisionType {
     NONE = 0,
     BUY_PROPERTY = 1,
     UPGRADE_PROPERTY = 2,
-    PAY_RENT = 3
+    PAY_RENT = 3,
+    CARD_SHOP = 4              // 卡片商店决策
 }
 
 // ===== SkipReason 跳过回合原因 =====

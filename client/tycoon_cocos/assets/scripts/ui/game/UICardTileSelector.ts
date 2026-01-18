@@ -342,7 +342,7 @@ export class UICardTileSelector {
      */
     private loadMoveControllerTexture(): Promise<Texture2D | null> {
         return new Promise((resolve) => {
-            resources.load('textures/moveController', Texture2D, (err, texture) => {
+            resources.load('textures/moveController/texture', Texture2D, (err, texture) => {
                 if (err) {
                     console.error('[UICardTileSelector] 加载moveController贴图失败:', err);
                     resolve(null);

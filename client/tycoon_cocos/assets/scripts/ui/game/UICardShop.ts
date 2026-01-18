@@ -434,7 +434,6 @@ export class UICardShop extends UIBase {
             if (result.success) {
                 console.log('[UICardShop] 卡片购买成功');
                 UINotification.success('购买成功', undefined, undefined, 'center');
-                EventBus.emit(EventTypes.Player.CardChange, {});
                 this.hide();
             } else {
                 console.error('[UICardShop] 卡片购买失败:', result.message);

@@ -182,14 +182,23 @@ export const CARD_EFFECTS: Map<number, CardEffect> = new Map([
  */
 export function getCardName(kind: number): string {
     const names: { [key: number]: string } = {
-        0: '遥控骰子',  // CARD_MOVE_CTRL
-        1: '路障卡',    // CARD_BARRIER
-        2: '炸弹卡',    // CARD_BOMB
-        3: '免租卡',    // CARD_RENT_FREE
-        4: '冰冻卡',    // CARD_FREEZE
-        5: '恶犬卡',    // CARD_DOG
-        6: '机器娃娃',  // CARD_CLEANSE - 清除一段路上所有NPC
-        7: '转向卡'     // CARD_TURN
+        0: '遥控骰子',    // CARD_MOVE_CTRL
+        1: '路障卡',      // CARD_BARRIER
+        2: '炸弹卡',      // CARD_BOMB
+        3: '免租卡',      // CARD_RENT_FREE
+        4: '冰冻卡',      // CARD_FREEZE
+        5: '恶犬卡',      // CARD_DOG
+        6: '机器娃娃',    // CARD_CLEANSE - 清除一段路上所有NPC
+        7: '转向卡',      // CARD_TURN
+        8: '瞬移卡',      // CARD_TELEPORT
+        9: '奖励卡（小）', // CARD_REWARD_SMALL
+        10: '奖励卡（大）', // CARD_REWARD_LARGE
+        11: '费用卡（小）', // CARD_FEE_SMALL
+        12: '费用卡（大）', // CARD_FEE_LARGE
+        13: '建造卡',     // CARD_BUILD
+        14: '改建卡',     // CARD_REBUILD
+        15: '召唤卡',     // CARD_SUMMON
+        16: '驱逐卡'      // CARD_BANISH
     };
     return names[kind] || `未知卡牌(${kind})`;
 }

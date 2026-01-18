@@ -62,6 +62,14 @@ export class UICardShop extends UIBase {
     }
 
     /**
+     * 重写show方法，设置为非全屏
+     */
+    public show(data?: any, isFullScreen?: boolean): void {
+        // 强制设置为非全屏
+        super.show(data, false);
+    }
+
+    /**
      * 设置组件引用
      */
     private _setupComponents(): void {

@@ -37,7 +37,7 @@
     <component id="mrzhpd" name="EventLogItem.xml" path="/components/playerDetail/"/>
     <component id="uas2pe" name="PlayerBuffDetail.xml" path="/components/playerDetail/"/>
     <component id="uas2pg" name="EditorSetting.xml" path="/components/"/>
-    <component id="la01ph" name="CardShop.xml" path="/components/card/"/>
+    <component id="la01ph" name="CardShop.xml" path="/" exported="true"/>
     <component id="la01pi" name="CardShopItem.xml" path="/components/card/"/>
   </resources>
   <publish name="" genCode="true"/>

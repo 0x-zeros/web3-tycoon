@@ -363,15 +363,23 @@ export class RollAndStepHandler {
 
             // 卡片商店
             if (step.stop_effect.stop_type === StopType.CARD_SHOP) {
-                // 只有当前玩家才打开卡片商店 UI
-                const myPlayer = session.getMyPlayer();
-                if (player && myPlayer && player === myPlayer) {
-                    import('../../../ui/core/UIManager').then(({ UIManager }) => {
-                        UIManager.instance.showUI('CardShop');
-                    }).catch(err => {
-                        console.error('[RollAndStepHandler] 打开卡片商店失败', err);
+                // 使用地址比较（比对象引用比较更可靠）
+                import('../../managers/SuiManager').then(({ SuiManager }) => {
+                    const myAddress = SuiManager.instance.currentAddress;
+                    console.log('[RollAndStepHandler] CardShop:', {
+                        eventPlayer: event.player,
+                        myAddress: myAddress,
+                        isMyAction: event.player === myAddress
                     });
-                }
+
+                    if (myAddress && event.player === myAddress) {
+                        import('../../../ui/core/UIManager').then(({ UIManager }) => {
+                            UIManager.instance.showUI('CardShop');
+                        }).catch(err => {
+                            console.error('[RollAndStepHandler] 打开卡片商店失败', err);
+                        });
+                    }
+                });
             }
 
             // 处理 NPC 触发的 Buff（土地神等）

@@ -638,6 +638,10 @@ export class UIInGame extends UIBase {
             case DecisionType.PAY_RENT:
                 DecisionDialogHelper.showRentDialog(decision, session);
                 break;
+            case DecisionType.CARD_SHOP:
+                console.log('[UIInGame] 显示卡片商店（从待决策恢复）');
+                UIManager.instance.showUI('CardShop');
+                break;
             default:
                 console.warn('[UIInGame] 未知的决策类型', decision.type);
         }

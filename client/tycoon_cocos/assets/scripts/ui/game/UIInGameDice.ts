@@ -140,6 +140,10 @@ export class UIInGameDice extends UIBase {
 
         // 监听回合变化（更新骰子按钮状态）
         EventBus.on(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
+
+        // 监听决策状态变化（更新骰子按钮状态）
+        EventBus.on(EventTypes.Game.DecisionPending, this._onDecisionStateChanged, this);
+        EventBus.on(EventTypes.Game.DecisionCleared, this._onDecisionStateChanged, this);
     }
 
     /**
@@ -161,6 +165,8 @@ export class UIInGameDice extends UIBase {
         EventBus.off(EventTypes.Dice.StartRoll, this._onDiceStart, this);
         EventBus.off(EventTypes.Dice.RollComplete, this._onDiceComplete, this);
         EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
+        EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionStateChanged, this);
+        EventBus.off(EventTypes.Game.DecisionCleared, this._onDecisionStateChanged, this);
 
         super.unbindEvents();
     }
@@ -215,6 +221,9 @@ export class UIInGameDice extends UIBase {
         // 检查是否在医院
         const shouldSkip = myPlayer && myPlayer.isInHospital();
 
+        // 检查是否有待决策（任何玩家的待决策都会阻塞游戏）
+        const hasPendingDecision = session.hasPendingDecision();
+
         // 【调试日志】详细输出状态信息
         console.log('[UIInGameDice] _updateButtonState DEBUG:', {
             myPlayerIndex: session.getMyPlayerIndex(),
@@ -225,7 +234,8 @@ export class UIInGameDice extends UIBase {
             hasMyPlayer: !!myPlayer,
             inHospital: myPlayer?.getInHospitalTurns() || 0,
             shouldSkip: shouldSkip,
-            btnRollEnabled: isMyTurn && !shouldSkip,
+            hasPendingDecision: hasPendingDecision,
+            btnRollEnabled: isMyTurn && !shouldSkip && !hasPendingDecision,
             btnSkipVisible: isMyTurn && shouldSkip
         });
 
@@ -236,10 +246,11 @@ export class UIInGameDice extends UIBase {
             console.log('[UIInGameDice] SkipTurn 按钮:', (isMyTurn && shouldSkip) ? '显示并启用' : '隐藏');
         }
 
-        // dice: 轮到自己 && 不在医院
-        this.m_btn_roll.enabled = isMyTurn && !shouldSkip;
+        // dice: 轮到自己 && 不在医院 && 没有待决策
+        this.m_btn_roll.enabled = isMyTurn && !shouldSkip && !hasPendingDecision;
 
-        console.log('[UIInGameDice] Dice 按钮:', (isMyTurn && !shouldSkip) ? '启用' : '禁用');
+        console.log('[UIInGameDice] Dice 按钮:', (isMyTurn && !shouldSkip && !hasPendingDecision) ? '启用' : '禁用',
+            hasPendingDecision ? '（等待决策中）' : '');
     }
 
     /**
@@ -705,6 +716,14 @@ export class UIInGameDice extends UIBase {
     private _onTurnChanged(data: { isMyTurn: boolean }): void {
         this._updateButtonState();  // 统一使用 _updateButtonState
         this._updateDiceCountOptions();  // 同时更新骰子数量选项
+    }
+
+    /**
+     * 决策状态变化处理（待决策/决策完成时更新骰子按钮状态）
+     */
+    private _onDecisionStateChanged(): void {
+        console.log('[UIInGameDice] 决策状态变化，更新按钮状态');
+        this._updateButtonState();
     }
 
     /**

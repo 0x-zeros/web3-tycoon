@@ -506,6 +506,11 @@ entry fun buy_cards(
 
     let card_registry = tycoon::get_card_registry(game_data);
 
+    // 收集购买信息
+    let mut purchased_cards = vector::empty<events::CardDrawItem>();
+    let mut total_cost = 0u64;
+    let tile_id = game.decision_tile;
+
     // 逐张购买，使用 CardRegistry 查询价格
     let mut i = 0u64;
     while (i < purchases.length()) {
@@ -517,8 +522,23 @@ entry fun buy_cards(
         // 获取卡片价格并购买
         let price = cards::get_card_price(card_registry, kind);
         buy_card_internal(game, seat.player_index, kind, price);
+
+        // 记录购买
+        purchased_cards.push_back(events::make_card_draw_item(tile_id, kind, 1, false));
+        total_cost = total_cost + price;
         i = i + 1;
     };
+
+    // 发出卡片商店决策事件
+    events::emit_card_shop_decision_event(
+        game.id.to_inner(),
+        get_active_player_address(game),
+        game.round,
+        game.turn,
+        tile_id,
+        purchased_cards,
+        total_cost
+    );
 
     clear_decision_state(game);
     advance_turn(game, game_data, map, r, ctx);
@@ -548,6 +568,11 @@ entry fun buy_gm_cards(
 
     let card_registry = tycoon::get_card_registry(game_data);
 
+    // 收集购买信息
+    let mut purchased_cards = vector::empty<events::CardDrawItem>();
+    let mut total_cost = 0u64;
+    let tile_id = game.decision_tile;
+
     // 逐张购买，使用 CardRegistry 查询价格（允许购买所有卡片）
     let mut i = 0u64;
     while (i < purchases.length()) {
@@ -557,8 +582,23 @@ entry fun buy_gm_cards(
         // 获取卡片价格并购买（所有卡片按各自价格计算）
         let price = cards::get_card_price(card_registry, kind);
         buy_card_internal(game, seat.player_index, kind, price);
+
+        // 记录购买
+        purchased_cards.push_back(events::make_card_draw_item(tile_id, kind, 1, false));
+        total_cost = total_cost + price;
         i = i + 1;
     };
+
+    // 发出卡片商店决策事件
+    events::emit_card_shop_decision_event(
+        game.id.to_inner(),
+        get_active_player_address(game),
+        game.round,
+        game.turn,
+        tile_id,
+        purchased_cards,
+        total_cost
+    );
 
     clear_decision_state(game);
     advance_turn(game, game_data, map, r, ctx);

@@ -113,6 +113,14 @@ public struct DecisionSkippedEvent has copy, drop {
     turn: u8
 }
 
+public struct CardShopDecisionEvent has copy, drop {
+    game: ID,
+    player: address,
+    round: u16,
+    turn_in_round: u8,
+    decision: CardShopDecisionInfo
+}
+
 // ===== Aggregated Event Constants 聚合事件常量 =====
 
 // NPC操作常量
@@ -192,6 +200,12 @@ public struct RentDecisionInfo has copy, drop, store {
     tile_id: u16,
     rent_amount: u64,
     used_rent_free: bool
+}
+
+public struct CardShopDecisionInfo has copy, drop, store {
+    tile_id: u16,                       // 卡片商店地块
+    purchased_cards: vector<CardDrawItem>,  // 购买的卡片列表
+    total_cost: u64                     // 总花费
 }
 
 public struct StopEffect has copy, drop, store {
@@ -670,6 +684,28 @@ public(package) fun emit_decision_skipped_event(
         tile_id,
         round,
         turn
+    });
+}
+
+public(package) fun emit_card_shop_decision_event(
+    game_id: ID,
+    player: address,
+    round: u16,
+    turn_in_round: u8,
+    tile_id: u16,
+    purchased_cards: vector<CardDrawItem>,
+    total_cost: u64
+) {
+    event::emit(CardShopDecisionEvent {
+        game: game_id,
+        player,
+        round,
+        turn_in_round,
+        decision: CardShopDecisionInfo {
+            tile_id,
+            purchased_cards,
+            total_cost
+        }
     });
 }
 

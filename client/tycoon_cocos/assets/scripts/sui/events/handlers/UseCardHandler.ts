@@ -53,10 +53,10 @@ export interface BuffChangeItem {
  */
 export interface CashDelta {
     player: string;         // address
-    is_expense: boolean;
+    is_debit: boolean;      // 与 Move 端一致: true=扣钱, false=加钱
     amount: bigint;         // u64
     reason: number;         // u8
-    related_tile: number;   // u16
+    details: number;        // u16 - 与 Move 端一致
 }
 
 /**
@@ -275,14 +275,14 @@ export class UseCardHandler {
             const amount = BigInt(change.amount);  // ✅ 确保类型为BigInt
             const currentCash = player.getCash();
 
-            const newCash = change.is_expense
+            const newCash = change.is_debit
                 ? currentCash - amount
                 : currentCash + amount;
 
             player.setCash(newCash);  // ✅ 正确调用setCash
 
             console.log(`[UseCardHandler] 玩家 ${change.player} 现金更新`, {
-                isExpense: change.is_expense,
+                isDebit: change.is_debit,
                 amount: amount.toString(),
                 newCash: newCash.toString()
             });

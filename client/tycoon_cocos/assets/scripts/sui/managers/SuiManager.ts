@@ -1351,9 +1351,11 @@ export class SuiManager {
         this._gameEventHandlers.set(EventType.CARD_SHOP_DECISION, cardShopDecisionCallback);
 
         // 5. DecisionSkipped 事件
+        console.log('[SuiManager] 注册 DecisionSkipped 事件处理器');
         const decisionSkippedCallback: EventCallback<DecisionSkippedEvent> = async (event) => {
-            console.log('[SuiManager] DecisionSkippedEvent from chain:', event.data);
+            console.log('[SuiManager] >>>>>> 收到 DecisionSkipped 事件 <<<<<<', event.data);
             await decisionSkippedHandler.instance.handleEvent(event);
+            console.log('[SuiManager] DecisionSkipped 处理完成');
         };
         this._eventIndexer.on<DecisionSkippedEvent>(EventType.DECISION_SKIPPED, decisionSkippedCallback);
         this._gameEventHandlers.set(EventType.DECISION_SKIPPED, decisionSkippedCallback);

@@ -53,7 +53,8 @@ export class DecisionSkippedHandler {
      * @param metadata 事件元数据
      */
     public async handleEvent(metadata: EventMetadata<DecisionSkippedEvent>): Promise<void> {
-        console.log('[DecisionSkippedHandler] 收到 DecisionSkippedEvent', metadata);
+        console.log('[DecisionSkippedHandler] ========== 开始处理 ==========');
+        console.log('[DecisionSkippedHandler] 收到事件:', JSON.stringify(metadata.data));
 
         const event = metadata.data;
 
@@ -61,26 +62,39 @@ export class DecisionSkippedHandler {
             // 获取 GameSession
             const session = Blackboard.instance.get<GameSession>("currentGameSession");
             if (!session) {
-                console.warn('[DecisionSkippedHandler] GameSession not found');
+                console.error('[DecisionSkippedHandler] ❌ GameSession not found');
                 return;
             }
+            console.log('[DecisionSkippedHandler] ✓ GameSession 获取成功');
 
             // 1. 检查事件是否属于当前游戏
             if (event.game !== session.getGameId()) {
-                console.warn('[DecisionSkippedHandler] Event game mismatch, ignoring', {
+                console.warn('[DecisionSkippedHandler] ❌ Game ID 不匹配', {
                     eventGame: event.game,
                     currentGame: session.getGameId()
                 });
                 return;
             }
+            console.log('[DecisionSkippedHandler] ✓ Game ID 匹配');
+
+            // 记录调用前状态
+            console.log('[DecisionSkippedHandler] 调用 advance_turn 前:', {
+                currentRound: session.getRound(),
+                currentTurn: session.getTurn(),
+                eventRound: event.round,
+                eventTurn: event.turn,
+                hasPendingDecision: session.hasPendingDecision()
+            });
 
             // 2. 更新 turn（注意 +1）
             session.setRound(event.round);
             await session.advance_turn(event.turn);
 
-            console.log('[DecisionSkippedHandler] Turn 已更新', {
-                round: event.round,
-                turn: event.turn
+            console.log('[DecisionSkippedHandler] 调用 advance_turn 后:', {
+                newRound: session.getRound(),
+                newTurn: session.getTurn(),
+                activePlayerIndex: session.getActivePlayerIndex(),
+                isMyTurn: session.isMyTurn()
             });
 
             // 3. 获取玩家
@@ -102,9 +116,11 @@ export class DecisionSkippedHandler {
                 );
 
                 // 清除待决策状态（关键修复）
+                console.log('[DecisionSkippedHandler] 准备调用 clearPendingDecision (无关联建筑)');
                 session.clearPendingDecision();
+                console.log('[DecisionSkippedHandler] clearPendingDecision 完成, hasPendingDecision:', session.hasPendingDecision());
 
-                console.log('[DecisionSkippedHandler] 无关联建筑信息');
+                console.log('[DecisionSkippedHandler] ========== 处理完成 (无关联建筑) ==========');
                 return;
             }
 
@@ -118,15 +134,17 @@ export class DecisionSkippedHandler {
             );
 
             // 6. 清除待决策状态
+            console.log('[DecisionSkippedHandler] 准备调用 clearPendingDecision');
             session.clearPendingDecision();
+            console.log('[DecisionSkippedHandler] clearPendingDecision 完成, hasPendingDecision:', session.hasPendingDecision());
 
-            console.log('[DecisionSkippedHandler] DecisionSkippedEvent 处理完成', {
+            console.log('[DecisionSkippedHandler] ========== 处理完成 ==========', {
                 player: player.getPlayerIndex(),
                 decisionType: decisionTypeStr,
                 building: buildingName
             });
         } catch (error) {
-            console.error('[DecisionSkippedHandler] 处理主逻辑失败', error);
+            console.error('[DecisionSkippedHandler] ❌ 处理失败', error);
             UINotification.error(`跳过决策处理失败: ${error.message || error}`);
         }
     }

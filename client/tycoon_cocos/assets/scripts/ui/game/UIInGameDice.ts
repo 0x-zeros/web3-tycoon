@@ -192,8 +192,11 @@ export class UIInGameDice extends UIBase {
      * 更新按钮状态（根据当前回合）
      */
     private _updateButtonState(): void {
+        console.log('[UIInGameDice] _updateButtonState 开始');
+
         const session = GameInitializer.getInstance()?.getGameSession();
         if (!session) {
+            console.error('[UIInGameDice] ❌ session 为空');
             this.m_btn_roll.enabled = false;
             if (this.m_btn_skipTurn) {
                 this.m_btn_skipTurn.visible = false;
@@ -252,8 +255,8 @@ export class UIInGameDice extends UIBase {
         // dice: 轮到自己 && 不在医院（待决策时作为兜底入口）
         this.m_btn_roll.enabled = canRollButton;
 
-        console.log('[UIInGameDice] Dice 按钮:', canRollButton ? '启用' : '禁用',
-            hasPendingDecision ? '（等待决策中，可点击重开）' : '');
+        console.log('[UIInGameDice] 骰子按钮 enabled =', canRollButton);
+        console.log('[UIInGameDice] _updateButtonState 完成');
     }
 
     /**
@@ -722,6 +725,7 @@ export class UIInGameDice extends UIBase {
      * 回合变化处理（更新骰子按钮状态）
      */
     private _onTurnChanged(data: { isMyTurn: boolean }): void {
+        console.log('[UIInGameDice] >>>>>> _onTurnChanged 被调用 <<<<<<', data);
         this._updateButtonState();  // 统一使用 _updateButtonState
         this._updateDiceCountOptions();  // 同时更新骰子数量选项
     }
@@ -730,7 +734,7 @@ export class UIInGameDice extends UIBase {
      * 决策状态变化处理（待决策/决策完成时更新骰子按钮状态）
      */
     private _onDecisionStateChanged(): void {
-        console.log('[UIInGameDice] 决策状态变化，更新按钮状态');
+        console.log('[UIInGameDice] >>>>>> _onDecisionStateChanged 被调用 <<<<<<');
         this._updateButtonState();
     }
 

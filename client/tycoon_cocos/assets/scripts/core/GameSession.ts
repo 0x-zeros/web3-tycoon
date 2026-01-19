@@ -701,6 +701,13 @@ export class GameSession {
         });
 
         // 触发回合变化事件
+        console.log('[GameSession] 准备发射 TurnChanged 事件:', {
+            oldPlayerIndex: oldActiveIdx,
+            newPlayerIndex: newTurn,
+            isMyTurn: this.isMyTurn(),
+            hasRolled: this._hasRolled
+        });
+
         EventBus.emit(EventTypes.Game.TurnChanged, {
             session: this,
             oldPlayerIndex: oldActiveIdx,
@@ -708,6 +715,8 @@ export class GameSession {
             activePlayer: activePlayer,
             isMyTurn: this.isMyTurn()
         });
+
+        console.log('[GameSession] TurnChanged 事件已发射');
 
         // 非编辑模式下，更新相机跟随新的当前玩家
         if (activePlayer && this._gameMap && !this._gameMap.isEditMode) {
@@ -761,19 +770,22 @@ export class GameSession {
      * 设置待决策状态
      */
     public setPendingDecision(decision: PendingDecisionInfo | null): void {
+        console.log('[GameSession] setPendingDecision 调用:', decision);
         this._pendingDecision = decision;
 
         if (decision) {
-            console.log('[GameSession] 设置待决策', decision);
+            console.log('[GameSession] 发射 DecisionPending 事件');
             EventBus.emit(EventTypes.Game.DecisionPending, {
                 session: this,
                 decision: decision
             });
+            console.log('[GameSession] DecisionPending 事件已发射');
         } else {
-            console.log('[GameSession] 清除待决策');
+            console.log('[GameSession] 发射 DecisionCleared 事件');
             EventBus.emit(EventTypes.Game.DecisionCleared, {
                 session: this
             });
+            console.log('[GameSession] DecisionCleared 事件已发射');
         }
     }
 
@@ -781,7 +793,9 @@ export class GameSession {
      * 清除待决策状态
      */
     public clearPendingDecision(): void {
+        console.log('[GameSession] clearPendingDecision 调用, 当前待决策:', this._pendingDecision);
         this.setPendingDecision(null);
+        console.log('[GameSession] clearPendingDecision 完成');
     }
 
     /**

@@ -617,7 +617,24 @@ entry fun skip_card_shop(
     validate_seat_and_turn(game, seat);
     assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
 
+    let player_addr = seat.player;
+    let decision_type = game.pending_decision;
+    let decision_tile = game.decision_tile;
+
     clear_decision_state(game);
+
+    let event_round = game.round;
+    let event_turn = game.turn;
+
+    events::emit_decision_skipped_event(
+        game.id.to_inner(),
+        player_addr,
+        decision_type,
+        decision_tile,
+        event_round,
+        event_turn
+    );
+
     advance_turn(game, game_data, map, r, ctx);
 }
 

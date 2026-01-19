@@ -265,8 +265,16 @@ export class NumberTextureGenerator {
         const textColor = this.getTileTypeTextColor(typeId);  // 根据类型获取文字颜色
 
         // 根据类型调整字体大小
-        // 金额类型（奖励4、费用5）使用更小的字体
-        const fontSize = (typeId === 4 || typeId === 5) ? 18 : 22;
+        // 金额类型（奖励4、费用5）固定18px，其他类型根据字数动态调整
+        let fontSize: number;
+        if (typeId === 4 || typeId === 5) {
+            fontSize = 18;
+        } else {
+            // 去掉空格计算实际字数
+            const charCount = typeName.replace(/\s/g, '').length;
+            // 2字及以下: 22px, 3字: 20px, 4字及以上: 16px
+            fontSize = charCount <= 2 ? 22 : charCount === 3 ? 20 : 16;
+        }
 
         return this.getNumberTexture(0, {
             size: 64,
@@ -297,7 +305,7 @@ export class NumberTextureGenerator {
             // case 5: return '费用';
             case 6: return '卡片';
             case 7: return '新闻';
-            case 8: return '卡片商店';   // 卡片商店：简称 卡店
+            case 8: return '卡片 商店';  // 卡片商店：2行显示（空格分隔触发多行）
             default: return '未知';
         }
     }

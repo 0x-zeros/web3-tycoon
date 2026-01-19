@@ -473,9 +473,18 @@ export class UIManager {
             if (this._config.debug) {
                 console.log(`[UIManager] UI ${uiName} already exists and is valid, returning existing instance`);
             }
-            // 刷新现有UI的数据
-            existingUI.refresh(data);
-            existingUI.show(data, true);
+            // 刷新现有UI的数据（兼容 UIShowOptions 解包）
+            const actualData = isUIShowOptions(data) ? data.data : data;
+            existingUI.refresh(actualData);
+            existingUI.show(actualData, true);
+            if (isUIShowOptions(data) && data.parentUIName) {
+                const parentUI = this._activeUIs.get(data.parentUIName);
+                if (parentUI) {
+                    UIBase.addChildUI(parentUI, existingUI, data.alignment || UIAlignment.CENTER);
+                } else {
+                    console.warn(`[UIManager] Parent UI '${data.parentUIName}' not found`);
+                }
+            }
             this._syncCommonSettingMode(uiName);
             return existingUI as T;
         } else if (existingUI) {
@@ -493,8 +502,17 @@ export class UIManager {
             }
             const result = await pendingPromise;
             if (result) {
-                result.refresh(data);
-                result.show(data, true);
+                const actualData = isUIShowOptions(data) ? data.data : data;
+                result.refresh(actualData);
+                result.show(actualData, true);
+                if (isUIShowOptions(data) && data.parentUIName) {
+                    const parentUI = this._activeUIs.get(data.parentUIName);
+                    if (parentUI) {
+                        UIBase.addChildUI(parentUI, result, data.alignment || UIAlignment.CENTER);
+                    } else {
+                        console.warn(`[UIManager] Parent UI '${data.parentUIName}' not found`);
+                    }
+                }
             }
             return result as T | null;
         }

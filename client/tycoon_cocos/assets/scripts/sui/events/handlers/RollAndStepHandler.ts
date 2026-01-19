@@ -614,12 +614,22 @@ export class RollAndStepHandler {
 
         // ✅ 最后才切换回合（确保决策检查时 isMyTurn() 仍为 true）
         if (session) {
-            await session.advance_turn(event.turn_in_round);
+            const pendingDecisionType = lastStep?.stop_effect?.pending_decision;
+            const hasPendingDecision = pendingDecisionType !== undefined &&
+                pendingDecisionType !== DecisionType.NONE;
 
-            console.log('[RollAndStepHandler] Turn 已同步（from event）', {
-                round: event.round,
-                turn: event.turn_in_round
-            });
+            if (hasPendingDecision) {
+                console.log('[RollAndStepHandler] 检测到待决策，跳过回合推进', {
+                    pendingDecisionType
+                });
+            } else {
+                await session.advance_turn(event.turn_in_round);
+
+                console.log('[RollAndStepHandler] Turn 已同步（from event）', {
+                    round: event.round,
+                    turn: event.turn_in_round
+                });
+            }
         }
     }
 

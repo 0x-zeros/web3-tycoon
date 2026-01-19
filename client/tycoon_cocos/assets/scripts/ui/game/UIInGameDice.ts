@@ -223,6 +223,8 @@ export class UIInGameDice extends UIBase {
 
         // 检查是否有待决策（任何玩家的待决策都会阻塞游戏）
         const hasPendingDecision = session.hasPendingDecision();
+        const canRollButton = isMyTurn && !shouldSkip;
+        const decisionFallback = hasPendingDecision && canRollButton;
 
         // 【调试日志】详细输出状态信息
         console.log('[UIInGameDice] _updateButtonState DEBUG:', {
@@ -235,7 +237,8 @@ export class UIInGameDice extends UIBase {
             inHospital: myPlayer?.getInHospitalTurns() || 0,
             shouldSkip: shouldSkip,
             hasPendingDecision: hasPendingDecision,
-            btnRollEnabled: isMyTurn && !shouldSkip && !hasPendingDecision,
+            btnRollEnabled: canRollButton,
+            decisionFallback: decisionFallback,
             btnSkipVisible: isMyTurn && shouldSkip
         });
 
@@ -246,11 +249,11 @@ export class UIInGameDice extends UIBase {
             console.log('[UIInGameDice] SkipTurn 按钮:', (isMyTurn && shouldSkip) ? '显示并启用' : '隐藏');
         }
 
-        // dice: 轮到自己 && 不在医院 && 没有待决策
-        this.m_btn_roll.enabled = isMyTurn && !shouldSkip && !hasPendingDecision;
+        // dice: 轮到自己 && 不在医院（待决策时作为兜底入口）
+        this.m_btn_roll.enabled = canRollButton;
 
-        console.log('[UIInGameDice] Dice 按钮:', (isMyTurn && !shouldSkip && !hasPendingDecision) ? '启用' : '禁用',
-            hasPendingDecision ? '（等待决策中）' : '');
+        console.log('[UIInGameDice] Dice 按钮:', canRollButton ? '启用' : '禁用',
+            hasPendingDecision ? '（等待决策中，可点击重开）' : '');
     }
 
     /**
@@ -356,11 +359,16 @@ export class UIInGameDice extends UIBase {
                     this.m_btn_roll.enabled = true;
                 }
 
-                // 显示决策窗口
-                this._showDecisionDialogFallback(pendingDecision, session);
+                const decisionAlreadyShowing = this._isDecisionUIShowing(pendingDecision);
+                if (!decisionAlreadyShowing) {
+                    // 显示决策窗口
+                    this._showDecisionDialogFallback(pendingDecision, session);
 
-                // 提示用户
-                UINotification.warning('请先处理待决策事项', undefined, undefined, 'center');
+                    // 提示用户
+                    UINotification.warning('请先处理待决策事项', undefined, undefined, 'center');
+                } else {
+                    console.log('[UIInGameDice] 决策窗口已显示，忽略重复点击');
+                }
 
                 return;  // 不提交交易
             }
@@ -772,6 +780,16 @@ export class UIInGameDice extends UIBase {
         if (this.m_ctrl_diceNum) {
             this.m_ctrl_diceNum.selectedIndex = count - 1;
         }
+    }
+
+    /**
+     * 判断决策窗口是否已显示（避免重复弹窗）
+     */
+    private _isDecisionUIShowing(decision: PendingDecisionInfo): boolean {
+        if (decision.type === DecisionType.CARD_SHOP) {
+            return UIManager.instance.isUIShowing('CardShop');
+        }
+        return UIManager.instance.isUIShowing('MessageBox');
     }
 
     /**

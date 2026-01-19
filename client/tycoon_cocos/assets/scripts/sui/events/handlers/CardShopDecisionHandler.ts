@@ -76,6 +76,14 @@ export class CardShopDecisionHandler {
 
         const decision = event.decision;
 
+        // 同步回合（对应 Move 端 buy_cards 内的 advance_turn）
+        session.setRound(event.round);
+        await session.advance_turn(event.turn_in_round);
+        console.log('[CardShopDecisionHandler] Turn 已更新', {
+            round: event.round,
+            turn: event.turn_in_round
+        });
+
         // 更新玩家卡片 - addCard() 内部会触发 Player.CardChange 事件
         for (const cardDraw of decision.purchased_cards) {
             // 处理 Move 事件的 fields 嵌套结构

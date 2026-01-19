@@ -97,10 +97,14 @@ export class DecisionSkippedHandler {
             const tile = tiles[event.tile_id];
 
             if (!tile || tile.buildingId === INVALID_TILE_ID) {
-                // 无法获取建筑信息，显示简单通知
+                // 无关联建筑（如卡片商店），显示决策类型
+                const decisionTypeStr = this.getDecisionTypeString(event.decision_type);
                 UINotification.info(
-                    `玩家${player.getPlayerIndex() + 1}放弃了决策`
+                    `玩家${player.getPlayerIndex() + 1}放弃了${decisionTypeStr}`
                 );
+
+                // 清除待决策状态（关键修复）
+                session.clearPendingDecision();
 
                 console.log('[DecisionSkippedHandler] 无关联建筑信息');
                 return;
@@ -110,7 +114,7 @@ export class DecisionSkippedHandler {
             const buildingName = building?.getBuildingTypeName() || `建筑${tile.buildingId}`;
 
             // 5. 显示 notification
-            const decisionTypeStr = event.decision_type === 1 ? '购买' : '升级';
+            const decisionTypeStr = this.getDecisionTypeString(event.decision_type);
             UINotification.info(
                 `玩家${player.getPlayerIndex() + 1}放弃${decisionTypeStr}${buildingName}`
             );
@@ -137,6 +141,19 @@ export class DecisionSkippedHandler {
             } catch (error) {
                 console.error('[DecisionSkippedHandler] 发射事件失败', error);
             }
+        }
+    }
+
+    /**
+     * 获取决策类型的显示文案
+     */
+    private getDecisionTypeString(decisionType: number): string {
+        switch (decisionType) {
+            case 1: return '购买';
+            case 2: return '升级';
+            case 3: return '租金支付';
+            case 4: return '卡片商店';
+            default: return '决策';
         }
     }
 

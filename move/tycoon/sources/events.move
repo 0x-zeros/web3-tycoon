@@ -261,6 +261,19 @@ public struct RollAndStepActionEvent has copy, drop {
     end_pos: u16
 }
 
+// 瞬移动作事件
+public struct TeleportActionEvent has copy, drop {
+    game: ID,
+    player: address,           // 使用卡牌的玩家
+    round: u16,
+    turn_in_round: u8,
+    target_player: address,    // 被瞬移的玩家
+    from_pos: u16,             // 原位置
+    to_pos: u16,               // 目标位置
+    stop_effect: option::Option<StopEffect>,
+    cash_changes: vector<CashDelta>,
+}
+
 
 // ===== Emit Functions 事件发射函数 =====
 
@@ -577,6 +590,30 @@ public(package) fun emit_roll_and_step_action_event_with_choices(
         steps,
         cash_changes,
         end_pos
+    });
+}
+
+public(package) fun emit_teleport_action_event(
+    game_id: ID,
+    player: address,
+    round: u16,
+    turn_in_round: u8,
+    target_player: address,
+    from_pos: u16,
+    to_pos: u16,
+    stop_effect: option::Option<StopEffect>,
+    cash_changes: vector<CashDelta>,
+) {
+    event::emit(TeleportActionEvent {
+        game: game_id,
+        player,
+        round,
+        turn_in_round,
+        target_player,
+        from_pos,
+        to_pos,
+        stop_effect,
+        cash_changes,
     });
 }
 

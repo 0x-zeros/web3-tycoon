@@ -247,7 +247,8 @@ export enum EventType {
 
     // 聚合事件（在aggregated.ts中定义）
     USE_CARD_ACTION = 'UseCardActionEvent',
-    ROLL_AND_STEP_ACTION = 'RollAndStepActionEvent'
+    ROLL_AND_STEP_ACTION = 'RollAndStepActionEvent',
+    TELEPORT_ACTION = 'TeleportActionEvent'
 }
 
 /**

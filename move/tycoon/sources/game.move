@@ -132,6 +132,15 @@ public struct Tile has store, copy, drop {
     npc_on: u16
 }
 
+// 瞬移卡效果信息（用于返回给 use_card 发射事件）
+struct TeleportInfo has drop {
+    target_player: address,
+    from_pos: u16,
+    to_pos: u16,
+    stop_effect: Option<events::StopEffect>,
+    cash_changes: vector<events::CashDelta>
+}
+
 const NO_OWNER: u8 = 255;
 const NO_NPC: u16 = 65535;
 
@@ -425,6 +434,7 @@ entry fun use_card(
     params: vector<u16>,
     game_data: &GameData,
     map: &map::MapTemplate,
+    r: &Random,
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
@@ -444,7 +454,9 @@ entry fun use_card(
     let mut buff_changes = vector[];
     let mut cash_changes = vector[];
 
-    apply_card_effect_with_collectors(
+    let mut generator = r.new_generator(ctx);
+
+    let teleport_info = apply_card_effect_with_collectors(
         game,
         seat.player_index,
         kind,
@@ -452,7 +464,9 @@ entry fun use_card(
         &mut npc_changes,
         &mut buff_changes,
         &mut cash_changes,
-        map
+        game_data,
+        map,
+        &mut generator
     );
 
     events::emit_use_card_action_event(
@@ -467,6 +481,22 @@ entry fun use_card(
         cash_changes,
         game.players[seat.player_index as u64].next_tile_id
     );
+
+    // 如果是瞬移卡，额外发射 TeleportActionEvent
+    if (teleport_info.is_some()) {
+        let info = teleport_info.destroy_some();
+        events::emit_teleport_action_event(
+            game.id.to_inner(),
+            player_addr,
+            game.round,
+            game.turn,
+            info.target_player,
+            info.from_pos,
+            info.to_pos,
+            info.stop_effect,
+            info.cash_changes
+        );
+    };
 }
 
 /// 购买卡片的内部实现
@@ -2247,8 +2277,10 @@ fun apply_card_effect_with_collectors(
     npc_changes: &mut vector<events::NpcChangeItem>,
     buff_changes: &mut vector<events::BuffChangeItem>,
     cash_changes: &mut vector<events::CashDelta>,
-    _map: &map::MapTemplate
-) {
+    game_data: &GameData,
+    map: &map::MapTemplate,
+    generator: &mut RandomGenerator
+): Option<TeleportInfo> {
     let player_addr = (&game.players[player_index as u64]).owner;
 
     if (kind == types::CARD_MOVE_CTRL()) {
@@ -2391,8 +2423,32 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
         assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
 
-        let target_player = &mut game.players[target_index as u64];
-        target_player.pos = tile_id;
+        // 1. 记录原位置和目标玩家地址
+        let from_pos = game.players[target_index as u64].pos;
+        let target_player_addr = game.players[target_index as u64].owner;
+
+        // 2. 更新位置
+        game.players[target_index as u64].pos = tile_id;
+
+        // 3. 调用停留处理（复用现有逻辑）
+        let mut teleport_cash_changes = vector[];
+        let stop_effect = handle_tile_stop_with_collector(
+            game, target_index, tile_id,
+            &mut teleport_cash_changes,
+            false,  // auto_buy
+            false,  // auto_upgrade
+            false,  // prefer_rent_card
+            game_data, map, generator
+        );
+
+        // 4. 返回 TeleportInfo
+        return option::some(TeleportInfo {
+            target_player: target_player_addr,
+            from_pos,
+            to_pos: tile_id,
+            stop_effect: option::some(stop_effect),
+            cash_changes: teleport_cash_changes
+        })
 
     } else if (kind == types::CARD_BONUS_S()) {
         // 奖励卡（小）: params = [target_player_index]，+1万
@@ -2514,7 +2570,10 @@ fun apply_card_effect_with_collectors(
         assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
 
         remove_npc_internal(game, tile_id, npc_changes);
-    }
+    };
+
+    // 其他卡牌返回 none
+    option::none()
 }
 
 // ===== Buff管理API函数 =====

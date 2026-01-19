@@ -59,6 +59,7 @@ export class TycoonEventIndexer {
         'DecisionSkippedEvent': EventType.DECISION_SKIPPED,
         'UseCardActionEvent': EventType.USE_CARD_ACTION,
         'RollAndStepActionEvent': EventType.ROLL_AND_STEP_ACTION,
+        'TeleportActionEvent': EventType.TELEPORT_ACTION,
     };
 
     // 每个事件类型单独维护游标（MoveEventType 过滤下必须分开维护）
@@ -73,6 +74,7 @@ export class TycoonEventIndexer {
     // 需要按 game ID 过滤的事件类型
     private readonly gameFlowEventTypes: string[] = [
         'RollAndStepActionEvent',
+        'TeleportActionEvent',
         'BuildingDecisionEvent',
         'RentDecisionEvent',
         'DecisionSkippedEvent',

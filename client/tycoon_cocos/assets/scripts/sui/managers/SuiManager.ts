@@ -43,8 +43,10 @@ import { bankruptHandler } from '../events/handlers/BankruptHandler';
 import { gameEndedHandler } from '../events/handlers/GameEndedHandler';
 import { useCardHandler } from '../events/handlers/UseCardHandler';
 import { cardShopDecisionHandler } from '../events/handlers/CardShopDecisionHandler';
+import { teleportActionHandler } from '../events/handlers/TeleportActionHandler';
 import type { BuildingDecisionEvent, RentDecisionEvent, CardShopDecisionEvent, DecisionSkippedEvent, SkipTurnEvent, BankruptEvent, GameEndedEvent } from '../events/types';
 import type { UseCardActionEvent } from '../events/handlers/UseCardHandler';
+import type { TeleportActionEvent } from '../events/types/TeleportActionEvent';
 import type { EventCallback } from '../events/indexer';
 
 /**
@@ -1392,7 +1394,15 @@ export class SuiManager {
         this._eventIndexer.on<GameEndedEvent>(EventType.GAME_ENDED, gameEndedCallback);
         this._gameEventHandlers.set(EventType.GAME_ENDED, gameEndedCallback);
 
-        console.log('[SuiManager] Game event listeners registered (9 events)');
+        // 10. TeleportAction 事件
+        const teleportActionCallback: EventCallback<TeleportActionEvent> = async (event) => {
+            console.log('[SuiManager] TeleportActionEvent from chain:', event.data);
+            await teleportActionHandler.instance.handleEvent(event);
+        };
+        this._eventIndexer.on<TeleportActionEvent>(EventType.TELEPORT_ACTION, teleportActionCallback);
+        this._gameEventHandlers.set(EventType.TELEPORT_ACTION, teleportActionCallback);
+
+        console.log('[SuiManager] Game event listeners registered (10 events)');
     }
 
     /**

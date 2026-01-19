@@ -62,26 +62,12 @@ export class UICardShop extends UIBase {
     }
 
     /**
-     * 重写show方法，设置为非全屏并居中显示
+     * 重写show方法，设置为非全屏
+     * 注意：居中对齐由 UIBase.addChildUI 处理
      */
     public show(data?: any, isFullScreen?: boolean): void {
         // 强制设置为非全屏
         super.show(data, false);
-        
-        // 居中显示
-        if (this._panel) {
-            const screenWidth = fgui.GRoot.inst.width;
-            const screenHeight = fgui.GRoot.inst.height;
-            const panelWidth = this._panel.width;
-            const panelHeight = this._panel.height;
-            
-            // 计算居中位置
-            const centerX = (screenWidth - panelWidth) / 2;
-            const centerY = (screenHeight - panelHeight) / 2;
-            
-            this._panel.x = centerX;
-            this._panel.y = centerY;
-        }
     }
 
     /**

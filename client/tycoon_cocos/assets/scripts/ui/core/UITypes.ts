@@ -56,6 +56,8 @@ export interface UIEventData {
     data?: any;
 }
 
+import { UIAlignment } from './UIBase';
+
 /**
  * UI显示选项
  */
@@ -66,6 +68,20 @@ export interface UIShowOptions {
     immediate?: boolean;
     /** 显示完成回调 */
     onComplete?: () => void;
+    /** 父 UI 名称，指定后会自动调用 addChildUI */
+    parentUIName?: string;
+    /** 子 UI 对齐方式（默认居中） */
+    alignment?: UIAlignment;
+}
+
+/**
+ * 判断 data 是否为 UIShowOptions（包含 showUI 选项字段）
+ */
+export function isUIShowOptions(data: any): data is UIShowOptions {
+    if (!data || typeof data !== 'object') return false;
+    // 检查是否包含任意 UIShowOptions 特有字段
+    return 'parentUIName' in data || 'alignment' in data ||
+           'immediate' in data || 'onComplete' in data;
 }
 
 /**

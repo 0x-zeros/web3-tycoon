@@ -7,8 +7,9 @@ import { UI3DInteractionManager } from "../../events/UI3DInteractionManager";
 import { MapManager } from "../../map/MapManager";
 import * as fgui from "fairygui-cc";
 
-// 从 UITypes 导入 UILayer（避免循环依赖）
-import { UILayer } from "./UITypes";
+// 从 UITypes 导入 UILayer 和 isUIShowOptions（避免循环依赖）
+import { UILayer, isUIShowOptions } from "./UITypes";
+import { UIAlignment } from "./UIBase";
 
 // 重新导出 UILayer（保持向后兼容）
 export { UILayer };
@@ -546,8 +547,20 @@ export class UIManager {
                 this._showAsComponent(uiInstance, config);
             }
 
-            uiInstance.show(data, true);
+            // 提取实际数据（如果 data 是 UIShowOptions，则取其 data 字段）
+            const actualData = isUIShowOptions(data) ? data.data : data;
+            uiInstance.show(actualData, true);
             this._activeUIs.set(uiName, uiInstance);
+
+            // 处理父子UI关系
+            if (isUIShowOptions(data) && data.parentUIName) {
+                const parentUI = this._activeUIs.get(data.parentUIName);
+                if (parentUI) {
+                    UIBase.addChildUI(parentUI, uiInstance, data.alignment || UIAlignment.CENTER);
+                } else {
+                    console.warn(`[UIManager] Parent UI '${data.parentUIName}' not found`);
+                }
+            }
             this._syncCommonSettingMode(uiName);
 
             // 发送显示事件
@@ -1043,7 +1056,7 @@ export class UIManager {
             packageName,
             componentName,
             cache: false,
-            isWindow: true,
+            isWindow: false,  // 改为 false，通过 addChildUI 添加到 InGame
             layer: UILayer.MODAL
         }, UICardShop);
     }

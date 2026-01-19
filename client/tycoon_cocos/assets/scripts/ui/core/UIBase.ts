@@ -7,6 +7,19 @@ import GameSettings from '../../config/GameSettings';
 const { ccclass, property } = _decorator;
 
 /**
+ * 对齐方式枚举
+ */
+export enum UIAlignment {
+    CENTER = 'center',
+    TOP_LEFT = 'topLeft',
+    TOP_CENTER = 'topCenter',
+    TOP_RIGHT = 'topRight',
+    BOTTOM_LEFT = 'bottomLeft',
+    BOTTOM_CENTER = 'bottomCenter',
+    BOTTOM_RIGHT = 'bottomRight',
+}
+
+/**
  * UI基类 - 继承Component，可挂载到FairyGUI节点上
  * 所有游戏UI逻辑类都应该继承此类
  */
@@ -441,5 +454,78 @@ export abstract class UIBase extends Component {
      */
     protected onRefresh(_data?: any): void {
         // 子类重写
+    }
+
+    // ================== 静态方法（子UI归属管理） ==================
+
+    /**
+     * 将子UI添加到主UI作为子节点
+     * 主UI隐藏时，子UI会自动隐藏（FairyGUI父子机制）
+     * @param parentUI 主UI实例
+     * @param childUI 子UI实例
+     * @param alignment 对齐方式（默认居中）
+     */
+    public static addChildUI(
+        parentUI: UIBase,
+        childUI: UIBase,
+        alignment: UIAlignment = UIAlignment.CENTER
+    ): void {
+        if (!parentUI.panel || !childUI.panel) {
+            console.error('[UIBase] addChildUI: panel not found');
+            return;
+        }
+
+        // 添加为子节点
+        parentUI.panel.addChild(childUI.panel);
+
+        // 设置对齐
+        UIBase.alignChildUI(parentUI, childUI, alignment);
+
+        // 确保在最上层
+        parentUI.panel.setChildIndex(childUI.panel, parentUI.panel.numChildren - 1);
+
+        console.log(`[UIBase] 子UI ${childUI.uiName} 添加到主UI ${parentUI.uiName}`);
+    }
+
+    /**
+     * 对齐子UI
+     */
+    private static alignChildUI(
+        parentUI: UIBase,
+        childUI: UIBase,
+        alignment: UIAlignment
+    ): void {
+        const parent = parentUI.panel!;
+        const child = childUI.panel!;
+
+        switch (alignment) {
+            case UIAlignment.CENTER:
+                child.center();
+                break;
+            case UIAlignment.TOP_LEFT:
+                child.x = 0;
+                child.y = 0;
+                break;
+            case UIAlignment.TOP_CENTER:
+                child.x = (parent.width - child.width) / 2;
+                child.y = 0;
+                break;
+            case UIAlignment.TOP_RIGHT:
+                child.x = parent.width - child.width;
+                child.y = 0;
+                break;
+            case UIAlignment.BOTTOM_LEFT:
+                child.x = 0;
+                child.y = parent.height - child.height;
+                break;
+            case UIAlignment.BOTTOM_CENTER:
+                child.x = (parent.width - child.width) / 2;
+                child.y = parent.height - child.height;
+                break;
+            case UIAlignment.BOTTOM_RIGHT:
+                child.x = parent.width - child.width;
+                child.y = parent.height - child.height;
+                break;
+        }
     }
 }

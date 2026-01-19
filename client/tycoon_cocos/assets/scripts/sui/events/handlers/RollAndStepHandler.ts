@@ -374,7 +374,7 @@ export class RollAndStepHandler {
 
                     if (myAddress && event.player === myAddress) {
                         import('../../../ui/core/UIManager').then(({ UIManager }) => {
-                            UIManager.instance.showUI('CardShop');
+                            UIManager.instance.showUI('CardShop', { parentUIName: 'InGame' });
                         }).catch(err => {
                             console.error('[RollAndStepHandler] 打开卡片商店失败', err);
                         });

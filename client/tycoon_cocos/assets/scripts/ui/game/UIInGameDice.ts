@@ -815,7 +815,7 @@ export class UIInGameDice extends UIBase {
 
             case DecisionType.CARD_SHOP:
                 console.log('[UIInGameDice] 显示卡片商店');
-                UIManager.instance.showUI('CardShop');
+                UIManager.instance.showUI('CardShop', { parentUIName: 'InGame' });
                 break;
 
             default:

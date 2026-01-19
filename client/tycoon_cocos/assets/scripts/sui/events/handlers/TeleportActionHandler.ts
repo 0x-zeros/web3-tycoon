@@ -195,12 +195,19 @@ export class TeleportActionHandler {
             const buffName = this._getBuffName(npcBuff.buff_type);
             UINotification.info(`获得 ${buffName}！`, 'NPC祝福', 3000, 'center');
 
-            player.addBuff({
-                kind: npcBuff.buff_type,
-                last_active_round: npcBuff.last_active_round ?? 0,
-                value: BigInt(0),
-                spawn_index: 0xFFFF
-            });
+            // 根据 target 地址查找目标玩家（fallback 到被瞬移的玩家）
+            const targetPlayer = npcBuff.target
+                ? session.getPlayerByAddress(npcBuff.target)
+                : player;
+
+            if (targetPlayer) {
+                targetPlayer.addBuff({
+                    kind: npcBuff.buff_type,
+                    last_active_round: npcBuff.last_active_round ?? 0,
+                    value: BigInt(0),
+                    spawn_index: 0xFFFF
+                });
+            }
 
             // NPC被消耗
             session.removeNPC(stopEffect.tile_id);

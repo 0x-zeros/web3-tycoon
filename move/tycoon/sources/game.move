@@ -133,7 +133,7 @@ public struct Tile has store, copy, drop {
 }
 
 // 瞬移卡效果信息（用于返回给 use_card 发射事件）
-struct TeleportInfo has drop {
+public struct TeleportInfo has drop {
     target_player: address,
     from_pos: u16,
     to_pos: u16,
@@ -1665,6 +1665,22 @@ fun handle_tile_stop_with_collector(
             // 消耗NPC
             consume_npc_if_consumable(game, tile_id, &npc);
             handle_npc_consumed(game, &npc, true);
+        } else if (is_hospital_npc(npc.kind)) {
+            // 炸弹/狗触发 - 送往医院（瞬移卡等场景）
+            let hospital_tile = find_nearest_hospital(game, tile_id, map, game_data);
+            send_to_hospital_internal(game, player_index, hospital_tile, game_data);
+
+            // 消耗NPC
+            consume_npc_if_consumable(game, tile_id, &npc);
+            handle_npc_consumed(game, &npc, true);
+
+            // 设置停留效果为医院
+            stop_type = events::stop_hospital();
+            turns_opt = option::some(types::DEFAULT_HOSPITAL_TURNS());
+        } else if (npc.kind == types::NPC_BARRIER()) {
+            // 路障：瞬移场景下玩家已在目标位置，只消耗NPC
+            consume_npc_if_consumable(game, tile_id, &npc);
+            handle_npc_consumed(game, &npc, true);
         }
     };
 
@@ -2427,8 +2443,9 @@ fun apply_card_effect_with_collectors(
         let from_pos = game.players[target_index as u64].pos;
         let target_player_addr = game.players[target_index as u64].owner;
 
-        // 2. 更新位置
+        // 2. 更新位置并清除强制方向
         game.players[target_index as u64].pos = tile_id;
+        game.players[target_index as u64].next_tile_id = 65535;  // 清除转向卡设置
 
         // 3. 调用停留处理（复用现有逻辑）
         let mut teleport_cash_changes = vector[];

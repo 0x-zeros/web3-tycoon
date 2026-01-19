@@ -55,8 +55,21 @@ dependencies = [
   { id = "Sui", name = "Sui" },
 ]
 
+[move.toolchain-version]
+compiler-version = "1.62.0"
+edition = "2024.beta"
+flavor = "sui"
+
 [pinned.testnet.tycoon]
 source = { root = true }
 use_environment = "testnet"
 manifest_digest = "5745706258F61D6CE210904B3E6AE87A73CE9D31A6F93BE4718C442529332A87"
 deps = { std = "MoveStdlib", sui = "Sui" }
+
+[env]
+
+[env.local]
+chain-id = "73bac4db"
+original-published-id = "0x987d6664c049549be8b0d2c0e77ae92ab0f67365bdbadd90d0c234aa27a4a743"
+latest-published-id = "0x987d6664c049549be8b0d2c0e77ae92ab0f67365bdbadd90d0c234aa27a4a743"
+published-version = "1"

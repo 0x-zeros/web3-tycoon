@@ -98,6 +98,8 @@ export class UIManager {
     private _commonLayoutUI: UICommonLayout | null = null;
     /** UI缓存池 */
     private _uiCache: Map<string, UIBase> = new Map();
+    /** 正在创建中的UI Promise，用于并发控制 */
+    private _pendingShowPromises: Map<string, Promise<UIBase | null>> = new Map();
     /** 已加载的包 */
     private _loadedPackages: Set<string> = new Set();
     /** 管理器配置 */
@@ -482,6 +484,40 @@ export class UIManager {
             this._activeUIs.delete(uiName);
         }
 
+        // 检查是否有正在进行的创建请求（并发控制）
+        const pendingPromise = this._pendingShowPromises.get(uiName);
+        if (pendingPromise) {
+            if (this._config.debug) {
+                console.log(`[UIManager] UI ${uiName} is being created, waiting for existing promise`);
+            }
+            const result = await pendingPromise;
+            if (result) {
+                result.refresh(data);
+                result.show(data, true);
+            }
+            return result as T | null;
+        }
+
+        // 创建新的 Promise 并注册
+        const createPromise = this._doShowUI<T>(uiName, config, constructor, data);
+        this._pendingShowPromises.set(uiName, createPromise);
+
+        try {
+            return await createPromise;
+        } finally {
+            this._pendingShowPromises.delete(uiName);
+        }
+    }
+
+    /**
+     * 内部方法：实际执行UI创建和显示逻辑
+     */
+    private async _doShowUI<T extends UIBase>(
+        uiName: string,
+        config: UIConfig,
+        constructor: UIConstructor,
+        data?: any
+    ): Promise<T | null> {
         try {
             // 确保包已加载
             if (!this._loadedPackages.has(config.packageName)) {
@@ -751,6 +787,7 @@ export class UIManager {
         this._uiConfigs.clear();
         this._uiConstructors.clear();
         this._activeUIs.clear();
+        this._pendingShowPromises.clear();
         this._loadedPackages.clear();
         
         this._groot = null;

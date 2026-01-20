@@ -297,8 +297,7 @@ export class GameInteraction {
                 tx.pure.u8(cardKind),
                 tx.pure.vector('u16', params),
                 tx.object(this.gameDataId),
-                tx.object(mapTemplateId),
-                tx.object(this.randomObjectId)  // random
+                tx.object(mapTemplateId)
             ]
         });
 

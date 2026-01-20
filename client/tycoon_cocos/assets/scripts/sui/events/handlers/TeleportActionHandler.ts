@@ -65,7 +65,10 @@ export class TeleportActionHandler {
             // 2. 更新位置（瞬移不更新lastTile）
             targetPlayer.setPos(event.to_pos, false);
 
-            // 3. 执行视觉瞬移
+            // 3. 清除强制方向（与Move端同步）
+            targetPlayer.setNextTileId(65535);
+
+            // 4. 执行视觉瞬移
             const targetCenter = session.getTileWorldCenter(event.to_pos);
             if (targetCenter) {
                 await targetPlayer.moveTo({
@@ -83,7 +86,7 @@ export class TeleportActionHandler {
                 buffAdded: event.buff_added
             });
 
-            // 4. 显示通知
+            // 5. 显示通知
             const sourcePlayer = session.getPlayerByAddress(event.player);
             const sourceIndex = sourcePlayer?.getPlayerIndex() ?? 0;
             const targetIndex = targetPlayer.getPlayerIndex();

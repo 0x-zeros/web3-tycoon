@@ -39,6 +39,8 @@
     <component id="uas2pg" name="EditorSetting.xml" path="/components/"/>
     <component id="la01ph" name="CardShop.xml" path="/" exported="true"/>
     <component id="la01pi" name="CardShopItem.xml" path="/components/card/"/>
+    <component id="m8d4pj" name="SummonNpc.xml" path="/" exported="true"/>
+    <component id="m8d4pk" name="NpcItem.xml" path="/components/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

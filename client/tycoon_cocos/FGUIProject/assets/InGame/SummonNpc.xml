@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="800,800">
+  <displayList>
+    <image id="n1_la01" name="n1" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="800,800">
+      <relation target="" sidePair="width-width,height-height"/>
+    </image>
+    <text id="n5_la01" name="n5" xy="195,9" size="406,52" fontSize="30" color="#ffffff" align="center" vAlign="middle" autoSize="none" text="选择要召唤的NPC"/>
+    <component id="n2_la01" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="800,800">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
+    <list id="n0_mumq" name="list" xy="52,68" size="940,764" scale="0.75,0.75" layout="flow_hz" selectionMode="multipleSingleClick" overflow="scroll" defaultItem="ui://8z385pimm8d4pk" autoClearItems="true">
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+      <item/>
+    </list>
+    <component id="n3_la01" name="btn_cancel" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="34,716" size="216,64">
+      <Button title="取消"/>
+    </component>
+    <component id="n4_la01" name="btn_ok" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="554,716" size="216,64">
+      <Button title="确定"/>
+    </component>
+    <text id="n7_la01" name="num" xy="52,654" size="706,52" fontSize="30" color="#ffffff" align="right" vAlign="middle" autoSize="none" text="0 / 1"/>
+  </displayList>
+</component>

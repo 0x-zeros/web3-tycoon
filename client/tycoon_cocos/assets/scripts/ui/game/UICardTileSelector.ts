@@ -426,4 +426,71 @@ export class UICardTileSelector {
         this.overlayNodes.clear();
         this.selectedTile = null;
     }
+
+    /**
+     * 召唤卡专用tile选择（额外排除已有NPC的格子）
+     * @param card 卡片实例
+     * @param currentPlayerPos 玩家当前位置
+     * @returns 选中的tile ID，取消返回null
+     */
+    async showTileSelectionForSummon(
+        card: Card,
+        currentPlayerPos: number
+    ): Promise<number | null> {
+        if (this.isActive) {
+            console.warn('[UICardTileSelector] 选择器已激活，忽略重复调用');
+            return null;
+        }
+
+        this.isActive = true;
+
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            console.error('[UICardTileSelector] GameSession未初始化');
+            this.isActive = false;
+            return null;
+        }
+
+        const mapTemplate = session.getMapTemplate();
+        if (!mapTemplate) {
+            console.error('[UICardTileSelector] MapTemplate未初始化');
+            this.isActive = false;
+            return null;
+        }
+
+        // 获取所有有效tiles（全地图选择）
+        let validTiles = this.getAllValidTiles(mapTemplate);
+        console.log(`[UICardTileSelector] 召唤卡: 全地图有效tiles数量: ${validTiles.length}`);
+
+        // 额外过滤：排除已有NPC的格子
+        const gameTiles = session.getTiles();
+        if (gameTiles && gameTiles.length > 0) {
+            validTiles = validTiles.filter(tileId => {
+                const gameTile = gameTiles[tileId];
+                if (!gameTile) return true;  // tile不存在，允许选择
+                return !gameTile.hasNPC();  // 只允许无NPC的格子
+            });
+            console.log(`[UICardTileSelector] 召唤卡: 过滤已有NPC后tiles数量: ${validTiles.length}`);
+        }
+
+        if (validTiles.length === 0) {
+            this.isActive = false;
+            const { UIMessage } = await import('../utils/UIMessage');
+            await UIMessage.warning('没有可放置NPC的位置');
+            return null;
+        }
+
+        // 创建overlays
+        await this.createOverlaysForTiles(validTiles);
+
+        // 等待用户选择
+        const result = await new Promise<number | null>((resolve) => {
+            this.cancelResolve = resolve;
+            this.setupTileClickHandlers(validTiles, resolve);
+        });
+
+        this.cancelResolve = null;
+        this.isActive = false;
+        return result;
+    }
 }

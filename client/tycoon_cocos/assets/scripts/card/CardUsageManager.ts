@@ -20,6 +20,7 @@ import { BFSPathfinder } from '../sui/pathfinding/BFSPathfinder';
 import { MapGraph } from '../sui/pathfinding/MapGraph';
 import { PathExtender } from '../sui/pathfinding/PathExtender';
 import { INVALID_TILE_ID, CardKind } from '../sui/types/constants';
+import { UISummonNpc } from '../ui/game/UISummonNpc';
 
 /**
  * 卡片使用管理器
@@ -132,6 +133,9 @@ export class CardUsageManager {
             if (card.canUseDirectly()) {
                 // 直接使用（免租卡、转向卡）
                 await this.handleDirectCard(card);
+            } else if (card.isSummonCard()) {
+                // 召唤卡：先选NPC再选tile
+                await this.handleSummonCard(card);
             } else if (card.needsMultipleTargets()) {
                 // 需要多个目标（如瞬移卡：先选玩家再选地块）
                 await this.handleMultiTargetCard(card);
@@ -151,6 +155,66 @@ export class CardUsageManager {
         } finally {
             this.currentUsingCard = null;  // 清除记录
         }
+    }
+
+    /**
+     * 处理召唤卡（先选NPC再选tile）
+     */
+    private async handleSummonCard(card: Card): Promise<void> {
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) {
+            await UIMessage.error('游戏会话未初始化');
+            return;
+        }
+
+        // 1. 显示NPC选择对话框
+        console.log('[CardUsageManager] 召唤卡: 选择NPC类型');
+        const npcKind = await UISummonNpc.show();
+
+        if (npcKind === null) {
+            console.log('[CardUsageManager] 用户取消选择NPC');
+            return;
+        }
+
+        console.log(`[CardUsageManager] 选中NPC类型: kind=${npcKind}`);
+
+        // 2. 显示tile选择界面（全地图选择，额外过滤已有NPC的格子）
+        console.log('[CardUsageManager] 召唤卡: 选择目标地块');
+        const myPlayer = session.getMyPlayer();
+        if (!myPlayer) {
+            console.error('[CardUsageManager] 无法获取当前玩家');
+            return;
+        }
+
+        const currentPos = myPlayer.getPos();
+        const selectedTile = await this.tileSelector.showTileSelectionForSummon(card, currentPos);
+
+        if (selectedTile === null) {
+            console.log('[CardUsageManager] 用户取消选择地块');
+            return;
+        }
+
+        console.log(`[CardUsageManager] 选中地块: tileId=${selectedTile}`);
+
+        // 3. 构建参数并调用合约
+        // 召唤卡参数: [tile_id, npc_kind]
+        const params = [selectedTile, npcKind];
+
+        console.log(`[CardUsageManager] 召唤卡参数:`, params);
+
+        // 获取NPC名称用于显示
+        const npcNames: { [key: number]: string } = {
+            20: '路障',
+            21: '炸弹',
+            22: '恶犬',
+            23: '土地神',
+            24: '财神',
+            25: '福神',
+            26: '穷神'
+        };
+        const npcName = npcNames[npcKind] || `NPC(${npcKind})`;
+
+        await this.callUseCard(card.kind, params, card.name, `Tile ${selectedTile} 放置${npcName}`);
     }
 
     /**

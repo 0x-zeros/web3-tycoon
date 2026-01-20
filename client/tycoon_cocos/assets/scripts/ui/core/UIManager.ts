@@ -27,6 +27,7 @@ import { UICommonLayout } from "../game/UICommonLayout";
 import { UIGameEnd } from "../game/UIGameEnd";
 import { UIBankruptcy } from "../game/UIBankruptcy";
 import { UICardShop } from "../game/UICardShop";
+import { UISummonNpc } from "../game/UISummonNpc";
 
 import { UIFairyGUIAdapter } from "../utils/UIFairyGUIAdapter";
 import { UIMessage, MessageBoxType } from "../utils/UIMessage";
@@ -935,6 +936,7 @@ export class UIManager {
             UIManager.instance.registerGameEndUI(); // 注册GameEnd
             UIManager.instance.registerBankruptcyUI(); // 注册Bankruptcy
             UIManager.instance.registerCardShopUI(); // 注册CardShop
+            UIManager.instance.registerSummonNpcUI(); // 注册SummonNpc
             await UIManager.instance.registerLoadingUI(UIManager.PRELOAD_PACKAGES[1]); // 注册Loading（ModeSelect包），等待完成
             // GameConfig 不再单独注册，作为 CommonLayout 的子组件管理
 
@@ -1077,6 +1079,19 @@ export class UIManager {
             isWindow: false,  // 改为 false，通过 addChildUI 添加到 InGame
             layer: UILayer.MODAL
         }, UICardShop);
+    }
+
+    /**
+     * 便捷注册方法 - 注册NPC召唤选择UI
+     */
+    public registerSummonNpcUI(packageName: string = "InGame", componentName: string = "SummonNpc"): void {
+        this.registerUI<UISummonNpc>("SummonNpc", {
+            packageName,
+            componentName,
+            cache: false,
+            isWindow: false,
+            layer: UILayer.MODAL
+        }, UISummonNpc);
     }
 
     /**

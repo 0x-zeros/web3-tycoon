@@ -44,7 +44,7 @@ const CARD_CONFIGS: CardConfig[] = [
     { kind: 12, name: '费用卡（大）', description: '扣除玩家10万金币', targetType: 1, value: 100000, rarity: 3, price: 5000, gm: true, iconPath: 'web3/cards/fee_l', range: 0 },
     { kind: 13, name: '建造卡', description: '升级建筑一级', targetType: 4, value: 0, rarity: 3, price: 4000, gm: true, iconPath: 'web3/cards/construction', range: 0 },
     { kind: 14, name: '改建卡', description: '更换大建筑类型', targetType: 4, value: 0, rarity: 3, price: 4000, gm: true, iconPath: 'web3/cards/renovation', range: 0 },
-    { kind: 15, name: '召唤卡', description: '在地块上放置指定NPC', targetType: 2, value: 0, rarity: 3, price: 3000, gm: true, iconPath: 'web3/cards/summon', range: 10 },
+    { kind: 15, name: '召唤卡', description: '在地块上放置指定NPC', targetType: 2, value: 0, rarity: 3, price: 3000, gm: true, iconPath: 'web3/cards/summon', range: 0 },
     { kind: 16, name: '驱逐卡', description: '移除地块上的NPC', targetType: 2, value: 0, rarity: 3, price: 3000, gm: true, iconPath: 'web3/cards/banish', range: 10 }
 ];
 

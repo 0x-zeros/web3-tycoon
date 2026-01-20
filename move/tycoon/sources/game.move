@@ -134,10 +134,10 @@ public struct Tile has store, copy, drop {
 
 // 瞬移卡效果信息（用于返回给 use_card 发射事件）
 public struct TeleportInfo has drop {
-    target_player: address,
+    target_player_idx: u8,   // 被瞬移的玩家索引
+    source_player_idx: u8,   // 使用卡牌的玩家索引
     from_pos: u16,
     to_pos: u16,
-    buff_added: bool   // 是否添加了传送buff（传送自己时为true）
 }
 
 const NO_OWNER: u8 = 255;
@@ -485,10 +485,10 @@ entry fun use_card(
             player_addr,
             game.round,
             game.turn,
-            info.target_player,
+            info.target_player_idx,
+            info.source_player_idx,
             info.from_pos,
-            info.to_pos,
-            info.buff_added
+            info.to_pos
         );
     };
 }
@@ -2443,10 +2443,10 @@ fun apply_card_effect_with_collectors(
 
         // 4. 返回简化的 TeleportInfo（不调用 handle_tile_stop_with_collector）
         return option::some(TeleportInfo {
-            target_player: target_player_addr,
+            target_player_idx: target_index,
+            source_player_idx: player_index,
             from_pos,
             to_pos: tile_id,
-            buff_added: is_self
         })
 
     } else if (kind == types::CARD_BONUS_S()) {

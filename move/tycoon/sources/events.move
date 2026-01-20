@@ -264,13 +264,13 @@ public struct RollAndStepActionEvent has copy, drop {
 // 瞬移动作事件
 public struct TeleportActionEvent has copy, drop {
     game: ID,
-    player: address,           // 使用卡牌的玩家
+    player: address,           // 使用卡牌的玩家（保留用于事件筛选）
     round: u16,
     turn_in_round: u8,
-    target_player: address,    // 被瞬移的玩家
+    target_player_idx: u8,     // 被瞬移的玩家索引
+    source_player_idx: u8,     // 使用卡牌的玩家索引
     from_pos: u16,             // 原位置
     to_pos: u16,               // 目标位置
-    buff_added: bool,          // 是否添加了传送buff（传送自己时为true）
 }
 
 
@@ -597,20 +597,20 @@ public(package) fun emit_teleport_action_event(
     player: address,
     round: u16,
     turn_in_round: u8,
-    target_player: address,
+    target_player_idx: u8,
+    source_player_idx: u8,
     from_pos: u16,
     to_pos: u16,
-    buff_added: bool,
 ) {
     event::emit(TeleportActionEvent {
         game: game_id,
         player,
         round,
         turn_in_round,
-        target_player,
+        target_player_idx,
+        source_player_idx,
         from_pos,
         to_pos,
-        buff_added,
     });
 }
 

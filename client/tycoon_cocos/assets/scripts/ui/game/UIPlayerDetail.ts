@@ -439,7 +439,8 @@ export class UIPlayerDetail extends UIBase {
             3: '免租',          // BUFF_RENT_FREE
             4: '土地神祝福',    // BUFF_LAND_BLESSING
             5: '福神幸运',      // BUFF_FORTUNE
-            6: '机车卡'         // BUFF_LOCOMOTIVE
+            6: '机车卡',        // BUFF_LOCOMOTIVE
+            7: '传送'           // BUFF_TELEPORT
         };
 
         return buffNames[buffKind] || `Buff${buffKind}`;

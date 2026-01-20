@@ -55,10 +55,10 @@ export class TeleportActionHandler {
                 return;
             }
 
-            // 1. 获取被瞬移的玩家
-            const targetPlayer = session.getPlayerByAddress(event.target_player);
+            // 1. 通过 index 获取被瞬移的玩家（更简单直接）
+            const targetPlayer = session.getPlayerByIndex(event.target_player_idx);
             if (!targetPlayer) {
-                console.warn('[TeleportActionHandler] 目标玩家未找到:', event.target_player);
+                console.warn('[TeleportActionHandler] 目标玩家未找到, index:', event.target_player_idx);
                 return;
             }
 
@@ -79,27 +79,27 @@ export class TeleportActionHandler {
                 });
             }
 
+            // 判断是否对自己使用
+            const isSelfTeleport = event.source_player_idx === event.target_player_idx;
+
             console.log('[TeleportActionHandler] 玩家已瞬移', {
                 from: event.from_pos,
                 to: event.to_pos,
-                targetPlayer: event.target_player,
-                buffAdded: event.buff_added
+                targetPlayerIdx: event.target_player_idx,
+                sourcePlayerIdx: event.source_player_idx,
+                isSelfTeleport
             });
 
             // 5. 显示通知
-            const sourcePlayer = session.getPlayerByAddress(event.player);
-            const sourceIndex = sourcePlayer?.getPlayerIndex() ?? 0;
-            const targetIndex = targetPlayer.getPlayerIndex();
-
             let notificationText = '';
-            if (event.player === event.target_player) {
+            if (isSelfTeleport) {
                 notificationText = `瞬移到了 ${event.to_pos}`;
             } else {
-                notificationText = `将玩家${targetIndex + 1}瞬移到了 ${event.to_pos}`;
+                notificationText = `将玩家${event.target_player_idx + 1}瞬移到了 ${event.to_pos}`;
             }
 
             UINotification.info(notificationText, '瞬移卡', 3000, 'center', {
-                playerIndex: sourceIndex,
+                playerIndex: event.source_player_idx,
                 cards: [8]  // CARD_TELEPORT = 8
             });
 

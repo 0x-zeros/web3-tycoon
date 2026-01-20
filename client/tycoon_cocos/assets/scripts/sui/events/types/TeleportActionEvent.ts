@@ -12,18 +12,18 @@
 export interface TeleportActionEvent {
     /** 游戏ID */
     game: string;
-    /** 使用卡牌的玩家地址 */
+    /** 使用卡牌的玩家地址（保留用于事件筛选） */
     player: string;
     /** 轮次 */
     round: number;
     /** 轮内回合 */
     turn_in_round: number;
-    /** 被瞬移的玩家地址 */
-    target_player: string;
+    /** 被瞬移的玩家索引 */
+    target_player_idx: number;
+    /** 使用卡牌的玩家索引 */
+    source_player_idx: number;
     /** 原位置 */
     from_pos: number;
     /** 目标位置 */
     to_pos: number;
-    /** 是否添加了传送buff（传送自己时为true） */
-    buff_added: boolean;
 }

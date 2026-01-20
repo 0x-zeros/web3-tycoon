@@ -93,7 +93,8 @@ export enum BuffKind {
     RENT_FREE = 3,          // 免租状态
     LAND_BLESSING = 4,      // 土地神祝福
     FORTUNE = 5,            // 福神幸运
-    LOCOMOTIVE = 6          // 机车卡：允许多骰子
+    LOCOMOTIVE = 6,         // 机车卡：允许多骰子
+    TELEPORT = 7            // 传送buff（暂无具体效果）
 }
 
 // ===== Phase 游戏阶段 =====

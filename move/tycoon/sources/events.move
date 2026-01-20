@@ -270,8 +270,7 @@ public struct TeleportActionEvent has copy, drop {
     target_player: address,    // 被瞬移的玩家
     from_pos: u16,             // 原位置
     to_pos: u16,               // 目标位置
-    stop_effect: option::Option<StopEffect>,
-    cash_changes: vector<CashDelta>,
+    buff_added: bool,          // 是否添加了传送buff（传送自己时为true）
 }
 
 
@@ -601,8 +600,7 @@ public(package) fun emit_teleport_action_event(
     target_player: address,
     from_pos: u16,
     to_pos: u16,
-    stop_effect: option::Option<StopEffect>,
-    cash_changes: vector<CashDelta>,
+    buff_added: bool,
 ) {
     event::emit(TeleportActionEvent {
         game: game_id,
@@ -612,8 +610,7 @@ public(package) fun emit_teleport_action_event(
         target_player,
         from_pos,
         to_pos,
-        stop_effect,
-        cash_changes,
+        buff_added,
     });
 }
 

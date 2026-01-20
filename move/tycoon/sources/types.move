@@ -72,8 +72,9 @@ public(package) fun BUFF_RENT_FREE(): u8 { 3 }
 public(package) fun BUFF_LAND_BLESSING(): u8 { 4 }
 public(package) fun BUFF_FORTUNE(): u8 { 5 }
 public(package) fun BUFF_LOCOMOTIVE(): u8 { 6 }  // 机车卡：允许多骰子
+public(package) fun BUFF_TELEPORT(): u8 { 7 }    // 传送buff（暂无具体效果）
 
-// 7-199: 预留给card及其他
+// 8-199: 预留给card及其他
 
 // ===== GameStatus =====
 public(package) fun STATUS_READY(): u8 { 0 }

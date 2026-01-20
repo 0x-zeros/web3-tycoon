@@ -5,10 +5,9 @@
  * Move源文件: move/tycoon/sources/events.move
  */
 
-import type { StopEffect, CashDelta } from './RollAndStepEvent';
-
 /**
  * 瞬移动作事件
+ * 注意：瞬移卡不触发任何停留效果（购买/租金/NPC等）
  */
 export interface TeleportActionEvent {
     /** 游戏ID */
@@ -25,8 +24,6 @@ export interface TeleportActionEvent {
     from_pos: number;
     /** 目标位置 */
     to_pos: number;
-    /** 停留效果（如购买/租金/奖金等） */
-    stop_effect: StopEffect | null;
-    /** 现金变动列表 */
-    cash_changes: CashDelta[];
+    /** 是否添加了传送buff（传送自己时为true） */
+    buff_added: boolean;
 }

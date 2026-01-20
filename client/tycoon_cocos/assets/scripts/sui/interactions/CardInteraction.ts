@@ -35,6 +35,7 @@ export class CardInteraction {
      *     map: &map::MapTemplate,
      *     ctx: &mut TxContext
      * )
+     * 注意：use_card 不再需要 Random 参数
      */
     static async useCard(
         gameId: string,
@@ -302,10 +303,7 @@ export class CardInteraction {
             paramsLength: params.length
         });
 
-        // 从配置获取 Random 对象 ID
-        const randomObjectId = config.randomObjectId || '0x8';
-
-        // 调用use_card
+        // 调用use_card（不再需要 Random 参数）
         tx.moveCall({
             target: `${packageId}::game::use_card`,
             arguments: [
@@ -314,8 +312,7 @@ export class CardInteraction {
                 tx.pure.u8(cardKind),
                 tx.pure.vector('u16', params),
                 tx.object(gameDataId),
-                tx.object(mapTemplateId),
-                tx.object(randomObjectId)
+                tx.object(mapTemplateId)
             ]
         });
 

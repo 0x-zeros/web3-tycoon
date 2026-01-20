@@ -137,8 +137,7 @@ public struct TeleportInfo has drop {
     target_player: address,
     from_pos: u16,
     to_pos: u16,
-    stop_effect: Option<events::StopEffect>,
-    cash_changes: vector<events::CashDelta>
+    buff_added: bool   // 是否添加了传送buff（传送自己时为true）
 }
 
 const NO_OWNER: u8 = 255;
@@ -434,7 +433,6 @@ entry fun use_card(
     params: vector<u16>,
     game_data: &GameData,
     map: &map::MapTemplate,
-    r: &Random,
     ctx: &mut TxContext
 ) {
     validate_map(game, map);
@@ -454,8 +452,6 @@ entry fun use_card(
     let mut buff_changes = vector[];
     let mut cash_changes = vector[];
 
-    let mut generator = r.new_generator(ctx);
-
     let teleport_info = apply_card_effect_with_collectors(
         game,
         seat.player_index,
@@ -465,8 +461,7 @@ entry fun use_card(
         &mut buff_changes,
         &mut cash_changes,
         game_data,
-        map,
-        &mut generator
+        map
     );
 
     events::emit_use_card_action_event(
@@ -493,8 +488,7 @@ entry fun use_card(
             info.target_player,
             info.from_pos,
             info.to_pos,
-            info.stop_effect,
-            info.cash_changes
+            info.buff_added
         );
     };
 }
@@ -1665,22 +1659,6 @@ fun handle_tile_stop_with_collector(
             // 消耗NPC
             consume_npc_if_consumable(game, tile_id, &npc);
             handle_npc_consumed(game, &npc, true);
-        } else if (is_hospital_npc(npc.kind)) {
-            // 炸弹/狗触发 - 送往医院（瞬移卡等场景）
-            let hospital_tile = find_nearest_hospital(game, tile_id, map, game_data);
-            send_to_hospital_internal(game, player_index, hospital_tile, game_data);
-
-            // 消耗NPC
-            consume_npc_if_consumable(game, tile_id, &npc);
-            handle_npc_consumed(game, &npc, true);
-
-            // 设置停留效果为医院
-            stop_type = events::stop_hospital();
-            turns_opt = option::some(types::DEFAULT_HOSPITAL_TURNS());
-        } else if (npc.kind == types::NPC_BARRIER()) {
-            // 路障：瞬移场景下玩家已在目标位置，只消耗NPC
-            consume_npc_if_consumable(game, tile_id, &npc);
-            handle_npc_consumed(game, &npc, true);
         }
     };
 
@@ -2294,8 +2272,7 @@ fun apply_card_effect_with_collectors(
     buff_changes: &mut vector<events::BuffChangeItem>,
     cash_changes: &mut vector<events::CashDelta>,
     game_data: &GameData,
-    map: &map::MapTemplate,
-    generator: &mut RandomGenerator
+    map: &map::MapTemplate
 ): Option<TeleportInfo> {
     let player_addr = (&game.players[player_index as u64]).owner;
 
@@ -2433,6 +2410,7 @@ fun apply_card_effect_with_collectors(
 
     } else if (kind == types::CARD_TELEPORT()) {
         // 瞬移卡: params = [target_player_index, tile_id]
+        // 设计意图：瞬移不触发任何停留效果（购买/租金/NPC等）
         assert!(params.length() >= 2, EInvalidParams);
         let target_index = (params[0] as u8);
         let tile_id = params[1];
@@ -2447,24 +2425,28 @@ fun apply_card_effect_with_collectors(
         game.players[target_index as u64].pos = tile_id;
         game.players[target_index as u64].next_tile_id = 65535;  // 清除转向卡设置
 
-        // 3. 调用停留处理（复用现有逻辑）
-        let mut teleport_cash_changes = vector[];
-        let stop_effect = handle_tile_stop_with_collector(
-            game, target_index, tile_id,
-            &mut teleport_cash_changes,
-            false,  // auto_buy
-            false,  // auto_upgrade
-            false,  // prefer_rent_card
-            game_data, map, generator
-        );
+        // 3. 如果是传送自己，添加传送buff
+        let is_self = (player_index == target_index);
+        if (is_self) {
+            let last_active_round = calculate_buff_last_active_round(
+                player_index, player_index, game.round, 1, true
+            );
+            let target_player = &mut game.players[target_index as u64];
+            apply_buff(target_player, types::BUFF_TELEPORT(), last_active_round, 0);
 
-        // 4. 返回 TeleportInfo
+            buff_changes.push_back(events::make_buff_change(
+                types::BUFF_TELEPORT(),
+                target_player_addr,
+                option::some(last_active_round)
+            ));
+        };
+
+        // 4. 返回简化的 TeleportInfo（不调用 handle_tile_stop_with_collector）
         return option::some(TeleportInfo {
             target_player: target_player_addr,
             from_pos,
             to_pos: tile_id,
-            stop_effect: option::some(stop_effect),
-            cash_changes: teleport_cash_changes
+            buff_added: is_self
         })
 
     } else if (kind == types::CARD_BONUS_S()) {

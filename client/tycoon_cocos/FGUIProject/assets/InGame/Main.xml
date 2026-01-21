@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component size="1920,1080" opaque="false">
-  <controller name="mode" pages="0,play,1,editor" selected="0"/>
+  <controller name="mode" pages="0,play,1,editor" selected="1"/>
   <displayList>
     <component id="n0_ue83" name="cards" src="mumq6" fileName="components/card/CardList.xml" xy="286,869" scale="0.8,0.8">
       <gearDisplay controller="mode" pages="0"/>
@@ -42,8 +42,9 @@
       <gearDisplay controller="mode" pages="0"/>
       <relation target="" sidePair="center-center,middle-middle"/>
     </component>
-    <component id="n19_uas2" name="editorSetting" src="uas2pg" fileName="components/EditorSetting.xml" xy="528,211">
+    <component id="n19_uas2" name="editorSetting" src="uas2pg" fileName="components/EditorSetting.xml" xy="528,211" visible="false">
       <gearDisplay controller="mode" pages="1"/>
+      <relation target="" sidePair="center-center,middle-middle"/>
     </component>
     <component id="n14_nxs8" name="btn_defiReward" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="281,47" size="272,92" visible="false">
       <gearDisplay controller="mode" pages="0"/>

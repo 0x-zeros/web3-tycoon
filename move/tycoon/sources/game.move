@@ -2404,9 +2404,20 @@ fun apply_card_effect_with_collectors(
         game.players[target_index as u64].pos = tile_id;
         game.players[target_index as u64].next_tile_id = 65535;  // 清除转向卡设置
 
-        // 3. 如果是传送自己，添加传送buff
+        // 3. 如果是传送自己，添加传送buff（瞬移覆盖遥控骰子）
         let is_self = (player_index == target_index);
         if (is_self) {
+            // 移除遥控骰子buff（瞬移后路径已无意义）
+            let target_player = &mut game.players[target_index as u64];
+            if (has_buff(target_player, types::BUFF_MOVE_CTRL())) {
+                remove_buff(target_player, types::BUFF_MOVE_CTRL());
+                buff_changes.push_back(events::make_buff_change(
+                    types::BUFF_MOVE_CTRL(),
+                    target_index,
+                    option::none()  // none 表示移除
+                ));
+            };
+
             let last_active_round = calculate_buff_last_active_round(
                 player_index, player_index, game.round, 1, true
             );

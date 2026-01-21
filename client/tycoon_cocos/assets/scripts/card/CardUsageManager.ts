@@ -248,6 +248,7 @@ export class CardUsageManager {
 
         const params: number[] = [];
         let targetDesc = '';
+        let selectedPlayerIndex: number | null = null;
 
         // 按顺序处理各目标类型：Player → Tile → Building
 
@@ -260,6 +261,7 @@ export class CardUsageManager {
                 return;
             }
             params.push(playerIndex);
+            selectedPlayerIndex = playerIndex;
 
             const targetPlayer = session.getPlayerByIndex(playerIndex);
             targetDesc = targetPlayer?.getName() || `玩家${playerIndex + 1}`;
@@ -267,11 +269,12 @@ export class CardUsageManager {
         }
 
         // 2. 选择地块（如果需要）
+        let selectedTile: number | null = null;
         if (card.needsTileTarget()) {
             console.log(`[CardUsageManager] ${card.name}: 选择目标地块`);
 
             // 对于瞬移卡，目标地块范围是全地图（不限制范围）
-            const selectedTile = await this.tileSelector.showTileSelection(card, 0);
+            selectedTile = await this.tileSelector.showTileSelection(card, 0);
             if (selectedTile === null) {
                 console.log('[CardUsageManager] 用户取消选择地块');
                 return;
@@ -299,6 +302,15 @@ export class CardUsageManager {
         }
 
         console.log(`[CardUsageManager] ${card.name} 参数:`, params);
+
+        // 瞬移卡特殊处理：瞬移自己时使用合并调用
+        const myPlayerIndex = session.getMyPlayerIndex();
+        if (card.isTeleportCard() && selectedPlayerIndex === myPlayerIndex && selectedTile !== null) {
+            console.log('[CardUsageManager] 瞬移卡: 瞬移自己，使用合并调用');
+            await this.callUseCardAndRollAndStepForTeleport(card, params, selectedTile, targetDesc);
+            return;
+        }
+
         await this.callUseCard(card.kind, params, card.name, targetDesc);
     }
 
@@ -644,6 +656,79 @@ export class CardUsageManager {
             console.log('[CardUsageManager] 合并交易成功, digest:', result.digest);
             // 触发事件刷新UI
             EventBus.emit(EventTypes.Card.UseCard, { kind: card.kind, params: cardParams });
+        } else {
+            throw new Error(result.message || '交易失败');
+        }
+    }
+
+    /**
+     * 调用use_card + roll_and_step合并交易（瞬移自己专用）
+     * 瞬移自己后会有 TELEPORT buff，导致 roll_and_step 跳过移动
+     * 所以传入 path=[], diceCount=0
+     */
+    private async callUseCardAndRollAndStepForTeleport(
+        card: Card,
+        params: number[],
+        targetTile: number,
+        targetDesc: string
+    ): Promise<void> {
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) throw new Error('游戏会话未初始化');
+
+        const gameId = session.getGameId();
+        const mySeat = session.getMySeat();
+        const mapTemplateId = session.getTemplateMapId();
+
+        if (!gameId || !mySeat || !mapTemplateId) {
+            throw new Error('缺少游戏、座位或地图信息');
+        }
+
+        const seatId = mySeat.id;
+
+        // 瞬移自己后有 TELEPORT buff，roll_and_step 会跳过移动
+        // 所以传入空路径和0骰子
+        const movePath: number[] = [];
+        const diceCount = 0;
+
+        // 偏好设置
+        const autoBuy = true;
+        const autoUpgrade = true;
+        const preferRentCard = true;
+
+        console.log('[CardUsageManager] 调用瞬移合并交易:', {
+            gameId,
+            seatId,
+            mapTemplateId,
+            cardKind: card.kind,
+            cardParams: params,
+            movePath,
+            diceCount,
+            autoBuy,
+            autoUpgrade,
+            preferRentCard
+        });
+
+        // 动态导入CardInteraction
+        const { CardInteraction } = await import('../sui/interactions/CardInteraction');
+        const result = await CardInteraction.useCardAndRollAndStep(
+            gameId,
+            seatId,
+            mapTemplateId,
+            card.kind,
+            params,
+            movePath,
+            diceCount,
+            autoBuy,
+            autoUpgrade,
+            preferRentCard
+        );
+
+        if (result.success) {
+            const msg = `使用${card.name}瞬移到 Tile ${targetTile}`;
+            UINotification.success(msg, undefined, undefined, 'center');
+            console.log('[CardUsageManager] 瞬移合并交易成功, digest:', result.digest);
+            // 触发事件刷新UI
+            EventBus.emit(EventTypes.Card.UseCard, { kind: card.kind, params });
         } else {
             throw new Error(result.message || '交易失败');
         }

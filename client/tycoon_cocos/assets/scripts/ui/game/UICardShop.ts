@@ -262,10 +262,10 @@ export class UICardShop extends UIBase {
             });
         }
 
-        // 设置名称（10张版本显示"x10"后缀）
+        // 设置名称
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
-            title.text = count > 1 ? `${config.name} x${count}` : config.name;
+            title.text = config.name;
         }
 
         // 设置价格（显示总价 = 单价 × 数量）

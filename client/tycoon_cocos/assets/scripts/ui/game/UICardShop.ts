@@ -27,6 +27,9 @@ const { ccclass } = _decorator;
 /** GM卡片起始kind */
 const GM_CARD_START_KIND = 8;
 
+/** 最大选择项数（6项 × 最多10张 = 60张，与Move端限制一致） */
+const MAX_CART_TOTAL = 6;
+
 /** 卡片商店显示项 */
 interface DisplayCardItem {
     kind: number;       // 卡片类型
@@ -271,6 +274,17 @@ export class UICardShop extends UIBase {
             priceText.text = `$${config.price * count}`;
         }
 
+        // 设置数量显示（10张版本显示"x10"）
+        const numText = item.getChild('num') as fgui.GTextField;
+        if (numText) {
+            if (count > 1) {
+                numText.visible = true;
+                numText.text = `x${count}`;
+            } else {
+                numText.visible = false;
+            }
+        }
+
         // 设置选中状态（使用引用比较）
         const isSelected = this._selectedItems.has(displayItem);
         item.selected = isSelected;
@@ -309,7 +323,7 @@ export class UICardShop extends UIBase {
         const price = this._getTotalPrice();
 
         if (this.m_textNum) {
-            this.m_textNum.text = `${count}`;
+            this.m_textNum.text = `${this._selectedItems.size} / ${MAX_CART_TOTAL}`;
         }
         if (this.m_textPrice) {
             this.m_textPrice.text = `${price}`;
@@ -349,6 +363,12 @@ export class UICardShop extends UIBase {
             // 尝试选中
             if (isGMCard && !this._gmPass) {
                 console.log('[UICardShop] 没有GMPass，无法选择GM卡片');
+                button.selected = false;
+                return;
+            }
+            // 检查是否达到最大选择项数
+            if (this._selectedItems.size >= MAX_CART_TOTAL) {
+                console.log('[UICardShop] 已达最大选择数量');
                 button.selected = false;
                 return;
             }

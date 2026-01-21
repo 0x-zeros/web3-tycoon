@@ -53,13 +53,6 @@ public struct GameEndedEvent has copy, drop {
 
 // ===== Turn Events 回合事件 =====
 
-public struct TurnStartEvent has copy, drop {
-    game: ID,
-    player: u8,
-    round: u16,
-    turn_in_round: u8
-}
-
 public struct SkipTurnEvent has copy, drop {
     game: ID,
     player: u8,

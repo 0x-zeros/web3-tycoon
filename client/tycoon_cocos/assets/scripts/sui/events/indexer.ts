@@ -49,7 +49,6 @@ export class TycoonEventIndexer {
         'GameStartedEvent': EventType.GAME_STARTED,
         'GameEndedEvent': EventType.GAME_ENDED,
         'MapTemplatePublishedEvent': EventType.MAP_TEMPLATE_PUBLISHED,
-        'TurnStartEvent': EventType.TURN_START,
         'SkipTurnEvent': EventType.SKIP_TURN,
         'RoundEndedEvent': EventType.ROUND_ENDED,
         'BankruptEvent': EventType.BANKRUPT,

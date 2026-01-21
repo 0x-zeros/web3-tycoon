@@ -11,7 +11,6 @@ import { EventType, EventMetadata } from '../../../sui/events/types';
 import type {
     GameStartedEvent,
     GameEndedEvent,
-    TurnStartEvent,
     SkipTurnEvent,
     BankruptEvent,
     RoundEndedEvent,
@@ -138,9 +137,6 @@ export class EventLogFormatter {
             case EventType.PLAYER_JOINED:
                 return this.formatPlayerJoined(event.data, timestamp, session);
 
-            case EventType.TURN_START:
-                return this.formatTurnStart(event.data, timestamp, session);
-
             case EventType.SKIP_TURN:
                 return this.formatSkipTurn(event.data, timestamp, session);
 
@@ -227,25 +223,6 @@ export class EventLogFormatter {
             timestamp,
             playerIndex: data.player_index,
             eventType: EventType.PLAYER_JOINED,
-        };
-    }
-
-    /**
-     * 格式化回合开始事件
-     */
-    private static formatTurnStart(
-        data: TurnStartEvent,
-        timestamp: number,
-        session: GameSession
-    ): FormattedLog {
-        const playerIdx = resolvePlayerIndex(session, data.player);
-        const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
-
-        return {
-            text: `${formatTime(timestamp)} ${playerName} 的回合 (第${data.round}轮)`,
-            timestamp,
-            playerIndex: playerIdx,
-            eventType: EventType.TURN_START,
         };
     }
 

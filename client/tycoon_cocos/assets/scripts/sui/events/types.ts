@@ -70,21 +70,6 @@ export interface GameEndedEvent {
 // ===== Turn Events 回合事件 =====
 
 /**
- * 回合开始事件
- * 对应Move: struct TurnStartEvent
- */
-export interface TurnStartEvent {
-    /** 游戏ID */
-    game: string;
-    /** 当前玩家索引 */
-    player: number;
-    /** 当前轮次 */
-    round: number;
-    /** 轮内回合 */
-    turn_in_round: number;
-}
-
-/**
  * 跳过回合事件
  * 对应Move: struct SkipTurnEvent
  */
@@ -232,7 +217,6 @@ export enum EventType {
     MAP_TEMPLATE_PUBLISHED = 'MapTemplatePublishedEvent',
 
     // 回合管理
-    TURN_START = 'TurnStartEvent',
     SKIP_TURN = 'SkipTurnEvent',
     ROUND_ENDED = 'RoundEndedEvent',
 
@@ -259,7 +243,6 @@ export type GameEvent =
     | PlayerJoinedEvent
     | GameStartedEvent
     | GameEndedEvent
-    | TurnStartEvent
     | SkipTurnEvent
     | RoundEndedEvent
     | BankruptEvent

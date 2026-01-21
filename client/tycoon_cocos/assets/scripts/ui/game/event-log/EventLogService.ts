@@ -213,7 +213,6 @@ export class EventLogService {
             EventType.GAME_STARTED,
             EventType.GAME_ENDED,
             EventType.PLAYER_JOINED,
-            EventType.TURN_START,
             EventType.SKIP_TURN,
             EventType.ROUND_ENDED,
             EventType.BANKRUPT,
@@ -464,7 +463,6 @@ export class EventLogService {
             const eventTypes = [
                 'GameStartedEvent',
                 'PlayerJoinedEvent',
-                'TurnStartEvent',
                 'SkipTurnEvent',
                 'RoundEndedEvent',
                 'BankruptEvent',
@@ -610,7 +608,6 @@ export class EventLogService {
             'PlayerJoinedEvent': EventType.PLAYER_JOINED,
             'GameStartedEvent': EventType.GAME_STARTED,
             'GameEndedEvent': EventType.GAME_ENDED,
-            'TurnStartEvent': EventType.TURN_START,
             'SkipTurnEvent': EventType.SKIP_TURN,
             'RoundEndedEvent': EventType.ROUND_ENDED,
             'BankruptEvent': EventType.BANKRUPT,

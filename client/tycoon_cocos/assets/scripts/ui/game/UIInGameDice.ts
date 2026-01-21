@@ -461,8 +461,8 @@ export class UIInGameDice extends UIBase {
                 diceCount: diceCount
             });
 
-            // ===== 5. 播放骰子动画 =====
-            await this._playDiceAnimation(diceCount);
+            // ===== 5. 播放骰子动画（使用 UI 选中的骰子数） =====
+            await this._playDiceAnimation(this._selectedDiceCount);
 
             // ===== 6. 提交链上交易 =====
             console.log("[UIInGameDice] 提交链上交易...");

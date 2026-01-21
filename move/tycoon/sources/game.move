@@ -2390,7 +2390,7 @@ fun apply_card_effect_with_collectors(
 
     } else if (kind == types::CARD_TELEPORT()) {
         // 瞬移卡: params = [target_player_index, tile_id]
-        // 设计意图：瞬移不触发任何停留效果（购买/租金/NPC等）
+        // 设计意图：瞬移卡只改变位置，停留效果由后续的 roll_and_step 触发
         assert!(params.length() >= 2, EInvalidParams);
         let target_index = (params[0] as u8);
         let tile_id = params[1];

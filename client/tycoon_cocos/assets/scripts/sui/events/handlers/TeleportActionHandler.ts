@@ -7,7 +7,7 @@
  * 3. 执行视觉瞬移动画
  * 4. 显示通知
  *
- * 注意：瞬移卡不触发任何停留效果（购买/租金/NPC等）
+ * 注意：瞬移卡本身只改变位置，瞬移自己时通过合并 PTB 触发停留效果
  * Buff 通过 UseCardActionEvent 的 buff_changes 处理，这里不需要处理
  *
  * @author Web3 Tycoon Team

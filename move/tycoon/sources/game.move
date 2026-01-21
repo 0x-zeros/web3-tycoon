@@ -526,7 +526,7 @@ entry fun buy_cards(
     validate_map(game, map);
     validate_seat_and_turn(game, seat);
     assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
-    assert!(purchases.length() > 0 && purchases.length() <= 6, EInvalidParams);
+    assert!(purchases.length() > 0 && purchases.length() <= 100, EInvalidParams);
 
     let card_registry = tycoon::get_card_registry(game_data);
 
@@ -585,7 +585,7 @@ entry fun buy_gm_cards(
     validate_map(game, map);
     validate_seat_and_turn(game, seat);
     assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
-    assert!(purchases.length() > 0 && purchases.length() <= 6, EInvalidParams);
+    assert!(purchases.length() > 0 && purchases.length() <= 100, EInvalidParams);
 
     // 验证 GMPass 绑定
     assert!(gm_pass.game_id == game.id.to_inner(), EGMPassGameMismatch);

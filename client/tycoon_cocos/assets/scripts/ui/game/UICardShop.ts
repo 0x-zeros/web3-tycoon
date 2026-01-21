@@ -4,7 +4,7 @@
  * 功能：
  * - 显示所有17种卡片（kind 0-16）
  * - 普通卡片(0-7) 100/张，GM卡片(8-16) 500/张
- * - 使用list多选模式，最多选6种不同卡片
+ * - 有GMPass时，GM卡片显示1张和10张两个版本供选择
  * - 根据是否持有GMPass决定能否购买GM卡片
  *
  * @author Web3 Tycoon Team
@@ -24,10 +24,15 @@ import type { GMPass } from "../../sui/types/game";
 
 const { ccclass } = _decorator;
 
-/** 最大选择数量 */
-const MAX_CART_TOTAL = 6;
 /** GM卡片起始kind */
 const GM_CARD_START_KIND = 8;
+
+/** 卡片商店显示项 */
+interface DisplayCardItem {
+    kind: number;       // 卡片类型
+    count: number;      // 数量（1 或 10）
+    config: CardConfig; // 卡片配置
+}
 
 @ccclass('UICardShop')
 export class UICardShop extends UIBase {
@@ -38,19 +43,19 @@ export class UICardShop extends UIBase {
     private m_btnBuy: fgui.GButton | null = null;
     /** 取消按钮 */
     private m_btnCancel: fgui.GButton | null = null;
-    /** 数量显示文本 (显示 "X / 6") */
+    /** 数量显示文本（显示总卡片数） */
     private m_textNum: fgui.GTextField | null = null;
     /** 总价显示文本 */
     private m_textPrice: fgui.GTextField | null = null;
 
-    /** 已选中的卡片kind集合（每种卡片最多1张） */
-    private _selectedKinds: Set<number> = new Set();
+    /** 已选中的显示项集合（使用引用比较） */
+    private _selectedItems: Set<DisplayCardItem> = new Set();
     /** 当前游戏的GMPass（null表示没有） */
     private _gmPass: GMPass | null = null;
     /** 所有卡片配置（缓存） */
     private _allCards: CardConfig[] = [];
-    /** 当前显示的卡片列表（根据GMPass过滤） */
-    private _displayCards: CardConfig[] = [];
+    /** 当前显示的卡片列表（包含1张和10张版本） */
+    private _displayCards: DisplayCardItem[] = [];
     /** 当前玩家现金 */
     private _playerCash: bigint = 0n;
 
@@ -134,19 +139,32 @@ export class UICardShop extends UIBase {
         console.log('[UICardShop] Opening card shop');
 
         // 清空已选中的卡片
-        this._selectedKinds.clear();
+        this._selectedItems.clear();
 
         // 查询GMPass
         await this._queryGMPass();
 
-        // 根据 GMPass 过滤卡片
+        // 构建显示列表
+        this._displayCards = [];
+
         if (this._gmPass) {
-            // 有 GMPass：显示所有卡片 (0-16)
-            this._displayCards = this._allCards;
-            console.log('[UICardShop] GMPass detected, showing all cards');
+            // 有 GMPass：显示所有卡片，GM卡片显示1张和10张两个版本
+            for (const config of this._allCards) {
+                // 1张版本
+                this._displayCards.push({ kind: config.kind, count: 1, config });
+                // GM卡片额外添加10张版本
+                if (config.gm) {
+                    this._displayCards.push({ kind: config.kind, count: 10, config });
+                }
+            }
+            console.log('[UICardShop] GMPass detected, showing all cards with 10-pack option for GM cards');
         } else {
-            // 无 GMPass：只显示普通卡片 (gm=false)
-            this._displayCards = this._allCards.filter(c => !c.gm);
+            // 无 GMPass：只显示普通卡片 (gm=false)，每种1张
+            for (const config of this._allCards) {
+                if (!config.gm) {
+                    this._displayCards.push({ kind: config.kind, count: 1, config });
+                }
+            }
             console.log('[UICardShop] No GMPass, showing normal cards only');
         }
 
@@ -216,21 +234,20 @@ export class UICardShop extends UIBase {
         const item = obj as fgui.GButton;
         if (!item) return;
 
-        const cardConfig = this._displayCards[index];
-        if (!cardConfig) return;
+        const displayItem = this._displayCards[index];
+        if (!displayItem) return;
 
-        const kind = cardConfig.kind;
-        const isGMCard = cardConfig.gm;  // 使用 CardConfig 中的 gm 标志
-        const price = cardConfig.price;   // 使用 CardConfig 中的价格
+        const { kind, count, config } = displayItem;
+        const isGMCard = config.gm;
         const canBuyGM = isGMCard ? (this._gmPass !== null) : true;
 
-        // 保存数据到item
-        item.data = { kind, price, isGMCard };
+        // 保存 DisplayCardItem 引用到 item.data
+        item.data = displayItem;
 
         // 设置图标
         const icon = item.getChild('icon') as fgui.GLoader;
         if (icon) {
-            const texturePath = `${cardConfig.iconPath}/texture`;
+            const texturePath = `${config.iconPath}/texture`;
             resources.load(texturePath, Texture2D, (err, texture) => {
                 if (!err && texture) {
                     const spriteFrame = new SpriteFrame();
@@ -242,20 +259,20 @@ export class UICardShop extends UIBase {
             });
         }
 
-        // 设置名称
+        // 设置名称（10张版本显示"x10"后缀）
         const title = item.getChild('title') as fgui.GTextField;
         if (title) {
-            title.text = cardConfig.name;
+            title.text = count > 1 ? `${config.name} x${count}` : config.name;
         }
 
-        // 设置价格
+        // 设置价格（显示总价 = 单价 × 数量）
         const priceText = item.getChild('price') as fgui.GTextField;
         if (priceText) {
-            priceText.text = `$${price}`;
+            priceText.text = `$${config.price * count}`;
         }
 
-        // 设置选中状态
-        const isSelected = this._selectedKinds.has(kind);
+        // 设置选中状态（使用引用比较）
+        const isSelected = this._selectedItems.has(displayItem);
         item.selected = isSelected;
 
         // GM卡片无权限时设置为灰显
@@ -263,22 +280,23 @@ export class UICardShop extends UIBase {
     }
 
     /**
-     * 获取已选卡片数量
+     * 获取已选卡片总数量（计入count）
      */
     private _getTotalCount(): number {
-        return this._selectedKinds.size;
+        let total = 0;
+        for (const item of this._selectedItems) {
+            total += item.count;
+        }
+        return total;
     }
 
     /**
-     * 计算已选卡片总价
+     * 计算已选卡片总价（单价 × 数量）
      */
     private _getTotalPrice(): number {
         let total = 0;
-        for (const kind of this._selectedKinds) {
-            const cardConfig = CardConfigManager.getConfig(kind);
-            if (cardConfig) {
-                total += cardConfig.price;
-            }
+        for (const item of this._selectedItems) {
+            total += item.config.price * item.count;
         }
         return total;
     }
@@ -287,11 +305,11 @@ export class UICardShop extends UIBase {
      * 更新数量和总价显示
      */
     private _updateTotalDisplay(): void {
-        const count = this._selectedKinds.size;
+        const count = this._getTotalCount();
         const price = this._getTotalPrice();
 
         if (this.m_textNum) {
-            this.m_textNum.text = `${count} / ${MAX_CART_TOTAL}`;
+            this.m_textNum.text = `${count}`;
         }
         if (this.m_textPrice) {
             this.m_textPrice.text = `${price}`;
@@ -314,36 +332,29 @@ export class UICardShop extends UIBase {
      * 处理卡片点击（切换选中状态）
      */
     private _onItemClick(item: fgui.GObject): void {
-        const data = item.data as { kind: number; price: number; isGMCard: boolean };
-        if (!data) return;
+        const displayItem = item.data as DisplayCardItem;
+        if (!displayItem) return;
 
-        const kind = data.kind;
-        const isGMCard = data.isGMCard;
-        const isSelected = this._selectedKinds.has(kind);
+        const { kind, count, config } = displayItem;
+        const isGMCard = config.gm;
+        const isSelected = this._selectedItems.has(displayItem);
         const button = item as fgui.GButton;
 
         if (isSelected) {
             // 取消选中
-            this._selectedKinds.delete(kind);
+            this._selectedItems.delete(displayItem);
             button.selected = false;
-            console.log(`[UICardShop] 取消选中卡片 kind=${kind}`);
+            console.log(`[UICardShop] 取消选中卡片 kind=${kind} x${count}`);
         } else {
             // 尝试选中
-            if (this._selectedKinds.size >= MAX_CART_TOTAL) {
-                console.log('[UICardShop] 已达最大选择数量');
-                // 恢复未选中状态
-                button.selected = false;
-                return;
-            }
             if (isGMCard && !this._gmPass) {
                 console.log('[UICardShop] 没有GMPass，无法选择GM卡片');
-                // 恢复未选中状态
                 button.selected = false;
                 return;
             }
-            this._selectedKinds.add(kind);
+            this._selectedItems.add(displayItem);
             button.selected = true;
-            console.log(`[UICardShop] 选中卡片 kind=${kind}`);
+            console.log(`[UICardShop] 选中卡片 kind=${kind} x${count}`);
         }
 
         this._updateTotalDisplay();
@@ -367,7 +378,13 @@ export class UICardShop extends UIBase {
             return;
         }
 
-        const purchases = Array.from(this._selectedKinds);
+        // 构建 purchases 数组，每种卡片重复 count 次
+        const purchases: number[] = [];
+        for (const item of this._selectedItems) {
+            for (let i = 0; i < item.count; i++) {
+                purchases.push(item.kind);
+            }
+        }
         console.log('[UICardShop] 开始购买，已选卡片:', purchases);
 
         // 禁用购买按钮防止重复点击

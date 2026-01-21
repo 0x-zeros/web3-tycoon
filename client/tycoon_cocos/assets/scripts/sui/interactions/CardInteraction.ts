@@ -271,6 +271,154 @@ export class CardInteraction {
     }
 
     /**
+     * 调用use_card并立即roll_and_step（合并PTB）
+     * 用于遥控骰子卡片，使用后直接移动
+     *
+     * @param gameId 游戏ID
+     * @param seatId 座位ID
+     * @param mapTemplateId 地图模板ID
+     * @param cardKind 卡片类型
+     * @param cardParams 卡片参数 [player_index, dice1, dice2, ...]
+     * @param path 移动路径（不含起点）
+     * @param diceCount 骰子数量
+     * @param autoBuy 自动购买
+     * @param autoUpgrade 自动升级
+     * @param preferRentCard 优先使用免租卡
+     */
+    static async useCardAndRollAndStep(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string,
+        cardKind: number,
+        cardParams: number[],
+        path: number[],
+        diceCount: number,
+        autoBuy: boolean,
+        autoUpgrade: boolean,
+        preferRentCard: boolean
+    ): Promise<TransactionResult> {
+        try {
+            console.log('[CardInteraction] 调用useCardAndRollAndStep:', {
+                gameId,
+                seatId,
+                mapTemplateId,
+                cardKind,
+                cardParams,
+                path,
+                diceCount,
+                autoBuy,
+                autoUpgrade,
+                preferRentCard
+            });
+
+            const tx = this.buildUseCardAndRollAndStepTransaction(
+                gameId,
+                seatId,
+                mapTemplateId,
+                cardKind,
+                cardParams,
+                path,
+                diceCount,
+                autoBuy,
+                autoUpgrade,
+                preferRentCard
+            );
+
+            // 执行交易
+            const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+            console.log('[CardInteraction] 合并交易成功:', result.digest);
+
+            return {
+                success: true,
+                message: '卡片使用并移动成功',
+                digest: result.digest
+            };
+        } catch (error: any) {
+            console.error('[CardInteraction] useCardAndRollAndStep失败:', error);
+            return {
+                success: false,
+                message: error.message || '使用卡片并移动失败'
+            };
+        }
+    }
+
+    /**
+     * 构建use_card + roll_and_step合并交易
+     */
+    private static buildUseCardAndRollAndStepTransaction(
+        gameId: string,
+        seatId: string,
+        mapTemplateId: string,
+        cardKind: number,
+        cardParams: number[],
+        path: number[],
+        diceCount: number,
+        autoBuy: boolean,
+        autoUpgrade: boolean,
+        preferRentCard: boolean
+    ): Transaction {
+        const tx = new Transaction();
+        const config = SuiManager.instance.config;
+
+        if (!config) {
+            throw new Error('SuiManager配置未初始化');
+        }
+
+        const packageId = config.packageId;
+        const gameDataId = config.gameDataId;
+        const randomObjectId = config.randomObjectId || '0x8';
+        const clockObjectId = config.clockObjectId || '0x6';
+
+        if (!packageId || !gameDataId) {
+            throw new Error('缺少必要的配置: packageId, gameDataId');
+        }
+
+        console.log('[CardInteraction] 构建合并交易:', {
+            packageId,
+            gameDataId,
+            mapTemplateId,
+            cardKind,
+            cardParamsLength: cardParams.length,
+            pathLength: path.length,
+            diceCount
+        });
+
+        // 1. 调用use_card（不需要 Random 参数）
+        tx.moveCall({
+            target: `${packageId}::game::use_card`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.pure.u8(cardKind),
+                tx.pure.vector('u16', cardParams),
+                tx.object(gameDataId),
+                tx.object(mapTemplateId)
+            ]
+        });
+
+        // 2. 调用roll_and_step（需要 Random 参数）
+        tx.moveCall({
+            target: `${packageId}::game::roll_and_step`,
+            arguments: [
+                tx.object(gameId),
+                tx.object(seatId),
+                tx.pure.vector('u16', path),
+                tx.pure.u8(diceCount),
+                tx.pure.bool(autoBuy),
+                tx.pure.bool(autoUpgrade),
+                tx.pure.bool(preferRentCard),
+                tx.object(gameDataId),
+                tx.object(mapTemplateId),
+                tx.object(randomObjectId),
+                tx.object(clockObjectId)
+            ]
+        });
+
+        return tx;
+    }
+
+    /**
      * 构建use_card交易
      */
     private static buildUseCardTransaction(

@@ -34,10 +34,29 @@ export class CardUsageManager {
     /** 当前正在使用的卡片（用于检测再次点击取消） */
     private currentUsingCard: Card | null = null;
 
+    /** 遥控骰子是否使用合并调用（use_card + roll_and_step 在同一 PTB） */
+    private static combinedRemoteDice: boolean = true;
+
     private constructor() {
         this.tileSelector = new UICardTileSelector();
         this.playerSelector = new UIPlayerSelector();
         this.buildingSelector = new UICardBuildingSelector();
+    }
+
+    /**
+     * 设置遥控骰子是否使用合并调用
+     * @param combined true=合并调用（推荐），false=分开调用（测试用）
+     */
+    static setCombinedRemoteDice(combined: boolean): void {
+        this.combinedRemoteDice = combined;
+        console.log(`[CardUsageManager] 遥控骰子合并调用: ${combined}`);
+    }
+
+    /**
+     * 获取遥控骰子是否使用合并调用
+     */
+    static isCombinedRemoteDice(): boolean {
+        return this.combinedRemoteDice;
     }
 
     static get instance(): CardUsageManager {
@@ -336,13 +355,15 @@ export class CardUsageManager {
 
         // 计算路径，获取第一步的tile用于更新朝向
         const mapTemplate = session?.getMapTemplate();
+        let pathInfo: { path: number[]; distance: number } | null = null;
+
         if (mapTemplate) {
             const graph = new MapGraph(mapTemplate);
             const pathfinder = new BFSPathfinder(graph);
             const lastTileId = myPlayer.getLastTileId() ?? INVALID_TILE_ID;
             const maxRange = card.getMaxRange();
 
-            const pathInfo = pathfinder.findPathWithConstraints(
+            pathInfo = pathfinder.findPathWithConstraints(
                 currentPos,
                 selectedTile,
                 maxRange,
@@ -355,6 +376,13 @@ export class CardUsageManager {
                 myPlayer.setNextTileId(firstStepTile);
                 console.log(`[CardUsageManager] 设置nextTileId为第一步: ${firstStepTile}`);
             }
+        }
+
+        // 遥控骰子卡片：根据配置决定是否合并调用
+        if (card.isRemoteControlCard() && CardUsageManager.combinedRemoteDice && pathInfo) {
+            console.log('[CardUsageManager] 遥控骰子: 使用合并调用');
+            await this.callUseCardAndRollAndStep(card, currentPos, selectedTile, pathInfo);
+            return;
         }
 
         // 构建参数
@@ -536,6 +564,86 @@ export class CardUsageManager {
             console.log('[CardUsageManager] 卡片使用成功, digest:', result.digest);
             // 触发事件刷新UI
             EventBus.emit(EventTypes.Card.UseCard, { kind, params });
+        } else {
+            throw new Error(result.message || '交易失败');
+        }
+    }
+
+    /**
+     * 调用use_card + roll_and_step合并交易（遥控骰子专用）
+     */
+    private async callUseCardAndRollAndStep(
+        card: Card,
+        currentPos: number,
+        selectedTile: number,
+        pathInfo: { path: number[]; distance: number }
+    ): Promise<void> {
+        const session = GameInitializer.getInstance()?.getGameSession();
+        if (!session) throw new Error('游戏会话未初始化');
+
+        const gameId = session.getGameId();
+        const mySeat = session.getMySeat();
+        const mapTemplateId = session.getTemplateMapId();
+
+        if (!gameId || !mySeat || !mapTemplateId) {
+            throw new Error('缺少游戏、座位或地图信息');
+        }
+
+        const seatId = mySeat.id;
+        const myPlayerIndex = session.getMyPlayerIndex() || 0;
+
+        // 计算骰子值
+        const steps = pathInfo.distance;
+        const diceValues = this.splitIntoDiceValues(steps);
+
+        // 构建 use_card 参数: [player_index, dice1, dice2, ...]
+        const cardParams = [myPlayerIndex, ...diceValues];
+
+        // 移动路径（去掉起点）
+        const movePath = pathInfo.path.slice(1);
+
+        // 骰子数量
+        const diceCount = diceValues.length;
+
+        // 获取玩家偏好设置（如果有的话，这里使用默认值）
+        const autoBuy = true;
+        const autoUpgrade = true;
+        const preferRentCard = true;
+
+        console.log('[CardUsageManager] 调用合并交易:', {
+            gameId,
+            seatId,
+            mapTemplateId,
+            cardKind: card.kind,
+            cardParams,
+            movePath,
+            diceCount,
+            autoBuy,
+            autoUpgrade,
+            preferRentCard
+        });
+
+        // 动态导入CardInteraction
+        const { CardInteraction } = await import('../sui/interactions/CardInteraction');
+        const result = await CardInteraction.useCardAndRollAndStep(
+            gameId,
+            seatId,
+            mapTemplateId,
+            card.kind,
+            cardParams,
+            movePath,
+            diceCount,
+            autoBuy,
+            autoUpgrade,
+            preferRentCard
+        );
+
+        if (result.success) {
+            const msg = `使用${card.name}并移动到 Tile ${selectedTile}`;
+            UINotification.success(msg, undefined, undefined, 'center');
+            console.log('[CardUsageManager] 合并交易成功, digest:', result.digest);
+            // 触发事件刷新UI
+            EventBus.emit(EventTypes.Card.UseCard, { kind: card.kind, params: cardParams });
         } else {
             throw new Error(result.message || '交易失败');
         }

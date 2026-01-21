@@ -97,10 +97,10 @@ export class DecisionSkippedHandler {
                 isMyTurn: session.isMyTurn()
             });
 
-            // 3. 获取玩家
-            const player = session.getPlayerByAddress(event.player);
+            // 3. 获取玩家（通过索引）
+            const player = session.getPlayerByIndex(event.player);
             if (!player) {
-                console.warn('[DecisionSkippedHandler] Player not found', event.player);
+                console.warn('[DecisionSkippedHandler] Player not found, index:', event.player);
                 return;
             }
 

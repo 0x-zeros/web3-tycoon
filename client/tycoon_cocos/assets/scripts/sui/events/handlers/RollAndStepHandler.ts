@@ -85,13 +85,13 @@ export class RollAndStepHandler {
             EventBus.emit(EventTypes.Dice.ShowDiceAnimation, {
                 diceCount: diceCount,
                 diceValues: event.dice_values,
-                playerAddress: event.player
+                playerIndex: event.player
             });
 
             console.log('[RollAndStepHandler] 发送骰子动画事件（所有客户端）:', {
                 diceCount,
                 values: event.dice_values,
-                player: event.player
+                playerIndex: event.player
             });
 
             // 1. 发送链上骰子结果，让骰子动画停在正确的值
@@ -166,10 +166,10 @@ export class RollAndStepHandler {
         // 使用缓存的 GameSession
         const session = this.currentSession;
 
-        // 找到对应的玩家
-        const player = session.getPlayerByAddress(event.player);
+        // 找到对应的玩家（通过索引）
+        const player = session.getPlayerByIndex(event.player);
         if (!player) {
-            console.warn('[RollAndStepHandler] 玩家未找到', event.player);
+            console.warn('[RollAndStepHandler] 玩家未找到, index:', event.player);
             return;
         }
 
@@ -226,7 +226,7 @@ export class RollAndStepHandler {
         // 使用缓存的 GameSession
         const session = this.currentSession;
 
-        const player = session.getPlayerByAddress(event.player);
+        const player = session.getPlayerByIndex(event.player);
         if (!player) return;
 
         // 如果 from = to，说明被冰冻，跳过移动动画
@@ -265,7 +265,7 @@ export class RollAndStepHandler {
     ): Promise<void> {
         // 使用缓存的 GameSession
         const session = this.currentSession;
-        const player = session.getPlayerByAddress(event.player);
+        const player = session.getPlayerByIndex(event.player);
 
         // ✅ 更新玩家位置到最新的 tile（修复掷骰子使用过时位置的问题）
         if (player) {
@@ -363,25 +363,21 @@ export class RollAndStepHandler {
 
             // 卡片商店
             if (step.stop_effect.stop_type === StopType.CARD_SHOP) {
-                // 使用地址比较（比对象引用比较更可靠）
-                import('../../managers/SuiManager').then(({ SuiManager }) => {
-                    const myAddress = SuiManager.instance.currentAddress;
-                    console.log('[RollAndStepHandler] CardShop:', {
-                        eventPlayer: event.player,
-                        myAddress: myAddress,
-                        isMyAction: event.player === myAddress
-                    });
-
-                    if (myAddress && event.player === myAddress) {
-                        import('../../../ui/core/UIManager').then(({ UIManager }) => {
-                            UIManager.instance.showUI('CardShop', { parentUIName: 'InGame' });
-                        }).catch(err => {
-                            console.error('[RollAndStepHandler] 打开卡片商店失败', err);
-                        });
-                    }
-                }).catch(err => {
-                    console.error('[RollAndStepHandler] 加载 SuiManager 失败', err);
+                // 使用玩家索引比较
+                const myPlayerIndex = session.getMyPlayerIndex();
+                console.log('[RollAndStepHandler] CardShop:', {
+                    eventPlayerIndex: event.player,
+                    myPlayerIndex: myPlayerIndex,
+                    isMyAction: event.player === myPlayerIndex
                 });
+
+                if (myPlayerIndex !== undefined && event.player === myPlayerIndex) {
+                    import('../../../ui/core/UIManager').then(({ UIManager }) => {
+                        UIManager.instance.showUI('CardShop', { parentUIName: 'InGame' });
+                    }).catch(err => {
+                        console.error('[RollAndStepHandler] 打开卡片商店失败', err);
+                    });
+                }
             }
 
             // 处理 NPC 触发的 Buff（土地神等）
@@ -390,9 +386,9 @@ export class RollAndStepHandler {
                 const buffName = this._getBuffName(npcBuff.buff_type);
                 UINotification.info(`获得 ${buffName}！`, 'NPC祝福', 3000, 'center');
 
-                // 根据 target 地址查找目标玩家（可能不是当前行动玩家）
-                const targetPlayer = npcBuff.target
-                    ? session.getPlayerByAddress(npcBuff.target)
+                // 根据 target 索引查找目标玩家（可能不是当前行动玩家）
+                const targetPlayer = (npcBuff.target !== undefined && npcBuff.target !== null)
+                    ? session.getPlayerByIndex(npcBuff.target)
                     : player;  // fallback 到当前玩家
 
                 if (targetPlayer) {
@@ -500,7 +496,7 @@ export class RollAndStepHandler {
         const session = this.currentSession;
 
         // ✅ 清除玩家的next_tile_id（移动完成后，强制步骤已使用）
-        const player = session?.getPlayerByAddress(event.player);
+        const player = session?.getPlayerByIndex(event.player);
         if (player && player.getNextTileId() !== 65535) {
             player.setNextTileId(65535);
             console.log('[RollAndStepHandler] next_tile_id已清除（移动完成）');
@@ -530,7 +526,7 @@ export class RollAndStepHandler {
             console.log('[RollAndStepHandler] 处理现金变动', event.cash_changes);
 
             for (const change of event.cash_changes) {
-                const player = session.getPlayerByAddress(change.player);
+                const player = session.getPlayerByIndex(change.player);
                 if (player) {
                     // 确保 amount 是 BigInt 类型（防止 JSON 解析时类型丢失）
                     const amount = BigInt(change.amount);
@@ -556,7 +552,7 @@ export class RollAndStepHandler {
                     }
 
                     console.log('[RollAndStepHandler] 玩家现金已更新', {
-                        player: change.player,
+                        playerIndex: change.player,
                         isDebit: change.is_debit,
                         amount: amount.toString(),
                         newCash: newCash.toString(),
@@ -580,7 +576,7 @@ export class RollAndStepHandler {
         // 处理Hospital状态（从最后一个step的StopEffect获取）
         if (lastStep && lastStep.stop_effect) {
             const stopEffect = lastStep.stop_effect;
-            const player = session.getPlayerByAddress(event.player);
+            const player = session.getPlayerByIndex(event.player);
 
             if (player && stopEffect.turns !== null && stopEffect.turns !== undefined) {
                 // StopType.HOSPITAL = 3
@@ -588,7 +584,7 @@ export class RollAndStepHandler {
                     // 住院
                     player.setInHospitalTurns(stopEffect.turns);
                     console.log('[RollAndStepHandler] 玩家进入医院', {
-                        player: event.player,
+                        playerIndex: event.player,
                         turns: stopEffect.turns
                     });
                 }
@@ -651,7 +647,7 @@ export class RollAndStepHandler {
 
         // 瞬移玩家到 end_pos
         const session = this.currentSession;
-        const player = session.getPlayerByAddress(event.player);
+        const player = session.getPlayerByIndex(event.player);
 
         if (player) {
             // ✅ 更新玩家逻辑位置（修复瞬移后位置不同步）
@@ -740,11 +736,11 @@ export class RollAndStepHandler {
             return;
         }
 
-        const eventPlayer = session.getPlayerByAddress(event.player);
-        if (eventPlayer !== myPlayer) {
+        const myPlayerIndex = session.getMyPlayerIndex();
+        if (event.player !== myPlayerIndex) {
             console.log('[RollAndStepHandler] Not my turn, skip decision UI', {
-                eventPlayer: event.player,
-                myPlayer: myPlayer.getOwner()
+                eventPlayerIndex: event.player,
+                myPlayerIndex: myPlayerIndex
             });
             return;
         }
@@ -778,12 +774,12 @@ export class RollAndStepHandler {
      */
     private async _handleBuildingUpdate(
         buildingDecision: any,
-        playerAddress: string,
+        playerIndex: number,
         session: any
     ): Promise<void> {
-        const player = session.getPlayerByAddress(playerAddress);
+        const player = session.getPlayerByIndex(playerIndex);
         if (!player) {
-            console.warn('[RollAndStepHandler] Player not found for building update');
+            console.warn('[RollAndStepHandler] Player not found for building update, index:', playerIndex);
             return;
         }
 

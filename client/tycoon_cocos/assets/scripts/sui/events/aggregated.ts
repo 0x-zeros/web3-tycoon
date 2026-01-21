@@ -12,8 +12,8 @@
  * 对应Move: struct CashDelta
  */
 export interface CashDelta {
-    /** 玩家地址 */
-    player: string;
+    /** 玩家索引 */
+    player: number;
     /** 是否为支出（true=支出，false=收入） */
     is_debit: boolean;
     /** 金额 */
@@ -61,8 +61,8 @@ export interface NpcChangeItem {
 export interface BuffChangeItem {
     /** Buff类型 */
     buff_type: number;
-    /** 目标玩家地址 */
-    target: string;
+    /** 目标玩家索引 */
+    target: number;
     /** 最后激活轮次（包含） */
     last_active_round: number | null;
 }
@@ -97,8 +97,8 @@ export interface StopEffect {
     stop_type: number;
     /** 金额（过路费、奖金、罚款等） */
     amount: bigint;
-    /** 地产所有者地址 */
-    owner: string | null;
+    /** 地产所有者玩家索引 */
+    owner: number | null;
     /** 地产等级 */
     level: number | null;
     /** 停留回合数（医院） */
@@ -143,8 +143,8 @@ export interface StepEffect {
 export interface UseCardActionEvent {
     /** 游戏ID */
     game: string;
-    /** 玩家地址 */
-    player: string;
+    /** 玩家索引 */
+    player: number;
     /** 轮次 */
     round: number;
     /** 轮内回合 */
@@ -170,8 +170,8 @@ export interface UseCardActionEvent {
 export interface RollAndStepActionEvent {
     /** 游戏ID */
     game: string;
-    /** 玩家地址 */
-    player: string;
+    /** 玩家索引 */
+    player: number;
     /** 轮次 */
     round: number;
     /** 轮内回合 */
@@ -239,7 +239,7 @@ export const STOP_TYPE_TEXT: { [key: number]: string } = {
 /**
  * 计算事件中的总现金变动
  */
-export function calculateTotalCashChange(cashDeltas: CashDelta[], player: string): bigint {
+export function calculateTotalCashChange(cashDeltas: CashDelta[], player: number): bigint {
     let total = 0n;
     for (const delta of cashDeltas) {
         if (delta.player === player) {
@@ -254,10 +254,10 @@ export function calculateTotalCashChange(cashDeltas: CashDelta[], player: string
 }
 
 /**
- * 获取事件中的所有受影响玩家
+ * 获取事件中的所有受影响玩家索引
  */
-export function getAffectedPlayers(event: UseCardActionEvent | RollAndStepActionEvent): string[] {
-    const players = new Set<string>();
+export function getAffectedPlayers(event: UseCardActionEvent | RollAndStepActionEvent): number[] {
+    const players = new Set<number>();
     players.add(event.player);
 
     for (const cashDelta of event.cash_changes) {

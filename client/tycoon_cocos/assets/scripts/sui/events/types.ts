@@ -57,8 +57,8 @@ export interface GameStartedEvent {
 export interface GameEndedEvent {
     /** 游戏ID */
     game: string;
-    /** 胜利者地址（可选） */
-    winner?: string;
+    /** 胜利者玩家索引（可选） */
+    winner?: number;
     /** 结束时的轮次 */
     round: number;
     /** 轮内回合 */
@@ -76,8 +76,8 @@ export interface GameEndedEvent {
 export interface TurnStartEvent {
     /** 游戏ID */
     game: string;
-    /** 当前玩家地址 */
-    player: string;
+    /** 当前玩家索引 */
+    player: number;
     /** 当前轮次 */
     round: number;
     /** 轮内回合 */
@@ -91,8 +91,8 @@ export interface TurnStartEvent {
 export interface SkipTurnEvent {
     /** 游戏ID */
     game: string;
-    /** 被跳过的玩家地址 */
-    player: string;
+    /** 被跳过的玩家索引 */
+    player: number;
     /** 跳过原因（2=医院） */
     reason: number;
     /** 剩余天数 */
@@ -127,12 +127,12 @@ export interface RoundEndedEvent {
 export interface BankruptEvent {
     /** 游戏ID */
     game: string;
-    /** 破产玩家地址 */
-    player: string;
+    /** 破产玩家索引 */
+    player: number;
     /** 债务金额 */
     debt: bigint;
-    /** 债权人地址（可选） */
-    creditor?: string;
+    /** 债权人玩家索引（可选） */
+    creditor?: number;
 }
 
 // ===== Decision Events 决策事件 =====
@@ -144,8 +144,8 @@ export interface BankruptEvent {
 export interface BuildingDecisionEvent {
     /** 游戏ID */
     game: string;
-    /** 玩家地址 */
-    player: string;
+    /** 玩家索引 */
+    player: number;
     /** 轮次 */
     round: number;
     /** 回合 */
@@ -180,8 +180,8 @@ export interface RentDecisionEvent {
 export interface CardShopDecisionEvent {
     /** 游戏ID */
     game: string;
-    /** 玩家地址 */
-    player: string;
+    /** 玩家索引 */
+    player: number;
     /** 轮次 */
     round: number;
     /** 轮内回合 */
@@ -204,8 +204,8 @@ export interface CardShopDecisionEvent {
 export interface DecisionSkippedEvent {
     /** 游戏ID */
     game: string;
-    /** 玩家地址 */
-    player: string;
+    /** 玩家索引 */
+    player: number;
     /** 决策类型 */
     decision_type: number;
     /** 地块ID */

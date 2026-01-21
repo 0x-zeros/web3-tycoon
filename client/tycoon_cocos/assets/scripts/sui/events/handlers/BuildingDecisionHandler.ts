@@ -110,10 +110,10 @@ export class BuildingDecisionHandler {
                 turn: event.turn
             });
 
-            // 5. 获取玩家
-            const player = session.getPlayerByAddress(event.player);
+            // 5. 获取玩家（通过索引）
+            const player = session.getPlayerByIndex(event.player);
             if (!player) {
-                console.warn('[BuildingDecisionHandler] Player not found', event.player);
+                console.warn('[BuildingDecisionHandler] Player not found, index:', event.player);
                 return;
             }
 

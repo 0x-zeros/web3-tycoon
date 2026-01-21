@@ -185,8 +185,8 @@ export interface Game {
     price_rise_days: number;
 
     // 额外状态
-    /** 胜利者地址（游戏结束时） */
-    winner?: string;
+    /** 胜利者索引（游戏结束时） */
+    winner?: number;
 
     // 待决策状态
     /** 待决策类型（0=无，1=买地，2=升级，3=租金决策） */

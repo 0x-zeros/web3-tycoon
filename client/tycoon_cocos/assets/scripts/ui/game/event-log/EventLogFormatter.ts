@@ -91,7 +91,7 @@ function formatTime(timestamp: number): string {
 }
 
 /**
- * 根据玩家地址获取玩家索引
+ * 根据玩家地址获取玩家索引（兼容旧版事件）
  */
 function getPlayerIndexByAddress(session: GameSession, address: string): number {
     const players = session.getAllPlayers();
@@ -101,6 +101,16 @@ function getPlayerIndexByAddress(session: GameSession, address: string): number 
         }
     }
     return -1;
+}
+
+/**
+ * 获取玩家索引（新版事件直接返回索引，旧版通过地址查找）
+ * player 可以是 number（新版索引）或 string（旧版地址）
+ */
+function resolvePlayerIndex(session: GameSession, player: number | string | undefined): number {
+    if (player === undefined || player === null) return -1;
+    if (typeof player === 'number') return player;
+    return getPlayerIndexByAddress(session, player);
 }
 
 /**
@@ -187,8 +197,8 @@ export class EventLogFormatter {
     ): FormattedLog {
         let text = `${formatTime(timestamp)} ${colored('游戏结束', 'warning')}`;
 
-        if (data.winner) {
-            const winnerIdx = getPlayerIndexByAddress(session, data.winner);
+        if (data.winner !== undefined && data.winner !== null) {
+            const winnerIdx = resolvePlayerIndex(session, data.winner);
             const winnerName = winnerIdx >= 0 ? coloredPlayerName(winnerIdx) : '玩家';
             text += `，${winnerName} 获胜！`;
         } else {
@@ -228,7 +238,7 @@ export class EventLogFormatter {
         timestamp: number,
         session: GameSession
     ): FormattedLog {
-        const playerIdx = getPlayerIndexByAddress(session, data.player);
+        const playerIdx = resolvePlayerIndex(session, data.player);
         const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
 
         return {
@@ -247,7 +257,7 @@ export class EventLogFormatter {
         timestamp: number,
         session: GameSession
     ): FormattedLog {
-        const playerIdx = getPlayerIndexByAddress(session, data.player);
+        const playerIdx = resolvePlayerIndex(session, data.player);
         const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
 
         const reasonText = data.reason === 2 ? '住院中' : '跳过';
@@ -290,14 +300,14 @@ export class EventLogFormatter {
         timestamp: number,
         session: GameSession
     ): FormattedLog {
-        const playerIdx = getPlayerIndexByAddress(session, data.player);
+        const playerIdx = resolvePlayerIndex(session, data.player);
         const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
 
         let text = `${formatTime(timestamp)} ${playerName} ${colored('破产！', 'warning')}`;
         text += ` 负债 ${coloredAmount(-Number(data.debt), false)}`;
 
-        if (data.creditor) {
-            const creditorIdx = getPlayerIndexByAddress(session, data.creditor);
+        if (data.creditor !== undefined && data.creditor !== null) {
+            const creditorIdx = resolvePlayerIndex(session, data.creditor);
             const creditorName = creditorIdx >= 0 ? coloredPlayerName(creditorIdx) : '玩家';
             text += `，债权人: ${creditorName}`;
         }
@@ -319,7 +329,7 @@ export class EventLogFormatter {
         timestamp: number,
         session: GameSession
     ): FormattedLog {
-        const playerIdx = getPlayerIndexByAddress(session, data.player);
+        const playerIdx = resolvePlayerIndex(session, data.player);
         const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
 
         const lines: string[] = [];
@@ -400,8 +410,8 @@ export class EventLogFormatter {
         // 停留类型处理
         switch (stop.stop_type) {
             case 1: // 支付过路费
-                if (stop.owner) {
-                    const ownerIdx = getPlayerIndexByAddress(session, stop.owner);
+                if (stop.owner !== undefined && stop.owner !== null) {
+                    const ownerIdx = resolvePlayerIndex(session, stop.owner);
                     const ownerName = ownerIdx >= 0 ? coloredPlayerName(ownerIdx) : '地主';
                     lines.push(`  └ 支付过路费 ${coloredAmount(-Number(stop.amount), false)} 给 ${ownerName}`);
                 }
@@ -454,7 +464,7 @@ export class EventLogFormatter {
         timestamp: number,
         session: GameSession
     ): FormattedLog {
-        const playerIdx = getPlayerIndexByAddress(session, data.player);
+        const playerIdx = resolvePlayerIndex(session, data.player);
         const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
         const cardName = colored(getCardName(data.kind), 'highlight');
 
@@ -472,7 +482,7 @@ export class EventLogFormatter {
         // Buff变更
         if (data.buff_changes && data.buff_changes.length > 0) {
             for (const buff of data.buff_changes) {
-                const targetIdx = getPlayerIndexByAddress(session, buff.target);
+                const targetIdx = resolvePlayerIndex(session, buff.target);
                 const targetName = targetIdx >= 0 ? coloredPlayerName(targetIdx) : '目标';
                 text += `\n  └ ${targetName} 获得Buff效果`;
             }
@@ -510,7 +520,7 @@ export class EventLogFormatter {
             return null; // 没有实际决策，不记录
         }
 
-        const playerIdx = getPlayerIndexByAddress(session, data.player);
+        const playerIdx = resolvePlayerIndex(session, data.player);
         const playerName = playerIdx >= 0 ? coloredPlayerName(playerIdx) : '玩家';
 
         const decision = data.decision;
@@ -546,8 +556,8 @@ export class EventLogFormatter {
         }
 
         const decision = data.decision;
-        const payerIdx = getPlayerIndexByAddress(session, decision.payer);
-        const ownerIdx = getPlayerIndexByAddress(session, decision.owner);
+        const payerIdx = resolvePlayerIndex(session, decision.payer);
+        const ownerIdx = resolvePlayerIndex(session, decision.owner);
 
         const payerName = payerIdx >= 0 ? coloredPlayerName(payerIdx) : '玩家';
         const ownerName = ownerIdx >= 0 ? coloredPlayerName(ownerIdx) : '地主';

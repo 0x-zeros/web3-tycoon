@@ -59,10 +59,10 @@ export enum GameEffectType {
 export interface GameEffect {
     /** 效果类型 */
     type: GameEffectType;
-    /** 涉及的玩家 */
-    player: string;
+    /** 涉及的玩家（玩家索引或地址字符串，兼容旧版） */
+    player: number | string;
     /** 目标（如果有） */
-    target?: string;
+    target?: number | string;
     /** 金额（如果有） */
     amount?: bigint;
     /** 位置信息 */
@@ -89,10 +89,10 @@ export interface GameStateChange {
     timestamp: number;
     /** 产生的效果 */
     effects: GameEffect[];
-    /** 现金流变化 */
-    cashFlows: Map<string, bigint>;
-    /** 位置变化 */
-    positionChanges: Map<string, number>;
+    /** 现金流变化（key 为玩家索引） */
+    cashFlows: Map<number, bigint>;
+    /** 位置变化（key 为玩家索引） */
+    positionChanges: Map<number, number>;
 }
 
 /**
@@ -121,8 +121,8 @@ export class TycoonEventProcessor {
     private processRollAndStep(metadata: EventMetadata<RollAndStepActionEvent>): GameStateChange {
         const event = metadata.data;
         const effects: GameEffect[] = [];
-        const cashFlows = new Map<string, bigint>();
-        const positionChanges = new Map<string, number>();
+        const cashFlows = new Map<number, bigint>();
+        const positionChanges = new Map<number, number>();
 
         // 记录位置变化
         positionChanges.set(event.player, event.end_pos);
@@ -230,7 +230,7 @@ export class TycoonEventProcessor {
     private processUseCard(metadata: EventMetadata<UseCardActionEvent>): GameStateChange {
         const event = metadata.data;
         const effects: GameEffect[] = [];
-        const cashFlows = new Map<string, bigint>();
+        const cashFlows = new Map<number, bigint>();
 
         // 记录卡牌使用
         effects.push({
@@ -348,7 +348,7 @@ export class TycoonEventProcessor {
     /**
      * 处理停留效果
      */
-    private processStopEffect(stop: StopEffect, player: string, effects: GameEffect[]): void {
+    private processStopEffect(stop: StopEffect, player: number | string, effects: GameEffect[]): void {
         switch (stop.stop_type) {
             case StopType.BUILDING_TOLL:
                 // 已在现金变动中处理

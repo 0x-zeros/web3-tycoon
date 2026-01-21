@@ -55,10 +55,10 @@ export class TeleportActionHandler {
                 return;
             }
 
-            // 1. 通过 index 获取被瞬移的玩家（更简单直接）
-            const targetPlayer = session.getPlayerByIndex(event.target_player_idx);
+            // 1. 通过 index 获取被瞬移的玩家
+            const targetPlayer = session.getPlayerByIndex(event.target_player);
             if (!targetPlayer) {
-                console.warn('[TeleportActionHandler] 目标玩家未找到, index:', event.target_player_idx);
+                console.warn('[TeleportActionHandler] 目标玩家未找到, index:', event.target_player);
                 return;
             }
 
@@ -80,13 +80,13 @@ export class TeleportActionHandler {
             }
 
             // 判断是否对自己使用
-            const isSelfTeleport = event.source_player_idx === event.target_player_idx;
+            const isSelfTeleport = event.source_player === event.target_player;
 
             console.log('[TeleportActionHandler] 玩家已瞬移', {
                 from: event.from_pos,
                 to: event.to_pos,
-                targetPlayerIdx: event.target_player_idx,
-                sourcePlayerIdx: event.source_player_idx,
+                targetPlayer: event.target_player,
+                sourcePlayer: event.source_player,
                 isSelfTeleport
             });
 
@@ -95,11 +95,11 @@ export class TeleportActionHandler {
             if (isSelfTeleport) {
                 notificationText = `瞬移到了 ${event.to_pos}`;
             } else {
-                notificationText = `将玩家${event.target_player_idx + 1}瞬移到了 ${event.to_pos}`;
+                notificationText = `将玩家${event.target_player + 1}瞬移到了 ${event.to_pos}`;
             }
 
             UINotification.info(notificationText, '瞬移卡', 3000, 'center', {
-                playerIndex: event.source_player_idx,
+                playerIndex: event.source_player,
                 cards: [8]  // CARD_TELEPORT = 8
             });
 

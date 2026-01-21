@@ -72,26 +72,30 @@ export class BankruptHandler {
                 return;
             }
 
-            // 2. 更新玩家破产状态
-            const player = session.getPlayerByAddress(event.player);
+            // 2. 更新玩家破产状态（通过索引）
+            const player = session.getPlayerByIndex(event.player);
             if (!player) {
-                console.warn('[BankruptHandler] Player not found', event.player);
+                console.warn('[BankruptHandler] Player not found, index:', event.player);
                 return;
             }
 
             player.setBankrupt(true);
 
             console.log('[BankruptHandler] 玩家破产状态已更新', {
-                player: IdFormatter.shortenAddress(event.player),
+                playerIndex: event.player,
                 debt: event.debt,
-                creditor: event.creditor
+                creditorIndex: event.creditor
             });
 
             // 3. 显示破产通知（5秒后自动消失）
             const playerName = player.getName() || `玩家 ${player.getPlayerIndex() + 1}`;
-            const creditorPlayer = event.creditor ? session.getPlayerByAddress(event.creditor) : null;
+            const creditorPlayer = (event.creditor !== undefined && event.creditor !== null)
+                ? session.getPlayerByIndex(event.creditor)
+                : null;
             const creditorName = creditorPlayer?.getName()
-                || (event.creditor ? `玩家 ${creditorPlayer?.getPlayerIndex() ?? '?'}` : '银行');
+                || ((event.creditor !== undefined && event.creditor !== null)
+                    ? `玩家 ${(creditorPlayer?.getPlayerIndex() ?? event.creditor) + 1}`
+                    : '银行');
 
             // 动态导入 UIManager（避免循环依赖）
             const { UIManager } = await import('../../../ui/core/UIManager');

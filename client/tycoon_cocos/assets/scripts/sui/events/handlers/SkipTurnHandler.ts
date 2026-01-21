@@ -28,22 +28,21 @@ export class SkipTurnHandler {
             session.setRound(event.round);
             await session.advance_turn(event.turn);
 
-            // 更新玩家的hospital状态
-            const player = session.getPlayerByAddress(event.player);
+            // 更新玩家的hospital状态（通过索引）
+            const player = session.getPlayerByIndex(event.player);
             if (player && event.remaining_turns !== null && event.remaining_turns !== undefined) {
                 // reason: 2=医院
                 player.setInHospitalTurns(event.remaining_turns);
                 console.log('[SkipTurnHandler] 更新医院剩余回合', {
-                    player: event.player,
+                    playerIndex: event.player,
                     remainingTurns: event.remaining_turns
                 });
             }
         }
 
         // 显示通知
-        const playerName = IdFormatter.shortenAddress(event.player);
         UINotification.info(
-            `玩家 ${playerName} 在医院，还需休息 ${event.remaining_turns} 天`,
+            `玩家 ${event.player + 1} 在医院，还需休息 ${event.remaining_turns} 天`,
             '跳过回合'
         );
     }

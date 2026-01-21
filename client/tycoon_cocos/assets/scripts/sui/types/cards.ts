@@ -76,7 +76,7 @@ export interface CardEffectContext {
     /** 使用者玩家索引 */
     player_idx: number;
     /** 目标玩家索引（如冰冻卡） */
-    target_player_idx?: number;
+    target_player?: number;
     /** 目标地块ID（如路障卡） */
     target_tile?: number;
     /** 骰子点数（如遥控骰子） */
@@ -234,7 +234,7 @@ export function validateCardParams(kind: number, context: CardEffectContext): bo
         case 6: // CARD_CLEANSE - 机器娃娃
             return context.target_tile !== undefined;
         case 4: // CARD_FREEZE - 冰冻
-            return context.target_player_idx !== undefined;
+            return context.target_player !== undefined;
         default:
             return true;
     }

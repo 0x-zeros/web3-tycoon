@@ -9,7 +9,7 @@ import { BuffChangeItem } from '../aggregated';
 
 // 现金变动项
 export interface CashDelta {
-    player: string;
+    player: number;  // 玩家索引
     is_debit: boolean;
     amount: bigint;
     reason: number;  // 1=toll, 2=buy, 3=upgrade, 4=bonus, 5=fee, 6=card
@@ -36,8 +36,8 @@ export interface BuildingDecisionInfo {
 
 // 租金决策信息
 export interface RentDecisionInfo {
-    payer: string;
-    owner: string;
+    payer: number;   // 玩家索引
+    owner: number;   // 玩家索引
     building_id: number;
     tile_id: number;
     rent_amount: bigint;
@@ -59,7 +59,7 @@ export interface StopEffect {
     tile_kind: number;
     stop_type: number;  // 0=none, 1=toll, 2=no_rent, 3=hospital, 5=bonus, 6=fee, 7=card_stop, 8=unowned, 9=land_seize
     amount: bigint;
-    owner: string | null;
+    owner: number | null;  // 玩家索引
     level: number | null;
     turns: number | null;
     card_gains: CardDrawItem[];
@@ -85,7 +85,7 @@ export interface StepEffect {
 // 掷骰移动操作聚合事件
 export interface RollAndStepActionEvent {
     game: string;
-    player: string;
+    player: number;  // 玩家索引
     round: number;
     turn_in_round: number;
     dice_values: number[];   // 每颗骰子的值（长度1-3）

@@ -73,21 +73,21 @@ export class GameEndedHandler {
                 return;
             }
 
-            // 2. 更新 GameSession 状态
+            // 2. 更新 GameSession 状态（winner 现在是玩家索引）
+            session.setWinner(event.winner ?? null);
             session.setStatus(GameStatus.ENDED);
-            session.setWinner(event.winner || null);
 
             console.log('[GameEndedHandler] 游戏状态已更新', {
                 status: GameStatus.ENDED,
-                winner: event.winner ? IdFormatter.shortenAddress(event.winner) : '无',
+                winnerIndex: event.winner ?? '无',
                 reason: event.reason,
                 round: event.round,
                 turn: event.turn_in_round
             });
 
             // 3. 准备游戏结束信息
-            const winnerName = event.winner
-                ? `玩家 ${session.getPlayerByAddress(event.winner)?.getPlayerIndex() ?? '?'} + 1`
+            const winnerName = (event.winner !== undefined && event.winner !== null)
+                ? `玩家 ${event.winner + 1}`
                 : '无';
 
             const reasonText = this._getReasonText(event.reason);

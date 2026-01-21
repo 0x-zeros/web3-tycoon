@@ -119,14 +119,14 @@ export class RentDecisionHandler {
                 turn: event.turn
             });
 
-            // 5. 获取玩家
-            const payer = session.getPlayerByAddress(decision.payer);
-            const owner = session.getPlayerByAddress(decision.owner);
+            // 5. 获取玩家（通过索引）
+            const payer = session.getPlayerByIndex(decision.payer);
+            const owner = session.getPlayerByIndex(decision.owner);
 
             if (!payer || !owner) {
                 console.warn('[RentDecisionHandler] Player not found', {
-                    payer: decision.payer,
-                    owner: decision.owner
+                    payerIndex: decision.payer,
+                    ownerIndex: decision.owner
                 });
                 return;
             }

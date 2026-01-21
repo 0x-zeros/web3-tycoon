@@ -19,7 +19,7 @@ import { Blackboard } from '../../../events/Blackboard';
  */
 export interface UseCardActionEvent {
     game: string;           // ID
-    player: string;         // address
+    player: number;         // 玩家索引
     round: number;          // u16
     turn_in_round: number;  // u8
     kind: number;           // u8
@@ -27,6 +27,7 @@ export interface UseCardActionEvent {
     npc_changes: NpcChangeItem[];
     buff_changes: BuffChangeItem[];
     cash_changes: CashDelta[];
+    next_tile_id: number;   // u16
 }
 
 /**
@@ -44,7 +45,7 @@ export interface NpcChangeItem {
  */
 export interface BuffChangeItem {
     buff_type: number;      // u8 - Buff类型
-    target: string;         // address - 目标玩家
+    target: number;         // 玩家索引
     last_active_round: number | null; // option<u16> - 最后激活回合（null表示移除）
 }
 
@@ -52,7 +53,7 @@ export interface BuffChangeItem {
  * 现金变化项
  */
 export interface CashDelta {
-    player: string;         // address
+    player: number;         // 玩家索引
     is_debit: boolean;      // 与 Move 端一致: true=扣钱, false=加钱
     amount: bigint;         // u64
     reason: number;         // u8
@@ -117,13 +118,13 @@ export class UseCardHandler {
             await this.applyBuffChanges(session, event.buff_changes);
 
             // 打印所有受buff影响的玩家状态
-            const affectedPlayers = new Set<string>();
-            affectedPlayers.add(event.player);  // 使用卡牌的玩家
+            const affectedPlayers = new Set<number>();
+            affectedPlayers.add(event.player);  // 使用卡牌的玩家索引
             for (const change of event.buff_changes) {
-                affectedPlayers.add(change.target);  // buff目标玩家
+                affectedPlayers.add(change.target);  // buff目标玩家索引
             }
-            for (const addr of affectedPlayers) {
-                this.logPlayerBuffs(session, addr);
+            for (const playerIndex of affectedPlayers) {
+                this.logPlayerBuffs(session, playerIndex);
             }
 
             // 4. 应用 NPC 变化
@@ -152,9 +153,9 @@ export class UseCardHandler {
      * 更新玩家卡牌
      */
     private async updatePlayerCards(session: any, event: UseCardActionEvent): Promise<void> {
-        const player = session.getPlayerByAddress(event.player);
+        const player = session.getPlayerByIndex(event.player);
         if (!player) {
-            console.warn('[UseCardHandler] 玩家未找到:', event.player);
+            console.warn('[UseCardHandler] 玩家未找到, index:', event.player);
             return;
         }
 
@@ -162,22 +163,21 @@ export class UseCardHandler {
         // 注意：Move 端的 use_player_card 已经扣减了，这里只是同步客户端状态
         player.removeCard(event.kind, 1);
 
-        console.log(`[UseCardHandler] 玩家 ${event.player} 使用卡牌 ${event.kind}`);
+        console.log(`[UseCardHandler] 玩家${event.player} 使用卡牌 ${event.kind}`);
     }
 
     /**
      * 打印玩家当前所有buff状态（调试用）
      */
-    private logPlayerBuffs(session: any, playerAddress: string): void {
-        const player = session.getPlayerByAddress(playerAddress);
+    private logPlayerBuffs(session: any, playerIndex: number): void {
+        const player = session.getPlayerByIndex(playerIndex);
         if (!player) {
-            console.warn('[UseCardHandler] logPlayerBuffs: 玩家未找到:', playerAddress);
+            console.warn('[UseCardHandler] logPlayerBuffs: 玩家未找到, index:', playerIndex);
             return;
         }
 
         const allBuffs = player.getAllBuffs();
         const currentRound = session.getRound();
-        const playerIndex = player.getPlayerIndex();
 
         console.log(`[UseCardHandler] ========== 玩家${playerIndex} Buff状态 ==========`);
         console.log(`[UseCardHandler] 当前回合: ${currentRound}`);
@@ -217,9 +217,9 @@ export class UseCardHandler {
      */
     private async applyBuffChanges(session: any, buffChanges: BuffChangeItem[]): Promise<void> {
         for (const change of buffChanges) {
-            const player = session.getPlayerByAddress(change.target);
+            const player = session.getPlayerByIndex(change.target);
             if (!player) {
-                console.warn('[UseCardHandler] 玩家未找到（buff）:', change.target);
+                console.warn('[UseCardHandler] 玩家未找到（buff）, index:', change.target);
                 continue;
             }
 
@@ -231,11 +231,11 @@ export class UseCardHandler {
                     value: 0n,  // bigint 类型
                     spawn_index: 0xFFFF  // 非NPC产生的buff
                 });
-                console.log(`[UseCardHandler] 玩家 ${change.target} 获得buff ${change.buff_type}, 最后激活回合: ${change.last_active_round}`);
+                console.log(`[UseCardHandler] 玩家${change.target} 获得buff ${change.buff_type}, 最后激活回合: ${change.last_active_round}`);
             } else {
                 // 移除 buff
                 player.removeBuff(change.buff_type);
-                console.log(`[UseCardHandler] 玩家 ${change.target} 移除buff ${change.buff_type}`);
+                console.log(`[UseCardHandler] 玩家${change.target} 移除buff ${change.buff_type}`);
             }
         }
     }
@@ -265,9 +265,9 @@ export class UseCardHandler {
      */
     private async applyCashChanges(session: any, cashChanges: CashDelta[]): Promise<void> {
         for (const change of cashChanges) {
-            const player = session.getPlayerByAddress(change.player);
+            const player = session.getPlayerByIndex(change.player);
             if (!player) {
-                console.warn('[UseCardHandler] 玩家未找到（现金）:', change.player);
+                console.warn('[UseCardHandler] 玩家未找到（现金）, index:', change.player);
                 continue;
             }
 
@@ -281,7 +281,7 @@ export class UseCardHandler {
 
             player.setCash(newCash);  // ✅ 正确调用setCash
 
-            console.log(`[UseCardHandler] 玩家 ${change.player} 现金更新`, {
+            console.log(`[UseCardHandler] 玩家${change.player} 现金更新`, {
                 isDebit: change.is_debit,
                 amount: amount.toString(),
                 newCash: newCash.toString()
@@ -296,9 +296,9 @@ export class UseCardHandler {
      * @param event UseCardActionEvent事件
      */
     private updatePlayerNextTileId(session: any, event: UseCardActionEvent): void {
-        const player = session.getPlayerByAddress(event.player);
+        const player = session.getPlayerByIndex(event.player);
         if (!player) {
-            console.warn('[UseCardHandler] 玩家未找到（next_tile_id）:', event.player);
+            console.warn('[UseCardHandler] 玩家未找到（next_tile_id）, index:', event.player);
             return;
         }
 
@@ -322,9 +322,9 @@ export class UseCardHandler {
      */
     private async showCardNotification(session: any, event: UseCardActionEvent): Promise<void> {
         // 1. 获取使用卡牌的玩家
-        const player = session.getPlayerByAddress(event.player);
+        const player = session.getPlayerByIndex(event.player);
         if (!player) {
-            console.warn('[UseCardHandler] 玩家未找到，无法显示通知:', event.player);
+            console.warn('[UseCardHandler] 玩家未找到，无法显示通知, index:', event.player);
             return;
         }
 
@@ -354,8 +354,7 @@ export class UseCardHandler {
         });
 
         console.log('[UseCardHandler] 显示卡牌使用通知:', {
-            player: event.player,
-            playerIndex,
+            playerIndex: event.player,
             cardName,
             text: notificationText
         });

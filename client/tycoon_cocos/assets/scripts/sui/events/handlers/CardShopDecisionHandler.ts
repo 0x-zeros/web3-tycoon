@@ -67,10 +67,10 @@ export class CardShopDecisionHandler {
             return;
         }
 
-        // 获取玩家
-        const player = session.getPlayerByAddress(event.player);
+        // 获取玩家（通过索引）
+        const player = session.getPlayerByIndex(event.player);
         if (!player) {
-            console.warn('[CardShopDecisionHandler] 玩家未找到:', event.player);
+            console.warn('[CardShopDecisionHandler] 玩家未找到, index:', event.player);
             return;
         }
 

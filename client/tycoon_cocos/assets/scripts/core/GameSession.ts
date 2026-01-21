@@ -183,8 +183,8 @@ export class GameSession {
     /** 物价提升天数 */
     private _priceRiseDays: number = 15;
 
-    /** 胜利者地址 */
-    private _winner: string | null = null;
+    /** 胜利者索引 */
+    private _winner: number | null = null;
 
     // ========================= 观战模式 =========================
 
@@ -1110,9 +1110,9 @@ export class GameSession {
     }
 
     /**
-     * 设置胜利者
+     * 设置胜利者（玩家索引）
      */
-    public setWinner(winner: string | null): void {
+    public setWinner(winner: number | null): void {
         this._winner = winner;
 
         if (winner) {
@@ -1155,7 +1155,7 @@ export class GameSession {
 
     public getMaxRounds(): number { return this._maxRounds; }
     public getPriceRiseDays(): number { return this._priceRiseDays; }
-    public getWinner(): string | null { return this._winner; }
+    public getWinner(): number | null { return this._winner; }
 
     // 地图相关访问器
     public getMapTemplate(): MapTemplate | null { return this._mapTemplate; }

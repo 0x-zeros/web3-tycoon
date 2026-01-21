@@ -228,6 +228,9 @@ export class EventLogService {
     /**
      * 从事件中提取相关玩家索引数组
      * 支持多玩家关联（如租金事件的payer和owner都可见）
+     *
+     * 注意：新版事件中 player/payer/owner 已经是玩家索引（number），
+     * 旧版事件中是地址（string），需要兼容处理
      */
     private _extractPlayerIndices(event: EventMetadata<any>, session: GameSession): number[] {
         const data = event.data;
@@ -236,24 +239,27 @@ export class EventLogService {
         const indices: number[] = [];
         const players = session.getAllPlayers();
 
-        // 辅助函数：查找玩家索引
-        const findIndex = (address: string | undefined): number => {
-            if (!address) return -1;
+        // 辅助函数：解析玩家索引（兼容 number 索引和 string 地址）
+        const resolveIndex = (value: number | string | undefined): number => {
+            if (value === undefined || value === null) return -1;
+            // 新版：已经是索引
+            if (typeof value === 'number') return value;
+            // 旧版：通过地址查找
             for (let i = 0; i < players.length; i++) {
-                if (players[i].getOwner() === address) return i;
+                if (players[i].getOwner() === value) return i;
             }
             return -1;
         };
 
         // 顶层字段
-        const topLevelAddr = data.player || data.starting_player || data.payer;
-        const topIdx = findIndex(topLevelAddr);
+        const topLevelValue = data.player ?? data.starting_player ?? data.payer;
+        const topIdx = resolveIndex(topLevelValue);
         if (topIdx >= 0) indices.push(topIdx);
 
         // 嵌套在 decision 中的字段 (RentDecisionEvent, BuildingDecisionEvent)
         if (data.decision) {
-            const payerIdx = findIndex(data.decision.payer);
-            const ownerIdx = findIndex(data.decision.owner);
+            const payerIdx = resolveIndex(data.decision.payer);
+            const ownerIdx = resolveIndex(data.decision.owner);
             if (payerIdx >= 0 && !indices.includes(payerIdx)) indices.push(payerIdx);
             if (ownerIdx >= 0 && !indices.includes(ownerIdx)) indices.push(ownerIdx);
         }

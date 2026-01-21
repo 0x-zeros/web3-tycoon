@@ -20,9 +20,8 @@
 - `PlayerJoinedEvent` - 玩家加入
 - `GameStartedEvent` - 游戏开始
 - `GameEndedEvent` - 游戏结束
-- `TurnStartEvent` - 回合开始
-- `EndTurnEvent` - 回合结束
 - `SkipTurnEvent` - 跳过回合
+- `RoundEndedEvent` - 轮次结束
 - `BankruptEvent` - 玩家破产
 
 ### 2. 数据类型变化

@@ -11,7 +11,7 @@
 import { Role } from './Role';
 import { RoleType, RoleAttribute, RoleState } from './RoleTypes';
 import type { Player as MovePlayer, BuffEntry as MoveBuffEntry, CardEntry } from '../sui/types/game';
-import { INVALID_TILE_ID } from '../sui/types/constants';
+import { INVALID_TILE_ID, BuffKind } from '../sui/types/constants';
 import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { IdFormatter } from '../ui/utils/IdFormatter';
@@ -186,6 +186,16 @@ export class Player extends Role {
      */
     public hasAnyActiveBuff(currentRound: number): boolean {
         return this._buffs.some(buff => currentRound <= buff.last_active_round);
+    }
+
+    /**
+     * 检查玩家是否应该跳过移动（通用化检测）
+     * 扩展时只需在此添加新的 buff 类型
+     * @param currentRound 当前回合
+     */
+    public shouldSkipMovement(currentRound: number): boolean {
+        return this.hasActiveBuff(BuffKind.FROZEN, currentRound) ||
+            this.hasActiveBuff(BuffKind.TELEPORT, currentRound);
     }
 
     /**

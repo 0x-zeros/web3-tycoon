@@ -376,13 +376,23 @@ export class UIInGameDice extends UIBase {
                 return;  // 不提交交易
             }
 
-            // ===== 2. 检查遥控骰子路径 =====
+            // ===== 2. 检查跳过移动 / 遥控骰子路径 =====
             const pendingPath = session.getPendingRemoteDicePath();
+            const currentRound = session.getRound();
 
             let pathResult: { success: boolean; path: number[]; actualSteps: number; error?: string };
             let diceCount: number;
 
-            if (pendingPath && pendingPath.length > 0) {
+            // 通用化检测：是否应该跳过移动（冰冻、瞬移等）
+            const shouldSkipMovement = player.shouldSkipMovement(currentRound);
+
+            if (shouldSkipMovement) {
+                // === 跳过移动模式 ===
+                // 被冰冻或瞬移后，直接传 path=[], diceCount=0
+                console.log('[UIInGameDice] 检测到跳过移动 buff，使用 diceCount=0');
+                pathResult = { success: true, path: [], actualSteps: 0 };
+                diceCount = 0;
+            } else if (pendingPath && pendingPath.length > 0) {
                 // 遥控骰子模式：直接使用已保存的路径
                 console.log("[UIInGameDice] 遥控骰子模式，使用已保存路径:", pendingPath);
 

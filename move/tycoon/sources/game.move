@@ -58,6 +58,7 @@ const ECannotTurn: u64 = 5006;
 const EInvalidMove: u64 = 4001;
 const EPathTooShort: u64 = 4002;
 const EInvalidPath: u64 = 4003;
+const ESkipMovementRequiresZeroDice: u64 = 4004;  // 跳过移动时 dice_count 必须为 0
 
 const E_NPC_SPAWN_POOL_INDEX_OUT_OF_BOUNDS: u64 = 8001;
 const E_TILE_INDEX_OUT_OF_BOUNDS: u64 = 8002;
@@ -681,30 +682,41 @@ entry fun roll_and_step(
     assert!(game.pending_decision == types::DECISION_NONE(), EPendingDecision);
     // 检查玩家是否应该跳过回合（住院等）
     assert!(!should_skip_turn(game, seat.player_index), ECannotRollDuringHospital);
-    // 验证骰子数量（1-3）
-    assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
 
     game.has_rolled = true;
 
-    let player_addr = seat.player;
     let player_index = seat.player_index;
-
-    let mut generator = random::new_generator(r, ctx);
-
     let player = &game.players[player_index as u64];
     let from_pos = player.pos;
-    let has_move_ctrl = is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
 
-    // 根据模式生成骰子值
-    let (dice_values, total_dice) = if (has_move_ctrl) {
-        // 遥控骰子模式：路径长度就是步数，最多18步
+    // 通用化检测：是否跳过移动
+    let skip_movement = should_skip_movement(player, game.round);
+
+    // 遥控骰子检测（仅在非跳过移动时有效）
+    let has_move_ctrl = !skip_movement &&
+        is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
+
+    // 根据模式处理骰子和路径
+    let (dice_values, total_dice, mut generator) = if (skip_movement) {
+        // === 跳过移动模式 ===
+        // dice_count 必须为 0，路径可以为空
+        assert!(dice_count == 0, ESkipMovementRequiresZeroDice);
+        let generator = random::new_generator(r, ctx);
+        (vector[], 0u8, generator)
+
+    } else if (has_move_ctrl) {
+        // === 遥控骰子模式 ===
+        assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
         assert!(!path.is_empty() && path.length() <= 18, EInvalidPath);
         let total = path.length() as u8;
-        // 遥控模式：将总步数拆分为骰子值（用于动画显示）
         let values = split_into_dice_values(total, dice_count);
-        (values, total)
+        let generator = random::new_generator(r, ctx);
+        (values, total, generator)
+
     } else {
-        // 普通模式：根据骰子数量生成随机值
+        // === 普通模式 ===
+        assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
+        let mut generator = random::new_generator(r, ctx);
         let mut values = vector[];
         let mut total = 0u8;
         let mut i = 0u8;
@@ -715,7 +727,7 @@ entry fun roll_and_step(
             i = i + 1;
         };
         assert!(path.length() >= (total as u64), EPathTooShort);
-        (values, total)
+        (values, total, generator)
     };
 
     let mut steps = vector[];
@@ -1351,18 +1363,19 @@ fun execute_step_movement_with_choices(
     generator: &mut RandomGenerator
 ) {
 
-    let (from_pos, mut last_tile_id, mut next_tile_id, is_frozen, has_move_ctrl) = {
+    let (from_pos, mut last_tile_id, mut next_tile_id, skip_movement, has_move_ctrl) = {
         let player = &game.players[player_index as u64];
         (
             player.pos,
             player.last_tile_id,
             player.next_tile_id,
-            is_buff_active(player, types::BUFF_FROZEN(), game.round),
+            should_skip_movement(player, game.round),
             is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round)
         )
     };
 
-    if (is_frozen) {
+    // 统一处理所有跳过移动的 buff（冰冻、瞬移等）
+    if (skip_movement) {
         let stop_effect = handle_tile_stop_with_collector(
             game,
             player_index,
@@ -2688,6 +2701,13 @@ fun is_buff_active(player: &Player, kind: u8, current_round: u16): bool {
         i = i + 1;
     };
     false
+}
+
+/// 检查玩家是否应该跳过移动（通用化检测）
+/// 扩展时只需在此添加新的 buff 类型
+fun should_skip_movement(player: &Player, current_round: u16): bool {
+    is_buff_active(player, types::BUFF_FROZEN(), current_round) ||
+    is_buff_active(player, types::BUFF_TELEPORT(), current_round)
 }
 
 // 获取激活buff的数值载荷

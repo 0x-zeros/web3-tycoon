@@ -229,10 +229,10 @@ export class RollAndStepHandler {
         const player = session.getPlayerByIndex(event.player);
         if (!player) return;
 
-        // 如果 from = to，说明被冰冻，跳过移动动画
+        // 如果 from = to，说明跳过移动（冰冻、瞬移等 buff）
         if (step.from_tile === step.to_tile) {
-            console.log('[RollAndStepHandler] 玩家被冰冻，原地停留');
-            UINotification.info('被冰冻了，无法移动！', '冰冻');
+            console.log('[RollAndStepHandler] 玩家跳过移动，原地停留');
+            UINotification.info('原地停留', '跳过移动');
             return;
         }
 

@@ -45,7 +45,7 @@ public struct GameStartedEvent has copy, drop {
 
 public struct GameEndedEvent has copy, drop {
     game: ID,
-    winner: option::Option<address>,
+    winner: option::Option<u8>,
     round: u16,
     turn_in_round: u8,
     reason: u8  // 0=正常结束, 1=达到最大回合数, 2=只剩一个玩家
@@ -55,14 +55,14 @@ public struct GameEndedEvent has copy, drop {
 
 public struct TurnStartEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8
 }
 
 public struct SkipTurnEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     reason: u8,
     remaining_turns: u8,
     round: u16,
@@ -80,16 +80,16 @@ public struct RoundEndedEvent has copy, drop {
 
 public struct BankruptEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     debt: u64,
-    creditor: option::Option<address>
+    creditor: option::Option<u8>
 }
 
 // ===== Decision Events 决策事件 =====
 
 public struct BuildingDecisionEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn: u8,
     auto_decision: bool,
@@ -106,7 +106,7 @@ public struct RentDecisionEvent has copy, drop {
 
 public struct DecisionSkippedEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     decision_type: u8,
     tile_id: u16,
     round: u16,
@@ -115,7 +115,7 @@ public struct DecisionSkippedEvent has copy, drop {
 
 public struct CardShopDecisionEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
     decision: CardShopDecisionInfo
@@ -149,7 +149,7 @@ const STOP_CARD_SHOP: u8 = 10;              // 卡片商店
 // ===== Aggregated Event Data Types 聚合事件数据类型 =====
 
 public struct CashDelta has copy, drop, store {
-    player: address,
+    player: u8,
     is_debit: bool,
     amount: u64,
     reason: u8,
@@ -172,7 +172,7 @@ public struct NpcChangeItem has copy, drop, store {
 
 public struct BuffChangeItem has copy, drop, store {
     buff_type: u8,
-    target: address,
+    target: u8,
     last_active_round: option::Option<u16>
 }
 
@@ -194,8 +194,8 @@ public struct BuildingDecisionInfo has copy, drop, store {
 }
 
 public struct RentDecisionInfo has copy, drop, store {
-    payer: address,
-    owner: address,
+    payer: u8,
+    owner: u8,
     building_id: u16,
     tile_id: u16,
     rent_amount: u64,
@@ -213,7 +213,7 @@ public struct StopEffect has copy, drop, store {
     tile_kind: u8,
     stop_type: u8,
     amount: u64,
-    owner: option::Option<address>,
+    owner: option::Option<u8>,
     level: option::Option<u8>,
     turns: option::Option<u8>,
     card_gains: vector<CardDrawItem>,
@@ -237,7 +237,7 @@ public struct StepEffect has copy, drop, store {
 
 public struct UseCardActionEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
     kind: u8,
@@ -250,7 +250,7 @@ public struct UseCardActionEvent has copy, drop {
 
 public struct RollAndStepActionEvent has copy, drop {
     game: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
     dice_values: vector<u8>,  // 每颗骰子的值，长度1-3
@@ -264,11 +264,11 @@ public struct RollAndStepActionEvent has copy, drop {
 // 瞬移动作事件
 public struct TeleportActionEvent has copy, drop {
     game: ID,
-    player: address,           // 使用卡牌的玩家（保留用于事件筛选）
+    player: u8,                // 使用卡牌的玩家索引
     round: u16,
     turn_in_round: u8,
-    target_player_idx: u8,     // 被瞬移的玩家索引
-    source_player_idx: u8,     // 使用卡牌的玩家索引
+    target_player: u8,         // 被瞬移的玩家索引
+    source_player: u8,         // 使用卡牌的玩家索引
     from_pos: u16,             // 原位置
     to_pos: u16,               // 目标位置
 }
@@ -316,7 +316,7 @@ public(package) fun emit_game_started_event(
 
 public(package) fun emit_game_ended_event(
     game_id: ID,
-    winner: option::Option<address>,
+    winner: option::Option<u8>,
     round: u16,
     turn_in_round: u8,
     reason: u8
@@ -332,9 +332,9 @@ public(package) fun emit_game_ended_event(
 
 public(package) fun emit_bankrupt_event(
     game_id: ID,
-    player: address,
+    player: u8,
     debt: u64,
-    creditor: option::Option<address>
+    creditor: option::Option<u8>
 ) {
     event::emit(BankruptEvent {
         game: game_id,
@@ -346,7 +346,7 @@ public(package) fun emit_bankrupt_event(
 
 public(package) fun emit_skip_turn_event(
     game_id: ID,
-    player: address,
+    player: u8,
     reason: u8,
     remaining_turns: u8,
     round: u16,
@@ -379,7 +379,7 @@ public(package) fun emit_round_ended_event(
 // ===== Aggregated Event Constructor Functions 聚合事件构造函数 =====
 
 public(package) fun make_cash_delta(
-    player: address,
+    player: u8,
     is_debit: bool,
     amount: u64,
     reason: u8,
@@ -424,7 +424,7 @@ public(package) fun make_npc_change(
 
 public(package) fun make_buff_change(
     buff_type: u8,
-    target: address,
+    target: u8,
     last_active_round: option::Option<u16>
 ): BuffChangeItem {
     BuffChangeItem {
@@ -469,8 +469,8 @@ public(package) fun make_building_decision_info(
 }
 
 public(package) fun make_rent_decision_info(
-    payer: address,
-    owner: address,
+    payer: u8,
+    owner: u8,
     building_id: u16,
     tile_id: u16,
     rent_amount: u64,
@@ -491,7 +491,7 @@ public(package) fun make_stop_effect(
     tile_kind: u8,
     stop_type: u8,
     amount: u64,
-    owner: option::Option<address>,
+    owner: option::Option<u8>,
     level: option::Option<u8>,
     turns: option::Option<u8>,
     card_gains: vector<CardDrawItem>,
@@ -542,7 +542,7 @@ public(package) fun make_step_effect(
 
 public(package) fun emit_use_card_action_event(
     game_id: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
     kind: u8,
@@ -568,7 +568,7 @@ public(package) fun emit_use_card_action_event(
 
 public(package) fun emit_roll_and_step_action_event_with_choices(
     game_id: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
     dice_values: vector<u8>,
@@ -594,11 +594,11 @@ public(package) fun emit_roll_and_step_action_event_with_choices(
 
 public(package) fun emit_teleport_action_event(
     game_id: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
-    target_player_idx: u8,
-    source_player_idx: u8,
+    target_player: u8,
+    source_player: u8,
     from_pos: u16,
     to_pos: u16,
 ) {
@@ -607,8 +607,8 @@ public(package) fun emit_teleport_action_event(
         player,
         round,
         turn_in_round,
-        target_player_idx,
-        source_player_idx,
+        target_player,
+        source_player,
         from_pos,
         to_pos,
     });
@@ -671,7 +671,7 @@ public(package) fun emit_game_data_created_event(data_id: ID) {
 
 public(package) fun emit_building_decision_event(
     game_id: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn: u8,
     auto_decision: bool,
@@ -705,7 +705,7 @@ public(package) fun emit_rent_decision_event(
 
 public(package) fun emit_decision_skipped_event(
     game_id: ID,
-    player: address,
+    player: u8,
     decision_type: u8,
     tile_id: u16,
     round: u16,
@@ -723,7 +723,7 @@ public(package) fun emit_decision_skipped_event(
 
 public(package) fun emit_card_shop_decision_event(
     game_id: ID,
-    player: address,
+    player: u8,
     round: u16,
     turn_in_round: u8,
     tile_id: u16,

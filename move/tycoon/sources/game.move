@@ -134,8 +134,8 @@ public struct Tile has store, copy, drop {
 
 // 瞬移卡效果信息（用于返回给 use_card 发射事件）
 public struct TeleportInfo has drop {
-    target_player_idx: u8,   // 被瞬移的玩家索引
-    source_player_idx: u8,   // 使用卡牌的玩家索引
+    target_player: u8,   // 被瞬移的玩家索引
+    source_player: u8,   // 使用卡牌的玩家索引
     from_pos: u16,
     to_pos: u16,
 }
@@ -162,7 +162,7 @@ public struct Game has key, store {
     starting_cash: u64,
     max_rounds: u8,
     price_rise_days: u8,
-    winner: Option<address>,
+    winner: Option<u8>,
     pending_decision: u8,
     decision_tile: u16,
     decision_amount: u64,
@@ -466,7 +466,7 @@ entry fun use_card(
 
     events::emit_use_card_action_event(
         game.id.to_inner(),
-        player_addr,
+        seat.player_index,
         (game.round as u16),
         (game.turn as u8),
         kind,
@@ -482,11 +482,11 @@ entry fun use_card(
         let info = teleport_info.destroy_some();
         events::emit_teleport_action_event(
             game.id.to_inner(),
-            player_addr,
+            seat.player_index,
             game.round,
             game.turn,
-            info.target_player_idx,
-            info.source_player_idx,
+            info.target_player,
+            info.source_player,
             info.from_pos,
             info.to_pos
         );
@@ -556,7 +556,7 @@ entry fun buy_cards(
     // 发出卡片商店决策事件
     events::emit_card_shop_decision_event(
         game.id.to_inner(),
-        get_active_player_address(game),
+        game.active_idx,
         game.round,
         game.turn,
         tile_id,
@@ -616,7 +616,7 @@ entry fun buy_gm_cards(
     // 发出卡片商店决策事件
     events::emit_card_shop_decision_event(
         game.id.to_inner(),
-        get_active_player_address(game),
+        game.active_idx,
         game.round,
         game.turn,
         tile_id,
@@ -641,7 +641,6 @@ entry fun skip_card_shop(
     validate_seat_and_turn(game, seat);
     assert!(game.pending_decision == types::DECISION_CARD_SHOP(), EInvalidDecision);
 
-    let player_addr = seat.player;
     let decision_type = game.pending_decision;
     let decision_tile = game.decision_tile;
 
@@ -652,7 +651,7 @@ entry fun skip_card_shop(
 
     events::emit_decision_skipped_event(
         game.id.to_inner(),
-        player_addr,
+        seat.player_index,
         decision_type,
         decision_tile,
         event_round,
@@ -749,7 +748,7 @@ entry fun roll_and_step(
 
     events::emit_roll_and_step_action_event_with_choices(
         game.id.to_inner(),
-        player_addr,
+        player_index,
         game.round,
         game.turn,
         dice_values,
@@ -817,11 +816,9 @@ entry fun decide_rent_payment(
     let event_round = game.round;
     let event_turn = game.turn;
 
-    let owner_addr = game.players[owner_index as u64].owner;
-
     let rent_info = events::make_rent_decision_info(
-        player_addr,
-        owner_addr,
+        player_index,
+        owner_index,
         building_id,
         tile_id,
         toll,
@@ -856,7 +853,6 @@ entry fun skip_building_decision(
         EInvalidDecision
     );
 
-    let player_addr = seat.player;
     let decision_type = game.pending_decision;
     let decision_tile = game.decision_tile;
 
@@ -867,7 +863,7 @@ entry fun skip_building_decision(
 
     events::emit_decision_skipped_event(
         game.id.to_inner(),
-        player_addr,
+        seat.player_index,
         decision_type,
         decision_tile,
         event_round,
@@ -895,8 +891,6 @@ fun try_execute_buy_building(
         return (false, option::none())
     };
 
-    let player_addr = player.owner;
-
     let player_mut = &mut game.players[player_index as u64];
     player_mut.cash = player_mut.cash - price;
 
@@ -908,7 +902,7 @@ fun try_execute_buy_building(
     // 注意：temple_levels 只在升级时添加（level > 0 才算有效 temple）
 
     let cash_delta = events::make_cash_delta(
-        player_addr,
+        player_index,
         true,
         price,
         2,
@@ -937,8 +931,6 @@ fun try_execute_upgrade_building(
         return (false, option::none(), current_level, types::BUILDING_NONE())
     };
 
-    let player_addr = player.owner;
-
     let player_mut = &mut game.players[player_index as u64];
     player_mut.cash = player_mut.cash - upgrade_cost;
 
@@ -963,7 +955,7 @@ fun try_execute_upgrade_building(
     };
 
     let cash_delta = events::make_cash_delta(
-        player_addr,
+        player_index,
         true,
         upgrade_cost,
         3,
@@ -1003,9 +995,6 @@ fun try_execute_rent_payment(
             return (false, cash_deltas, false)
         };
 
-        let player_addr = player.owner;
-        let owner_addr = (&game.players[owner_index as u64]).owner;
-
         let player_mut = &mut game.players[player_index as u64];
         player_mut.cash = player_mut.cash - toll;
 
@@ -1013,7 +1002,7 @@ fun try_execute_rent_payment(
         owner_player.cash = owner_player.cash + toll;
 
         cash_deltas.push_back(events::make_cash_delta(
-            player_addr,
+            player_index,
             true,
             toll,
             1,
@@ -1021,7 +1010,7 @@ fun try_execute_rent_payment(
         ));
 
         cash_deltas.push_back(events::make_cash_delta(
-            owner_addr,
+            owner_index,
             false,
             toll,
             1,
@@ -1064,7 +1053,6 @@ entry fun buy_building(
 
     assert!(game.pending_decision == types::DECISION_BUY_PROPERTY(), EInvalidDecision);
 
-    let player_addr = seat.player;
     let player_index = seat.player_index;
     let player = &game.players[player_index as u64];
     let tile_id = player.pos;
@@ -1072,7 +1060,6 @@ entry fun buy_building(
     assert!(tile_id == game.decision_tile, EPosMismatch);
 
     let tile_static = map::get_tile(map, tile_id);
-    let tile_kind = map::tile_kind(tile_static);
 
     let building_id = map::tile_building_id(tile_static);
     assert!(building_id != map::no_building(), ENotBuilding);
@@ -1109,7 +1096,7 @@ entry fun buy_building(
 
     events::emit_building_decision_event(
         game.id.to_inner(),
-        player_addr,
+        player_index,
         event_round,
         event_turn,
         false,
@@ -1133,7 +1120,6 @@ entry fun upgrade_building(
 
     assert!(game.pending_decision == types::DECISION_UPGRADE_PROPERTY(), EInvalidDecision);
 
-    let player_addr = seat.player;
     let player_index = seat.player_index;
     let player = &game.players[player_index as u64];
     let tile_id = player.pos;
@@ -1183,7 +1169,7 @@ entry fun upgrade_building(
 
     events::emit_building_decision_event(
         game.id.to_inner(),
-        player_addr,
+        player_index,
         event_round,
         event_turn,
         false,
@@ -1277,7 +1263,6 @@ fun should_skip_turn(game: &Game, player_index: u8): bool {
 
 fun handle_skip_turn(game: &mut Game, player_index: u8) {
     let player = &mut game.players[player_index as u64];
-    let player_addr = player.owner;
 
     player.in_hospital_turns = player.in_hospital_turns - 1;
     let reason = types::SKIP_HOSPITAL();
@@ -1290,7 +1275,7 @@ fun handle_skip_turn(game: &mut Game, player_index: u8) {
 
     events::emit_skip_turn_event(
         game.id.to_inner(),
-        player_addr,
+        player_index,
         reason,
         remaining_turns,
         event_round,
@@ -1615,11 +1600,10 @@ fun handle_tile_stop_with_collector(
 ): events::StopEffect {
     let tile = map::get_tile(map, tile_id);
     let tile_kind = map::tile_kind(tile);
-    let player_addr = (&game.players[player_index as u64]).owner;
 
     let mut stop_type = events::stop_none();
     let mut amount = 0;
-    let mut owner_opt = option::none<address>();
+    let mut owner_opt = option::none<u8>();
     let mut level_opt = option::none<u8>();
     let mut turns_opt = option::none<u8>();
     let mut card_gains = vector<events::CardDrawItem>[];
@@ -1652,7 +1636,7 @@ fun handle_tile_stop_with_collector(
             // 记录NPC触发的buff变化
             npc_buff_opt = option::some(events::make_buff_change(
                 types::BUFF_LAND_BLESSING(),
-                player_addr,
+                player_index,
                 option::some(last_active_round)
             ));
 
@@ -1692,7 +1676,7 @@ fun handle_tile_stop_with_collector(
 
                     events::emit_building_decision_event(
                         game.id.to_inner(),
-                        player_addr,
+                        player_index,
                         game.round,
                         game.turn,
                         true,
@@ -1727,7 +1711,7 @@ fun handle_tile_stop_with_collector(
 
                             events::emit_building_decision_event(
                                 game.id.to_inner(),
-                                player_addr,
+                                player_index,
                                 game.round,
                                 game.turn,
                                 true,
@@ -1758,7 +1742,6 @@ fun handle_tile_stop_with_collector(
                     if (has_land_blessing) {
                         // ===== 土地神附身 - 直接抢夺地产 =====
                         let level = building.level;
-                        let old_owner_addr = (&game.players[owner_index as u64]).owner;
 
                         // 转移所有权（保持原等级）
                         let building_mut = &mut game.buildings[building_id as u64];
@@ -1772,7 +1755,7 @@ fun handle_tile_stop_with_collector(
                         };
 
                         stop_type = events::stop_land_seize();
-                        owner_opt = option::some(old_owner_addr);  // 记录原主人
+                        owner_opt = option::some(owner_index);  // 记录原主人
                         level_opt = option::some(level);
 
                         // 生成建筑决策事件
@@ -1787,7 +1770,7 @@ fun handle_tile_stop_with_collector(
 
                         events::emit_building_decision_event(
                             game.id.to_inner(),
-                            player_addr,
+                            player_index,
                             game.round,
                             game.turn,
                             true,
@@ -1807,8 +1790,7 @@ fun handle_tile_stop_with_collector(
 
                         if (has_rent_free_buff) {
                         stop_type = events::stop_building_no_rent();
-                        let owner_addr = (&game.players[owner_index as u64]).owner;
-                        owner_opt = option::some(owner_addr);
+                        owner_opt = option::some(owner_index);
                         level_opt = option::some(level);
                         amount = 0;
                     } else if (has_rent_free_card || prefer_rent_card) {
@@ -1819,11 +1801,10 @@ fun handle_tile_stop_with_collector(
                         if (success) {
                             if (used_card) {
                                 stop_type = events::stop_building_no_rent();
-                                let owner_addr = game.players[owner_index as u64].owner;
 
                                 let rent_info = events::make_rent_decision_info(
-                                    player_addr,
-                                    owner_addr,
+                                    player_index,
+                                    owner_index,
                                     building_id,
                                     tile_id,
                                     toll,
@@ -1848,11 +1829,9 @@ fun handle_tile_stop_with_collector(
                                 };
                                 amount = toll;
 
-                                let owner_addr = game.players[owner_index as u64].owner;
-
                                 let rent_info = events::make_rent_decision_info(
-                                    player_addr,
-                                    owner_addr,
+                                    player_index,
+                                    owner_index,
                                     building_id,
                                     tile_id,
                                     toll,
@@ -1870,16 +1849,14 @@ fun handle_tile_stop_with_collector(
                                 rent_decision_opt = option::some(rent_info);
                             };
 
-                            let owner_addr = (&game.players[owner_index as u64]).owner;
-                            owner_opt = option::some(owner_addr);
+                            owner_opt = option::some(owner_index);
                             level_opt = option::some(level);
                         } else {
                             stop_type = events::stop_building_toll();
                             game.pending_decision = types::DECISION_PAY_RENT();
                             game.decision_tile = tile_id;
                             game.decision_amount = toll;
-                            let owner_addr = (&game.players[owner_index as u64]).owner;
-                            owner_opt = option::some(owner_addr);
+                            owner_opt = option::some(owner_index);
                             level_opt = option::some(level);
                             amount = toll;
                         }
@@ -1902,10 +1879,9 @@ fun handle_tile_stop_with_collector(
                         if (actual_payment > 0) {
                             let owner_player = &mut game.players[owner_index as u64];
                             owner_player.cash = owner_player.cash + actual_payment;
-                            let owner_addr = owner_player.owner;
 
                             cash_changes.push_back( events::make_cash_delta(
-                                player_addr,
+                                player_index,
                                 true,
                                 actual_payment,
                                 1,
@@ -1913,7 +1889,7 @@ fun handle_tile_stop_with_collector(
                             ));
 
                             cash_changes.push_back( events::make_cash_delta(
-                                owner_addr,
+                                owner_index,
                                 false,
                                 actual_payment,
                                 1,
@@ -1925,18 +1901,15 @@ fun handle_tile_stop_with_collector(
                         };
 
                         if (should_bankrupt) {
-                            let owner_addr = (&game.players[owner_index as u64]).owner;
-                            handle_bankruptcy(game, game_data, map, player_addr, option::some(owner_addr));
+                            handle_bankruptcy(game, game_data, map, player_index, option::some(owner_index));
                         };
 
-                        let owner_addr = (&game.players[owner_index as u64]).owner;
-                        owner_opt = option::some(owner_addr);
+                        owner_opt = option::some(owner_index);
                         level_opt = option::some(level);
                         }
                     }
             } else {
                 let level = building.level;
-                let player_addr = (&game.players[player_index as u64]).owner;
 
                 if (level < types::LEVEL_4()) {
                     let upgrade_cost = calculate_building_price(building_static, building, level, level + 1, game, game_data);
@@ -1970,7 +1943,7 @@ fun handle_tile_stop_with_collector(
 
                             events::emit_building_decision_event(
                                 game.id.to_inner(),
-                                player_addr,
+                                player_index,
                                 game.round,
                                 game.turn,
                                 true,
@@ -1994,7 +1967,7 @@ fun handle_tile_stop_with_collector(
                     stop_type = events::stop_none();
                 };
 
-                owner_opt = option::some(player_addr);
+                owner_opt = option::some(player_index);
                 level_opt = option::some(level);
             }
         }
@@ -2034,7 +2007,7 @@ fun handle_tile_stop_with_collector(
         player.cash = player.cash + bonus;
 
         cash_changes.push_back( events::make_cash_delta(
-            player_addr,
+            player_index,
             false,
             bonus,
             4,
@@ -2060,7 +2033,7 @@ fun handle_tile_stop_with_collector(
 
         if (actual_payment > 0) {
             cash_changes.push_back( events::make_cash_delta(
-                player_addr,
+                player_index,
                 true,
                 actual_payment,
                 5,
@@ -2072,7 +2045,7 @@ fun handle_tile_stop_with_collector(
         amount = actual_payment;
 
         if (player.cash == 0 && fee > actual_payment) {
-            handle_bankruptcy(game, game_data, map, player_addr, option::none());
+            handle_bankruptcy(game, game_data, map, player_index, option::none());
         }
     } else if (tile_kind == types::TILE_CARD_SHOP()) {
         // CARD_SHOP: 设置 pending_decision，等待玩家购买卡片或跳过
@@ -2135,12 +2108,11 @@ fun send_to_hospital_internal(game: &mut Game, player_index: u8, hospital_tile: 
 //    - 游戏状态设置为结束，记录获胜者
 fun handle_bankruptcy(
     game: &mut Game,
-    game_data: &GameData,
-    map: &map::MapTemplate,
-    player_addr: address,
-    creditor: Option<address>
+    _game_data: &GameData,
+    _map: &map::MapTemplate,
+    player_index: u8,
+    creditor: Option<u8>
 ) {
-    let player_index = find_player_index(game, player_addr);
     {
         let player = &mut game.players[player_index as u64];
         player.bankrupt = true;
@@ -2162,29 +2134,29 @@ fun handle_bankruptcy(
 
     events::emit_bankrupt_event(
         game.id.to_inner(),
-        player_addr,
+        player_index,
         0,
         creditor
     );
 
     let mut non_bankrupt_count = 0;
-    let mut winner = option::none<address>();
+    let mut winner_idx = option::none<u8>();
     let mut i = 0;
     while (i < game.players.length()) {
         let player = &game.players[i];
         if (!player.bankrupt) {
             non_bankrupt_count = non_bankrupt_count + 1;
-            winner = option::some(player.owner);
+            winner_idx = option::some(i as u8);
         };
         i = i + 1;
     };
 
     if (non_bankrupt_count == 1) {
         game.status = types::STATUS_ENDED();
-        game.winner = winner;
+        game.winner = winner_idx;
         events::emit_game_ended_event(
             game.id.to_inner(),
-            winner,
+            winner_idx,
             (game.round as u16),
             (game.turn as u8),
             2
@@ -2274,8 +2246,6 @@ fun apply_card_effect_with_collectors(
     game_data: &GameData,
     map: &map::MapTemplate
 ): Option<TeleportInfo> {
-    let player_addr = (&game.players[player_index as u64]).owner;
-
     if (kind == types::CARD_MOVE_CTRL()) {
         assert!(params.length() >= 2, EInvalidParams);
         let target_index = (params[0] as u8);
@@ -2290,7 +2260,6 @@ fun apply_card_effect_with_collectors(
             i = i + 1;
         };
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
 
         // 移除冰冻buff（遥控骰子覆盖冰冻），并发出移除事件
@@ -2298,7 +2267,7 @@ fun apply_card_effect_with_collectors(
             remove_buff(target_player, types::BUFF_FROZEN());
             buff_changes.push_back(events::make_buff_change(
                 types::BUFF_FROZEN(),
-                target_addr,
+                target_index,
                 option::none()  // none表示移除
             ));
         };
@@ -2310,7 +2279,7 @@ fun apply_card_effect_with_collectors(
 
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_MOVE_CTRL(),
-            target_addr,
+            target_index,
             option::some(last_active_round)
         ));
     } else if (kind == types::CARD_RENT_FREE()) {
@@ -2328,10 +2297,9 @@ fun apply_card_effect_with_collectors(
         let target_player = &mut game.players[target_index as u64];
         apply_buff(target_player, types::BUFF_RENT_FREE(), last_active_round, 0);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_RENT_FREE(),
-            target_addr,
+            target_index,
             option::some(last_active_round)
         ));
     } else if (kind == types::CARD_FREEZE()) {
@@ -2345,7 +2313,6 @@ fun apply_card_effect_with_collectors(
             target_index, player_index, game.round, 1, true
         );
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
 
         // 移除遥控骰子buff（冰冻覆盖遥控骰子），并发出移除事件
@@ -2353,7 +2320,7 @@ fun apply_card_effect_with_collectors(
             remove_buff(target_player, types::BUFF_MOVE_CTRL());
             buff_changes.push_back(events::make_buff_change(
                 types::BUFF_MOVE_CTRL(),
-                target_addr,
+                target_index,
                 option::none()  // none表示移除
             ));
         };
@@ -2362,7 +2329,7 @@ fun apply_card_effect_with_collectors(
 
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_FROZEN(),
-            target_addr,
+            target_index,
             option::some(last_active_round)
         ));
     } else if (kind == types::CARD_BARRIER() || kind == types::CARD_BOMB() || kind == types::CARD_DOG()) {
@@ -2417,9 +2384,8 @@ fun apply_card_effect_with_collectors(
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
         assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
 
-        // 1. 记录原位置和目标玩家地址
+        // 1. 记录原位置
         let from_pos = game.players[target_index as u64].pos;
-        let target_player_addr = game.players[target_index as u64].owner;
 
         // 2. 更新位置并清除强制方向
         game.players[target_index as u64].pos = tile_id;
@@ -2436,15 +2402,15 @@ fun apply_card_effect_with_collectors(
 
             buff_changes.push_back(events::make_buff_change(
                 types::BUFF_TELEPORT(),
-                target_player_addr,
+                target_index,
                 option::some(last_active_round)
             ));
         };
 
         // 4. 返回简化的 TeleportInfo（不调用 handle_tile_stop_with_collector）
         return option::some(TeleportInfo {
-            target_player_idx: target_index,
-            source_player_idx: player_index,
+            target_player: target_index,
+            source_player: player_index,
             from_pos,
             to_pos: tile_id,
         })
@@ -2455,12 +2421,11 @@ fun apply_card_effect_with_collectors(
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
         target_player.cash = target_player.cash + 10000;
 
         cash_changes.push_back(events::make_cash_delta(
-            target_addr,
+            target_index,
             false,   // is_debit=false: 获得金币
             10000,
             6,       // reason=6: CARD
@@ -2473,12 +2438,11 @@ fun apply_card_effect_with_collectors(
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
         target_player.cash = target_player.cash + 100000;
 
         cash_changes.push_back(events::make_cash_delta(
-            target_addr,
+            target_index,
             false,   // is_debit=false: 获得金币
             100000,
             6,       // reason=6: CARD
@@ -2491,12 +2455,11 @@ fun apply_card_effect_with_collectors(
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
         if (target_player.cash >= 10000) {
             target_player.cash = target_player.cash - 10000;
             cash_changes.push_back(events::make_cash_delta(
-                target_addr,
+                target_index,
                 true,    // is_debit=true: 扣除金币
                 10000,
                 6,       // reason=6: CARD
@@ -2510,12 +2473,11 @@ fun apply_card_effect_with_collectors(
         let target_index = (params[0] as u8);
         assert!((target_index as u64) < game.players.length(), EPlayerNotFound);
 
-        let target_addr = (&game.players[target_index as u64]).owner;
         let target_player = &mut game.players[target_index as u64];
         if (target_player.cash >= 100000) {
             target_player.cash = target_player.cash - 100000;
             cash_changes.push_back(events::make_cash_delta(
-                target_addr,
+                target_index,
                 true,    // is_debit=true: 扣除金币
                 100000,
                 6,       // reason=6: CARD
@@ -2749,9 +2711,9 @@ fun clean_turn_state(game: &mut Game, player_index: u8) {
     process_and_clear_expired_buffs(game, player_index);
 }
 
-fun find_richest_player(game: &Game): Option<address> {
+fun find_richest_player(game: &Game): Option<u8> {
     let mut max_cash: u64 = 0;
-    let mut richest_player: Option<address> = option::none();
+    let mut richest_player: Option<u8> = option::none();
 
     let mut i = 0;
     while (i < game.players.length()) {
@@ -2760,7 +2722,7 @@ fun find_richest_player(game: &Game): Option<address> {
         if (!player.bankrupt) {
             if (player.cash > max_cash) {
                 max_cash = player.cash;
-                richest_player = option::some(player.owner);
+                richest_player = option::some(i as u8);
             }
         };
 

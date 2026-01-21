@@ -264,6 +264,8 @@ export class UseCardHandler {
      * 应用现金变化
      */
     private async applyCashChanges(session: any, cashChanges: CashDelta[]): Promise<void> {
+        const { UINotification } = await import('../../../ui/utils/UINotification');
+
         for (const change of cashChanges) {
             const player = session.getPlayerByIndex(change.player);
             if (!player) {
@@ -280,6 +282,11 @@ export class UseCardHandler {
                 : currentCash + amount;
 
             player.setCash(newCash);  // ✅ 正确调用setCash
+
+            // ✅ 显示现金变动（所有玩家）
+            const prefix = `玩家${player.getPlayerIndex() + 1} `;
+            const text = change.is_debit ? `${prefix}-${amount}` : `${prefix}+${amount}`;
+            UINotification.info(text, undefined, 2000, 'center');
 
             console.log(`[UseCardHandler] 玩家${change.player} 现金更新`, {
                 isDebit: change.is_debit,

@@ -539,17 +539,11 @@ export class RollAndStepHandler {
                     // 调用 Player.setCash 会自动触发 EventTypes.Player.CashChange 事件
                     player.setCash(newCash);
 
-                    // 显示现金变动Notification
-                    // 观战模式：显示所有玩家的现金变动（带玩家标识）
-                    // 正常模式：只显示自己的现金变动
-                    const isSpectator = this.currentSession?.isSpectatorMode() || false;
-                    const myPlayer = this.currentSession?.getMyPlayer();
-                    if (isSpectator || (myPlayer && player === myPlayer)) {
-                        const prefix = isSpectator ? `玩家${player.getPlayerIndex() + 1} ` : '';
-                        const text = change.is_debit ? `${prefix}-${amount}` : `${prefix}+${amount}`;
-                        UINotification.info(text, undefined, 2000, 'center');
-                        console.log('[RollAndStepHandler] 显示现金变动:', text);
-                    }
+                    // 显示现金变动Notification（所有玩家）
+                    const prefix = `玩家${player.getPlayerIndex() + 1} `;
+                    const text = change.is_debit ? `${prefix}-${amount}` : `${prefix}+${amount}`;
+                    UINotification.info(text, undefined, 2000, 'center');
+                    console.log('[RollAndStepHandler] 显示现金变动:', text);
 
                     console.log('[RollAndStepHandler] 玩家现金已更新', {
                         playerIndex: change.player,

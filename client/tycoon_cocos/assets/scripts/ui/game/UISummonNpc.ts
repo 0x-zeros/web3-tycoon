@@ -49,7 +49,9 @@ export class UISummonNpc extends UIBase {
     /** Promise resolve回调 */
     private _resolveCallback: ((kind: number | null) => void) | null = null;
 
-    /** 静态实例（用于Promise方式调用） */
+    /** 静态Promise实例（防止重入调用） */
+    private static _pendingPromise: Promise<number | null> | null = null;
+    /** 静态resolve回调 */
     private static _pendingResolve: ((kind: number | null) => void) | null = null;
 
     /**
@@ -57,10 +59,22 @@ export class UISummonNpc extends UIBase {
      * @returns 选中的NPC kind，取消返回null
      */
     public static async show(): Promise<number | null> {
-        return new Promise((resolve) => {
+        // 如果已经有一个pending的Promise，直接返回它（防止重入/快速双击）
+        if (UISummonNpc._pendingPromise) {
+            console.warn('[UISummonNpc] 已有pending的对话框，返回现有Promise');
+            return UISummonNpc._pendingPromise;
+        }
+
+        UISummonNpc._pendingPromise = new Promise((resolve) => {
             UISummonNpc._pendingResolve = resolve;
             UIManager.instance.showUI('SummonNpc', { parentUIName: 'InGame' });
         });
+
+        try {
+            return await UISummonNpc._pendingPromise;
+        } finally {
+            UISummonNpc._pendingPromise = null;
+        }
     }
 
     /**
@@ -185,11 +199,22 @@ export class UISummonNpc extends UIBase {
             title.text = npcData.name;
         }
 
-        // 设置图标
+        // 设置图标（带竞态检查）
         const icon = item.getChild('icon') as fgui.GLoader;
         if (icon) {
+            const expectedKind = npcData.kind;  // 捕获期望的kind
             const texturePath = `${npcData.icon}/texture`;
+
             resources.load(texturePath, Texture2D, (err, texture) => {
+                // 竞态检查：验证item仍然绑定到同一个NPC，且icon仍然有效
+                const currentData = item.data as NpcData;
+                if (!currentData || currentData.kind !== expectedKind) {
+                    return;  // item已被复用
+                }
+                if (icon.isDisposed) {
+                    return;  // icon已被销毁
+                }
+
                 if (!err && texture) {
                     const spriteFrame = new SpriteFrame();
                     spriteFrame.texture = texture;
@@ -222,12 +247,19 @@ export class UISummonNpc extends UIBase {
             button.selected = false;
             console.log(`[UISummonNpc] 取消选中NPC: ${data.name}`);
         } else {
-            // 选中新项，取消其他选中
-            // 遍历所有item取消选中
-            for (let i = 0; i < this.m_list!.numItems; i++) {
-                const otherItem = this.m_list!.getChildAt(i) as fgui.GButton;
-                if (otherItem && otherItem !== button) {
-                    otherItem.selected = false;
+            // 选中新项
+            // 只需更新当前可见的旧选中项（如果存在）
+            // 使用 numChildren 而非 numItems，因为虚拟列表中只有可见项才被实例化
+            if (this._selectedKind !== null && this.m_list) {
+                for (let i = 0; i < this.m_list.numChildren; i++) {
+                    const child = this.m_list.getChildAt(i) as fgui.GButton;
+                    if (child && child.data) {
+                        const childData = child.data as NpcData;
+                        if (childData.kind === this._selectedKind) {
+                            child.selected = false;
+                            break;
+                        }
+                    }
                 }
             }
 

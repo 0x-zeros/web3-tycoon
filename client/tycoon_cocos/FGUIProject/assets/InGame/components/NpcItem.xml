@@ -2,7 +2,7 @@
 <component size="186,256" pivot="0.5,0.5" extention="Button">
   <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
   <displayList>
-    <image id="n6_m8d4" name="n6" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="0,0" size="186,256">
+    <image id="n6_m8d4" name="n6" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="21,29" size="146,204">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
     <loader id="n4_pn5r" name="icon" xy="22,30" size="142,201" fill="scaleFree" clearOnPublish="true"/>

@@ -294,7 +294,11 @@ export class UIInGamePlayer extends UIBase {
             3: '免租',          // BUFF_RENT_FREE
             4: '土地神祝福',    // BUFF_LAND_BLESSING
             5: '福神幸运',      // BUFF_FORTUNE
-            6: '机车卡'         // BUFF_LOCOMOTIVE
+            6: '机车卡',        // BUFF_LOCOMOTIVE
+            7: '传送',          // BUFF_TELEPORT
+            8: '福神附身',      // BUFF_FORTUNE_BLESSING
+            9: '穷神诅咒',      // BUFF_RENT_DOUBLE
+            10: '财神附身'      // BUFF_WEALTH_BLESSING
         };
 
         return buffNames[buffKind] || `Buff${buffKind}`;
@@ -313,7 +317,11 @@ export class UIInGamePlayer extends UIBase {
             3: 'buff_rent_free',      // 免租
             4: 'buff_land_blessing',  // 土地神祝福
             5: 'buff_fortune',        // 福神幸运
-            6: 'buff_locomotive'      // 机车卡
+            6: 'buff_locomotive',     // 机车卡
+            7: 'buff_teleport',       // 传送
+            8: 'buff_fortune',        // 福神附身 → 复用福神图标
+            9: 'buff_frozen',         // 穷神诅咒 → 复用冰冻图标
+            10: 'buff_rent_free'      // 财神附身 → 复用免租图标
         };
 
         const iconName = iconMap[buffKind];

@@ -62,6 +62,7 @@ const ESkipMovementRequiresZeroDice: u64 = 4004;  // 跳过移动时 dice_count 
 
 const E_NPC_SPAWN_POOL_INDEX_OUT_OF_BOUNDS: u64 = 8001;
 const E_TILE_INDEX_OUT_OF_BOUNDS: u64 = 8002;
+const EInvalidNpcRewardParams: u64 = 8003;
 
 const EMapMismatch: u64 = 9001;
 const ETileOccupiedByNpc: u64 = 2001;
@@ -899,7 +900,8 @@ fun try_execute_buy_building(
 ): (bool, option::Option<events::CashDelta>) {
     let player = &game.players[player_index as u64];
 
-    if (player.cash <= price) {
+    // 允许免费购买（price=0时跳过检查）- 用于福神buff
+    if (price > 0 && player.cash < price) {
         return (false, option::none())
     };
 
@@ -939,7 +941,8 @@ fun try_execute_upgrade_building(
 ): (bool, option::Option<events::CashDelta>, u8, u8) {
     let player = &game.players[player_index as u64];
 
-    if (player.cash <= upgrade_cost) {
+    // 允许免费升级（upgrade_cost=0时跳过检查）- 用于福神buff
+    if (upgrade_cost > 0 && player.cash < upgrade_cost) {
         return (false, option::none(), current_level, types::BUILDING_NONE())
     };
 
@@ -1089,7 +1092,7 @@ entry fun buy_building(
     let price = if (has_fortune_blessing) { 0 } else { raw_price };
 
     if (price > 0) {
-        assert!(player.cash > price, EInsufficientCash);
+        assert!(player.cash >= price, EInsufficientCash);
     };
 
     let (success, _cash_delta_opt) = try_execute_buy_building(
@@ -1169,7 +1172,7 @@ entry fun upgrade_building(
     let upgrade_cost = if (has_fortune_blessing) { 0 } else { raw_upgrade_cost };
 
     if (upgrade_cost > 0) {
-        assert!(player.cash > upgrade_cost, EInsufficientCash);
+        assert!(player.cash >= upgrade_cost, EInsufficientCash);
     };
 
     let (success, _cash_delta_opt, new_level, final_building_type) = try_execute_upgrade_building(
@@ -3138,7 +3141,9 @@ fun is_npc_consumable(npc_kind: u8): bool {
 
 fun is_buff_npc(npc_kind: u8): bool {
     npc_kind == types::NPC_LAND_GOD() ||
-    npc_kind == types::NPC_FORTUNE_GOD()
+    npc_kind == types::NPC_FORTUNE_GOD() ||
+    npc_kind == types::NPC_WEALTH_GOD() ||
+    npc_kind == types::NPC_POOR_GOD()
 }
 
 // ===== 探针式随机地块查找（Gas优化版本）=====
@@ -3539,7 +3544,11 @@ fun generate_weighted_random_amount(
     let (min, max, mid_lo, mid_hi, w_mid, w_low, w_high) =
         tycoon::get_npc_reward_params(game_data);
 
+    // 参数验证：确保权重和大于0，区间有效
     let w_sum = w_mid + w_low + w_high;
+    assert!(w_sum > 0, EInvalidNpcRewardParams);
+    assert!(min < mid_lo && mid_lo <= mid_hi && mid_hi < max, EInvalidNpcRewardParams);
+
     let r = random::generate_u64(generator) % w_sum;
 
     if (r < w_mid) {

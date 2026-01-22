@@ -1081,14 +1081,21 @@ entry fun buy_building(
 
     let building_static = map::get_building(map, building_id);
 
-    let price = calculate_buy_price(building_static, game);
-    assert!(price > 0, EInvalidPrice);
-    assert!(player.cash > price, EInsufficientCash);
+    let raw_price = calculate_buy_price(building_static, game);
+    assert!(raw_price > 0, EInvalidPrice);
+
+    // 检查福神附身buff，免费购买
+    let has_fortune_blessing = is_buff_active(player, types::BUFF_FORTUNE_BLESSING(), game.round);
+    let price = if (has_fortune_blessing) { 0 } else { raw_price };
+
+    if (price > 0) {
+        assert!(player.cash > price, EInsufficientCash);
+    };
 
     let (success, _cash_delta_opt) = try_execute_buy_building(
         game, player_index, building_id, tile_id, price, building_static
     );
-    assert!(success, EInsufficientCash);
+    assert!(success || has_fortune_blessing, EInsufficientCash);
 
     let building_type = game.buildings[building_id as u64].building_type;
 
@@ -1155,15 +1162,21 @@ entry fun upgrade_building(
     let building_static = map::get_building(map, building_id);
     let building_size = map::building_size(building_static);
 
-    let upgrade_cost = calculate_building_price(building_static, building, current_level, current_level + 1, game, game_data);
+    let raw_upgrade_cost = calculate_building_price(building_static, building, current_level, current_level + 1, game, game_data);
 
-    assert!(player.cash > upgrade_cost, EInsufficientCash);
+    // 检查福神附身buff，免费升级
+    let has_fortune_blessing = is_buff_active(player, types::BUFF_FORTUNE_BLESSING(), game.round);
+    let upgrade_cost = if (has_fortune_blessing) { 0 } else { raw_upgrade_cost };
+
+    if (upgrade_cost > 0) {
+        assert!(player.cash > upgrade_cost, EInsufficientCash);
+    };
 
     let (success, _cash_delta_opt, new_level, final_building_type) = try_execute_upgrade_building(
         game, player_index, building_id, tile_id, upgrade_cost,
         current_level, game_data, building_size, building_type
     );
-    assert!(success, EInsufficientCash);
+    assert!(success || has_fortune_blessing, EInsufficientCash);
 
     clear_decision_state(game);
 
@@ -1657,6 +1670,120 @@ fun handle_tile_stop_with_collector(
             consume_npc_if_consumable(game, tile_id, &npc);
             handle_npc_consumed(game, &npc, true);
         }
+        // ===== 福神触发 - 给予免费购买/升级buff =====
+        else if (npc.kind == types::NPC_FORTUNE_GOD()) {
+            let last_active_round = calculate_buff_last_active_round(
+                player_index, player_index, game.round, 7, true
+            );
+            {
+                let player = &mut game.players[player_index as u64];
+                apply_buff_with_source(
+                    player,
+                    types::BUFF_FORTUNE_BLESSING(),
+                    last_active_round,
+                    0,
+                    npc.spawn_index
+                );
+            };
+
+            npc_buff_opt = option::some(events::make_buff_change(
+                types::BUFF_FORTUNE_BLESSING(),
+                player_index,
+                option::some(last_active_round)
+            ));
+            consume_npc_if_consumable(game, tile_id, &npc);
+            handle_npc_consumed(game, &npc, true);
+        }
+        // ===== 财神触发 - 立即获得金钱 + 租金免除buff =====
+        else if (npc.kind == types::NPC_WEALTH_GOD()) {
+            // 计算金额 = b × 物价指数
+            let b = generate_weighted_random_amount(generator, game_data);
+            let price_index = calculate_price_index(game);
+            let reward_amount = b * price_index;
+
+            // 增加现金
+            {
+                let player = &mut game.players[player_index as u64];
+                player.cash = player.cash + reward_amount;
+            };
+            cash_changes.push_back(events::make_cash_delta(
+                player_index,
+                false,  // is_debit=false: 获得金币
+                reward_amount,
+                10,     // reason=10: 财神赐福
+                tile_id
+            ));
+
+            // 财神附身buff（租金免除，使用独立类型）
+            let last_active_round = calculate_buff_last_active_round(
+                player_index, player_index, game.round, 7, true
+            );
+            {
+                let player = &mut game.players[player_index as u64];
+                apply_buff_with_source(
+                    player,
+                    types::BUFF_WEALTH_BLESSING(),
+                    last_active_round,
+                    0,
+                    npc.spawn_index
+                );
+            };
+
+            npc_buff_opt = option::some(events::make_buff_change(
+                types::BUFF_WEALTH_BLESSING(),
+                player_index,
+                option::some(last_active_round)
+            ));
+            consume_npc_if_consumable(game, tile_id, &npc);
+            handle_npc_consumed(game, &npc, true);
+        }
+        // ===== 穷神触发 - 立即丢失金钱 + 租金翻倍buff =====
+        else if (npc.kind == types::NPC_POOR_GOD()) {
+            let b = generate_weighted_random_amount(generator, game_data);
+            let price_index = calculate_price_index(game);
+            let loss_amount = b * price_index;
+
+            // 扣除现金（不能低于0）
+            let actual_loss = {
+                let player = &mut game.players[player_index as u64];
+                let loss = if (player.cash >= loss_amount) { loss_amount } else { player.cash };
+                player.cash = player.cash - loss;
+                loss
+            };
+
+            if (actual_loss > 0) {
+                cash_changes.push_back(events::make_cash_delta(
+                    player_index,
+                    true,   // is_debit=true: 扣除金币
+                    actual_loss,
+                    11,     // reason=11: 穷神诅咒
+                    tile_id
+                ));
+            };
+
+            // 穷神诅咒buff（租金翻倍）
+            let last_active_round = calculate_buff_last_active_round(
+                player_index, player_index, game.round, 7, true
+            );
+            {
+                let player = &mut game.players[player_index as u64];
+                apply_buff_with_source(
+                    player,
+                    types::BUFF_RENT_DOUBLE(),
+                    last_active_round,
+                    0,
+                    npc.spawn_index
+                );
+            };
+
+            npc_buff_opt = option::some(events::make_buff_change(
+                types::BUFF_RENT_DOUBLE(),
+                player_index,
+                option::some(last_active_round)
+            ));
+            consume_npc_if_consumable(game, tile_id, &npc);
+            handle_npc_consumed(game, &npc, true);
+        }
     };
 
     let building_id = map::tile_building_id(tile);
@@ -1699,14 +1826,26 @@ fun handle_tile_stop_with_collector(
                     building_decision_opt = option::some(decision_info);
                 } else {
                     // ===== 原有购买逻辑 =====
-                    let price = calculate_buy_price(building_static, game);
+                    let raw_price = calculate_buy_price(building_static, game);
 
-                    if (auto_buy) {
+                    // 检查福神附身buff，免费购买
+                    let player = &game.players[player_index as u64];
+                    let has_fortune_blessing = is_buff_active(player, types::BUFF_FORTUNE_BLESSING(), game.round);
+                    let price = if (has_fortune_blessing) { 0 } else { raw_price };
+
+                    if (auto_buy || has_fortune_blessing) {
                         let (success, cash_delta_opt) = try_execute_buy_building(
                             game, player_index, building_id, tile_id, price, building_static
                         );
 
-                        if (success) {
+                        if (success || has_fortune_blessing) {
+                            // 福神附身时强制成功
+                            if (!success && has_fortune_blessing) {
+                                // 手动设置owner（try_execute_buy_building在价格为0时可能失败）
+                                let building_mut = &mut game.buildings[building_id as u64];
+                                building_mut.owner = player_index;
+                            };
+
                             stop_type = events::stop_building_unowned();
                             if (cash_delta_opt.is_some()) {
                                 cash_changes.push_back(cash_delta_opt.destroy_some());
@@ -1795,13 +1934,21 @@ fun handle_tile_stop_with_collector(
                     } else {
                         // ===== 原有租金逻辑 =====
                         let level = building.level;
-                        let toll = calculate_toll(game, tile_id, map, game_data);
+                        let mut toll = calculate_toll(game, tile_id, map, game_data);
 
                         let player = &game.players[player_index as u64];
                         let has_rent_free_buff = is_buff_active(player, types::BUFF_RENT_FREE(), game.round);
+                        let has_wealth_blessing = is_buff_active(player, types::BUFF_WEALTH_BLESSING(), game.round);
+                        let has_rent_double = is_buff_active(player, types::BUFF_RENT_DOUBLE(), game.round);
                         let has_rent_free_card = cards::player_has_card(&player.cards, types::CARD_RENT_FREE());
 
-                        if (has_rent_free_buff) {
+                        // 穷神诅咒：租金翻倍（先翻倍再判断免除）
+                        if (has_rent_double) {
+                            toll = toll * 2;
+                        };
+
+                        // 财神附身或免租buff：租金免除
+                        if (has_rent_free_buff || has_wealth_blessing) {
                         stop_type = events::stop_building_no_rent();
                         owner_opt = option::some(owner_index);
                         level_opt = option::some(level);
@@ -1925,7 +2072,12 @@ fun handle_tile_stop_with_collector(
                 let level = building.level;
 
                 if (level < types::LEVEL_4()) {
-                    let upgrade_cost = calculate_building_price(building_static, building, level, level + 1, game, game_data);
+                    let raw_upgrade_cost = calculate_building_price(building_static, building, level, level + 1, game, game_data);
+
+                    // 检查福神附身buff，免费升级
+                    let player = &game.players[player_index as u64];
+                    let has_fortune_blessing = is_buff_active(player, types::BUFF_FORTUNE_BLESSING(), game.round);
+                    let upgrade_cost = if (has_fortune_blessing) { 0 } else { raw_upgrade_cost };
 
                     let building_size = map::building_size(building_static);
                     let needs_type_selection =
@@ -1933,25 +2085,38 @@ fun handle_tile_stop_with_collector(
                         level == 0 &&
                         building.building_type == types::BUILDING_NONE();
 
-                    if (auto_upgrade && !needs_type_selection) {
+                    if ((auto_upgrade || has_fortune_blessing) && !needs_type_selection) {
                         let (success, cash_delta_opt, new_level, final_type) = try_execute_upgrade_building(
                             game, player_index, building_id, tile_id, upgrade_cost, level, game_data,
                             building_size, types::BUILDING_TEMPLE()
                         );
 
-                        if (success) {
+                        if (success || has_fortune_blessing) {
+                            // 福神附身时强制成功
+                            if (!success && has_fortune_blessing) {
+                                // 手动升级（try_execute_upgrade_building在价格为0时可能失败）
+                                let building_mut = &mut game.buildings[building_id as u64];
+                                building_mut.level = level + 1;
+                                if (building_mut.building_type == types::BUILDING_TEMPLE()) {
+                                    rebuild_temple_levels_cache(game, player_index);
+                                };
+                            };
+
                             stop_type = events::stop_none();
                             if (cash_delta_opt.is_some()) {
                                 cash_changes.push_back(cash_delta_opt.destroy_some());
                             };
+
+                            let actual_new_level = if (success) { new_level } else { level + 1 };
+                            let actual_final_type = if (success) { final_type } else { game.buildings[building_id as u64].building_type };
 
                             let decision_info = events::make_building_decision_info(
                                 types::DECISION_UPGRADE_PROPERTY(),
                                 building_id,
                                 tile_id,
                                 upgrade_cost,
-                                new_level,
-                                final_type
+                                actual_new_level,
+                                actual_final_type
                             );
 
                             events::emit_building_decision_event(
@@ -3362,6 +3527,31 @@ fun rebuild_temple_levels_cache(game: &mut Game, player_index: u8) {
 fun calculate_price_factor(game: &Game): u64 {
     let price_index = calculate_price_index(game);
     price_index * 20
+}
+
+/// 分段加权随机金额生成
+/// 财神/穷神触发时使用，参数从GameData读取
+/// 算法：60%概率落在[3000,7000]，20%概率落在[100,2999]，20%概率落在[7001,10000]
+fun generate_weighted_random_amount(
+    generator: &mut RandomGenerator,
+    game_data: &GameData
+): u64 {
+    let (min, max, mid_lo, mid_hi, w_mid, w_low, w_high) =
+        tycoon::get_npc_reward_params(game_data);
+
+    let w_sum = w_mid + w_low + w_high;
+    let r = random::generate_u64(generator) % w_sum;
+
+    if (r < w_mid) {
+        // 中间区间 [mid_lo, mid_hi]，概率60%
+        mid_lo + (random::generate_u64(generator) % (mid_hi - mid_lo + 1))
+    } else if (r < w_mid + w_low) {
+        // 低区间 [min, mid_lo - 1]，概率20%
+        min + (random::generate_u64(generator) % (mid_lo - min))
+    } else {
+        // 高区间 [mid_hi + 1, max]，概率20%
+        (mid_hi + 1) + (random::generate_u64(generator) % (max - mid_hi))
+    }
 }
 
 /// 计算购买空地的价格（获得 L0 所有权）

@@ -73,8 +73,11 @@ public(package) fun BUFF_LAND_BLESSING(): u8 { 4 }
 public(package) fun BUFF_FORTUNE(): u8 { 5 }
 public(package) fun BUFF_LOCOMOTIVE(): u8 { 6 }  // 机车卡：允许多骰子
 public(package) fun BUFF_TELEPORT(): u8 { 7 }    // 传送buff（暂无具体效果）
+public(package) fun BUFF_FORTUNE_BLESSING(): u8 { 8 }  // 福神附身：购买/升级免费
+public(package) fun BUFF_RENT_DOUBLE(): u8 { 9 }       // 穷神诅咒：租金翻倍
+public(package) fun BUFF_WEALTH_BLESSING(): u8 { 10 }  // 财神附身：租金免除
 
-// 8-199: 预留给card及其他
+// 11-199: 预留给card及其他
 
 // ===== GameStatus =====
 public(package) fun STATUS_READY(): u8 { 0 }

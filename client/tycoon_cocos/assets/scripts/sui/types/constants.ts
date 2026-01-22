@@ -94,7 +94,10 @@ export enum BuffKind {
     LAND_BLESSING = 4,      // 土地神祝福
     FORTUNE = 5,            // 福神幸运
     LOCOMOTIVE = 6,         // 机车卡：允许多骰子
-    TELEPORT = 7            // 传送buff（暂无具体效果）
+    TELEPORT = 7,           // 传送buff（暂无具体效果）
+    FORTUNE_BLESSING = 8,   // 福神附身：购买/升级免费
+    RENT_DOUBLE = 9,        // 穷神诅咒：租金翻倍
+    WEALTH_BLESSING = 10    // 财神附身：租金免除
 }
 
 // ===== Phase 游戏阶段 =====
@@ -246,12 +249,14 @@ export enum StopType {
 
 // ===== 现金变动原因 =====
 export enum CashReason {
-    TOLL = 1,      // 过路费
-    BUY = 2,       // 购买
-    UPGRADE = 3,   // 升级
-    BONUS = 4,     // 奖金
-    FEE = 5,       // 罚款
-    CARD = 6       // 卡牌效果
+    TOLL = 1,           // 过路费
+    BUY = 2,            // 购买
+    UPGRADE = 3,        // 升级
+    BONUS = 4,          // 奖金
+    FEE = 5,            // 罚款
+    CARD = 6,           // 卡牌效果
+    NPC_WEALTH_GOD = 10, // 财神赐福
+    NPC_POOR_GOD = 11   // 穷神诅咒
 }
 
 // ===== 游戏结束原因 =====

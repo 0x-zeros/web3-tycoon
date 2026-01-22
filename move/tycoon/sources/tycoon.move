@@ -17,6 +17,19 @@ public struct AdminCap has key, store {
     id: UID
 }
 
+// ===== NPC奖励随机参数（分段加权均匀采样）=====
+
+/// 用于财神/穷神的金额计算
+public struct NpcRewardParams has store, copy, drop {
+    min: u64,       // 100 - 最小值
+    max: u64,       // 10000 - 最大值
+    mid_lo: u64,    // 3000 - 中间区间下限
+    mid_hi: u64,    // 7000 - 中间区间上限
+    w_mid: u64,     // 60 - 中间区间权重
+    w_low: u64,     // 20 - 低区间权重
+    w_high: u64,    // 20 - 高区间权重
+}
+
 // ===== GameData 统一的策划数据容器 =====
 
 public struct GameData has key, store {
@@ -45,6 +58,7 @@ public struct GameData has key, store {
 
     npc_spawn_weights: vector<u8>,
     map_schema_version: u8,
+    npc_reward_params: NpcRewardParams,  // NPC奖励随机参数（财神/穷神）
 }
 
 // ===== Package Init 包初始化 =====
@@ -75,6 +89,17 @@ fun init(ctx: &mut TxContext) {
         ],
 
         map_schema_version: 1,
+
+        // NPC奖励随机参数（财神/穷神）
+        npc_reward_params: NpcRewardParams {
+            min: 100,
+            max: 10000,
+            mid_lo: 3000,
+            mid_hi: 7000,
+            w_mid: 60,
+            w_low: 20,
+            w_high: 20,
+        },
     };
 
     let game_data_id = object::id(&game_data);
@@ -193,6 +218,12 @@ public(package) fun get_large_building_costs(game_data: &GameData): &vector<u64>
 /// 获取 CardRegistry 的引用
 public(package) fun get_card_registry(game_data: &GameData): &cards::CardRegistry {
     &game_data.card_registry
+}
+
+/// 获取NPC奖励参数（返回多值）
+public(package) fun get_npc_reward_params(game_data: &GameData): (u64, u64, u64, u64, u64, u64, u64) {
+    let p = &game_data.npc_reward_params;
+    (p.min, p.max, p.mid_lo, p.mid_hi, p.w_mid, p.w_low, p.w_high)
 }
 
 // ===== Configuration Validation Functions 配置验证函数 =====

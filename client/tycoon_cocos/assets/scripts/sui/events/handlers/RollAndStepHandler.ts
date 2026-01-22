@@ -843,6 +843,10 @@ export class RollAndStepHandler {
             case 4: return '土地神附身';    // BUFF_LAND_BLESSING
             case 5: return '福神祝福';      // BUFF_FORTUNE
             case 6: return '机车';          // BUFF_LOCOMOTIVE
+            case 7: return '传送';          // BUFF_TELEPORT
+            case 8: return '福神附身';      // BUFF_FORTUNE_BLESSING（购买/升级免费）
+            case 9: return '穷神诅咒';      // BUFF_RENT_DOUBLE（租金翻倍）
+            case 10: return '财神附身';     // BUFF_WEALTH_BLESSING（租金免除）
             default: return `效果(${buffType})`;
         }
     }

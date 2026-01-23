@@ -13,6 +13,7 @@ import { EventBus } from '../events/EventBus';
 import { EventTypes } from '../events/EventTypes';
 import { Blackboard } from '../events/Blackboard';
 import { GameMap } from './core/GameMap';
+import type { MapSaveData } from './data/MapDataTypes';
 import { VoxelSystem } from '../voxel/VoxelSystem';
 import { GridGround, GridGroundConfig } from './GridGround';
 import { UINotification } from '../ui/utils/UINotification';
@@ -546,6 +547,9 @@ export class MapManager extends Component {
         // 监听地图切换请求
         EventBus.on(EventTypes.Game.RequestMapChange, this.onMapChangeRequest, this);
 
+        // 监听编辑链上地图模板事件
+        EventBus.on(EventTypes.Game.EditMapTemplate, this._onEditMapTemplate, this);
+
         // ❌ 移除：游戏模式现在由 GameSession 直接调用 loadGameMapFromSession
         // EventBus.on(EventTypes.Game.GameStart, this._onGameStart, this);
     }
@@ -758,6 +762,134 @@ export class MapManager extends Component {
         return this._currentMapComponent.isEditMode;
     }
 
+    /**
+     * 编辑链上地图模板事件处理
+     * 从链上获取 MapTemplate 完整数据并进入编辑模式
+     */
+    private async _onEditMapTemplate(data: { templateId: string }): Promise<void> {
+        try {
+            // 动态导入避免循环依赖
+            const { SuiManager } = await import('../sui/managers/SuiManager');
+            const { convertMapTemplateToSaveData } = await import('../sui/utils/MapTemplateConverter');
+            const { UIManager } = await import('../ui/core/UIManager');
+
+            UINotification.info("正在加载地图模板...");
+
+            // 1. 从链上获取完整的 MapTemplate 数据
+            const mapTemplate = await SuiManager.instance.getMapTemplate(data.templateId);
+            if (!mapTemplate) {
+                UINotification.error("地图模板加载失败");
+                return;
+            }
+
+            // 2. 转换为 MapSaveData 格式（编辑模式，无 game）
+            const mapSaveData = convertMapTemplateToSaveData(
+                mapTemplate,
+                null,
+                `template_${data.templateId.slice(-8)}`
+            );
+
+            // 3. 使用 MapSaveData 加载地图进入编辑模式
+            const result = await this.loadMapFromSaveData(mapSaveData, true);
+            if (result.success) {
+                await UIManager.instance?.showUI("InGame");
+                EventBus.emit(EventTypes.Game.GameStart, {
+                    mode: "edit",
+                    source: "map_template_edit"
+                });
+            } else {
+                UINotification.error("加载地图失败");
+            }
+        } catch (error) {
+            console.error('[MapManager] Failed to load map template:', error);
+            UINotification.error("加载地图模板失败");
+        }
+    }
+
+    /**
+     * 从 MapSaveData 加载地图（用于链上模板编辑）
+     */
+    public async loadMapFromSaveData(
+        mapSaveData: MapSaveData,
+        isEdit: boolean
+    ): Promise<MapLoadResult> {
+        this.log(`从 MapSaveData 加载: ${mapSaveData.mapId}`);
+
+        const { UIManager } = await import("../ui/core/UIManager");
+
+        try {
+            await UIManager.instance.showUI("Loading");
+
+            Blackboard.instance.set("loading.description", "准备中...");
+            Blackboard.instance.set("loading.progress", 0);
+            await this.waitOneFrame();
+            this.unloadCurrentMap();
+
+            Blackboard.instance.set("loading.progress", 30);
+            Blackboard.instance.set("loading.description", "初始化中...");
+            await this.waitOneFrame();
+
+            // 创建临时 MapConfig
+            const tempConfig: MapConfig = {
+                id: mapSaveData.mapId,
+                name: mapSaveData.mapName || `Template Map`,
+                prefabPath: '',
+                previewImagePath: '',
+                type: 'classic'
+            };
+
+            const mapInstance = new Node(tempConfig.id);
+            const mapComponent = mapInstance.addComponent(GameMap);
+            await mapComponent.init(tempConfig, isEdit);
+
+            Blackboard.instance.set("loading.progress", 50);
+            await this.waitOneFrame();
+
+            // 使用 GameMap 的 loadFromMapSaveData 方法加载数据
+            const loaded = await mapComponent.loadFromMapSaveData(mapSaveData);
+            if (!loaded) {
+                throw new Error('Failed to load from MapSaveData');
+            }
+
+            Blackboard.instance.set("loading.progress", 80);
+            await this.waitOneFrame();
+
+            const container = this.mapContainer || director.getScene();
+            if (container) {
+                container.addChild(mapInstance);
+            }
+
+            this._currentMapInstance = mapInstance;
+            this._currentMapComponent = mapComponent;
+            this._currentMapId = mapSaveData.mapId;
+
+            // 编辑模式显示 tile type overlays
+            if (isEdit) {
+                console.log('[MapManager] Editor mode: showing tile type overlays...');
+                await mapComponent.showTileTypeOverlays(async (progress, desc) => {
+                    const mappedProgress = 80 + ((progress - 80) / 20) * 20;
+                    Blackboard.instance.set("loading.progress", mappedProgress);
+                    Blackboard.instance.set("loading.description", desc);
+                    await this.waitOneFrame();
+                });
+            }
+
+            Blackboard.instance.set("loading.progress", 100);
+            Blackboard.instance.set("loading.description", "加载完成！");
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('[MapManager] loadMapFromSaveData failed:', error);
+            return { success: false, error: error.message };
+
+        } finally {
+            const { UIManager } = await import("../ui/core/UIManager");
+            setTimeout(() => {
+                UIManager.instance.hideUI("Loading");
+            }, 100);
+        }
+    }
 
     /**
      * 调试日志输出

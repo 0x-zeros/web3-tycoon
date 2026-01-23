@@ -174,7 +174,9 @@ export const EventTypes = {
         /** 回合变化（玩家切换） */
         TurnChanged: "game_turn_changed",
         /** 建筑变化（owner/level更新） */
-        BuildingChanged: "game_building_changed"
+        BuildingChanged: "game_building_changed",
+        /** 编辑链上地图模板 */
+        EditMapTemplate: "game_edit_map_template"
     },
 
     /** 地产相关事件 */

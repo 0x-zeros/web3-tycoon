@@ -1534,7 +1534,7 @@ export class GameMap extends Component {
             );
 
             // 2. 使用转换后的数据加载场景
-            return await this._loadMapFromData(mapData);
+            return await this.loadFromMapSaveData(mapData);
 
         } catch (error) {
             console.error('[GameMap] Failed to load from chain data:', error);
@@ -2005,10 +2005,10 @@ export class GameMap extends Component {
     }
 
     /**
-     * 从内存中的 MapSaveData 加载（内部方法）
-     * 复用 loadMap 的核心逻辑，但数据来自内存而非文件
+     * 从 MapSaveData 加载地图数据
+     * 可用于链上模板编辑或从内存数据加载
      */
-    private async _loadMapFromData(mapData: MapSaveData): Promise<boolean> {
+    public async loadFromMapSaveData(mapData: MapSaveData): Promise<boolean> {
         try {
             // 清空现有地图
             this.clearMap();

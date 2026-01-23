@@ -1,6 +1,7 @@
 import { UIBase } from "../../core/UIBase";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
+import { UINotification } from "../../utils/UINotification";
 import * as fgui from "fairygui-cc";
 import { _decorator } from 'cc';
 import {
@@ -27,6 +28,7 @@ export class UIGameCreateParams extends UIBase {
     // FairyGUI组件引用
     private m_btnCreateGame: fgui.GButton;
     private m_btnCancel: fgui.GButton;
+    private m_btnEditMap: fgui.GButton;
 
     // Slider和Text组件
     private m_sliderStartingCash: fgui.GSlider;
@@ -83,6 +85,9 @@ export class UIGameCreateParams extends UIBase {
         // GM模式按钮
         this.m_btnGm = this.getButton('btn_gm');
 
+        // 编辑地图按钮
+        this.m_btnEditMap = this.getButton('btn_editMap');
+
         // 检查组件是否正确获取
         if (!this.m_btnCreateGame) {
             console.error('[UIGameCreateParams] btn_createGame not found');
@@ -133,6 +138,7 @@ export class UIGameCreateParams extends UIBase {
         this.m_btnMaxRoundsMode.on(fgui.Event.CLICK, this._onMaxRoundsModeClick, this);
         this.m_btnCreateGame.on(fgui.Event.CLICK, this._onCreateGameClick, this);
         this.m_btnCancel.on(fgui.Event.CLICK, this._onCancelClick, this);
+        this.m_btnEditMap?.on(fgui.Event.CLICK, this._onEditMapClick, this);
     }
 
     /**
@@ -156,6 +162,9 @@ export class UIGameCreateParams extends UIBase {
         }
         if (this.m_btnCancel) {
             this.m_btnCancel.off(fgui.Event.CLICK, this._onCancelClick, this);
+        }
+        if (this.m_btnEditMap) {
+            this.m_btnEditMap.off(fgui.Event.CLICK, this._onEditMapClick, this);
         }
 
         super.unbindEvents();
@@ -379,5 +388,27 @@ export class UIGameCreateParams extends UIBase {
         if (this._parentUI && this._parentUI.showMainPanel) {
             this._parentUI.showMainPanel();
         }
+    }
+
+    /**
+     * 编辑地图按钮点击
+     */
+    private async _onEditMapClick(): Promise<void> {
+        if (!this._mapTemplateId) {
+            UINotification.warning("请先选择地图模板");
+            return;
+        }
+
+        console.log('[UIGameCreateParams] Edit map, template:', this._mapTemplateId);
+
+        // 隐藏参数面板
+        if (this._parentUI?.showMainPanel) {
+            this._parentUI.showMainPanel();
+        }
+
+        // 发送事件，请求以编辑模式加载链上模板
+        EventBus.emit(EventTypes.Game.EditMapTemplate, {
+            templateId: this._mapTemplateId
+        });
     }
 }

@@ -36,7 +36,6 @@ const { ccclass } = _decorator;
 export class UIMapList extends UIBase {
     // 组件引用
     private m_list: fgui.GList;
-    private m_btn_createGame: fgui.GButton;
 
     // 过滤器
     private _filter: ListFilter<MapTemplatePublishedEvent> = new ListFilter<MapTemplatePublishedEvent>(MAP_FILTER_CONFIG);
@@ -61,14 +60,10 @@ export class UIMapList extends UIBase {
      * 设置组件引用
      */
     private _setupComponents(): void {
-        // 按钮在 data 组件中，this._panel 就是 data
-        this.m_btn_createGame = this.getButton('btn_createGame');
-
         // 获取列表
         this.m_list = this.getList("map_id");
 
         console.log('[UIMapList] Components setup');
-        console.log('  m_btn_createGame:', !!this.m_btn_createGame);
         console.log('  m_list:', !!this.m_list);
     }
 
@@ -76,8 +71,6 @@ export class UIMapList extends UIBase {
      * 绑定事件
      */
     protected bindEvents(): void {
-        this.m_btn_createGame?.onClick(this._onCreateGameClick, this);
-
         // 监听地图模板发布事件（实时更新列表）
         EventBus.on(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
 
@@ -93,7 +86,6 @@ export class UIMapList extends UIBase {
      * 解绑事件
      */
     protected unbindEvents(): void {
-        this.m_btn_createGame?.offClick(this._onCreateGameClick, this);
         EventBus.off(EventTypes.Move.MapTemplatePublished, this._onMapTemplatePublished, this);
         EventBus.off(EventTypes.Game.CreateGameWithParams, this._onCreateGameWithParams, this);
         EventBus.off(EventTypes.Search.MapFilterChanged, this._onFilterChanged, this);
@@ -261,23 +253,6 @@ export class UIMapList extends UIBase {
     }
 
     /**
-     * 创建游戏按钮点击
-     */
-    private _onCreateGameClick(): void {
-        console.log('[UIMapList] Create game clicked');
-
-        if (this._selectedTemplateId === null) {
-            UINotification.warning("请先选择地图模板");
-            return;
-        }
-
-        // 发送事件，让UIMapSelect显示参数配置界面
-        EventBus.emit(EventTypes.Game.ShowGameCreateParams, {
-            mapTemplateId: this._selectedTemplateId
-        });
-    }
-
-    /**
      * 根据模板 ID 选中（用于发布后返回）
      */
     public selectTemplateById(templateId: string): void {
@@ -302,13 +277,25 @@ export class UIMapList extends UIBase {
 
     /**
      * 列表项点击（统一处理）
+     * 点击后直接打开 GameCreateParams 面板
      */
     private _onItemClick(evt: fgui.Event): void {
         const btn = evt.sender as fgui.GButton;
         const index = (btn?.data as number) ?? -1;
         if (index >= 0 && index < this._displayTemplates.length) {
             this._selectTemplate(index);
+            this._showGameCreateParams();
         }
+    }
+
+    /**
+     * 显示游戏创建参数面板
+     */
+    private _showGameCreateParams(): void {
+        if (!this._selectedTemplateId) return;
+        EventBus.emit(EventTypes.Game.ShowGameCreateParams, {
+            mapTemplateId: this._selectedTemplateId
+        });
     }
 
     /**

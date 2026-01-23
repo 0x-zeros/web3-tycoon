@@ -50,13 +50,13 @@ function calculateBuildingDirection(
  * 将 Move MapTemplate + Game 数据转换为 MapSaveData
  *
  * @param template 链上 MapTemplate 数据
- * @param game 链上 Game 数据（包含动态状态：owner, level等）
+ * @param game 链上 Game 数据（包含动态状态：owner, level等），编辑模式可为 null
  * @param mapId 地图ID（客户端使用）
  * @returns MapSaveData 格式，可直接用于 GameMap.loadMap()
  */
 export function convertMapTemplateToSaveData(
     template: MapTemplate,
-    game: Game,
+    game: Game | null,
     mapId: string
 ): MapSaveData {
     const tiles: TileData[] = [];
@@ -65,7 +65,7 @@ export function convertMapTemplateToSaveData(
     console.log('[MapTemplateConverter] Converting template to save data');
     console.log('  Template tiles:', template.tiles_static.size, template.tiles_static);
     console.log('  Template buildings:', template.buildings_static.size, template.buildings_static);
-    console.log('  Game buildings:', game.buildings.length, game.buildings);
+    console.log('  Game buildings:', game?.buildings?.length ?? 0);
 
     // 1. 转换 Tiles
     template.tiles_static.forEach((tileStatic, tileId) => {
@@ -127,10 +127,8 @@ export function convertMapTemplateToSaveData(
         const gridPos = {x: buildingStatic.x, y: buildingStatic.y};
 
         // 从 Game.buildings 获取动态数据（owner, level, building_type）
-        const gameBuildingData = game.buildings[buildingId];
-        if (!gameBuildingData) {
-            console.warn(`[Converter] Building ${buildingId} not found in Game.buildings.`);
-        }
+        // 编辑模式下 game 为 null，building 使用默认值
+        const gameBuildingData = game?.buildings?.[buildingId];
 
         buildings.push({
             blockId: getBuildingBlockId(buildingStatic.size, gameBuildingData?.building_type),
@@ -157,13 +155,15 @@ export function convertMapTemplateToSaveData(
     const result = {
         // ✅ MapMetadata 必须字段
         mapId,
-        mapName: `Chain Game ${IdFormatter.shortenAddress(game.id)}`,
+        mapName: game
+            ? `Chain Game ${IdFormatter.shortenAddress(game.id)}`
+            : `Template ${IdFormatter.shortenAddress(template.id)}`,
         version: '1.0.0',
         createTime: Date.now(),
         updateTime: Date.now(),
 
         // MapSaveData 字段
-        gameMode: 'play' as 'play',  // 游戏模式（非编辑）
+        gameMode: game ? 'play' as 'play' : 'edit' as 'edit',
         tiles,
         objects: [],  // 游戏中不使用旧的 objects 系统
         buildings,

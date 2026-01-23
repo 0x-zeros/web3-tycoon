@@ -771,7 +771,6 @@ export class MapManager extends Component {
             // 动态导入避免循环依赖
             const { SuiManager } = await import('../sui/managers/SuiManager');
             const { convertMapTemplateToSaveData } = await import('../sui/utils/MapTemplateConverter');
-            const { UIManager } = await import('../ui/core/UIManager');
 
             UINotification.info("正在加载地图模板...");
 
@@ -792,7 +791,7 @@ export class MapManager extends Component {
             // 3. 使用 MapSaveData 加载地图进入编辑模式
             const result = await this.loadMapFromSaveData(mapSaveData, true);
             if (result.success) {
-                await UIManager.instance?.showUI("InGame");
+                // GameStart 事件会触发 UIManager 显示 InGame 界面
                 EventBus.emit(EventTypes.Game.GameStart, {
                     mode: "edit",
                     source: "map_template_edit"
@@ -837,6 +836,9 @@ export class MapManager extends Component {
                 previewImagePath: '',
                 type: 'classic'
             };
+
+            // 注册到 _mapConfigs，使 getCurrentMapInfo() 能正常工作
+            this._mapConfigs.set(tempConfig.id, tempConfig);
 
             const mapInstance = new Node(tempConfig.id);
             const mapComponent = mapInstance.addComponent(GameMap);

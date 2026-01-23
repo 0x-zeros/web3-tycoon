@@ -5,6 +5,9 @@
     <image id="n2_jhxs" name="n2" src="pseuov9" fileName="kenney_ui-pack/Extra/bar_shadow_square_outline_small_square.png" pkg="82r0pzop" xy="2,1" size="1024,512">
       <relation target="" sidePair="width-width,height-height"/>
     </image>
+    <graph id="n12_ro6t" name="bg" xy="0,0" size="1024,512" type="rect" fillColor="#ff6699cc">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
     <text id="n3_jhxs" name="n3" xy="40,23" size="165,36" fontSize="22" color="#ffffff" autoSize="none" text="filter："/>
     <text id="n4_jhxs" name="n4" xy="28,116" size="109,39" fontSize="22" color="#ffffff" autoSize="none" text="Game id">
       <gearDisplay controller="category" pages="0"/>
@@ -27,7 +30,7 @@
     <text id="n10_jhxs" name="player" xy="154,258" size="856,36" fontSize="22" color="#ffffff" autoSize="none" autoClearText="true" text="0x1efd...4ece" input="true" prompt="player id 或者 子字段">
       <gearDisplay controller="category" pages="0"/>
     </text>
-    <component id="n11_jhxs" name="btn_noFilter" src="lrk2ow1" fileName="components/Button13.xml" pkg="82r0pzop" xy="302,403" size="448,76">
+    <component id="n11_jhxs" name="btn_noFilter" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="302,403" size="448,76">
       <Button title="清除 filter"/>
     </component>
   </displayList>

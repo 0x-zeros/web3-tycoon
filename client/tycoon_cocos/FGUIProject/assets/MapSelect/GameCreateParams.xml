@@ -23,7 +23,7 @@
     <component id="n33_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="1024,512">
       <relation target="" sidePair="width-width,height-height"/>
     </component>
-    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="763,434" size="218,62">
+    <component id="n19_qh36" name="btn_createGame" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="789,437" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="创建游戏"/>
     </component>
@@ -40,11 +40,15 @@
     <component id="n27_y9h6" name="btn_max_rounds_mode" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="324,206">
       <Button checked="true"/>
     </component>
-    <component id="n30_hysa" name="btn_cancel" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="40,434" size="218,62">
+    <component id="n30_hysa" name="btn_cancel" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="18,437" size="218,62">
       <relation target="" sidePair="left-left,bottom-bottom"/>
       <Button title="取消"/>
     </component>
     <text id="n32_tw76" name="name" xy="288,14" size="718,39" fontSize="22" color="#ffffff" autoSize="none" text="" input="true" prompt="输入游戏名字（可选）"/>
     <component id="n35_la01" name="btn_gm" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="324,367"/>
+    <component id="n37_ro6t" name="btn_editMap" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="255,437" size="218,62">
+      <relation target="" sidePair="left-left,bottom-bottom"/>
+      <Button title="编辑地图"/>
+    </component>
   </displayList>
 </component>

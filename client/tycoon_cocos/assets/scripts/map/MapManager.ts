@@ -840,9 +840,15 @@ export class MapManager extends Component {
             // 注册到 _mapConfigs，使 getCurrentMapInfo() 能正常工作
             this._mapConfigs.set(tempConfig.id, tempConfig);
 
+            // 设置标志避免 init 时从 localStorage 加载旧数据（Issue 3 修复）
+            Blackboard.instance.set("loadFromLocalStorage", false);
+
             const mapInstance = new Node(tempConfig.id);
             const mapComponent = mapInstance.addComponent(GameMap);
             await mapComponent.init(tempConfig, isEdit);
+
+            // init 完成后重置标志
+            Blackboard.instance.set("loadFromLocalStorage", true);
 
             Blackboard.instance.set("loading.progress", 50);
             await this.waitOneFrame();

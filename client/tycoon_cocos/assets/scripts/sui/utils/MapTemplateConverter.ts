@@ -201,6 +201,7 @@ function getTileTypeId(kind: number): number {
         case TileKind.FEE: return Web3TileType.FEE;             // 5
         case TileKind.CARD: return Web3TileType.CARD;           // 6
         case TileKind.NEWS: return Web3TileType.NEWS;           // 7
+        case TileKind.CARD_SHOP: return Web3TileType.CARD_SHOP; // 8
         default:
             console.warn(`[Converter] Unknown tile kind: ${kind}, using EMPTY_LAND`);
             return Web3TileType.EMPTY_LAND;
@@ -220,6 +221,7 @@ function getTileBlockId(kind: number): string {
         case TileKind.FEE: return 'web3:fee';               // 5
         case TileKind.CARD: return 'web3:card';             // 6
         case TileKind.NEWS: return 'web3:news';             // 7
+        case TileKind.CARD_SHOP: return 'web3:card_shop';   // 8
         default:
             console.warn(`[Converter] Unknown tile kind: ${kind}, using empty_land`);
             return 'web3:empty_land';

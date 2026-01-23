@@ -744,3 +744,26 @@ interface PendingDecisionInfo {
 5. TS 端：handlers/ 创建对应 Handler 类
 6. TS 端：DecisionDialogHelper.ts 添加对应对话框方法
 7. TS 端：UIInGame.ts 的 `_showDecisionDialog()` 添加分支
+
+### 添加新 TileKind 类型步骤
+
+扩展 tile 类型时，需要同步修改以下文件（否则会出现类型丢失变空地的问题）：
+
+**Move 端**：
+1. `types.move` - 添加 `TILE_XXX()` 常量
+
+**TypeScript 端**：
+| 文件 | 修改内容 |
+|------|----------|
+| `sui/types/constants.ts` | TileKind 枚举添加新值 |
+| `voxel/Web3BlockTypes.ts` | 1. Web3TileType 枚举添加新值<br>2. WEB3_BLOCKS 数组添加新 block 定义 |
+| `sui/utils/MapTemplateConverter.ts` | 1. `getTileTypeId()` 添加 case<br>2. `getTileBlockId()` 添加 case |
+| `game/models/GameTile.ts` | 1. `getTileTypeId()` 添加 case<br>2. `getTileBlockId()` 添加 case |
+
+**资源文件**：
+- `resources/voxel/resource_pack/assets/web3/models/block/xxx.json` - 添加方块模型
+- `resources/voxel/resource_pack/assets/web3/textures/block/xxx.png` - 添加方块纹理
+
+**易漏点**：
+- ⚠️ `MapTemplateConverter.ts` 容易忘记修改，会导致编辑模板时该类型变空地
+- `GameTile.ts` 用于创建游戏路径，`MapTemplateConverter.ts` 用于编辑模板路径，两者都需要修改

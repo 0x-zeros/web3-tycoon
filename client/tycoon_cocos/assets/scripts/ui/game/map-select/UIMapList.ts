@@ -13,6 +13,7 @@ import { SuiManager } from "../../../sui/managers/SuiManager";
 import { ProfileService } from "../../../sui/services/ProfileService";
 import { UINotification } from "../../utils/UINotification";
 import { UIMessage } from "../../utils/UIMessage";
+import { MapDisplayHelper } from "../../utils/MapDisplayHelper";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { MapTemplatePublishedEvent } from "../../../sui/types/admin";
@@ -213,7 +214,7 @@ export class UIMapList extends UIBase {
         // 根据 FairyGUI 的实际组件名称设置
         const mapidText = button.getChild("mapid") as fgui.GTextField;
         if (mapidText) {
-            mapidText.text = template.template_id || 'N/A';  // ✅ 添加 fallback
+            MapDisplayHelper.updateMapName(mapidText, template.template_id, `map_${index}`);
         }
 
         const tileText = button.getChild("tile") as fgui.GTextField;

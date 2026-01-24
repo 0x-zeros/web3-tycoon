@@ -10,6 +10,7 @@ import { UIMessage } from "../../utils/UIMessage";
 import { IdFormatter } from "../../utils/IdFormatter";
 import { PlayerDisplayHelper } from "../../utils/PlayerDisplayHelper";
 import { GameDisplayHelper } from "../../utils/GameDisplayHelper";
+import { MapDisplayHelper } from "../../utils/MapDisplayHelper";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
@@ -137,7 +138,7 @@ export class UIGameDetail extends UIBase {
 
         // 显示地图 ID
         if (this.m_mapid) {
-            this.m_mapid.text = game.template_map_id;  // ✅ 完整显示
+            MapDisplayHelper.updateMapName(this.m_mapid, game.template_map_id);
         }
 
         // 显示玩家列表

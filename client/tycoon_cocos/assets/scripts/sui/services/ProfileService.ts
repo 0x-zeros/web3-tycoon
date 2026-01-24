@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import { SuiClient, SuiObjectResponse, SuiMoveObject } from '@mysten/sui/client';
+import { SuiClient, SuiObjectResponse, SuiMoveObject, EventId } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiManager } from '../managers/SuiManager';
 import { PlayerProfile, GameProfile, MapProfile } from '../types/profile';
@@ -536,7 +536,7 @@ export class ProfileService {
             const fullType = `${this.packageId}::events::${eventTypeName}`;
 
             // 分页查询所有事件
-            let cursor: string | null | undefined = undefined;
+            let cursor: EventId | null | undefined = undefined;
             let hasNextPage = true;
             let pageCount = 0;
             const maxPages = 100;  // 防止无限循环
@@ -566,6 +566,12 @@ export class ProfileService {
                 hasNextPage = res.hasNextPage;
                 cursor = res.nextCursor ?? undefined;
                 pageCount++;
+
+                // 防止 nextCursor 为空时无限循环
+                if (hasNextPage && !cursor) {
+                    console.warn('[ProfileService] hasNextPage=true 但 nextCursor 为空，终止分页');
+                    break;
+                }
             }
 
             if (pageCount >= maxPages) {

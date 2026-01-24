@@ -11,6 +11,7 @@ import { _decorator } from 'cc';
 import { UIBase } from '../core/UIBase';
 import { UIWallet } from './UIWallet';
 import { UICommonSetting, SettingMode } from './UICommonSetting';
+import { UIPlayerProfile } from './UIPlayerProfile';
 
 const { ccclass } = _decorator;
 
@@ -21,12 +22,14 @@ export class UICommonLayout extends UIBase {
     private commonSetting!: fgui.GComponent;
     private gameConfig!: fgui.GComponent;
     private suiConfig!: fgui.GComponent;
+    private playerProfile!: fgui.GComponent;
 
     // UI 逻辑组件
     private walletUI!: UIWallet;
     private settingUI!: UICommonSetting;
     private gameConfigUI!: any;  // UIGameConfig 类型
     private suiConfigUI!: any;  // UISuiConfig 类型
+    private playerProfileUI!: UIPlayerProfile;
 
     /**
      * UI 包名和组件名
@@ -50,8 +53,9 @@ export class UICommonLayout extends UIBase {
         this.commonSetting = this.getFGuiComponent('commonSetting')!;
         this.gameConfig = this.getFGuiComponent('gameConfig')!;
         this.suiConfig = this.getFGuiComponent('suiConfig')!;
+        this.playerProfile = this.getFGuiComponent('playerProfile')!;
 
-        if (!this.wallet || !this.commonSetting || !this.gameConfig || !this.suiConfig) {
+        if (!this.wallet || !this.commonSetting || !this.gameConfig || !this.suiConfig || !this.playerProfile) {
             console.error('[UICommonLayout] Failed to get child components');
             return;
         }
@@ -94,7 +98,16 @@ export class UICommonLayout extends UIBase {
             console.log('[UICommonLayout] SuiConfig initialized (hidden by default)');
         });
 
-        console.log('[UICommonLayout] Initialized with Wallet, CommonSetting, GameConfig, and SuiConfig');
+        // 创建 UIPlayerProfile 逻辑组件
+        this.playerProfileUI = this.playerProfile.node.addComponent(UIPlayerProfile);
+        this.playerProfileUI.setUIName('PlayerProfile');
+        this.playerProfileUI.setPanel(this.playerProfile);
+        this.playerProfileUI.init();
+
+        // 默认隐藏
+        this.playerProfile.visible = false;
+
+        console.log('[UICommonLayout] Initialized with Wallet, CommonSetting, GameConfig, SuiConfig, and PlayerProfile');
     }
 
     /**
@@ -165,6 +178,43 @@ export class UICommonLayout extends UIBase {
      */
     public getSuiConfig(): any {
         return this.suiConfigUI;
+    }
+
+    // ================== PlayerProfile 控制 ==================
+
+    /**
+     * 切换 PlayerProfile 显示/隐藏
+     * @returns 切换后的可见性
+     */
+    public togglePlayerProfile(): boolean {
+        if (!this.playerProfile) {
+            console.warn('[UICommonLayout] playerProfile component not initialized');
+            return false;
+        }
+
+        this.playerProfile.visible = !this.playerProfile.visible;
+        console.log('[UICommonLayout] PlayerProfile visible:', this.playerProfile.visible);
+
+        // 如果显示，触发 onShow 加载数据
+        if (this.playerProfile.visible && this.playerProfileUI) {
+            this.playerProfileUI.show(undefined, false);
+        }
+
+        return this.playerProfile.visible;
+    }
+
+    /**
+     * 获取 PlayerProfile 可见性
+     */
+    public isPlayerProfileVisible(): boolean {
+        return this.playerProfile?.visible || false;
+    }
+
+    /**
+     * 获取 PlayerProfile UI 实例
+     */
+    public getPlayerProfile(): UIPlayerProfile {
+        return this.playerProfileUI;
     }
 
     // ================== 模式控制（转发到 CommonSetting） ==================

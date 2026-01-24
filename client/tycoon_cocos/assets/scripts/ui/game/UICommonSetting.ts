@@ -39,6 +39,7 @@ export class UICommonSetting extends UIBase {
     private btn_editorSetting!: fgui.GButton;
     private btn_debug!: fgui.GButton;
     private btn_minimap!: fgui.GButton;
+    private btn_playerProfile!: fgui.GButton;
 
     // Mode Controller（控制按钮在不同模式下的显示）
     private m_modeController!: fgui.Controller;
@@ -68,6 +69,7 @@ export class UICommonSetting extends UIBase {
         this.btn_editorSetting = this.getButton('btn_editorSetting')!;
         this.btn_debug = this.getButton('btn_debug')!;
         this.btn_minimap = this.getButton('btn_minimap')!;
+        this.btn_playerProfile = this.getButton('btn_playerProfile')!;
 
         // 绑定事件（按钮可能在某些模式下不存在，需要检查）
         this.btn_gameConfig?.onClick(this.onGameConfigClick, this);
@@ -76,12 +78,14 @@ export class UICommonSetting extends UIBase {
         this.btn_editorSetting?.onClick(this.onEditorSettingClick, this);
         this.btn_debug?.onClick(this.onDebugClick, this);
         this.btn_minimap?.onClick(this.onMinimapClick, this);
+        this.btn_playerProfile?.onClick(this.onPlayerProfileClick, this);
 
         // 监听事件
         EventBus.on(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
         EventBus.on(EventTypes.UI.EditorSettingClosed, this.onEditorSettingClosed, this);
         EventBus.on(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
         EventBus.on(EventTypes.UI.MinimapClosed, this.onMinimapClosed, this);
+        EventBus.on(EventTypes.UI.PlayerProfileClosed, this.onPlayerProfileClosed, this);
     }
 
     /**
@@ -239,6 +243,32 @@ export class UICommonSetting extends UIBase {
         }
     }
 
+    /**
+     * 玩家资料按钮点击（Toggle 按钮）
+     * 控制 PlayerProfile 显示/隐藏
+     */
+    private onPlayerProfileClick(): void {
+        console.log('[UICommonSetting] PlayerProfile button clicked');
+
+        // 切换 PlayerProfile 显示/隐藏
+        UIManager.instance.togglePlayerProfile();
+
+        // 同步按钮状态
+        if (this.btn_playerProfile) {
+            this.btn_playerProfile.selected = UIManager.instance.isPlayerProfileVisible();
+        }
+    }
+
+    /**
+     * PlayerProfile 关闭事件（用于同步按钮状态）
+     */
+    private onPlayerProfileClosed(): void {
+        console.log('[UICommonSetting] PlayerProfile closed event received');
+        if (this.btn_playerProfile) {
+            this.btn_playerProfile.selected = false;
+        }
+    }
+
     // ================== 模式控制 ==================
 
     /**
@@ -256,6 +286,7 @@ export class UICommonSetting extends UIBase {
         this.btn_editorSetting && (this.btn_editorSetting.selected = false);
         this.btn_debug && (this.btn_debug.selected = false);
         this.btn_minimap && (this.btn_minimap.selected = false);
+        this.btn_playerProfile && (this.btn_playerProfile.selected = false);
     }
 
     /**
@@ -286,11 +317,16 @@ export class UICommonSetting extends UIBase {
             this.btn_minimap.offClick(this.onMinimapClick, this);
         }
 
+        if (this.btn_playerProfile) {
+            this.btn_playerProfile.offClick(this.onPlayerProfileClick, this);
+        }
+
         // 移除事件监听
         EventBus.off(EventTypes.UI.PlaySettingClosed, this.onPlaySettingClosed, this);
         EventBus.off(EventTypes.UI.EditorSettingClosed, this.onEditorSettingClosed, this);
         EventBus.off(EventTypes.UI.SuiConfigClosed, this.onSuiConfigClosed, this);
         EventBus.off(EventTypes.UI.MinimapClosed, this.onMinimapClosed, this);
+        EventBus.off(EventTypes.UI.PlayerProfileClosed, this.onPlayerProfileClosed, this);
 
         super.unbindEvents();
     }

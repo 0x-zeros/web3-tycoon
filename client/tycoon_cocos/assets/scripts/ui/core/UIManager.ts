@@ -1197,6 +1197,24 @@ export class UIManager {
     }
 
     /**
+     * 切换 PlayerProfile 显示/隐藏
+     */
+    public togglePlayerProfile(): void {
+        if (this._commonLayoutUI) {
+            this._commonLayoutUI.togglePlayerProfile();
+        } else {
+            console.warn('[UIManager] CommonLayout not initialized');
+        }
+    }
+
+    /**
+     * 获取 PlayerProfile 可见性
+     */
+    public isPlayerProfileVisible(): boolean {
+        return this._commonLayoutUI?.isPlayerProfileVisible() || false;
+    }
+
+    /**
      * 设置 CommonSetting 模式
      * 由各 UI 界面在 onShow 时调用
      */

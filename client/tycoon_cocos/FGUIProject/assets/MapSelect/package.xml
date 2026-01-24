@@ -13,6 +13,8 @@
     <component id="lizyod" name="SearchGame.xml" path="/components/"/>
     <component id="lizyoe" name="SearchMap.xml" path="/components/"/>
     <component id="jhxsof" name="Search.xml" path="/" exported="true"/>
+    <component id="oe4kog" name="GameProfile.xml" path="/"/>
+    <component id="oe4koh" name="MapProfile.xml" path="/"/>
   </resources>
   <publish name=""/>
 </packageDescription>

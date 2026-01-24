@@ -15,10 +15,10 @@
     <image id="ue83i" name="capy3.png" path="/images/player/"/>
     <component id="ue83j" name="PlayerInfo.xml" path="/components/playerInfo/"/>
     <component id="ue83k" name="PlayerInfoList.xml" path="/images/"/>
-    <component id="105vop" name="MapElement.xml" path="/components/"/>
-    <component id="105vor" name="Editor.xml" path="/components/"/>
+    <component id="105vop" name="MapElement.xml" path="/components/editor/"/>
+    <component id="105vor" name="Editor.xml" path="/components/editor/"/>
     <component id="pd4wos" name="Debug.xml" path="/components/"/>
-    <component id="pn5rou" name="Tile.xml" path="/components/"/>
+    <component id="pn5rou" name="Tile.xml" path="/components/editor/"/>
     <component id="f49aov" name="PlaySetting.xml" path="/components/"/>
     <component id="f49aox" name="CardDraws.xml" path="/" exported="true"/>
     <component id="n6n6oy" name="Building.xml" path="/components/"/>
@@ -36,11 +36,12 @@
     <component id="mrzhpc" name="EventLog.xml" path="/components/playerDetail/"/>
     <component id="mrzhpd" name="EventLogItem.xml" path="/components/playerDetail/"/>
     <component id="uas2pe" name="PlayerBuffDetail.xml" path="/components/playerDetail/"/>
-    <component id="uas2pg" name="EditorSetting.xml" path="/components/"/>
+    <component id="uas2pg" name="EditorSetting.xml" path="/components/editor/"/>
     <component id="la01ph" name="CardShop.xml" path="/" exported="true"/>
     <component id="la01pi" name="CardShopItem.xml" path="/components/card/"/>
     <component id="m8d4pj" name="SummonNpc.xml" path="/" exported="true"/>
     <component id="m8d4pk" name="NpcItem.xml" path="/components/"/>
+    <component id="oe4kpl" name="PublishMap.xml" path="/components/editor/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

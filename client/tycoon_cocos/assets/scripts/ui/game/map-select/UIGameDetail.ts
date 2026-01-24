@@ -9,6 +9,7 @@ import { UINotification } from "../../utils/UINotification";
 import { UIMessage } from "../../utils/UIMessage";
 import { IdFormatter } from "../../utils/IdFormatter";
 import { PlayerDisplayHelper } from "../../utils/PlayerDisplayHelper";
+import { GameDisplayHelper } from "../../utils/GameDisplayHelper";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
@@ -131,7 +132,7 @@ export class UIGameDetail extends UIBase {
 
         // 显示游戏 ID
         if (this.m_gameid) {
-            this.m_gameid.text = game.id;  // ✅ 完整显示
+            GameDisplayHelper.updateGameName(this.m_gameid, game.id);
         }
 
         // 显示地图 ID

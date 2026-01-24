@@ -12,6 +12,7 @@ import { UIBase } from "../../core/UIBase";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
 import { PlayerDisplayHelper } from "../../utils/PlayerDisplayHelper";
+import { GameDisplayHelper } from "../../utils/GameDisplayHelper";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
@@ -229,7 +230,7 @@ export class UIGameList extends UIBase {
         // 根据 FairyGUI 的实际组件名称设置
         const gameidText = button.getChild("gameid") as fgui.GTextField;
         if (gameidText) {
-            gameidText.text = game.id;  // ✅ 完整显示
+            GameDisplayHelper.updateGameName(gameidText, game.id, `list_${index}`);
         }
 
         const mapidText = button.getChild("mapid") as fgui.GTextField;

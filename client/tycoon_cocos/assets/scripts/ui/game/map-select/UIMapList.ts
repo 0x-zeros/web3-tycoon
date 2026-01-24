@@ -10,6 +10,7 @@
 
 import { UIBase } from "../../core/UIBase";
 import { SuiManager } from "../../../sui/managers/SuiManager";
+import { ProfileService } from "../../../sui/services/ProfileService";
 import { UINotification } from "../../utils/UINotification";
 import { UIMessage } from "../../utils/UIMessage";
 import { EventBus } from "../../../events/EventBus";
@@ -316,12 +317,14 @@ export class UIMapList extends UIBase {
         priceRiseDays: number;
         maxRounds: number;
         settings?: number;  // 位字段
+        name?: string;  // 游戏名称（可选）
     }): Promise<void> {
         console.log('[UIMapList] CreateGameWithParams event received');
         console.log('  Parameters:', {
             ...data,
             startingCash: data.startingCash.toString(),  // BigInt需要转为string才能log
-            settings: data.settings
+            settings: data.settings,
+            name: data.name
         });
 
         try {
@@ -337,6 +340,17 @@ export class UIMapList extends UIBase {
             );
 
             console.log('[UIMapList] 游戏创建成功:', result);
+
+            // 如果提供了游戏名称，创建 GameProfile（可选，失败不影响游戏创建）
+            if (data.name && data.name.length > 0) {
+                try {
+                    await ProfileService.instance.createGameProfile(result.gameId, data.name);
+                    console.log('[UIMapList] GameProfile 创建成功');
+                } catch (profileError) {
+                    console.warn('[UIMapList] GameProfile 创建失败（不影响游戏）:', profileError);
+                    // 不抛出错误，游戏已创建成功
+                }
+            }
 
             // 显示成功消息
             UIMessage.success(

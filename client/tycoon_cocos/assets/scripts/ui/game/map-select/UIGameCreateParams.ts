@@ -47,6 +47,9 @@ export class UIGameCreateParams extends UIBase {
     // GM模式按钮
     private m_btnGm: fgui.GButton;
 
+    // 游戏名称输入框
+    private m_inputName: fgui.GTextField;
+
     // 数据
     private _mapTemplateId: string;
 
@@ -87,6 +90,9 @@ export class UIGameCreateParams extends UIBase {
 
         // 编辑地图按钮
         this.m_btnEditMap = this.getButton('btn_editMap');
+
+        // 游戏名称输入框
+        this.m_inputName = this.getText('name');
 
         // 检查组件是否正确获取
         if (!this.m_btnCreateGame) {
@@ -360,13 +366,15 @@ export class UIGameCreateParams extends UIBase {
             maxRounds: this.m_controllerMaxRounds.selectedIndex === 0
                 ? 0  // 无限期
                 : parseInt(this.m_textMaxRounds.text),  // 有限期
-            settings: this.m_btnGm?.selected ? SETTING_GM_MODE : 0  // 游戏设置位字段
+            settings: this.m_btnGm?.selected ? SETTING_GM_MODE : 0,  // 游戏设置位字段
+            name: this.m_inputName?.text?.trim() || ''  // 游戏名称（可选）
         };
 
         console.log('[UIGameCreateParams] Create game with params:', {
             ...params,
             startingCash: params.startingCash.toString(),  // BigInt需要转为string才能log
-            settings: params.settings
+            settings: params.settings,
+            name: params.name
         });
 
         // 发送事件，让UIMapList处理实际创建

@@ -154,9 +154,7 @@ export class ProfileService {
             ]
         });
 
-        const result = await SuiManager.instance.signAndExecuteTransaction(tx, {
-            showEvents: true,
-        });
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
 
         // 清除缓存
         const address = SuiManager.instance.currentAddress;
@@ -249,8 +247,18 @@ export class ProfileService {
             }
         }
 
-        // 索引中没有，返回 null（需要通过事件索引建立映射）
-        console.log('[ProfileService] GameProfile 不在索引中:', gameId);
+        // 索引未命中，尝试从链上事件回填
+        console.log('[ProfileService] GameProfile 不在索引中，尝试链上回填:', gameId);
+        const backfilledProfileId = await this.queryProfileFromEvents(gameId, 'GameProfileCreatedEvent', 'game_id');
+        if (backfilledProfileId) {
+            this.registerGameProfileIndex(gameId, backfilledProfileId);
+            const profile = await this.getGameProfileById(backfilledProfileId);
+            if (profile) {
+                this.gameProfileCache.set(gameId, { data: profile, timestamp: Date.now() });
+                return profile;
+            }
+        }
+
         this.gameProfileCache.set(gameId, { data: null, timestamp: Date.now() });
         return null;
     }
@@ -291,9 +299,7 @@ export class ProfileService {
             ]
         });
 
-        const result = await SuiManager.instance.signAndExecuteTransaction(tx, {
-            showEvents: true,
-        });
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
 
         // 从事件中提取 Profile ID 并注册索引
         const profileId = this.extractProfileIdFromEvents(result.events, 'GameProfileCreatedEvent');
@@ -364,8 +370,18 @@ export class ProfileService {
             }
         }
 
-        // 索引中没有，返回 null
-        console.log('[ProfileService] MapProfile 不在索引中:', mapId);
+        // 索引未命中，尝试从链上事件回填
+        console.log('[ProfileService] MapProfile 不在索引中，尝试链上回填:', mapId);
+        const backfilledProfileId = await this.queryProfileFromEvents(mapId, 'MapProfileCreatedEvent', 'map_id');
+        if (backfilledProfileId) {
+            this.registerMapProfileIndex(mapId, backfilledProfileId);
+            const profile = await this.getMapProfileById(backfilledProfileId);
+            if (profile) {
+                this.mapProfileCache.set(mapId, { data: profile, timestamp: Date.now() });
+                return profile;
+            }
+        }
+
         this.mapProfileCache.set(mapId, { data: null, timestamp: Date.now() });
         return null;
     }
@@ -408,9 +424,7 @@ export class ProfileService {
             ]
         });
 
-        const result = await SuiManager.instance.signAndExecuteTransaction(tx, {
-            showEvents: true,
-        });
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
 
         // 从事件中提取 Profile ID 并注册索引
         const profileId = this.extractProfileIdFromEvents(result.events, 'MapProfileCreatedEvent');
@@ -481,6 +495,73 @@ export class ProfileService {
     }
 
     // ==================== 辅助方法 ====================
+
+    /**
+     * 规范化 ID 格式
+     * 处理可能是对象或字符串的 ID
+     */
+    private normalizeId(id: any): string {
+        if (typeof id === 'string') {
+            return id;
+        }
+        if (typeof id === 'object') {
+            if (id.id) return id.id;
+            if (id.bytes) return id.bytes;
+        }
+        return String(id);
+    }
+
+    /**
+     * 从链上事件查询 Profile ID（回填机制）
+     * 当索引未命中时，通过遍历历史事件找到匹配的 profile
+     *
+     * @param targetId 目标 ID（game_id 或 map_id）
+     * @param eventTypeName 事件类型名称
+     * @param idFieldName 事件中的 ID 字段名
+     * @returns Profile ID 或 null
+     */
+    private async queryProfileFromEvents(
+        targetId: string,
+        eventTypeName: 'GameProfileCreatedEvent' | 'MapProfileCreatedEvent',
+        idFieldName: 'game_id' | 'map_id'
+    ): Promise<string | null> {
+        try {
+            const client = this.getClient();
+            const fullType = `${this.packageId}::events::${eventTypeName}`;
+
+            // 查询该类型的所有事件（限制数量避免性能问题）
+            const res = await client.queryEvents({
+                query: { MoveEventType: fullType },
+                order: 'descending',
+                limit: 100,
+            });
+
+            if (!res.data || res.data.length === 0) {
+                console.log('[ProfileService] 未找到任何事件:', eventTypeName);
+                return null;
+            }
+
+            // 遍历事件找到匹配的 profile
+            for (const event of res.data) {
+                const json = event.parsedJson as any;
+                if (!json) continue;
+
+                const eventTargetId = this.normalizeId(json[idFieldName]);
+                if (eventTargetId === targetId) {
+                    const profileId = this.normalizeId(json.profile_id);
+                    console.log('[ProfileService] 链上回填成功:', targetId, '->', profileId);
+                    return profileId;
+                }
+            }
+
+            console.log('[ProfileService] 遍历事件未找到匹配:', targetId);
+            return null;
+
+        } catch (error) {
+            console.error('[ProfileService] 链上查询失败:', error);
+            return null;
+        }
+    }
 
     /**
      * 从交易事件中提取 Profile ID

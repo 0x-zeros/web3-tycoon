@@ -6,7 +6,9 @@ import { UIMapElement } from "./UIMapElement";
 import { UIMessage, MessageBoxIcon } from "../utils/UIMessage";
 import { UINotification } from "../utils/UINotification";
 import { SuiManager } from "../../sui/managers/SuiManager";
+import { ProfileService } from "../../sui/services/ProfileService";
 import { exportGameMapToMapTemplate } from "../../map/utils/MapTemplateExporter";
+import { UIPublishMap } from "./UIPublishMap";
 import * as fgui from "fairygui-cc";
 import { _decorator, find, input, Input, KeyCode } from 'cc';
 import { GameMap } from "../../map/core/GameMap";
@@ -48,6 +50,9 @@ export class UIEditor extends UIBase {
 
     /** 地块类型显示状态 */
     private _isShowingTileTypes: boolean = false;
+
+    /** 发布地图确认对话框 */
+    private m_publishMapUI: UIPublishMap | null = null;
 
     /** 当前选中的tile显示 */
     private m_tile: fgui.GComponent;
@@ -92,11 +97,19 @@ export class UIEditor extends UIBase {
         if (this.m_tile) {
             this.m_tileTitle = this.m_tile.getChild("title") as fgui.GTextField;
             this.m_tileIcon = this.m_tile.getChild("tileIcon") as fgui.GLoader;
-            
+
             // 初始时隐藏tile（没有选中任何地块）
             this.m_tile.visible = false;
         }
-        
+
+        // 获取 PublishMap 子组件
+        const publishMapCom = this.getChild('publishMap');
+        if (publishMapCom) {
+            this.m_publishMapUI = new UIPublishMap();
+            this.m_publishMapUI.initSubUI(publishMapCom.asCom);
+            publishMapCom.visible = false;  // 初始隐藏
+        }
+
         console.log('[UIEditor] Components setup completed');
     }
     
@@ -193,6 +206,11 @@ export class UIEditor extends UIBase {
 
         // 解绑地图元素选中事件
         EventBus.off(EventTypes.UI.MapElementSelected, this._onMapElementSelected, this);
+
+        // 解绑 PublishMap 事件
+        if (this.m_publishMapUI) {
+            this.m_publishMapUI.unbindButtonEvents();
+        }
 
         // 键盘事件已移除
         // input.off(Input.EventType.KEY_DOWN, this._onKeyDown, this);
@@ -513,7 +531,7 @@ export class UIEditor extends UIBase {
             const mapTemplate = exportGameMapToMapTemplate(gameMap, '0');  // templateId=0，Move 端自动生成
             console.log('[UIEditor] ✓ Map template exported');
 
-            // Step 5: 显示确认对话框
+            // Step 5: 显示 PublishMap 确认对话框
             const confirmMessage =
                 `确认发布地图到 Sui 链上？\n\n` +
                 `✓ 地块数量: ${mapTemplate.tiles_static.size}\n` +
@@ -521,15 +539,34 @@ export class UIEditor extends UIBase {
                 `✓ 医院数量: ${mapTemplate.hospital_ids.length}\n\n` +
                 `注意：\n` +
                 `• 发布后无法修改\n` +
-                `• 需要消耗 Gas 费用\n` +
-                `• 数据已通过完整验证\n\n` +
-                `确认继续？`;
+                `• 需要消耗 Gas 费用`;
 
-            const confirmed = await UIMessage.confirm({
-                message: confirmMessage,
-                title: "确认发布",
-                confirmText: "确认",
-                cancelText: "取消"
+            // 检查 PublishMap UI 是否可用
+            if (!this.m_publishMapUI) {
+                // fallback 到 UIMessage
+                const confirmed = await UIMessage.confirm({
+                    message: confirmMessage,
+                    title: "确认发布",
+                    confirmText: "确认",
+                    cancelText: "取消"
+                });
+                if (!confirmed) {
+                    console.log('[UIEditor] User cancelled');
+                    return;
+                }
+            }
+
+            // 使用 Promise 包装异步确认
+            const { confirmed, mapName } = await new Promise<{ confirmed: boolean; mapName: string }>((resolve) => {
+                if (this.m_publishMapUI) {
+                    this.m_publishMapUI.showConfirm(
+                        confirmMessage,
+                        (name) => resolve({ confirmed: true, mapName: name }),
+                        () => resolve({ confirmed: false, mapName: '' })
+                    );
+                } else {
+                    resolve({ confirmed: true, mapName: '' });
+                }
             });
 
             if (!confirmed) {
@@ -545,6 +582,22 @@ export class UIEditor extends UIBase {
             console.log('[UIEditor] ✓ Map published successfully');
             console.log('  Template ID:', result.templateId);
             console.log('  Tx Hash:', result.txHash);
+
+            // 如果用户填写了地图名称，创建 MapProfile
+            if (mapName) {
+                try {
+                    console.log('[UIEditor] Creating map profile with name:', mapName);
+                    await ProfileService.instance.createMapProfile(
+                        result.templateId,
+                        mapName,
+                        ''  // description 暂时为空
+                    );
+                    console.log('[UIEditor] ✓ Map profile created');
+                } catch (error) {
+                    console.warn('[UIEditor] Failed to create map profile:', error);
+                    // 不阻塞主流程，名称保存失败只是警告
+                }
+            }
 
             // Step 7: 显示成功消息（双按钮）
             const explorerUrl = SuiManager.instance.getExplorer(result.txHash, 'txblock');

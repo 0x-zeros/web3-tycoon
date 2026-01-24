@@ -33,5 +33,6 @@
     <component id="n11_12ec4" name="btn_showTileType" src="mumqlc" fileName="components/Button1.xml" pkg="82r0pzop" xy="29,317" size="230,50">
       <Button title="显示类型"/>
     </component>
+    <component id="n16_pm" name="publishMap" src="oe4kpl" fileName="components/editor/PublishMap.xml" xy="-260,0" size="800,600" visible="false"/>
   </displayList>
 </component>

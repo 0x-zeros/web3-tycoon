@@ -10,6 +10,8 @@ export const SuiEnvConfig = {
     network: 'localnet',
     // tycoon_profiles 合约地址（部署后更新）
     profilesPackageId: '',
+    // ProfileRegistry shared object ID（部署后更新）
+    profilesRegistryId: '',
 
     // 开发环境使用 Keypair 签名
     signerType: 'keypair' as const

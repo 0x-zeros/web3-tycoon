@@ -337,8 +337,9 @@ export class GameInitializer extends Component {
 
             // 初始化 ProfileService 和 ProfileEventHandler（如果配置了 profilesPackageId）
             if (savedConfig.profilesPackageId) {
-                ProfileService.instance.initialize(savedConfig.profilesPackageId);
+                ProfileService.instance.initialize(savedConfig.profilesPackageId, savedConfig.profilesRegistryId);
                 console.log('  ProfilesPackageID:', savedConfig.profilesPackageId);
+                console.log('  ProfilesRegistryID:', savedConfig.profilesRegistryId || '(未配置，将使用事件回填)');
 
                 // 初始化并启动 ProfileEventHandler（独立监听 tycoon_profiles 包事件）
                 await ProfileEventHandler.getInstance().initialize(savedConfig.profilesPackageId);

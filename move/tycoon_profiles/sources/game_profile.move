@@ -4,6 +4,7 @@ module tycoon_profiles::game_profile;
 
 use std::string::String;
 use tycoon_profiles::events;
+use tycoon_profiles::registry::{Self, ProfileRegistry};
 
 // ============ Constants ============
 
@@ -39,7 +40,9 @@ public struct GameProfile has key, store {
 /// 创建游戏档案
 /// - 创建后设为 shared object
 /// - 名称长度: 1-64 字符
+/// - 自动注册到 Registry
 public entry fun create_game_profile(
+    registry: &mut ProfileRegistry,
     game_id: ID,
     name: String,
     ctx: &mut TxContext,
@@ -59,10 +62,13 @@ public entry fun create_game_profile(
 
     let profile_id = object::id(&profile);
 
+    // 注册到 Registry（用于免 gas 查询）
+    registry::register_game_profile(registry, game_id, profile_id);
+
     // 设为 shared object
     transfer::share_object(profile);
 
-    // 发送创建事件
+    // 发送创建事件（保留用于事件回填兼容）
     events::emit_game_profile_created(profile_id, game_id, creator);
 }
 
@@ -108,16 +114,31 @@ public fun name(profile: &GameProfile): &String {
 #[test_only]
 use sui::test_scenario;
 
+#[test_only]
+/// 辅助函数：初始化 Registry
+fun init_registry(ctx: &mut TxContext) {
+    registry::init_for_testing(ctx);
+}
+
 #[test]
 fun test_create_game_profile() {
     let user = @0x1;
     let game_id = object::id_from_address(@0x100);
     let mut scenario = test_scenario::begin(user);
 
-    // 创建档案
+    // 初始化 Registry
     {
         let ctx = scenario.ctx();
-        create_game_profile(game_id, b"My Game".to_string(), ctx);
+        init_registry(ctx);
+    };
+
+    // 创建档案
+    scenario.next_tx(user);
+    {
+        let mut registry = scenario.take_shared<ProfileRegistry>();
+        let ctx = scenario.ctx();
+        create_game_profile(&mut registry, game_id, b"My Game".to_string(), ctx);
+        test_scenario::return_shared(registry);
     };
 
     // 验证档案
@@ -139,10 +160,19 @@ fun test_update_game_profile_name() {
     let game_id = object::id_from_address(@0x100);
     let mut scenario = test_scenario::begin(user);
 
-    // 创建档案
+    // 初始化 Registry
     {
         let ctx = scenario.ctx();
-        create_game_profile(game_id, b"My Game".to_string(), ctx);
+        init_registry(ctx);
+    };
+
+    // 创建档案
+    scenario.next_tx(user);
+    {
+        let mut registry = scenario.take_shared<ProfileRegistry>();
+        let ctx = scenario.ctx();
+        create_game_profile(&mut registry, game_id, b"My Game".to_string(), ctx);
+        test_scenario::return_shared(registry);
     };
 
     // 更新名称
@@ -166,10 +196,19 @@ fun test_update_game_profile_not_creator() {
     let game_id = object::id_from_address(@0x100);
     let mut scenario = test_scenario::begin(user);
 
-    // 创建档案
+    // 初始化 Registry
     {
         let ctx = scenario.ctx();
-        create_game_profile(game_id, b"My Game".to_string(), ctx);
+        init_registry(ctx);
+    };
+
+    // 创建档案
+    scenario.next_tx(user);
+    {
+        let mut registry = scenario.take_shared<ProfileRegistry>();
+        let ctx = scenario.ctx();
+        create_game_profile(&mut registry, game_id, b"My Game".to_string(), ctx);
+        test_scenario::return_shared(registry);
     };
 
     // 其他用户尝试更新
@@ -191,9 +230,18 @@ fun test_create_game_profile_empty_name() {
     let game_id = object::id_from_address(@0x100);
     let mut scenario = test_scenario::begin(user);
 
+    // 初始化 Registry
     {
         let ctx = scenario.ctx();
-        create_game_profile(game_id, b"".to_string(), ctx);
+        init_registry(ctx);
+    };
+
+    scenario.next_tx(user);
+    {
+        let mut registry = scenario.take_shared<ProfileRegistry>();
+        let ctx = scenario.ctx();
+        create_game_profile(&mut registry, game_id, b"".to_string(), ctx);
+        test_scenario::return_shared(registry);
     };
 
     scenario.end();

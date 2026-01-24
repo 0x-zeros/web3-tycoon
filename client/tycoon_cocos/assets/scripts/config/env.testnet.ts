@@ -9,5 +9,7 @@ export const SuiEnvConfig = {
     gameData: '0x5c1e0a6b0e87f9c1ef6c1d7b20fae6f3adc9b57bf7aab69aacab9f956206ccba',
     network: 'testnet',
     // tycoon_profiles 合约地址（部署后更新）
-    profilesPackageId: ''
+    profilesPackageId: '',
+    // ProfileRegistry shared object ID（部署后更新）
+    profilesRegistryId: ''
 };

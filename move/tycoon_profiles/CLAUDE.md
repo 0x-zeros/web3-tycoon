@@ -40,8 +40,20 @@ public struct MapProfile has key, store {
 }
 ```
 
+### ProfileRegistry (shared object)
+```move
+public struct ProfileRegistry has key {
+    id: UID,
+    game_profiles: Table<ID, ID>,  // game_id -> GameProfile ID
+    map_profiles: Table<ID, ID>,   // map_id -> MapProfile ID
+}
+```
+- 用于免 gas 的 O(1) 查询
+- 客户端通过 `getDynamicFieldObject` RPC 查询 Table 内容
+
 ## 模块结构
 
+- `registry.move` - ProfileRegistry（全局索引表）
 - `player_profile.move` - PlayerProfile CRUD
 - `game_profile.move` - GameProfile CRUD
 - `map_profile.move` - MapProfile CRUD
@@ -61,25 +73,35 @@ sui move test
 sui client publish --gas-budget 500000000
 ```
 
-部署后需要更新客户端配置文件中的 `profilesPackageId`：
+部署后需要更新客户端配置文件：
 - `env.mainnet.ts`
 - `env.testnet.ts`
 - `env.devnet.ts`
 - `env.localnet.ts`
+
+需要配置的字段：
+- `profilesPackageId` - tycoon_profiles 合约 Package ID
+- `profilesRegistryId` - ProfileRegistry shared object ID
 
 ## 客户端集成
 
 TypeScript 端使用 `ProfileService` 与合约交互：
 
 ```typescript
+// 初始化（需要 registryId 用于免 gas 查询）
+ProfileService.instance.initialize(packageId, registryId);
+
 // 获取玩家档案
 const profile = await ProfileService.instance.getPlayerProfile(address);
 
 // 创建玩家档案
 await ProfileService.instance.createPlayerProfile("Alice", 1);
 
-// 更新玩家昵称
-await ProfileService.instance.updatePlayerName(profileId, "Bob");
+// 创建游戏档案（需要传入 Registry）
+await ProfileService.instance.createGameProfile(gameId, "My Game");
+
+// 创建地图档案（需要传入 Registry）
+await ProfileService.instance.createMapProfile(mapId, "My Map", "Description");
 ```
 
 ## 查询方式
@@ -87,12 +109,36 @@ await ProfileService.instance.updatePlayerName(profileId, "Bob");
 | 类型 | 查询方式 | 说明 |
 |------|---------|------|
 | PlayerProfile | `getOwnedObjects` by address | owned object，直接通过地址查询 |
-| GameProfile | 事件索引 + 对象查询 | shared object，需要先通过事件建立 game_id → profile_id 映射 |
-| MapProfile | 事件索引 + 对象查询 | shared object，需要先通过事件建立 map_id → profile_id 映射 |
+| GameProfile | Registry（优先）/ 事件回填 | 先查 Registry Table，未命中则事件回填 |
+| MapProfile | Registry（优先）/ 事件回填 | 先查 Registry Table，未命中则事件回填 |
+
+### Registry 查询流程（免 gas，O(1)）
+
+```typescript
+// 查询顺序：缓存 → 内存索引 → Registry → 事件回填
+public async getGameProfile(gameId: string): Promise<GameProfile | null> {
+    // 1. 检查缓存
+    // 2. 检查内存索引
+    // 3. 尝试 Registry 查询（免 gas，O(1)）
+    // 4. 回退：事件回填（最后手段）
+    // 5. 获取完整 Profile
+}
+```
+
+Registry 查询使用 Sui RPC 的 `getDynamicFieldObject`：
+```typescript
+const result = await client.getDynamicFieldObject({
+    parentId: gameProfilesTableId,
+    name: {
+        type: '0x2::object::ID',
+        value: gameId
+    }
+});
+```
 
 ## 事件
 
-用于客户端建立索引：
+用于客户端建立索引（事件回填作为 Registry 查询的降级方案）：
 
 - `PlayerProfileCreatedEvent` - 玩家档案创建
 - `PlayerProfileUpdatedEvent` - 玩家档案更新
@@ -100,3 +146,10 @@ await ProfileService.instance.updatePlayerName(profileId, "Bob");
 - `GameProfileUpdatedEvent` - 游戏档案更新
 - `MapProfileCreatedEvent` - 地图档案创建
 - `MapProfileUpdatedEvent` - 地图档案更新
+
+## 方案对比
+
+| 方案 | 查询成本 | 查询复杂度 | 上限限制 |
+|------|---------|-----------|---------|
+| 事件回填（旧） | 免费 | O(n) 遍历 | 5000 条 |
+| **Registry + Dynamic Fields** | **免费** | **O(1)** | **无** |

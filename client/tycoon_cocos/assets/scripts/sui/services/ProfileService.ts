@@ -47,6 +47,9 @@ export class ProfileService {
     /** profiles package ID */
     private packageId: string = '';
 
+    /** ProfileRegistry shared object ID（用于免 gas 查询） */
+    private registryId: string = '';
+
     private constructor() {}
 
     /**
@@ -62,10 +65,12 @@ export class ProfileService {
     /**
      * 初始化服务
      * @param packageId tycoon_profiles 合约的 package ID
+     * @param registryId ProfileRegistry shared object ID（可选，用于免 gas 查询）
      */
-    public initialize(packageId: string): void {
+    public initialize(packageId: string, registryId?: string): void {
         this.packageId = packageId;
-        console.log('[ProfileService] 初始化完成, packageId:', packageId);
+        this.registryId = registryId || '';
+        console.log('[ProfileService] 初始化完成, packageId:', packageId, ', registryId:', registryId || '(未配置)');
     }
 
     /**
@@ -226,33 +231,41 @@ export class ProfileService {
 
     /**
      * 获取游戏档案
+     * 查询顺序：缓存 → 内存索引 → Registry（免 gas）→ 事件回填
      * @param gameId Game 对象 ID
      * @returns GameProfile 或 null
      */
     public async getGameProfile(gameId: string): Promise<GameProfile | null> {
-        // 检查缓存
+        // 1. 检查缓存
         const cached = this.gameProfileCache.get(gameId);
         if (this.isCacheValid(cached)) {
             console.log('[ProfileService] GameProfile 缓存命中:', gameId);
             return cached!.data;
         }
 
-        // 检查索引
-        const profileId = this.gameProfileIndex.get(gameId);
-        if (profileId) {
-            const profile = await this.getGameProfileById(profileId);
-            if (profile) {
-                this.gameProfileCache.set(gameId, { data: profile, timestamp: Date.now() });
-                return profile;
+        // 2. 检查内存索引
+        let profileId = this.gameProfileIndex.get(gameId);
+
+        // 3. 尝试 Registry 查询（免 gas，O(1)）
+        if (!profileId && this.registryId) {
+            profileId = await this.queryGameProfileIdFromRegistry(gameId) ?? undefined;
+            if (profileId) {
+                this.registerGameProfileIndex(gameId, profileId);
             }
         }
 
-        // 索引未命中，尝试从链上事件回填
-        console.log('[ProfileService] GameProfile 不在索引中，尝试链上回填:', gameId);
-        const backfilledProfileId = await this.queryProfileFromEvents(gameId, 'GameProfileCreatedEvent', 'game_id');
-        if (backfilledProfileId) {
-            this.registerGameProfileIndex(gameId, backfilledProfileId);
-            const profile = await this.getGameProfileById(backfilledProfileId);
+        // 4. 回退：事件回填（最后手段）
+        if (!profileId) {
+            console.log('[ProfileService] Registry 未命中，尝试事件回填:', gameId);
+            profileId = await this.queryProfileFromEvents(gameId, 'GameProfileCreatedEvent', 'game_id') ?? undefined;
+            if (profileId) {
+                this.registerGameProfileIndex(gameId, profileId);
+            }
+        }
+
+        // 5. 获取完整 Profile
+        if (profileId) {
+            const profile = await this.getGameProfileById(profileId);
             if (profile) {
                 this.gameProfileCache.set(gameId, { data: profile, timestamp: Date.now() });
                 return profile;
@@ -289,11 +302,16 @@ export class ProfileService {
      * @returns 创建的 Profile ID（从事件中提取）
      */
     public async createGameProfile(gameId: string, name: string): Promise<string> {
+        if (!this.registryId) {
+            throw new Error('[ProfileService] registryId 未配置，无法创建 GameProfile');
+        }
+
         const tx = new Transaction();
 
         tx.moveCall({
             target: `${this.packageId}::game_profile::create_game_profile`,
             arguments: [
+                tx.object(this.registryId),
                 tx.pure.id(gameId),
                 tx.pure.string(name)
             ]
@@ -349,33 +367,41 @@ export class ProfileService {
 
     /**
      * 获取地图档案
+     * 查询顺序：缓存 → 内存索引 → Registry（免 gas）→ 事件回填
      * @param mapId MapTemplate 对象 ID
      * @returns MapProfile 或 null
      */
     public async getMapProfile(mapId: string): Promise<MapProfile | null> {
-        // 检查缓存
+        // 1. 检查缓存
         const cached = this.mapProfileCache.get(mapId);
         if (this.isCacheValid(cached)) {
             console.log('[ProfileService] MapProfile 缓存命中:', mapId);
             return cached!.data;
         }
 
-        // 检查索引
-        const profileId = this.mapProfileIndex.get(mapId);
-        if (profileId) {
-            const profile = await this.getMapProfileById(profileId);
-            if (profile) {
-                this.mapProfileCache.set(mapId, { data: profile, timestamp: Date.now() });
-                return profile;
+        // 2. 检查内存索引
+        let profileId = this.mapProfileIndex.get(mapId);
+
+        // 3. 尝试 Registry 查询（免 gas，O(1)）
+        if (!profileId && this.registryId) {
+            profileId = await this.queryMapProfileIdFromRegistry(mapId) ?? undefined;
+            if (profileId) {
+                this.registerMapProfileIndex(mapId, profileId);
             }
         }
 
-        // 索引未命中，尝试从链上事件回填
-        console.log('[ProfileService] MapProfile 不在索引中，尝试链上回填:', mapId);
-        const backfilledProfileId = await this.queryProfileFromEvents(mapId, 'MapProfileCreatedEvent', 'map_id');
-        if (backfilledProfileId) {
-            this.registerMapProfileIndex(mapId, backfilledProfileId);
-            const profile = await this.getMapProfileById(backfilledProfileId);
+        // 4. 回退：事件回填（最后手段）
+        if (!profileId) {
+            console.log('[ProfileService] Registry 未命中，尝试事件回填:', mapId);
+            profileId = await this.queryProfileFromEvents(mapId, 'MapProfileCreatedEvent', 'map_id') ?? undefined;
+            if (profileId) {
+                this.registerMapProfileIndex(mapId, profileId);
+            }
+        }
+
+        // 5. 获取完整 Profile
+        if (profileId) {
+            const profile = await this.getMapProfileById(profileId);
             if (profile) {
                 this.mapProfileCache.set(mapId, { data: profile, timestamp: Date.now() });
                 return profile;
@@ -413,11 +439,16 @@ export class ProfileService {
      * @returns 创建的 Profile ID（从事件中提取）
      */
     public async createMapProfile(mapId: string, name: string, description: string): Promise<string> {
+        if (!this.registryId) {
+            throw new Error('[ProfileService] registryId 未配置，无法创建 MapProfile');
+        }
+
         const tx = new Transaction();
 
         tx.moveCall({
             target: `${this.packageId}::map_profile::create_map_profile`,
             arguments: [
+                tx.object(this.registryId),
                 tx.pure.id(mapId),
                 tx.pure.string(name),
                 tx.pure.string(description)
@@ -495,6 +526,122 @@ export class ProfileService {
     }
 
     // ==================== 辅助方法 ====================
+
+    /**
+     * 通过 Registry Dynamic Fields 查询 GameProfile ID（免 gas）
+     * @param gameId Game 对象 ID
+     * @returns Profile ID 或 null
+     */
+    private async queryGameProfileIdFromRegistry(gameId: string): Promise<string | null> {
+        if (!this.registryId) {
+            return null;
+        }
+
+        try {
+            const client = this.getClient();
+
+            // 获取 Registry 对象，提取 game_profiles Table ID
+            const registryObj = await client.getObject({
+                id: this.registryId,
+                options: { showContent: true }
+            });
+
+            const fields = (registryObj.data?.content as any)?.fields;
+            const gameProfilesTableId = fields?.game_profiles?.fields?.id?.id;
+
+            if (!gameProfilesTableId) {
+                console.warn('[ProfileService] 无法获取 game_profiles Table ID');
+                return null;
+            }
+
+            // 通过 Dynamic Fields 查询 game_id -> profile_id
+            const result = await client.getDynamicFieldObject({
+                parentId: gameProfilesTableId,
+                name: {
+                    type: '0x2::object::ID',
+                    value: gameId
+                }
+            });
+
+            if (!result.data?.content) {
+                return null;
+            }
+
+            const valueFields = (result.data.content as any)?.fields;
+            const profileId = valueFields?.value;
+
+            if (profileId) {
+                console.log('[ProfileService] Registry 查询 GameProfile 成功:', gameId, '->', profileId);
+            }
+            return profileId || null;
+
+        } catch (error: any) {
+            // 404 表示 key 不存在，不是真正的错误
+            if (error?.code === -32000 || error?.message?.includes('not found')) {
+                return null;
+            }
+            console.warn('[ProfileService] Registry 查询 GameProfile 失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 通过 Registry Dynamic Fields 查询 MapProfile ID（免 gas）
+     * @param mapId Map 对象 ID
+     * @returns Profile ID 或 null
+     */
+    private async queryMapProfileIdFromRegistry(mapId: string): Promise<string | null> {
+        if (!this.registryId) {
+            return null;
+        }
+
+        try {
+            const client = this.getClient();
+
+            // 获取 Registry 对象，提取 map_profiles Table ID
+            const registryObj = await client.getObject({
+                id: this.registryId,
+                options: { showContent: true }
+            });
+
+            const fields = (registryObj.data?.content as any)?.fields;
+            const mapProfilesTableId = fields?.map_profiles?.fields?.id?.id;
+
+            if (!mapProfilesTableId) {
+                console.warn('[ProfileService] 无法获取 map_profiles Table ID');
+                return null;
+            }
+
+            // 通过 Dynamic Fields 查询 map_id -> profile_id
+            const result = await client.getDynamicFieldObject({
+                parentId: mapProfilesTableId,
+                name: {
+                    type: '0x2::object::ID',
+                    value: mapId
+                }
+            });
+
+            if (!result.data?.content) {
+                return null;
+            }
+
+            const valueFields = (result.data.content as any)?.fields;
+            const profileId = valueFields?.value;
+
+            if (profileId) {
+                console.log('[ProfileService] Registry 查询 MapProfile 成功:', mapId, '->', profileId);
+            }
+            return profileId || null;
+
+        } catch (error: any) {
+            // 404 表示 key 不存在，不是真正的错误
+            if (error?.code === -32000 || error?.message?.includes('not found')) {
+                return null;
+            }
+            console.warn('[ProfileService] Registry 查询 MapProfile 失败:', error);
+            return null;
+        }
+    }
 
     /**
      * 规范化 ID 格式

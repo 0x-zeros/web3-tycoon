@@ -7,5 +7,7 @@ export const SuiEnvConfig = {
     upgradeCap: '0x6677a4b6e55832d04f06e026603ec3f6745fcbe81163e79d2dbb9ad63272396b',
     adminCap: '0x07c9205b3954f468bd6a6775b2c5942ed074ec7ef7aea2ef6befba36adcd2213',
     gameData: '0x5c1e0a6b0e87f9c1ef6c1d7b20fae6f3adc9b57bf7aab69aacab9f956206ccba',
-    network: 'testnet'
+    network: 'testnet',
+    // tycoon_profiles 合约地址（部署后更新）
+    profilesPackageId: ''
 };

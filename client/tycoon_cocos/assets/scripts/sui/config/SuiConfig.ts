@@ -32,6 +32,8 @@ export interface SuiConfig {
     adminCapId?: string;
     /** UpgradeCap ID（可选） */
     upgradeCapId?: string;
+    /** tycoon_profiles Package ID（可选，用于链上元数据） */
+    profilesPackageId?: string;
     /** 自定义 RPC URL（可选，覆盖默认网络 URL） */
     rpcUrl?: string;
     /** 签名器类型（wallet=钱包签名，keypair=本地密钥对，默认 wallet） */
@@ -51,6 +53,7 @@ export function fromEnvConfig(envConfig: {
     gameData: string;
     adminCap?: string;
     upgradeCap?: string;
+    profilesPackageId?: string;
     signerType?: 'wallet' | 'keypair';
 }): SuiConfig {
     return {
@@ -59,6 +62,7 @@ export function fromEnvConfig(envConfig: {
         gameDataId: envConfig.gameData,
         adminCapId: envConfig.adminCap,
         upgradeCapId: envConfig.upgradeCap,
+        profilesPackageId: envConfig.profilesPackageId,
         signerType: envConfig.signerType
     };
 }

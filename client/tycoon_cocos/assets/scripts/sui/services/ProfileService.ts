@@ -1,0 +1,551 @@
+/**
+ * Profile 服务
+ *
+ * 与链上 tycoon_profiles 合约交互的服务层
+ * 提供 PlayerProfile、GameProfile、MapProfile 的 CRUD 操作
+ *
+ * @author Web3 Tycoon Team
+ * @version 1.0.0
+ */
+
+import { SuiClient, SuiObjectResponse, SuiMoveObject } from '@mysten/sui/client';
+import { Transaction } from '@mysten/sui/transactions';
+import { SuiManager } from '../managers/SuiManager';
+import { PlayerProfile, GameProfile, MapProfile } from '../types/profile';
+
+/**
+ * 缓存条目
+ */
+interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+}
+
+/**
+ * Profile 服务
+ * 管理链上 Profile 数据的查询和创建
+ */
+export class ProfileService {
+    private static _instance: ProfileService | null = null;
+
+    /** 缓存有效期 (5分钟) */
+    private static readonly CACHE_TTL = 5 * 60 * 1000;
+
+    /** PlayerProfile 缓存 (address -> profile) */
+    private playerProfileCache = new Map<string, CacheEntry<PlayerProfile | null>>();
+
+    /** GameProfile 缓存 (gameId -> profile) */
+    private gameProfileCache = new Map<string, CacheEntry<GameProfile | null>>();
+
+    /** MapProfile 缓存 (mapId -> profile) */
+    private mapProfileCache = new Map<string, CacheEntry<MapProfile | null>>();
+
+    /** Game/Map ID -> Profile ID 索引（从事件建立） */
+    private gameProfileIndex = new Map<string, string>();
+    private mapProfileIndex = new Map<string, string>();
+
+    /** profiles package ID */
+    private packageId: string = '';
+
+    private constructor() {}
+
+    /**
+     * 获取单例实例
+     */
+    public static get instance(): ProfileService {
+        if (!ProfileService._instance) {
+            ProfileService._instance = new ProfileService();
+        }
+        return ProfileService._instance;
+    }
+
+    /**
+     * 初始化服务
+     * @param packageId tycoon_profiles 合约的 package ID
+     */
+    public initialize(packageId: string): void {
+        this.packageId = packageId;
+        console.log('[ProfileService] 初始化完成, packageId:', packageId);
+    }
+
+    /**
+     * 获取 Sui 客户端
+     */
+    private getClient(): SuiClient {
+        return SuiManager.instance.client;
+    }
+
+    /**
+     * 检查缓存是否有效
+     */
+    private isCacheValid<T>(entry: CacheEntry<T> | undefined): boolean {
+        if (!entry) return false;
+        return Date.now() - entry.timestamp < ProfileService.CACHE_TTL;
+    }
+
+    // ==================== PlayerProfile ====================
+
+    /**
+     * 获取玩家档案
+     * 通过 getOwnedObjects 查询指定地址拥有的 PlayerProfile
+     * @param address 钱包地址
+     * @returns PlayerProfile 或 null
+     */
+    public async getPlayerProfile(address: string): Promise<PlayerProfile | null> {
+        // 检查缓存
+        const cached = this.playerProfileCache.get(address);
+        if (this.isCacheValid(cached)) {
+            console.log('[ProfileService] PlayerProfile 缓存命中:', address);
+            return cached!.data;
+        }
+
+        try {
+            const client = this.getClient();
+            const profileType = `${this.packageId}::player_profile::PlayerProfile`;
+
+            // 查询该地址拥有的 PlayerProfile 对象
+            const response = await client.getOwnedObjects({
+                owner: address,
+                filter: {
+                    StructType: profileType
+                },
+                options: {
+                    showContent: true
+                }
+            });
+
+            if (response.data.length === 0) {
+                console.log('[ProfileService] 玩家档案不存在:', address);
+                this.playerProfileCache.set(address, { data: null, timestamp: Date.now() });
+                return null;
+            }
+
+            // 取第一个（每个地址应该只有一个 PlayerProfile）
+            const obj = response.data[0];
+            const profile = this.parsePlayerProfile(obj);
+
+            if (profile) {
+                this.playerProfileCache.set(address, { data: profile, timestamp: Date.now() });
+                console.log('[ProfileService] 获取玩家档案成功:', address, profile.name);
+            }
+
+            return profile;
+
+        } catch (error) {
+            console.error('[ProfileService] 获取玩家档案失败:', address, error);
+            return null;
+        }
+    }
+
+    /**
+     * 创建玩家档案
+     * @param name 昵称 (1-32 字符)
+     * @param avatar 头像索引 (0-255)
+     * @returns 创建的 Profile ID
+     */
+    public async createPlayerProfile(name: string, avatar: number): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::player_profile::create_profile`,
+            arguments: [
+                tx.pure.string(name),
+                tx.pure.u8(avatar)
+            ]
+        });
+
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存
+        const address = SuiManager.instance.currentAddress;
+        if (address) {
+            this.playerProfileCache.delete(address);
+        }
+
+        console.log('[ProfileService] 创建玩家档案成功:', result.digest);
+        return result.digest;
+    }
+
+    /**
+     * 更新玩家昵称
+     * @param profileId Profile 对象 ID
+     * @param name 新昵称
+     */
+    public async updatePlayerName(profileId: string, name: string): Promise<void> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::player_profile::update_name`,
+            arguments: [
+                tx.object(profileId),
+                tx.pure.string(name)
+            ]
+        });
+
+        await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存
+        const address = SuiManager.instance.currentAddress;
+        if (address) {
+            this.playerProfileCache.delete(address);
+        }
+
+        console.log('[ProfileService] 更新玩家昵称成功');
+    }
+
+    /**
+     * 更新玩家头像
+     * @param profileId Profile 对象 ID
+     * @param avatar 新头像索引
+     */
+    public async updatePlayerAvatar(profileId: string, avatar: number): Promise<void> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::player_profile::update_avatar`,
+            arguments: [
+                tx.object(profileId),
+                tx.pure.u8(avatar)
+            ]
+        });
+
+        await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存
+        const address = SuiManager.instance.currentAddress;
+        if (address) {
+            this.playerProfileCache.delete(address);
+        }
+
+        console.log('[ProfileService] 更新玩家头像成功');
+    }
+
+    // ==================== GameProfile ====================
+
+    /**
+     * 获取游戏档案
+     * @param gameId Game 对象 ID
+     * @returns GameProfile 或 null
+     */
+    public async getGameProfile(gameId: string): Promise<GameProfile | null> {
+        // 检查缓存
+        const cached = this.gameProfileCache.get(gameId);
+        if (this.isCacheValid(cached)) {
+            console.log('[ProfileService] GameProfile 缓存命中:', gameId);
+            return cached!.data;
+        }
+
+        // 检查索引
+        const profileId = this.gameProfileIndex.get(gameId);
+        if (profileId) {
+            const profile = await this.getGameProfileById(profileId);
+            if (profile) {
+                this.gameProfileCache.set(gameId, { data: profile, timestamp: Date.now() });
+                return profile;
+            }
+        }
+
+        // 索引中没有，返回 null（需要通过事件索引建立映射）
+        console.log('[ProfileService] GameProfile 不在索引中:', gameId);
+        this.gameProfileCache.set(gameId, { data: null, timestamp: Date.now() });
+        return null;
+    }
+
+    /**
+     * 通过 Profile ID 获取 GameProfile
+     */
+    private async getGameProfileById(profileId: string): Promise<GameProfile | null> {
+        try {
+            const client = this.getClient();
+            const response = await client.getObject({
+                id: profileId,
+                options: { showContent: true }
+            });
+
+            return this.parseGameProfile(response);
+
+        } catch (error) {
+            console.error('[ProfileService] 获取 GameProfile 失败:', profileId, error);
+            return null;
+        }
+    }
+
+    /**
+     * 创建游戏档案
+     * @param gameId Game 对象 ID
+     * @param name 游戏名称 (1-64 字符)
+     * @returns 创建的 Profile ID
+     */
+    public async createGameProfile(gameId: string, name: string): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game_profile::create_game_profile`,
+            arguments: [
+                tx.pure.id(gameId),
+                tx.pure.string(name)
+            ]
+        });
+
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存
+        this.gameProfileCache.delete(gameId);
+
+        console.log('[ProfileService] 创建游戏档案成功:', result.digest);
+        return result.digest;
+    }
+
+    /**
+     * 更新游戏名称
+     * @param profileId Profile 对象 ID
+     * @param name 新名称
+     */
+    public async updateGameName(profileId: string, name: string): Promise<void> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::game_profile::update_name`,
+            arguments: [
+                tx.object(profileId),
+                tx.pure.string(name)
+            ]
+        });
+
+        await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        console.log('[ProfileService] 更新游戏名称成功');
+    }
+
+    /**
+     * 注册 Game -> Profile 索引
+     * 通过事件处理器调用，建立 gameId -> profileId 的映射
+     */
+    public registerGameProfileIndex(gameId: string, profileId: string): void {
+        this.gameProfileIndex.set(gameId, profileId);
+        this.gameProfileCache.delete(gameId); // 清除缓存，下次查询时重新加载
+        console.log('[ProfileService] 注册 GameProfile 索引:', gameId, '->', profileId);
+    }
+
+    // ==================== MapProfile ====================
+
+    /**
+     * 获取地图档案
+     * @param mapId MapTemplate 对象 ID
+     * @returns MapProfile 或 null
+     */
+    public async getMapProfile(mapId: string): Promise<MapProfile | null> {
+        // 检查缓存
+        const cached = this.mapProfileCache.get(mapId);
+        if (this.isCacheValid(cached)) {
+            console.log('[ProfileService] MapProfile 缓存命中:', mapId);
+            return cached!.data;
+        }
+
+        // 检查索引
+        const profileId = this.mapProfileIndex.get(mapId);
+        if (profileId) {
+            const profile = await this.getMapProfileById(profileId);
+            if (profile) {
+                this.mapProfileCache.set(mapId, { data: profile, timestamp: Date.now() });
+                return profile;
+            }
+        }
+
+        // 索引中没有，返回 null
+        console.log('[ProfileService] MapProfile 不在索引中:', mapId);
+        this.mapProfileCache.set(mapId, { data: null, timestamp: Date.now() });
+        return null;
+    }
+
+    /**
+     * 通过 Profile ID 获取 MapProfile
+     */
+    private async getMapProfileById(profileId: string): Promise<MapProfile | null> {
+        try {
+            const client = this.getClient();
+            const response = await client.getObject({
+                id: profileId,
+                options: { showContent: true }
+            });
+
+            return this.parseMapProfile(response);
+
+        } catch (error) {
+            console.error('[ProfileService] 获取 MapProfile 失败:', profileId, error);
+            return null;
+        }
+    }
+
+    /**
+     * 创建地图档案
+     * @param mapId MapTemplate 对象 ID
+     * @param name 地图名称 (1-64 字符)
+     * @param description 地图描述 (0-256 字符)
+     * @returns 创建的 Profile ID
+     */
+    public async createMapProfile(mapId: string, name: string, description: string): Promise<string> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::map_profile::create_map_profile`,
+            arguments: [
+                tx.pure.id(mapId),
+                tx.pure.string(name),
+                tx.pure.string(description)
+            ]
+        });
+
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存
+        this.mapProfileCache.delete(mapId);
+
+        console.log('[ProfileService] 创建地图档案成功:', result.digest);
+        return result.digest;
+    }
+
+    /**
+     * 更新地图名称
+     * @param profileId Profile 对象 ID
+     * @param name 新名称
+     */
+    public async updateMapName(profileId: string, name: string): Promise<void> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::map_profile::update_name`,
+            arguments: [
+                tx.object(profileId),
+                tx.pure.string(name)
+            ]
+        });
+
+        await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        console.log('[ProfileService] 更新地图名称成功');
+    }
+
+    /**
+     * 更新地图描述
+     * @param profileId Profile 对象 ID
+     * @param description 新描述
+     */
+    public async updateMapDescription(profileId: string, description: string): Promise<void> {
+        const tx = new Transaction();
+
+        tx.moveCall({
+            target: `${this.packageId}::map_profile::update_description`,
+            arguments: [
+                tx.object(profileId),
+                tx.pure.string(description)
+            ]
+        });
+
+        await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        console.log('[ProfileService] 更新地图描述成功');
+    }
+
+    /**
+     * 注册 Map -> Profile 索引
+     * 通过事件处理器调用，建立 mapId -> profileId 的映射
+     */
+    public registerMapProfileIndex(mapId: string, profileId: string): void {
+        this.mapProfileIndex.set(mapId, profileId);
+        this.mapProfileCache.delete(mapId);
+        console.log('[ProfileService] 注册 MapProfile 索引:', mapId, '->', profileId);
+    }
+
+    // ==================== 解析方法 ====================
+
+    /**
+     * 解析 PlayerProfile 对象
+     */
+    private parsePlayerProfile(obj: SuiObjectResponse): PlayerProfile | null {
+        if (!obj.data?.content || obj.data.content.dataType !== 'moveObject') {
+            return null;
+        }
+
+        const content = obj.data.content as SuiMoveObject;
+        const fields = content.fields as Record<string, any>;
+
+        return {
+            id: obj.data.objectId,
+            name: fields.name as string,
+            avatar: Number(fields.avatar)
+        };
+    }
+
+    /**
+     * 解析 GameProfile 对象
+     */
+    private parseGameProfile(obj: SuiObjectResponse): GameProfile | null {
+        if (!obj.data?.content || obj.data.content.dataType !== 'moveObject') {
+            return null;
+        }
+
+        const content = obj.data.content as SuiMoveObject;
+        const fields = content.fields as Record<string, any>;
+
+        return {
+            id: obj.data.objectId,
+            game_id: fields.game_id as string,
+            creator: fields.creator as string,
+            name: fields.name as string
+        };
+    }
+
+    /**
+     * 解析 MapProfile 对象
+     */
+    private parseMapProfile(obj: SuiObjectResponse): MapProfile | null {
+        if (!obj.data?.content || obj.data.content.dataType !== 'moveObject') {
+            return null;
+        }
+
+        const content = obj.data.content as SuiMoveObject;
+        const fields = content.fields as Record<string, any>;
+
+        return {
+            id: obj.data.objectId,
+            map_id: fields.map_id as string,
+            creator: fields.creator as string,
+            name: fields.name as string,
+            description: fields.description as string
+        };
+    }
+
+    // ==================== 缓存管理 ====================
+
+    /**
+     * 清除玩家档案缓存
+     */
+    public clearPlayerCache(address: string): void {
+        this.playerProfileCache.delete(address);
+    }
+
+    /**
+     * 清除游戏档案缓存
+     */
+    public clearGameCache(gameId: string): void {
+        this.gameProfileCache.delete(gameId);
+    }
+
+    /**
+     * 清除地图档案缓存
+     */
+    public clearMapCache(mapId: string): void {
+        this.mapProfileCache.delete(mapId);
+    }
+
+    /**
+     * 清除所有缓存
+     */
+    public clearAllCache(): void {
+        this.playerProfileCache.clear();
+        this.gameProfileCache.clear();
+        this.mapProfileCache.clear();
+        console.log('[ProfileService] 所有缓存已清除');
+    }
+}

@@ -20,6 +20,9 @@ export * from './admin';
 // 导出资产类型
 export * from './assets';
 
+// 导出档案类型（链上元数据）
+export * from './profile';
+
 // 导出GameData类型（来自tycoon.move）
 export interface GameData {
     /** 对象ID */

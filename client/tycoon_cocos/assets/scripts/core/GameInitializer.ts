@@ -22,9 +22,7 @@ import { SuiEnvConfigManager } from '../config/SuiEnvConfigManager';
 import { GameSession } from './GameSession';
 import { DiceController } from '../game/DiceController';
 import { EventLogService } from '../ui/game/event-log/EventLogService';
-import { HttpClient } from '../http/HttpClient';
-import { CacheManager } from '../http/CacheManager';
-import { MetadataService } from '../http/MetadataService';
+import { ProfileService } from '../sui/services/ProfileService';
 import * as TWEEN from '@tweenjs/tween.js';
 
 const { ccclass, property } = _decorator;
@@ -91,11 +89,6 @@ export class GameInitializer extends Component {
     // GameSession 实例
     private gameSession: GameSession | null = null;
 
-    // 元数据服务
-    private httpClient: HttpClient | null = null;
-    private cacheManager: CacheManager | null = null;
-    private metadataService: MetadataService | null = null;
-
     // 初始化性能数据
     private initStartTime: number = 0;
     private phaseStartTime: number = 0;
@@ -156,12 +149,6 @@ export class GameInitializer extends Component {
         this.initStartTime = Date.now();
 
         try {
-            // 阶段0: 初始化HTTP和缓存
-            const httpResult = await this.initializeHttpAndCache();
-            if (!httpResult.success) {
-                return this.handleInitializationError('HTTP和缓存初始化失败', httpResult.error);
-            }
-
             // 阶段1: 加载配置文件
             let result = await this.loadConfigurations();
             if (!result.success) {
@@ -196,46 +183,6 @@ export class GameInitializer extends Component {
 
         } catch (error) {
             return this.handleInitializationError('初始化过程中发生异常', error.toString());
-        }
-    }
-
-    /**
-     * 阶段0: 初始化HTTP和缓存
-     */
-    private async initializeHttpAndCache(): Promise<InitializationResult> {
-        console.log('[GameInitializer] 初始化HTTP客户端和缓存管理器...');
-
-        try {
-            // 创建缓存管理器
-            this.cacheManager = new CacheManager({
-                useLocalStorage: true,
-                maxMemoryEntries: 100
-            });
-
-            // 创建HTTP客户端
-            this.httpClient = new HttpClient({
-                baseUrl: 'https://web3-tycoon-api.zeros-null.workers.dev',
-                timeout: 30000
-            });
-
-            // 创建元数据服务
-            this.metadataService = new MetadataService(
-                this.httpClient,
-                this.cacheManager
-            );
-
-            console.log('[GameInitializer] HTTP和缓存系统初始化完成');
-
-            return {
-                success: true,
-                phase: InitializationPhase.NONE
-            };
-        } catch (error) {
-            return {
-                success: false,
-                phase: InitializationPhase.NONE,
-                error: `HTTP和缓存初始化异常: ${error}`
-            };
         }
     }
 
@@ -386,6 +333,14 @@ export class GameInitializer extends Component {
             console.log('  Network:', savedConfig.network);
             console.log('  PackageID:', savedConfig.packageId);
             console.log('  GameDataID:', savedConfig.gameDataId);
+
+            // 初始化 ProfileService（如果配置了 profilesPackageId）
+            if (savedConfig.profilesPackageId) {
+                ProfileService.instance.initialize(savedConfig.profilesPackageId);
+                console.log('  ProfilesPackageID:', savedConfig.profilesPackageId);
+            } else {
+                console.log('  ProfilesPackageID: 未配置（跳过 ProfileService 初始化）');
+            }
 
             // 启动后台数据同步（不等待完成）
             SuiManager.instance.startBackgroundSync().catch(error => {
@@ -613,24 +568,10 @@ export class GameInitializer extends Component {
     }
 
     /**
-     * 获取元数据服务
+     * 获取 ProfileService 实例
      */
-    public getMetadataService(): MetadataService | null {
-        return this.metadataService;
-    }
-
-    /**
-     * 获取HTTP客户端
-     */
-    public getHttpClient(): HttpClient | null {
-        return this.httpClient;
-    }
-
-    /**
-     * 获取缓存管理器
-     */
-    public getCacheManager(): CacheManager | null {
-        return this.cacheManager;
+    public getProfileService(): ProfileService {
+        return ProfileService.instance;
     }
 
 }

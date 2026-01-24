@@ -8,6 +8,9 @@
     <text id="n9_mrxi" name="n9" xy="89,78" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo"/>
     <text id="n11_mrxi" name="n11" xy="89,146" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo"/>
     <text id="n13_mrxi" name="n13" xy="89,217" size="640,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="todo"/>
+    <component id="n23_oe4k" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" pkg="82r0pzop" xy="0,0" size="800,600">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
     <component id="n10_mrxi" name="btn_1" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="23,76"/>
     <component id="n12_mrxi" name="btn_2" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="23,144"/>
     <component id="n14_mrxi" name="btn_3" src="mrxiow4" fileName="components/Button32.xml" pkg="82r0pzop" xy="23,215"/>

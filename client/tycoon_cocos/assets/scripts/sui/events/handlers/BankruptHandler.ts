@@ -12,7 +12,7 @@
 
 import type { EventMetadata, BankruptEvent } from '../types';
 import { Blackboard } from '../../../events/Blackboard';
-import { IdFormatter } from '../../../ui/utils/IdFormatter';
+import { PlayerDisplayHelper, NameSource } from '../../../ui/utils/PlayerDisplayHelper';
 import type { GameSession } from '../../../core/GameSession';
 
 /**
@@ -88,14 +88,21 @@ export class BankruptHandler {
             });
 
             // 3. 显示破产通知（5秒后自动消失）
-            const playerName = player.getName() || `玩家 ${player.getPlayerIndex() + 1}`;
+            const playerResult = PlayerDisplayHelper.getDisplayNameSync(player.getOwner(), false);
+            const playerName = playerResult.source !== NameSource.ADDRESS
+                ? playerResult.name
+                : `玩家 ${player.getPlayerIndex() + 1}`;
+
             const creditorPlayer = (event.creditor !== undefined && event.creditor !== null)
                 ? session.getPlayerByIndex(event.creditor)
                 : null;
-            const creditorName = creditorPlayer?.getName()
-                || ((event.creditor !== undefined && event.creditor !== null)
-                    ? `玩家 ${(creditorPlayer?.getPlayerIndex() ?? event.creditor) + 1}`
-                    : '银行');
+            let creditorName = '银行';
+            if (creditorPlayer) {
+                const creditorResult = PlayerDisplayHelper.getDisplayNameSync(creditorPlayer.getOwner(), false);
+                creditorName = creditorResult.source !== NameSource.ADDRESS
+                    ? creditorResult.name
+                    : `玩家 ${creditorPlayer.getPlayerIndex() + 1}`;
+            }
 
             // 动态导入 UIManager（避免循环依赖）
             const { UIManager } = await import('../../../ui/core/UIManager');

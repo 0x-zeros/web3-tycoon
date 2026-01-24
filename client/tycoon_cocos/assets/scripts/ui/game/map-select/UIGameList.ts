@@ -11,7 +11,7 @@
 import { UIBase } from "../../core/UIBase";
 import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
-import { IdFormatter } from "../../utils/IdFormatter";
+import { PlayerDisplayHelper } from "../../utils/PlayerDisplayHelper";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
@@ -178,6 +178,10 @@ export class UIGameList extends UIBase {
 
         if (!this.m_list) return;
 
+        // 预加载所有玩家的显示名称
+        const allAddresses = data.flatMap(g => g.players.map(p => p.owner));
+        void PlayerDisplayHelper.preload(allAddresses);
+
         // 设置数量并填充
         this.m_list.numItems = data.length;
         console.log('  List updated, numItems:', this.m_list.numItems);
@@ -245,7 +249,7 @@ export class UIGameList extends UIBase {
             if (playerText) {
                 if (i < game.players.length) {
                     const player = game.players[i];
-                    playerText.text = IdFormatter.shortenAddress(player.owner);  // ✅ 短地址
+                    playerText.text = PlayerDisplayHelper.getDisplayName(player.owner);
                 } else {
                     playerText.text = '---';  // 空位
                 }

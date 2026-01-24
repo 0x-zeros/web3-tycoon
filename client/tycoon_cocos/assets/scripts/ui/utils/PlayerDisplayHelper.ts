@@ -3,6 +3,11 @@
  *
  * 用于更新 UI 上的玩家名称和头像
  * 从链上 PlayerProfile 获取数据
+ *
+ * 显示优先级：
+ * 1. PlayerProfile.name (自定义昵称)
+ * 2. NS Name (预留接口)
+ * 3. Wallet Address (短地址)
  */
 
 import * as fgui from "fairygui-cc";
@@ -11,6 +16,23 @@ import type { Player } from "../../role/Player";
 import type { PlayerProfile } from "../../sui/types/profile";
 
 type ProfileResult = PlayerProfile | null;
+
+/**
+ * 名字来源枚举
+ */
+export enum NameSource {
+    PROFILE = 'profile',  // 自定义昵称
+    NS = 'ns',            // NS 域名（预留）
+    ADDRESS = 'address',  // 钱包地址
+}
+
+/**
+ * NS 解析器接口（预留）
+ */
+export interface INSResolver {
+    resolve(address: string): Promise<string | null>;
+    getCached(address: string): string | null;
+}
 
 /**
  * 地址格式化工具
@@ -24,6 +46,17 @@ function shortenAddress(address: string, prefixLen: number = 6, suffixLen: numbe
 export class PlayerDisplayHelper {
     private static profileCache = new Map<string, ProfileResult>();
     private static profilePending = new Map<string, Promise<ProfileResult>>();
+
+    // NS 解析器（预留）
+    private static _nsResolver: INSResolver | null = null;
+
+    /**
+     * 注册 NS 解析器（后续扩展用）
+     */
+    public static setNSResolver(resolver: INSResolver): void {
+        this._nsResolver = resolver;
+        this.clearAllCache();
+    }
 
     /**
      * 获取玩家档案
@@ -139,19 +172,122 @@ export class PlayerDisplayHelper {
      * 如果缓存中有数据则返回昵称，否则返回短地址
      *
      * @param address 钱包地址
+     * @param includeAddressSuffix 是否在昵称后附加短地址
      * @returns 显示名称
      */
-    public static getDisplayName(address: string): string {
+    public static getDisplayName(address: string, includeAddressSuffix: boolean = true): string {
         if (!address) return '';
 
         const shortAddr = shortenAddress(address);
         const cached = this.profileCache.get(address);
 
         if (cached?.name) {
-            return `${cached.name} (${shortAddr})`;
+            return includeAddressSuffix ? `${cached.name} (${shortAddr})` : cached.name;
         }
 
+        // NS 同步检查（预留）
+        if (this._nsResolver) {
+            const nsName = this._nsResolver.getCached(address);
+            if (nsName) {
+                return includeAddressSuffix ? `${nsName} (${shortAddr})` : nsName;
+            }
+        }
+
+        // 触发后台加载
+        void this.getPlayerProfile(address);
+
         return shortAddr;
+    }
+
+    /**
+     * 获取玩家显示名称（带来源信息，同步版本）
+     *
+     * 如果缓存中没有，返回短地址并触发后台加载
+     *
+     * @param address 钱包地址
+     * @param includeAddressSuffix 是否在昵称后附加短地址
+     * @returns { name: string; source: NameSource }
+     */
+    public static getDisplayNameSync(
+        address: string,
+        includeAddressSuffix: boolean = true
+    ): { name: string; source: NameSource } {
+        if (!address) return { name: '', source: NameSource.ADDRESS };
+
+        const shortAddr = shortenAddress(address);
+        const cached = this.profileCache.get(address);
+
+        if (cached?.name) {
+            const name = includeAddressSuffix
+                ? `${cached.name} (${shortAddr})`
+                : cached.name;
+            return { name, source: NameSource.PROFILE };
+        }
+
+        // NS 同步检查（预留）
+        if (this._nsResolver) {
+            const nsName = this._nsResolver.getCached(address);
+            if (nsName) {
+                const name = includeAddressSuffix
+                    ? `${nsName} (${shortAddr})`
+                    : nsName;
+                return { name, source: NameSource.NS };
+            }
+        }
+
+        // 触发后台加载
+        void this.getPlayerProfile(address);
+
+        return { name: shortAddr, source: NameSource.ADDRESS };
+    }
+
+    /**
+     * 获取玩家显示名称（异步版本，带来源信息）
+     *
+     * @param address 钱包地址
+     * @param includeAddressSuffix 是否在昵称后附加短地址
+     * @returns Promise<{ name: string; source: NameSource }>
+     */
+    public static async resolveDisplayName(
+        address: string,
+        includeAddressSuffix: boolean = true
+    ): Promise<{ name: string; source: NameSource }> {
+        if (!address) return { name: '', source: NameSource.ADDRESS };
+
+        const shortAddr = shortenAddress(address);
+
+        // 1. 尝试 PlayerProfile
+        const profile = await this.getPlayerProfile(address);
+        if (profile?.name) {
+            const name = includeAddressSuffix
+                ? `${profile.name} (${shortAddr})`
+                : profile.name;
+            return { name, source: NameSource.PROFILE };
+        }
+
+        // 2. 尝试 NS（预留）
+        if (this._nsResolver) {
+            const nsName = await this._nsResolver.resolve(address);
+            if (nsName) {
+                const name = includeAddressSuffix
+                    ? `${nsName} (${shortAddr})`
+                    : nsName;
+                return { name, source: NameSource.NS };
+            }
+        }
+
+        // 3. 回退到地址
+        return { name: shortAddr, source: NameSource.ADDRESS };
+    }
+
+    /**
+     * 预加载地址列表的名字
+     *
+     * @param addresses 地址列表
+     */
+    public static async preload(addresses: string[]): Promise<void> {
+        const unique = [...new Set(addresses.filter(a => a))];
+        await Promise.all(unique.map(addr => this.getPlayerProfile(addr)));
     }
 
     /**

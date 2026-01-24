@@ -7,6 +7,7 @@
  */
 import { GameInitializer } from "../../../core/GameInitializer";
 import { PlayerColors } from "../../../utils/PlayerColors";
+import { PlayerDisplayHelper, NameSource } from "../../utils/PlayerDisplayHelper";
 
 // 向后兼容：重新导出 PlayerColors
 export { PlayerColors };
@@ -46,7 +47,19 @@ export const getPlayerColor = PlayerColors.getHex;
 export function coloredPlayerName(playerIndex: number): string {
     const color = getPlayerColor(playerIndex);
     const session = GameInitializer.getInstance()?.getGameSession();
-    const playerName = session?.getPlayerByIndex(playerIndex)?.getName() || `玩家${playerIndex + 1}`;
+    let playerName = `玩家${playerIndex + 1}`;
+
+    if (session) {
+        const player = session.getPlayerByIndex(playerIndex);
+        if (player) {
+            const result = PlayerDisplayHelper.getDisplayNameSync(player.getOwner(), false);
+            // 只有当获取到非地址来源的名字时才使用
+            if (result.source !== NameSource.ADDRESS) {
+                playerName = result.name;
+            }
+        }
+    }
+
     return `[color=${color}]${playerName}[/color]`;
 }
 

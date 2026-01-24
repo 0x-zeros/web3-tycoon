@@ -8,6 +8,7 @@ import { SuiManager } from "../../../sui/managers/SuiManager";
 import { UINotification } from "../../utils/UINotification";
 import { UIMessage } from "../../utils/UIMessage";
 import { IdFormatter } from "../../utils/IdFormatter";
+import { PlayerDisplayHelper } from "../../utils/PlayerDisplayHelper";
 import { EventBus } from "../../../events/EventBus";
 import { EventTypes } from "../../../events/EventTypes";
 import type { Game } from "../../../sui/types/game";
@@ -142,12 +143,16 @@ export class UIGameDetail extends UIBase {
         const currentAddress = SuiManager.instance.currentAddress;
         const isPlayer = game.players.some(p => p.owner === currentAddress);
 
+        // 预加载玩家显示名称
+        const playerAddresses = game.players.map(p => p.owner);
+        void PlayerDisplayHelper.preload(playerAddresses);
+
         for (let i = 0; i < 4; i++) {
             const playerField = this[`m_player_${i}`] as fgui.GTextField;
             if (playerField) {
                 if (i < game.players.length) {
                     const player = game.players[i];
-                    playerField.text = IdFormatter.shortenAddress(player.owner);  // ✅ 短地址
+                    playerField.text = PlayerDisplayHelper.getDisplayName(player.owner);
                 } else {
                     playerField.text = '---';  // 空位
                 }

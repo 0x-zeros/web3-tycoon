@@ -8,7 +8,7 @@
       <relation target="" sidePair="width-width,height-height"/>
     </graph>
     <text id="n11_mrxi" name="n11" xy="8,46" size="364,54" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" text="自定义名字："/>
-    <component id="n15_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,0" size="800,600">
+    <component id="n15_jhxs" name="panel_draggable" src="jhxsowb" fileName="components/draggable.xml" xy="0,-1" size="800,600">
       <relation target="" sidePair="width-width,height-height"/>
     </component>
     <text id="n1_f49a" name="name" xy="13,122" size="771,49" fontSize="30" color="#ffffff" vAlign="middle" autoSize="none" autoClearText="true" text="alice" input="true" prompt="输入玩家名字..."/>

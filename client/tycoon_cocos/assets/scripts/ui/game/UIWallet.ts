@@ -12,6 +12,7 @@ import { UILayer } from "../core/UITypes";  // 从 UITypes 导入（避免循环
 import type { IdentifierArray, IdentifierRecord, Wallet, WalletAccount } from '@mysten/wallet-standard';
 import { loadWalletStandard, loadSuiClient } from '../../sui/loader';
 import { UINotification } from "../utils/UINotification";
+import { PlayerDisplayHelper } from "../utils/PlayerDisplayHelper";
 import { SuiManager } from "../../sui/managers/SuiManager";
 import { SuiEnvConfigManager } from "../../config/SuiEnvConfigManager";
 import { FaucetManager } from "../../sui/utils/FaucetManager";
@@ -412,9 +413,17 @@ export class UIWallet extends UIBase {
             this.m_connectedWallet = wallet;
             this.m_connectedAccount = account;
 
-            // 设置btn_wallet的title为缩略地址
+            // 设置btn_wallet的title（先显示短地址，然后异步更新为昵称）
             if (this.m_btn_wallet) {
-                this.m_btn_wallet.title = this._shortenAddress(account.address);
+                const { name } = PlayerDisplayHelper.getDisplayNameSync(account.address, false);
+                this.m_btn_wallet.title = name;
+
+                // 异步更新显示昵称
+                void PlayerDisplayHelper.resolveDisplayName(account.address, false).then(result => {
+                    if (this.m_btn_wallet && this.m_connectedAccount?.address === account.address) {
+                        this.m_btn_wallet.title = result.name;
+                    }
+                });
             }
 
             // 关闭WalletList
@@ -500,9 +509,17 @@ export class UIWallet extends UIBase {
             this.m_connectedWallet = targetWallet;
             this.m_connectedAccount = targetAccount;
 
-            // 更新UI
+            // 更新UI（先显示短地址，然后异步更新为昵称）
             if (this.m_btn_wallet) {
-                this.m_btn_wallet.title = this._shortenAddress(targetAccount.address);
+                const { name } = PlayerDisplayHelper.getDisplayNameSync(targetAccount.address, false);
+                this.m_btn_wallet.title = name;
+
+                // 异步更新显示昵称
+                void PlayerDisplayHelper.resolveDisplayName(targetAccount.address, false).then(result => {
+                    if (this.m_btn_wallet && this.m_connectedAccount?.address === targetAccount.address) {
+                        this.m_btn_wallet.title = result.name;
+                    }
+                });
             }
 
             // 设置 SuiManager 的签名器
@@ -779,9 +796,17 @@ export class UIWallet extends UIBase {
             return;
         }
 
-        // 设置地址显示
+        // 设置地址显示（先显示短地址，然后异步更新为昵称）
         if (this.m_btn_wallet) {
-            this.m_btn_wallet.title = this._shortenAddress(address);
+            const { name } = PlayerDisplayHelper.getDisplayNameSync(address, false);
+            this.m_btn_wallet.title = name;
+
+            // 异步更新显示昵称
+            void PlayerDisplayHelper.resolveDisplayName(address, false).then(result => {
+                if (this.m_btn_wallet && this._isKeypairMode) {
+                    this.m_btn_wallet.title = result.name;
+                }
+            });
         }
 
         // Keypair 模式：隐藏 disconnect 按钮（不允许断开）
@@ -818,16 +843,25 @@ export class UIWallet extends UIBase {
 
         // 如果是 Keypair 模式，更新显示
         if (this._isKeypairMode) {
-            // 更新地址显示
+            // 更新地址显示（先显示短地址，然后异步更新为昵称）
             if (this.m_btn_wallet) {
-                this.m_btn_wallet.title = this._shortenAddress(address);
+                const { name } = PlayerDisplayHelper.getDisplayNameSync(address, false);
+                this.m_btn_wallet.title = name;
                 console.log('[UIWallet] Wallet button title updated');
+
+                // 异步更新显示昵称
+                void PlayerDisplayHelper.resolveDisplayName(address, false).then(result => {
+                    if (this.m_btn_wallet && this._isKeypairMode) {
+                        this.m_btn_wallet.title = result.name;
+                    }
+                });
             }
 
             // 更新 chain 显示
             this._updateChainDisplay();
 
-            UINotification.info(`地址已更新\n${this._shortenAddress(address)}`);
+            const shortAddr = this._shortenAddress(address);
+            UINotification.info(`地址已更新\n${shortAddr}`);
         }
     }
 
@@ -854,7 +888,15 @@ export class UIWallet extends UIBase {
             this._isKeypairMode = true;
 
             if (this.m_btn_wallet) {
-                this.m_btn_wallet.title = this._shortenAddress(address);
+                const { name } = PlayerDisplayHelper.getDisplayNameSync(address, false);
+                this.m_btn_wallet.title = name;
+
+                // 异步更新显示昵称
+                void PlayerDisplayHelper.resolveDisplayName(address, false).then(result => {
+                    if (this.m_btn_wallet && this._isKeypairMode) {
+                        this.m_btn_wallet.title = result.name;
+                    }
+                });
             }
 
             console.log('[UIWallet] Keypair mode detected after network change');
@@ -912,9 +954,17 @@ export class UIWallet extends UIBase {
                     this.m_connectedWallet = null;
                     this.m_connectedAccount = null;
 
-                    // 更新 UI
+                    // 更新 UI（先显示短地址，然后异步更新为昵称）
                     if (this.m_btn_wallet) {
-                        this.m_btn_wallet.title = this._shortenAddress(address);
+                        const { name } = PlayerDisplayHelper.getDisplayNameSync(address, false);
+                        this.m_btn_wallet.title = name;
+
+                        // 异步更新显示昵称
+                        void PlayerDisplayHelper.resolveDisplayName(address, false).then(result => {
+                            if (this.m_btn_wallet && this._isKeypairMode) {
+                                this.m_btn_wallet.title = result.name;
+                            }
+                        });
                     }
 
                     if (this.m_btn_disconnect) {

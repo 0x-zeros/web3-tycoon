@@ -401,6 +401,7 @@
     <component id="mrxiow9" name="Button23.xml" path="/components/" exported="true"/>
     <component id="mrxiowa" name="Keypair.xml" path="/components/"/>
     <component id="jhxsowb" name="draggable.xml" path="/components/" exported="true"/>
+    <component id="oe4kowc" name="PlayerProfile.xml" path="/"/>
   </resources>
   <publish name=""/>
 </packageDescription>

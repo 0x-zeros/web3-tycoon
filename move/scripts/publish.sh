@@ -141,9 +141,18 @@ COCOS_CONFIG_DIR="../../client/tycoon_cocos/assets/scripts/config"
 mkdir -p "$COCOS_CONFIG_DIR"
 COCOS_CONFIG="$COCOS_CONFIG_DIR/env.$CONFIG_ENV.ts"
 
-# 根据环境决定是否添加 signerType 配置
-if [ "$CONFIG_ENV" = "localnet" ]; then
-    cat > "$COCOS_CONFIG" <<EOF
+# 检查配置文件是否存在
+if [ -f "$COCOS_CONFIG" ]; then
+    # 配置文件已存在，使用 sed 增量更新（保留 profilesPackageId 等其他字段）
+    sed -i '' "s|packageId: '[^']*'|packageId: '$PACKAGE_ID'|" "$COCOS_CONFIG"
+    sed -i '' "s|upgradeCap: '[^']*'|upgradeCap: '$UPGRADE_CAP'|" "$COCOS_CONFIG"
+    sed -i '' "s|adminCap: '[^']*'|adminCap: '$ADMIN_CAP'|" "$COCOS_CONFIG"
+    sed -i '' "s|gameData: '[^']*'|gameData: '$GAME_DATA'|" "$COCOS_CONFIG"
+    echo "Updated existing config file (incremental update)"
+else
+    # 配置文件不存在，创建包含所有字段的初始文件
+    if [ "$CONFIG_ENV" = "localnet" ]; then
+        cat > "$COCOS_CONFIG" <<EOF
 /**
  * Sui区块链环境配置
  * 自动生成于: $(date '+%Y-%m-%d %H:%M:%S')
@@ -154,13 +163,15 @@ export const SuiEnvConfig = {
     adminCap: '$ADMIN_CAP',
     gameData: '$GAME_DATA',
     network: '$CONFIG_ENV',
+    // tycoon_profiles 合约地址（部署后更新）
+    profilesPackageId: '',
 
     // 开发环境使用 Keypair 签名
     signerType: 'keypair' as const
 };
 EOF
-else
-    cat > "$COCOS_CONFIG" <<EOF
+    else
+        cat > "$COCOS_CONFIG" <<EOF
 /**
  * Sui区块链环境配置
  * 自动生成于: $(date '+%Y-%m-%d %H:%M:%S')
@@ -170,9 +181,13 @@ export const SuiEnvConfig = {
     upgradeCap: '$UPGRADE_CAP',
     adminCap: '$ADMIN_CAP',
     gameData: '$GAME_DATA',
-    network: '$CONFIG_ENV'
+    network: '$CONFIG_ENV',
+    // tycoon_profiles 合约地址（部署后更新）
+    profilesPackageId: ''
 };
 EOF
+    fi
+    echo "Created new config file"
 fi
 
 # # 构建CLI环境文件的绝对路径

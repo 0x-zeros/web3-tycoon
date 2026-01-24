@@ -201,6 +201,46 @@ export interface DecisionSkippedEvent {
     turn: number;
 }
 
+// ===== Profile Events 档案事件 =====
+// 注意：这些事件来自 tycoon_profiles 包，不是 tycoon 包
+
+/**
+ * 玩家档案创建事件
+ * 对应Move: tycoon_profiles::events::PlayerProfileCreatedEvent
+ */
+export interface PlayerProfileCreatedEvent {
+    /** Profile ID */
+    profile_id: string;
+    /** 所有者地址 */
+    owner: string;
+}
+
+/**
+ * 游戏档案创建事件
+ * 对应Move: tycoon_profiles::events::GameProfileCreatedEvent
+ */
+export interface GameProfileCreatedEvent {
+    /** Profile ID */
+    profile_id: string;
+    /** 关联的 Game ID */
+    game_id: string;
+    /** 创建者地址 */
+    creator: string;
+}
+
+/**
+ * 地图档案创建事件
+ * 对应Move: tycoon_profiles::events::MapProfileCreatedEvent
+ */
+export interface MapProfileCreatedEvent {
+    /** Profile ID */
+    profile_id: string;
+    /** 关联的 Map ID */
+    map_id: string;
+    /** 创建者地址 */
+    creator: string;
+}
+
 // ===== 事件类型枚举 =====
 
 /**
@@ -232,7 +272,12 @@ export enum EventType {
     // 聚合事件（在aggregated.ts中定义）
     USE_CARD_ACTION = 'UseCardActionEvent',
     ROLL_AND_STEP_ACTION = 'RollAndStepActionEvent',
-    TELEPORT_ACTION = 'TeleportActionEvent'
+    TELEPORT_ACTION = 'TeleportActionEvent',
+
+    // Profile 事件（来自 tycoon_profiles 包）
+    PLAYER_PROFILE_CREATED = 'PlayerProfileCreatedEvent',
+    GAME_PROFILE_CREATED = 'GameProfileCreatedEvent',
+    MAP_PROFILE_CREATED = 'MapProfileCreatedEvent',
 }
 
 /**
@@ -249,7 +294,10 @@ export type GameEvent =
     | BuildingDecisionEvent
     | RentDecisionEvent
     | CardShopDecisionEvent
-    | DecisionSkippedEvent;
+    | DecisionSkippedEvent
+    | PlayerProfileCreatedEvent
+    | GameProfileCreatedEvent
+    | MapProfileCreatedEvent;
 
 /**
  * 事件监听器类型

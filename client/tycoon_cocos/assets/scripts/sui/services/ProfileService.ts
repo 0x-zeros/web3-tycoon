@@ -141,7 +141,7 @@ export class ProfileService {
      * 创建玩家档案
      * @param name 昵称 (1-32 字符)
      * @param avatar 头像索引 (0-255)
-     * @returns 创建的 Profile ID
+     * @returns 创建的 Profile ID（从事件中提取）
      */
     public async createPlayerProfile(name: string, avatar: number): Promise<string> {
         const tx = new Transaction();
@@ -154,7 +154,9 @@ export class ProfileService {
             ]
         });
 
-        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx, {
+            showEvents: true,
+        });
 
         // 清除缓存
         const address = SuiManager.instance.currentAddress;
@@ -162,8 +164,10 @@ export class ProfileService {
             this.playerProfileCache.delete(address);
         }
 
-        console.log('[ProfileService] 创建玩家档案成功:', result.digest);
-        return result.digest;
+        // 从事件中提取 Profile ID
+        const profileId = this.extractProfileIdFromEvents(result.events, 'PlayerProfileCreatedEvent');
+        console.log('[ProfileService] 创建玩家档案成功:', profileId || result.digest);
+        return profileId || result.digest;
     }
 
     /**
@@ -274,7 +278,7 @@ export class ProfileService {
      * 创建游戏档案
      * @param gameId Game 对象 ID
      * @param name 游戏名称 (1-64 字符)
-     * @returns 创建的 Profile ID
+     * @returns 创建的 Profile ID（从事件中提取）
      */
     public async createGameProfile(gameId: string, name: string): Promise<string> {
         const tx = new Transaction();
@@ -287,13 +291,18 @@ export class ProfileService {
             ]
         });
 
-        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx, {
+            showEvents: true,
+        });
 
-        // 清除缓存
-        this.gameProfileCache.delete(gameId);
+        // 从事件中提取 Profile ID 并注册索引
+        const profileId = this.extractProfileIdFromEvents(result.events, 'GameProfileCreatedEvent');
+        if (profileId) {
+            this.registerGameProfileIndex(gameId, profileId);
+        }
 
-        console.log('[ProfileService] 创建游戏档案成功:', result.digest);
-        return result.digest;
+        console.log('[ProfileService] 创建游戏档案成功:', profileId || result.digest);
+        return profileId || result.digest;
     }
 
     /**
@@ -313,6 +322,9 @@ export class ProfileService {
         });
 
         await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存（因为不知道 game_id，清除所有 game profile 缓存）
+        this.gameProfileCache.clear();
 
         console.log('[ProfileService] 更新游戏名称成功');
     }
@@ -382,7 +394,7 @@ export class ProfileService {
      * @param mapId MapTemplate 对象 ID
      * @param name 地图名称 (1-64 字符)
      * @param description 地图描述 (0-256 字符)
-     * @returns 创建的 Profile ID
+     * @returns 创建的 Profile ID（从事件中提取）
      */
     public async createMapProfile(mapId: string, name: string, description: string): Promise<string> {
         const tx = new Transaction();
@@ -396,13 +408,18 @@ export class ProfileService {
             ]
         });
 
-        const result = await SuiManager.instance.signAndExecuteTransaction(tx);
+        const result = await SuiManager.instance.signAndExecuteTransaction(tx, {
+            showEvents: true,
+        });
 
-        // 清除缓存
-        this.mapProfileCache.delete(mapId);
+        // 从事件中提取 Profile ID 并注册索引
+        const profileId = this.extractProfileIdFromEvents(result.events, 'MapProfileCreatedEvent');
+        if (profileId) {
+            this.registerMapProfileIndex(mapId, profileId);
+        }
 
-        console.log('[ProfileService] 创建地图档案成功:', result.digest);
-        return result.digest;
+        console.log('[ProfileService] 创建地图档案成功:', profileId || result.digest);
+        return profileId || result.digest;
     }
 
     /**
@@ -422,6 +439,9 @@ export class ProfileService {
         });
 
         await SuiManager.instance.signAndExecuteTransaction(tx);
+
+        // 清除缓存（因为不知道 map_id，清除所有 map profile 缓存）
+        this.mapProfileCache.clear();
 
         console.log('[ProfileService] 更新地图名称成功');
     }
@@ -444,6 +464,9 @@ export class ProfileService {
 
         await SuiManager.instance.signAndExecuteTransaction(tx);
 
+        // 清除缓存（因为不知道 map_id，清除所有 map profile 缓存）
+        this.mapProfileCache.clear();
+
         console.log('[ProfileService] 更新地图描述成功');
     }
 
@@ -455,6 +478,41 @@ export class ProfileService {
         this.mapProfileIndex.set(mapId, profileId);
         this.mapProfileCache.delete(mapId);
         console.log('[ProfileService] 注册 MapProfile 索引:', mapId, '->', profileId);
+    }
+
+    // ==================== 辅助方法 ====================
+
+    /**
+     * 从交易事件中提取 Profile ID
+     * @param events 交易事件列表
+     * @param eventTypeName 事件类型名称（如 'PlayerProfileCreatedEvent'）
+     * @returns Profile ID 或 null
+     */
+    private extractProfileIdFromEvents(events: any[] | undefined, eventTypeName: string): string | null {
+        if (!events || events.length === 0) {
+            return null;
+        }
+
+        const event = events.find(e => e.type?.includes(eventTypeName));
+        if (!event?.parsedJson) {
+            return null;
+        }
+
+        const profileId = event.parsedJson.profile_id;
+        if (!profileId) {
+            return null;
+        }
+
+        // 规范化 ID（可能是对象或字符串）
+        if (typeof profileId === 'string') {
+            return profileId;
+        }
+        if (typeof profileId === 'object') {
+            if (profileId.id) return profileId.id;
+            if (profileId.bytes) return profileId.bytes;
+        }
+
+        return null;
     }
 
     // ==================== 解析方法 ====================

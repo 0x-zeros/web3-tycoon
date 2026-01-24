@@ -23,6 +23,7 @@ import { GameSession } from './GameSession';
 import { DiceController } from '../game/DiceController';
 import { EventLogService } from '../ui/game/event-log/EventLogService';
 import { ProfileService } from '../sui/services/ProfileService';
+import { ProfileEventHandler } from '../sui/events/handlers/ProfileEventHandler';
 import * as TWEEN from '@tweenjs/tween.js';
 
 const { ccclass, property } = _decorator;
@@ -334,12 +335,17 @@ export class GameInitializer extends Component {
             console.log('  PackageID:', savedConfig.packageId);
             console.log('  GameDataID:', savedConfig.gameDataId);
 
-            // 初始化 ProfileService（如果配置了 profilesPackageId）
+            // 初始化 ProfileService 和 ProfileEventHandler（如果配置了 profilesPackageId）
             if (savedConfig.profilesPackageId) {
                 ProfileService.instance.initialize(savedConfig.profilesPackageId);
                 console.log('  ProfilesPackageID:', savedConfig.profilesPackageId);
+
+                // 初始化并启动 ProfileEventHandler（独立监听 tycoon_profiles 包事件）
+                await ProfileEventHandler.getInstance().initialize(savedConfig.profilesPackageId);
+                ProfileEventHandler.getInstance().start();
+                console.log('  ProfileEventHandler: 已启动');
             } else {
-                console.log('  ProfilesPackageID: 未配置（跳过 ProfileService 初始化）');
+                console.log('  ProfilesPackageID: 未配置（跳过 ProfileService 和 ProfileEventHandler 初始化）');
             }
 
             // 启动后台数据同步（不等待完成）

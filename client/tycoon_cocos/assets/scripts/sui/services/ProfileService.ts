@@ -525,36 +525,54 @@ export class ProfileService {
         eventTypeName: 'GameProfileCreatedEvent' | 'MapProfileCreatedEvent',
         idFieldName: 'game_id' | 'map_id'
     ): Promise<string | null> {
+        // 检查服务是否已初始化
+        if (!this.packageId) {
+            console.log('[ProfileService] 服务未初始化，跳过链上回填');
+            return null;
+        }
+
         try {
             const client = this.getClient();
             const fullType = `${this.packageId}::events::${eventTypeName}`;
 
-            // 查询该类型的所有事件（限制数量避免性能问题）
-            const res = await client.queryEvents({
-                query: { MoveEventType: fullType },
-                order: 'descending',
-                limit: 100,
-            });
+            // 分页查询所有事件
+            let cursor: string | null | undefined = undefined;
+            let hasNextPage = true;
+            let pageCount = 0;
+            const maxPages = 100;  // 防止无限循环
+            const pageLimit = 50;
 
-            if (!res.data || res.data.length === 0) {
-                console.log('[ProfileService] 未找到任何事件:', eventTypeName);
-                return null;
-            }
+            while (hasNextPage && pageCount < maxPages) {
+                const res = await client.queryEvents({
+                    query: { MoveEventType: fullType },
+                    order: 'descending',
+                    limit: pageLimit,
+                    cursor
+                });
 
-            // 遍历事件找到匹配的 profile
-            for (const event of res.data) {
-                const json = event.parsedJson as any;
-                if (!json) continue;
+                // 在当前页查找匹配
+                for (const event of res.data) {
+                    const json = event.parsedJson as any;
+                    if (!json) continue;
 
-                const eventTargetId = this.normalizeId(json[idFieldName]);
-                if (eventTargetId === targetId) {
-                    const profileId = this.normalizeId(json.profile_id);
-                    console.log('[ProfileService] 链上回填成功:', targetId, '->', profileId);
-                    return profileId;
+                    const eventTargetId = this.normalizeId(json[idFieldName]);
+                    if (eventTargetId === targetId) {
+                        const profileId = this.normalizeId(json.profile_id);
+                        console.log('[ProfileService] 链上回填成功:', targetId, '->', profileId);
+                        return profileId;
+                    }
                 }
+
+                hasNextPage = res.hasNextPage;
+                cursor = res.nextCursor ?? undefined;
+                pageCount++;
             }
 
-            console.log('[ProfileService] 遍历事件未找到匹配:', targetId);
+            if (pageCount >= maxPages) {
+                console.warn('[ProfileService] 达到最大页数限制:', maxPages);
+            }
+
+            console.log('[ProfileService] 遍历事件未找到匹配:', targetId, `(${pageCount} 页)`);
             return null;
 
         } catch (error) {

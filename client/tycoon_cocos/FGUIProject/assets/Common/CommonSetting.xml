@@ -32,7 +32,7 @@
       <gearDisplay controller="mode" pages="2"/>
       <Button title="调试"/>
     </component>
-    <component id="n29_oe4k" name="btn_player" src="mrxiow6" fileName="components/Button33.xml" xy="35,77" size="190,52">
+    <component id="n29_oe4k" name="btn_playerProfile" src="mrxiow6" fileName="components/Button33.xml" xy="35,77" size="190,52">
       <gearDisplay controller="mode" pages="1"/>
       <Button checked="true" title="玩家设置"/>
     </component>

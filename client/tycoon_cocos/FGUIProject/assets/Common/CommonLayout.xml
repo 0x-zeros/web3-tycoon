@@ -9,5 +9,6 @@
     </component>
     <component id="n2_mrxi" name="gameConfig" src="mrxip4" fileName="GameConfig.xml" xy="504,349" visible="false"/>
     <component id="n3_mrxi" name="suiConfig" src="mrxiow8" fileName="SuiConfig.xml" xy="505,346" visible="false"/>
+    <component id="n4_oe4k" name="playerProfile" src="oe4kowc" fileName="PlayerProfile.xml" xy="505,348" visible="false"/>
   </displayList>
 </component>

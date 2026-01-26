@@ -568,7 +568,7 @@ export class ProfileService {
             }
 
             const valueFields = (result.data.content as any)?.fields;
-            const profileId = valueFields?.value;
+            const profileId = this.normalizeId(valueFields?.value);
 
             if (profileId) {
                 console.log('[ProfileService] Registry 查询 GameProfile 成功:', gameId, '->', profileId);
@@ -626,7 +626,7 @@ export class ProfileService {
             }
 
             const valueFields = (result.data.content as any)?.fields;
-            const profileId = valueFields?.value;
+            const profileId = this.normalizeId(valueFields?.value);
 
             if (profileId) {
                 console.log('[ProfileService] Registry 查询 MapProfile 成功:', mapId, '->', profileId);

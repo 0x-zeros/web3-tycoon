@@ -5,6 +5,9 @@ module tycoon_profiles::registry;
 
 use sui::table::{Self, Table};
 
+/// 错误码：Profile 已注册
+const EAlreadyRegistered: u64 = 1;
+
 /// 全局 Profile Registry（shared object）
 public struct ProfileRegistry has key {
     id: UID,
@@ -24,31 +27,25 @@ fun init(ctx: &mut TxContext) {
 }
 
 /// 注册 GameProfile
-/// 如果已存在则更新，否则添加
+/// 首次注册原则：禁止覆盖已有映射
 public(package) fun register_game_profile(
     registry: &mut ProfileRegistry,
     game_id: ID,
     profile_id: ID,
 ) {
-    if (table::contains(&registry.game_profiles, game_id)) {
-        *table::borrow_mut(&mut registry.game_profiles, game_id) = profile_id;
-    } else {
-        table::add(&mut registry.game_profiles, game_id, profile_id);
-    }
+    assert!(!table::contains(&registry.game_profiles, game_id), EAlreadyRegistered);
+    table::add(&mut registry.game_profiles, game_id, profile_id);
 }
 
 /// 注册 MapProfile
-/// 如果已存在则更新，否则添加
+/// 首次注册原则：禁止覆盖已有映射
 public(package) fun register_map_profile(
     registry: &mut ProfileRegistry,
     map_id: ID,
     profile_id: ID,
 ) {
-    if (table::contains(&registry.map_profiles, map_id)) {
-        *table::borrow_mut(&mut registry.map_profiles, map_id) = profile_id;
-    } else {
-        table::add(&mut registry.map_profiles, map_id, profile_id);
-    }
+    assert!(!table::contains(&registry.map_profiles, map_id), EAlreadyRegistered);
+    table::add(&mut registry.map_profiles, map_id, profile_id);
 }
 
 // ============ Accessor Functions ============
@@ -147,7 +144,8 @@ fun test_register_map_profile() {
 }
 
 #[test]
-fun test_update_existing_profile() {
+#[expected_failure(abort_code = EAlreadyRegistered)]
+fun test_register_duplicate_game_profile_should_fail() {
     let admin = @0x1;
     let mut scenario = test_scenario::begin(admin);
 
@@ -157,7 +155,7 @@ fun test_update_existing_profile() {
         init(ctx);
     };
 
-    // 注册并更新 game profile
+    // 尝试重复注册同一 game_id，应该 abort
     scenario.next_tx(admin);
     {
         let mut registry = scenario.take_shared<ProfileRegistry>();
@@ -170,9 +168,8 @@ fun test_update_existing_profile() {
         register_game_profile(&mut registry, game_id, profile_id_1);
         assert!(get_game_profile_id(&registry, game_id) == profile_id_1);
 
-        // 更新为新的 profile
+        // 尝试覆盖（应该失败）
         register_game_profile(&mut registry, game_id, profile_id_2);
-        assert!(get_game_profile_id(&registry, game_id) == profile_id_2);
 
         test_scenario::return_shared(registry);
     };

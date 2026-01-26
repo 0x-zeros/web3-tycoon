@@ -648,6 +648,7 @@ export class ProfileService {
      * 处理可能是对象或字符串的 ID
      */
     private normalizeId(id: any): string {
+        if (id == null) return '';
         if (typeof id === 'string') {
             return id;
         }

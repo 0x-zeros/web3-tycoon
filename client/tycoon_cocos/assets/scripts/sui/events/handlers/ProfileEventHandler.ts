@@ -216,6 +216,7 @@ export class ProfileEventHandler {
         try {
             // 规范化 ID 字段（可能是对象或字符串）
             const normalizeId = (id: any): string => {
+                if (id == null) return '';
                 if (typeof id === 'string') return id;
                 if (typeof id === 'object') {
                     if (id.id) return id.id;

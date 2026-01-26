@@ -32,6 +32,10 @@ Registry 禁止重复注册后，`create_game_profile` / `create_map_profile` �
 - 引入 Cap 授权机制，仅持有 GameCap / MapCap 者可创建对应 Profile
 - 或改为由 tycoon 合约在创建 Game/Map 时自动调用 Profile 创建
 
+
+先做一个msg（？） sign，用关联的方式来授权？  这个大约可以解决 by zeros？
+
+
 ---
 
 ## 更新记录

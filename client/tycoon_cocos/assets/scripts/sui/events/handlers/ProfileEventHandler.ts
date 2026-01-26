@@ -242,6 +242,10 @@ export class ProfileEventHandler {
                     const profileId = normalizeId(event.profile_id);
                     const gameId = normalizeId(event.game_id);
                     console.log('[ProfileEventHandler] GameProfileCreated:', { profileId, gameId });
+                    if (!profileId || !gameId) {
+                        console.warn('[ProfileEventHandler] GameProfile 索引跳过: ID 为空', { profileId, gameId });
+                        break;
+                    }
                     ProfileService.instance.registerGameProfileIndex(gameId, profileId);
                     break;
                 }
@@ -251,6 +255,10 @@ export class ProfileEventHandler {
                     const profileId = normalizeId(event.profile_id);
                     const mapId = normalizeId(event.map_id);
                     console.log('[ProfileEventHandler] MapProfileCreated:', { profileId, mapId });
+                    if (!profileId || !mapId) {
+                        console.warn('[ProfileEventHandler] MapProfile 索引跳过: ID 为空', { profileId, mapId });
+                        break;
+                    }
                     ProfileService.instance.registerMapProfileIndex(mapId, profileId);
                     break;
                 }

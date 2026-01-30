@@ -144,6 +144,9 @@ export class UIInGameDice extends UIBase {
         // 监听决策状态变化（更新骰子按钮状态）
         EventBus.on(EventTypes.Game.DecisionPending, this._onDecisionStateChanged, this);
         EventBus.on(EventTypes.Game.DecisionCleared, this._onDecisionStateChanged, this);
+
+        // 监听Buff变化（更新骰子数量选项，用于摩托车卡/汽车卡）
+        EventBus.on(EventTypes.Player.BuffsUpdated, this._onBuffsUpdated, this);
     }
 
     /**
@@ -167,6 +170,7 @@ export class UIInGameDice extends UIBase {
         EventBus.off(EventTypes.Game.TurnChanged, this._onTurnChanged, this);
         EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionStateChanged, this);
         EventBus.off(EventTypes.Game.DecisionCleared, this._onDecisionStateChanged, this);
+        EventBus.off(EventTypes.Player.BuffsUpdated, this._onBuffsUpdated, this);
 
         super.unbindEvents();
     }
@@ -597,24 +601,32 @@ export class UIInGameDice extends UIBase {
      * 获取当前选择的骰子数量
      *
      * 遥控骰子(MOVE_CTRL)和机车卡(LOCOMOTIVE)是独立功能：
-     * - 机车卡：控制骰子数量（当前阶段全部可用，后续检查buff）
+     * - 机车卡：控制骰子数量（无buff只能1个，摩托车buff可选1-2个，汽车buff可选1-3个）
      * - 遥控骰子：控制骰子点数（用户指定路径而非随机）
      *
-     * @param player 玩家对象（暂未使用，预留机车卡检查）
-     * @param currentRound 当前轮次（暂未使用，预留机车卡检查）
+     * @param player 玩家对象
+     * @param currentRound 当前轮次
      * @returns 骰子数量（1-3）
      */
     private _getDiceCount(player: any, currentRound: number): number {
-        // 当前阶段：直接返回用户选择的骰子数量
-        return this._selectedDiceCount;
+        // 获取最大允许骰子数
+        let maxDice = 1;
+        if (player) {
+            const locomotiveBuff = player.getBuff(BuffKind.LOCOMOTIVE);
+            // 永久buff: last_active_round = 0xFFFF (65535)
+            if (locomotiveBuff && currentRound <= locomotiveBuff.last_active_round) {
+                maxDice = locomotiveBuff.value >= 3 ? 3 :
+                          locomotiveBuff.value >= 2 ? 2 : 1;
+            }
+        }
 
-        // TODO: 后续添加机车卡检查
-        // const hasLocomotive = player.hasActiveBuff(BuffKind.LOCOMOTIVE, currentRound);
-        // if (!hasLocomotive && this._selectedDiceCount > 1) {
-        //     console.warn('[UIInGameDice] 无机车卡buff，强制使用1个骰子');
-        //     return 1;
-        // }
-        // return this._selectedDiceCount;
+        // 验证选择不超出范围
+        if (this._selectedDiceCount > maxDice) {
+            console.warn(`[UIInGameDice] 骰子数量超出范围，强制使用${maxDice}个`);
+            return maxDice;
+        }
+
+        return this._selectedDiceCount;
     }
 
     /**
@@ -749,35 +761,56 @@ export class UIInGameDice extends UIBase {
     }
 
     /**
+     * Buff变化处理（使用摩托车卡/汽车卡后更新骰子数量选项）
+     */
+    private _onBuffsUpdated(): void {
+        console.log('[UIInGameDice] >>>>>> _onBuffsUpdated 被调用 <<<<<<');
+        this._updateDiceCountOptions();
+    }
+
+    /**
      * 更新骰子数量选择按钮的可用性
      *
-     * 当前阶段：全部可用（用于测试）
-     * 后续添加机车卡后：无buff只能选1个，有LOCOMOTIVE buff可选2/3个
+     * - 无buff：只能选1个骰子
+     * - LOCOMOTIVE buff value=2（摩托车）：可选1-2个骰子
+     * - LOCOMOTIVE buff value=3（汽车）：可选1-3个骰子
+     * - 永久buff：last_active_round = 0xFFFF (65535)
      */
     private _updateDiceCountOptions(): void {
-        // 当前阶段：全部启用（用于测试多骰子功能）
-        if (this.m_btn_diceNum_1) {
-            this.m_btn_diceNum_1.enabled = true;
-        }
-        if (this.m_btn_diceNum_2) {
-            this.m_btn_diceNum_2.enabled = true;
-        }
-        if (this.m_btn_diceNum_3) {
-            this.m_btn_diceNum_3.enabled = true;
+        const session = GameInitializer.getInstance()?.getGameSession();
+        const player = session?.getMyPlayer();
+        const round = session?.getRound() || 0;
+
+        // 获取最大骰子数（默认1，有LOCOMOTIVE buff时根据value决定）
+        let maxDice = 1;
+        if (player) {
+            const locomotiveBuff = player.getBuff(BuffKind.LOCOMOTIVE);
+            if (locomotiveBuff && round <= locomotiveBuff.last_active_round) {
+                maxDice = locomotiveBuff.value >= 3 ? 3 :
+                          locomotiveBuff.value >= 2 ? 2 : 1;
+            }
         }
 
-        // 设置控制器默认选中状态
+        // 根据maxDice设置按钮可用状态
+        if (this.m_btn_diceNum_1) {
+            this.m_btn_diceNum_1.enabled = true;  // 1始终可用
+        }
+        if (this.m_btn_diceNum_2) {
+            this.m_btn_diceNum_2.enabled = maxDice >= 2;
+        }
+        if (this.m_btn_diceNum_3) {
+            this.m_btn_diceNum_3.enabled = maxDice >= 3;
+        }
+
+        // 如果当前选择超出范围，重置为1
+        if (this._selectedDiceCount > maxDice) {
+            this._selectedDiceCount = 1;
+        }
+
+        // 更新控制器状态
         if (this.m_ctrl_diceNum) {
             this.m_ctrl_diceNum.selectedIndex = this._selectedDiceCount - 1;
         }
-
-        // TODO: 后续机车卡逻辑
-        // const session = GameInitializer.getInstance()?.getGameSession();
-        // const player = session?.getMyPlayer();
-        // const round = session?.getRound() || 0;
-        // const hasLocomotive = player?.hasActiveBuff(BuffKind.LOCOMOTIVE, round);
-        // this.m_btn_diceNum_2.enabled = hasLocomotive;
-        // this.m_btn_diceNum_3.enabled = hasLocomotive;
     }
 
     /**

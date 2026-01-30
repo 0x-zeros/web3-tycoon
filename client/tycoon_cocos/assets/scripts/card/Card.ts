@@ -189,6 +189,27 @@ export class Card {
     }
 
     /**
+     * 是否是摩托车卡
+     */
+    isMotorcycleCard(): boolean {
+        return this.kind === 17; // CARD_MOTORCYCLE
+    }
+
+    /**
+     * 是否是汽车卡
+     */
+    isCarCard(): boolean {
+        return this.kind === 18; // CARD_CAR
+    }
+
+    /**
+     * 是否是载具卡（摩托车或汽车）
+     */
+    isVehicleCard(): boolean {
+        return this.kind === 17 || this.kind === 18;
+    }
+
+    /**
      * 获取卡片使用的最大步数/范围
      * 基于 config.range 配置：
      * - 255: 动态计算（遥控骰子根据骰子数量）

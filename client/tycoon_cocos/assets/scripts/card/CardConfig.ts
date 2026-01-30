@@ -45,7 +45,11 @@ const CARD_CONFIGS: CardConfig[] = [
     { kind: 13, name: '建造卡', description: '升级建筑一级', targetType: 4, value: 0, rarity: 3, price: 4000, gm: true, iconPath: 'web3/cards/construction', range: 0 },
     { kind: 14, name: '改建卡', description: '更换大建筑类型', targetType: 4, value: 0, rarity: 3, price: 4000, gm: true, iconPath: 'web3/cards/renovation', range: 0 },
     { kind: 15, name: '召唤卡', description: '在地块上放置指定NPC', targetType: 2, value: 0, rarity: 3, price: 3000, gm: true, iconPath: 'web3/cards/summon', range: 0 },
-    { kind: 16, name: '驱逐卡', description: '移除地块上的NPC', targetType: 2, value: 0, rarity: 3, price: 3000, gm: true, iconPath: 'web3/cards/banish', range: 10 }
+    { kind: 16, name: '驱逐卡', description: '移除地块上的NPC', targetType: 2, value: 0, rarity: 3, price: 3000, gm: true, iconPath: 'web3/cards/banish', range: 10 },
+
+    // 载具卡片 (17-18, gm=false)
+    { kind: 17, name: '摩托车卡', description: '永久允许使用2个骰子', targetType: 0, value: 2, rarity: 2, price: 3000, gm: false, iconPath: 'web3/cards/motorcycle', range: 0 },
+    { kind: 18, name: '汽车卡', description: '永久允许使用3个骰子', targetType: 0, value: 3, rarity: 3, price: 5000, gm: false, iconPath: 'web3/cards/car', range: 0 }
 ];
 
 export class CardConfigManager {

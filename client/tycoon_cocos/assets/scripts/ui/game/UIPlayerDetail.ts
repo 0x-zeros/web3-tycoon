@@ -392,12 +392,17 @@ export class UIPlayerDetail extends UIBase {
         const hasActedThisRound = buffOwnerIndex < activePlayerIndex;
 
         // 计算每个buff的剩余回合数，并过滤掉已失效的
+        // 永久buff (last_active_round = 0xFFFF) 不会被过滤掉
         const activeBuffsWithRemaining = allBuffs
             .filter((buff: any) => buff != null)
             .map((buff: any) => {
+                const isPermanent = buff.last_active_round >= 65535;
+                if (isPermanent) {
+                    return { buff, remaining: Infinity, isPermanent: true };
+                }
                 const baseRemaining = buff.last_active_round - currentRound;
                 const remaining = hasActedThisRound ? baseRemaining : baseRemaining + 1;
-                return { buff, remaining };
+                return { buff, remaining, isPermanent: false };
             })
             .filter((item: any) => item.remaining > 0);
 
@@ -417,11 +422,12 @@ export class UIPlayerDetail extends UIBase {
                 this.loadBuffIcon(icon, buff.kind);
             }
 
-            // 名称 + 剩余回合数
+            // 名称 + 剩余回合数（永久buff显示"永久"）
             const titleLabel = buffItem.getChild('title') as fgui.GTextField;
             if (titleLabel) {
-                const name = this.getBuffDisplayName(buff.kind);
-                titleLabel.text = `${name} ${remaining}`;
+                const name = this.getBuffDisplayName(buff.kind, buff.value);
+                const remainingText = item.isPermanent ? '永久' : `${remaining}`;
+                titleLabel.text = `${name} ${remainingText}`;
             }
         };
 
@@ -430,8 +436,17 @@ export class UIPlayerDetail extends UIBase {
 
     /**
      * 获取 Buff 中文名称
+     * @param buffKind buff类型
+     * @param buffValue buff值（用于区分摩托车/汽车）
      */
-    private getBuffDisplayName(buffKind: number): string {
+    private getBuffDisplayName(buffKind: number, buffValue?: number): string {
+        // 特殊处理：LOCOMOTIVE buff 根据 value 显示不同名称
+        if (buffKind === 6) {  // BUFF_LOCOMOTIVE
+            if (buffValue === 3) return '汽车';
+            if (buffValue === 2) return '摩托车';
+            return '机车卡';  // 默认
+        }
+
         // Buff类型映射（对应Move端 types.move 的 BUFF_* 常量）
         const buffNames: { [key: number]: string } = {
             1: '遥控骰子',      // BUFF_MOVE_CTRL
@@ -439,7 +454,7 @@ export class UIPlayerDetail extends UIBase {
             3: '免租',          // BUFF_RENT_FREE
             4: '土地神祝福',    // BUFF_LAND_BLESSING
             5: '福神幸运',      // BUFF_FORTUNE
-            6: '机车卡',        // BUFF_LOCOMOTIVE
+            // 6: 已在上面特殊处理
             7: '传送',          // BUFF_TELEPORT
             8: '福神附身',      // BUFF_FORTUNE_BLESSING（购买/升级免费）
             9: '穷神诅咒',      // BUFF_RENT_DOUBLE（租金翻倍）

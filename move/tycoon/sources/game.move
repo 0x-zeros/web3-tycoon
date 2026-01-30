@@ -1673,7 +1673,8 @@ fun handle_tile_stop_with_collector(
             npc_buff_opt = option::some(events::make_buff_change(
                 types::BUFF_LAND_BLESSING(),
                 player_index,
-                option::some(last_active_round)
+                option::some(last_active_round),
+                0
             ));
 
             // 消耗NPC
@@ -1699,7 +1700,8 @@ fun handle_tile_stop_with_collector(
             npc_buff_opt = option::some(events::make_buff_change(
                 types::BUFF_FORTUNE_BLESSING(),
                 player_index,
-                option::some(last_active_round)
+                option::some(last_active_round),
+                0
             ));
             consume_npc_if_consumable(game, tile_id, &npc);
             handle_npc_consumed(game, &npc, true);
@@ -1742,7 +1744,8 @@ fun handle_tile_stop_with_collector(
             npc_buff_opt = option::some(events::make_buff_change(
                 types::BUFF_WEALTH_BLESSING(),
                 player_index,
-                option::some(last_active_round)
+                option::some(last_active_round),
+                0
             ));
             consume_npc_if_consumable(game, tile_id, &npc);
             handle_npc_consumed(game, &npc, true);
@@ -1789,7 +1792,8 @@ fun handle_tile_stop_with_collector(
             npc_buff_opt = option::some(events::make_buff_change(
                 types::BUFF_RENT_DOUBLE(),
                 player_index,
-                option::some(last_active_round)
+                option::some(last_active_round),
+                0
             ));
             consume_npc_if_consumable(game, tile_id, &npc);
             handle_npc_consumed(game, &npc, true);
@@ -2456,7 +2460,8 @@ fun apply_card_effect_with_collectors(
             buff_changes.push_back(events::make_buff_change(
                 types::BUFF_FROZEN(),
                 target_index,
-                option::none()  // none表示移除
+                option::none(),  // none表示移除
+                0
             ));
         };
 
@@ -2468,7 +2473,8 @@ fun apply_card_effect_with_collectors(
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_MOVE_CTRL(),
             target_index,
-            option::some(last_active_round)
+            option::some(last_active_round),
+            dice_sum
         ));
     } else if (kind == types::CARD_RENT_FREE()) {
         // 免租卡：立即生效，持续1回合
@@ -2488,7 +2494,8 @@ fun apply_card_effect_with_collectors(
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_RENT_FREE(),
             target_index,
-            option::some(last_active_round)
+            option::some(last_active_round),
+            0
         ));
     } else if (kind == types::CARD_FREEZE()) {
         // 冰冻卡可以对自己或其他玩家使用
@@ -2509,7 +2516,8 @@ fun apply_card_effect_with_collectors(
             buff_changes.push_back(events::make_buff_change(
                 types::BUFF_MOVE_CTRL(),
                 target_index,
-                option::none()  // none表示移除
+                option::none(),  // none表示移除
+                0
             ));
         };
 
@@ -2518,7 +2526,8 @@ fun apply_card_effect_with_collectors(
         buff_changes.push_back( events::make_buff_change(
             types::BUFF_FROZEN(),
             target_index,
-            option::some(last_active_round)
+            option::some(last_active_round),
+            0
         ));
     } else if (kind == types::CARD_BARRIER() || kind == types::CARD_BOMB() || kind == types::CARD_DOG()) {
         assert!(params.length() >= 1, EInvalidParams);
@@ -2589,7 +2598,8 @@ fun apply_card_effect_with_collectors(
                 buff_changes.push_back(events::make_buff_change(
                     types::BUFF_MOVE_CTRL(),
                     target_index,
-                    option::none()  // none 表示移除
+                    option::none(),  // none 表示移除
+                    0
                 ));
             };
 
@@ -2602,7 +2612,8 @@ fun apply_card_effect_with_collectors(
             buff_changes.push_back(events::make_buff_change(
                 types::BUFF_TELEPORT(),
                 target_index,
-                option::some(last_active_round)
+                option::some(last_active_round),
+                0
             ));
         };
 
@@ -2745,7 +2756,8 @@ fun apply_card_effect_with_collectors(
         buff_changes.push_back(events::make_buff_change(
             types::BUFF_LOCOMOTIVE(),
             player_index,
-            option::some(last_active_round)
+            option::some(last_active_round),
+            max_dice
         ));
     };
 

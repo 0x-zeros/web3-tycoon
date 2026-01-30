@@ -47,6 +47,7 @@ export interface BuffChangeItem {
     buff_type: number;      // u8 - Buff类型
     target: number;         // 玩家索引
     last_active_round: number | null; // option<u16> - 最后激活回合（null表示移除）
+    value: bigint;          // u64 - buff 的数值参数（如 LOCOMOTIVE 的骰子数量）
 }
 
 /**
@@ -228,10 +229,10 @@ export class UseCardHandler {
                 player.addBuff({
                     kind: change.buff_type,
                     last_active_round: change.last_active_round,
-                    value: 0n,  // bigint 类型
+                    value: change.value ?? 0n,  // 使用事件中的 value
                     spawn_index: 0xFFFF  // 非NPC产生的buff
                 });
-                console.log(`[UseCardHandler] 玩家${change.target} 获得buff ${change.buff_type}, 最后激活回合: ${change.last_active_round}`);
+                console.log(`[UseCardHandler] 玩家${change.target} 获得buff ${change.buff_type}, 最后激活回合: ${change.last_active_round}, value: ${change.value}`);
             } else {
                 // 移除 buff
                 player.removeBuff(change.buff_type);

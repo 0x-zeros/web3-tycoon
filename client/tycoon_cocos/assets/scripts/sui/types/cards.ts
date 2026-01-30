@@ -169,6 +169,16 @@ export const CARD_EFFECTS: Map<number, CardEffect> = new Map([
         type: 'movement',
         duration: 0,
         description: '改变移动方向'
+    }],
+    [17, { // CARD_MOTORCYCLE - 摩托车卡
+        type: 'buff',
+        duration: -1,  // 永久
+        description: '永久允许使用2个骰子'
+    }],
+    [18, { // CARD_CAR - 汽车卡
+        type: 'buff',
+        duration: -1,  // 永久
+        description: '永久允许使用3个骰子'
     }]
 ]);
 
@@ -198,7 +208,9 @@ export function getCardName(kind: number): string {
         13: '建造卡',     // CARD_BUILD
         14: '改建卡',     // CARD_REBUILD
         15: '召唤卡',     // CARD_SUMMON
-        16: '驱逐卡'      // CARD_BANISH
+        16: '驱逐卡',     // CARD_BANISH
+        17: '摩托车卡',   // CARD_MOTORCYCLE
+        18: '汽车卡'      // CARD_CAR
     };
     return names[kind] || `未知卡牌(${kind})`;
 }

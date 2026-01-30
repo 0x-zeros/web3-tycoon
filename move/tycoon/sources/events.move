@@ -166,7 +166,8 @@ public struct NpcChangeItem has copy, drop, store {
 public struct BuffChangeItem has copy, drop, store {
     buff_type: u8,
     target: u8,
-    last_active_round: option::Option<u16>
+    last_active_round: option::Option<u16>,
+    value: u64  // buff 的数值参数（如 LOCOMOTIVE 的骰子数量）
 }
 
 public struct NpcStepEvent has copy, drop, store {
@@ -418,12 +419,14 @@ public(package) fun make_npc_change(
 public(package) fun make_buff_change(
     buff_type: u8,
     target: u8,
-    last_active_round: option::Option<u16>
+    last_active_round: option::Option<u16>,
+    value: u64
 ): BuffChangeItem {
     BuffChangeItem {
         buff_type,
         target,
-        last_active_round
+        last_active_round,
+        value
     }
 }
 

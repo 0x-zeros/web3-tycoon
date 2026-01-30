@@ -339,6 +339,34 @@ fun init_basic_cards(registry: &mut CardRegistry) {
         true,
         10      // range: 10步范围
     );
+
+    // ===== 载具卡片 (kind 17-18, gm=false) =====
+
+    // kind=17 摩托车卡：永久允许使用2个骰子，价格3000
+    register_card_internal(registry,
+        types::CARD_MOTORCYCLE(),
+        b"Motorcycle",
+        b"Ride a motorcycle, use up to 2 dice permanently",
+        target_none(),
+        2,       // value=2 表示最多2骰子
+        2,       // rarity
+        3000,    // price
+        false,   // 非GM卡
+        0        // range: 不需要选地块
+    );
+
+    // kind=18 汽车卡：永久允许使用3个骰子，价格5000
+    register_card_internal(registry,
+        types::CARD_CAR(),
+        b"Car",
+        b"Drive a car, use up to 3 dice permanently",
+        target_none(),
+        3,       // value=3 表示最多3骰子
+        3,       // rarity
+        5000,    // price
+        false,   // 非GM卡
+        0        // range: 不需要选地块
+    );
 }
 
 fun init_default_drop_rules(config: &mut DropConfig) {
@@ -350,18 +378,22 @@ fun init_default_drop_rules(config: &mut DropConfig) {
         types::CARD_FREEZE(),
         types::CARD_DOG(),
         types::CARD_CLEANSE(),
-        types::CARD_TURN()
+        types::CARD_TURN(),
+        types::CARD_MOTORCYCLE(),
+        types::CARD_CAR()
     ];
 
     config.default_weights = vector[
-        40,
-        40,
-        30,
-        30,
-        10,
-        30,
-        40,
-        40
+        40,  // MOVE_CTRL
+        40,  // BARRIER
+        30,  // BOMB
+        30,  // RENT_FREE
+        10,  // FREEZE
+        30,  // DOG
+        40,  // CLEANSE
+        40,  // TURN
+        15,  // MOTORCYCLE
+        8    // CAR
     ];
 
     let card_tile_rule = DropRule {
@@ -373,7 +405,7 @@ fun init_default_drop_rules(config: &mut DropConfig) {
 
     let bonus_tile_rule = DropRule {
         card_pool: config.default_pool,
-        weights: vector[20, 20, 40, 40, 30, 40, 20, 20],
+        weights: vector[20, 20, 40, 40, 30, 40, 20, 20, 10, 5],
         quantity: 3
     };
     table::add(&mut config.tile_drops, types::TILE_BONUS(), bonus_tile_rule);

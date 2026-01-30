@@ -697,6 +697,9 @@ entry fun roll_and_step(
     let has_move_ctrl = !skip_movement &&
         is_buff_active(player, types::BUFF_MOVE_CTRL(), game.round);
 
+    // 获取玩家当前允许的最大骰子数（受摩托车/汽车卡buff影响）
+    let max_dice = get_max_dice_count(player, game.round);
+
     // 根据模式处理骰子和路径
     let (dice_values, total_dice, mut generator) = if (skip_movement) {
         // === 跳过移动模式 ===
@@ -707,8 +710,11 @@ entry fun roll_and_step(
 
     } else if (has_move_ctrl) {
         // === 遥控骰子模式 ===
-        assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
-        assert!(!path.is_empty() && path.length() <= 18, EInvalidPath);
+        // 骰子数量受摩托车/汽车卡buff限制
+        assert!(dice_count >= 1 && dice_count <= max_dice, EInvalidPath);
+        // 路径长度限制也相应调整：max_dice * 6
+        let max_path_length = (max_dice as u64) * 6;
+        assert!(!path.is_empty() && path.length() <= max_path_length, EInvalidPath);
         let total = path.length() as u8;
         let values = split_into_dice_values(total, dice_count);
         let generator = random::new_generator(r, ctx);
@@ -716,7 +722,8 @@ entry fun roll_and_step(
 
     } else {
         // === 普通模式 ===
-        assert!(dice_count >= 1 && dice_count <= 3, EInvalidPath);
+        // 骰子数量受摩托车/汽车卡buff限制
+        assert!(dice_count >= 1 && dice_count <= max_dice, EInvalidPath);
         let mut generator = random::new_generator(r, ctx);
         let mut values = vector[];
         let mut total = 0u8;
@@ -2723,6 +2730,23 @@ fun apply_card_effect_with_collectors(
         assert!((tile_id as u64) < game.tiles.length(), ENoSuchTile);
 
         remove_npc_internal(game, tile_id, npc_changes);
+
+    } else if (kind == types::CARD_MOTORCYCLE() || kind == types::CARD_CAR()) {
+        // 摩托车卡/汽车卡：永久buff，允许使用更多骰子
+        // 摩托车: value=2（最多2骰子），汽车: value=3（最多3骰子）
+        let max_dice: u64 = if (kind == types::CARD_MOTORCYCLE()) { 2 } else { 3 };
+
+        // 永久buff：last_active_round设为0xFFFF
+        let last_active_round: u16 = 0xFFFF;
+
+        let player = &mut game.players[player_index as u64];
+        apply_buff(player, types::BUFF_LOCOMOTIVE(), last_active_round, max_dice);
+
+        buff_changes.push_back(events::make_buff_change(
+            types::BUFF_LOCOMOTIVE(),
+            player_index,
+            option::some(last_active_round)
+        ));
     };
 
     // 其他卡牌返回 none
@@ -2880,6 +2904,19 @@ fun is_buff_active(player: &Player, kind: u8, current_round: u16): bool {
         i = i + 1;
     };
     false
+}
+
+/// 获取玩家当前允许的最大骰子数
+/// 用于摩托车/汽车卡buff限制骰子数量
+fun get_max_dice_count(player: &Player, current_round: u16): u8 {
+    if (is_buff_active(player, types::BUFF_LOCOMOTIVE(), current_round)) {
+        let value = get_buff_value(player, types::BUFF_LOCOMOTIVE(), current_round);
+        if (value >= 3) { 3 }
+        else if (value >= 2) { 2 }
+        else { 1 }
+    } else {
+        1  // 默认只能用1个骰子
+    }
 }
 
 /// 检查玩家是否应该跳过移动（通用化检测）

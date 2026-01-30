@@ -60,6 +60,10 @@ public(package) fun CARD_RENOVATION(): u8 { 14 }    // 改建卡（更换大建�
 public(package) fun CARD_SUMMON(): u8 { 15 }        // 召唤卡（放置NPC）
 public(package) fun CARD_BANISH(): u8 { 16 }        // 驱逐卡（移除NPC）
 
+// ===== 载具卡牌（非GM卡） =====
+public(package) fun CARD_MOTORCYCLE(): u8 { 17 }    // 摩托车卡：最多2骰子
+public(package) fun CARD_CAR(): u8 { 18 }           // 汽车卡：最多3骰子
+
 // ===== GM卡牌判断辅助函数 =====
 public(package) fun is_gm_card(kind: u8): bool {
     kind >= CARD_TELEPORT() && kind <= CARD_BANISH()

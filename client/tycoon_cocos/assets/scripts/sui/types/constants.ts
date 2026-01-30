@@ -83,7 +83,11 @@ export enum CardKind {
     CONSTRUCTION = 13,  // 建造卡（升级建筑）
     RENOVATION = 14,    // 改建卡（更换大建筑类型）
     SUMMON = 15,        // 召唤卡（放置NPC）
-    BANISH = 16         // 驱逐卡（移除NPC）
+    BANISH = 16,        // 驱逐卡（移除NPC）
+
+    // 载具卡牌（非GM卡）
+    MOTORCYCLE = 17,    // 摩托车卡：永久最多2骰子
+    CAR = 18            // 汽车卡：永久最多3骰子
 }
 
 // ===== BuffKind Buff类型 =====

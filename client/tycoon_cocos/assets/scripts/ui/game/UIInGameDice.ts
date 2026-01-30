@@ -615,8 +615,8 @@ export class UIInGameDice extends UIBase {
             const locomotiveBuff = player.getBuff(BuffKind.LOCOMOTIVE);
             // 永久buff: last_active_round = 0xFFFF (65535)
             if (locomotiveBuff && currentRound <= locomotiveBuff.last_active_round) {
-                maxDice = locomotiveBuff.value >= 3 ? 3 :
-                          locomotiveBuff.value >= 2 ? 2 : 1;
+                const value = Number(locomotiveBuff.value);  // 显式转换为 number 进行比较
+                maxDice = value >= 3 ? 3 : value >= 2 ? 2 : 1;
             }
         }
 
@@ -786,8 +786,8 @@ export class UIInGameDice extends UIBase {
         if (player) {
             const locomotiveBuff = player.getBuff(BuffKind.LOCOMOTIVE);
             if (locomotiveBuff && round <= locomotiveBuff.last_active_round) {
-                maxDice = locomotiveBuff.value >= 3 ? 3 :
-                          locomotiveBuff.value >= 2 ? 2 : 1;
+                const value = Number(locomotiveBuff.value);  // 显式转换为 number 进行比较
+                maxDice = value >= 3 ? 3 : value >= 2 ? 2 : 1;
             }
         }
 

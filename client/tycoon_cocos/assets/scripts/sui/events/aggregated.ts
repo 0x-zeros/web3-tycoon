@@ -65,6 +65,8 @@ export interface BuffChangeItem {
     target: number;
     /** 最后激活轮次（包含） */
     last_active_round: number | null;
+    /** Buff数值参数（如 LOCOMOTIVE 的骰子数量） */
+    value: bigint;
 }
 
 /**

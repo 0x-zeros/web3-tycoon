@@ -229,7 +229,7 @@ export class UseCardHandler {
                 player.addBuff({
                     kind: change.buff_type,
                     last_active_round: change.last_active_round,
-                    value: change.value ?? 0n,  // 使用事件中的 value
+                    value: BigInt(change.value ?? 0),  // 显式转换为 BigInt
                     spawn_index: 0xFFFF  // 非NPC产生的buff
                 });
                 console.log(`[UseCardHandler] 玩家${change.target} 获得buff ${change.buff_type}, 最后激活回合: ${change.last_active_round}, value: ${change.value}`);

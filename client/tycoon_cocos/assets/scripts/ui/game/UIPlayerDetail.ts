@@ -437,13 +437,14 @@ export class UIPlayerDetail extends UIBase {
     /**
      * 获取 Buff 中文名称
      * @param buffKind buff类型
-     * @param buffValue buff值（用于区分摩托车/汽车）
+     * @param buffValue buff值（用于区分摩托车/汽车），支持 number 或 bigint
      */
-    private getBuffDisplayName(buffKind: number, buffValue?: number): string {
+    private getBuffDisplayName(buffKind: number, buffValue?: number | bigint): string {
         // 特殊处理：LOCOMOTIVE buff 根据 value 显示不同名称
         if (buffKind === 6) {  // BUFF_LOCOMOTIVE
-            if (buffValue === 3) return '汽车';
-            if (buffValue === 2) return '摩托车';
+            const val = Number(buffValue ?? 0);  // 显式转换为 number 进行比较
+            if (val === 3) return '汽车';
+            if (val === 2) return '摩托车';
             return '机车卡';  // 默认
         }
 

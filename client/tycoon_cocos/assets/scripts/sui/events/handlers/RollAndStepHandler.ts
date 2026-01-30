@@ -395,7 +395,7 @@ export class RollAndStepHandler {
                     targetPlayer.addBuff({
                         kind: npcBuff.buff_type,
                         last_active_round: npcBuff.last_active_round ?? 0,
-                        value: BigInt(0),
+                        value: BigInt(npcBuff.value ?? 0),  // 使用事件中的 value
                         spawn_index: 0xFFFF  // 从事件中无法获取，使用默认值
                     });
                 }

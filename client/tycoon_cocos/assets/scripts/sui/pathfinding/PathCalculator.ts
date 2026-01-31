@@ -261,16 +261,19 @@ export class PathCalculator {
     /**
      * 验证路径是否有效
      *
-     * 检查路径中的每一步是否是有效的邻居关系
+     * 检查路径中的每一步是否是有效的邻居关系，并检查回头逻辑是否合法。
+     * 与 Move 端保持一致：只有在死路（只有一个邻居）时才允许回头。
      *
      * @param startTile 起始 tile_id
      * @param path 路径数组
+     * @param lastTile 起始位置的上一个 tile_id（可选，默认 INVALID_TILE_ID）
      * @returns 是否有效
      */
-    public validatePath(startTile: number, path: number[]): boolean {
+    public validatePath(startTile: number, path: number[], lastTile: number = INVALID_TILE_ID): boolean {
         if (path.length === 0) return true;
 
         let currentTile = startTile;
+        let prevTile = lastTile;
 
         for (let i = 0; i < path.length; i++) {
             const nextTile = path[i];
@@ -295,6 +298,23 @@ export class PathCalculator {
                 return false;
             }
 
+            // 检查回头（与 Move 端一致：只在死路时允许回头）
+            if (nextTile === prevTile && prevTile !== INVALID_TILE_ID) {
+                // 计算当前 tile 的所有有效邻居数量
+                const allNeighbors = [tileStatic.w, tileStatic.n, tileStatic.e, tileStatic.s]
+                    .filter(n => n !== INVALID_TILE_ID);
+
+                // 只有死路（只有一个邻居）才允许回头
+                if (allNeighbors.length !== 1) {
+                    console.error(
+                        `[PathCalculator] Invalid path at step ${i}: backtrack not allowed at tile ${currentTile} ` +
+                        `(has ${allNeighbors.length} neighbors, not a dead end)`
+                    );
+                    return false;
+                }
+            }
+
+            prevTile = currentTile;
             currentTile = nextTile;
         }
 

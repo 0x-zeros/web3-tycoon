@@ -453,10 +453,10 @@ export class UIInGameDice extends UIBase {
                     console.log("[UIInGameDice] Rotor-Router 历史记录已保存");
                 }
 
-                // 校验路径合法性
-                const isValid = pathCalculator.validatePath(player.getPos(), pathResult.path);
+                // 校验路径合法性（传入 lastTile 以检测回头）
+                const isValid = pathCalculator.validatePath(player.getPos(), pathResult.path, player.getLastTileId());
                 if (!isValid) {
-                    throw new Error("路径校验失败：包含无效的邻接关系");
+                    throw new Error("路径校验失败：包含无效的邻接关系或非法回头");
                 }
             }
 
@@ -615,12 +615,28 @@ export class UIInGameDice extends UIBase {
         let maxDice = 1;
         if (player) {
             const locomotiveBuff = player.getBuff(BuffKind.LOCOMOTIVE);
+
+            // 调试日志：帮助定位偶发的骰子数量不一致问题
+            console.log('[UIInGameDice] _getDiceCount 检查 buff:', {
+                hasBuff: !!locomotiveBuff,
+                value: locomotiveBuff?.value,
+                valueType: typeof locomotiveBuff?.value,
+                currentRound,
+                lastActiveRound: locomotiveBuff?.last_active_round
+            });
+
             // 永久buff: last_active_round = 0xFFFF (65535)
             if (locomotiveBuff && currentRound <= locomotiveBuff.last_active_round) {
                 const value = Number(locomotiveBuff.value);  // 显式转换为 number 进行比较
                 maxDice = value >= 3 ? 3 : value >= 2 ? 2 : 1;
             }
         }
+
+        console.log('[UIInGameDice] _getDiceCount 结果:', {
+            maxDice,
+            selectedDiceCount: this._selectedDiceCount,
+            returning: this._selectedDiceCount > maxDice ? maxDice : this._selectedDiceCount
+        });
 
         // 验证选择不超出范围
         if (this._selectedDiceCount > maxDice) {

@@ -165,12 +165,14 @@ export class RotorRouter {
     }
 
     /**
-     * 获取所有有效邻居（使用优先级筛选：避开 terminal 优先于避免回头）
+     * 获取所有有效邻居
      *
-     * 优先级（从高到低）：
-     * 1. 非 terminal 且非 lastTile（最佳选择）
-     * 2. lastTile（回头，但不是 terminal）- 比走入死胡同好
-     * 3. terminal（走入死胡同，最后手段）
+     * 与 Move 端保持一致：只在死路（只有一个邻居）时才允许回头。
+     * 非死路情况下，过滤掉 lastTile，不允许回头。
+     *
+     * Move 端逻辑 (game.move:1475-1482):
+     * - 如果 next_pos == last_tile_id，检查 neighbors.length == 1
+     * - 只有死路才允许回头
      */
     private getValidNeighbors(currentTile: number, lastTile: number): number[] {
         const tileStatic = this.template.tiles_static.get(currentTile);
@@ -183,34 +185,22 @@ export class RotorRouter {
             tileStatic.s
         ].filter(n => n !== INVALID_TILE_ID);
 
-        // 特殊情况：当前在端点tile，只有一个邻居且是lastTile
-        // 必须允许"回头"离开端点
-        if (allNeighbors.length === 1 && allNeighbors[0] === lastTile) {
-            return [lastTile];
+        // 死路（只有一个邻居）：必须允许回头
+        if (allNeighbors.length === 1) {
+            return allNeighbors;
         }
 
-        // 分类所有邻居
-        const ideal: number[] = [];      // 非 terminal 且非 lastTile
-        const backtrack: number[] = [];  // lastTile（回头，但非 terminal）
-        const terminal: number[] = [];   // terminal tiles
+        // 非死路：不允许回头，过滤掉 lastTile
+        const neighbors = allNeighbors.filter(n => n !== lastTile);
 
-        for (const neighbor of allNeighbors) {
-            const isLast = neighbor === lastTile;
-            const isTerm = this.isTerminalTile(neighbor);
-
-            if (!isLast && !isTerm) {
-                ideal.push(neighbor);
-            } else if (isLast && !isTerm) {
-                backtrack.push(neighbor);
-            } else if (isTerm) {
-                terminal.push(neighbor);
-            }
+        // 进一步过滤：优先选择非 terminal 的邻居
+        const nonTerminal = neighbors.filter(n => !this.isTerminalTile(n));
+        if (nonTerminal.length > 0) {
+            return nonTerminal;
         }
 
-        // 按优先级返回：ideal > backtrack > terminal
-        if (ideal.length > 0) return ideal;
-        if (backtrack.length > 0) return backtrack;
-        return terminal;
+        // 如果所有邻居都是 terminal，返回所有邻居（让上层选择）
+        return neighbors;
     }
 
     /**

@@ -17,6 +17,8 @@ public struct CardEntry has store, copy, drop {
 }
 
 public(package) fun new_card_entry(kind: u8, count: u8): CardEntry { CardEntry { kind, count } }
+public(package) fun card_entry_kind(entry: &CardEntry): u8 { entry.kind }
+public(package) fun card_entry_count(entry: &CardEntry): u8 { entry.count }
 
 // ===== Card Definition 卡牌元数据 =====
 /// 卡牌元数据定义，不是玩家拥有的卡牌实例

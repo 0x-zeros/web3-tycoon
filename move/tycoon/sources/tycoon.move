@@ -59,6 +59,10 @@ public struct GameData has key, store {
     npc_spawn_weights: vector<u8>,
     map_schema_version: u8,
     npc_reward_params: NpcRewardParams,  // NPC奖励随机参数（财神/穷神）
+
+    // ===== 初始卡片配置 =====
+    initial_cards: vector<cards::CardEntry>,      // 基础初始卡片（所有游戏）
+    gm_extra_cards: vector<cards::CardEntry>,     // GM模式额外卡片
 }
 
 // ===== Package Init 包初始化 =====
@@ -100,6 +104,24 @@ fun init(ctx: &mut TxContext) {
             w_low: 20,
             w_high: 20,
         },
+
+        // 基础初始卡片（所有游戏）
+        initial_cards: vector[
+            cards::new_card_entry(types::CARD_MOVE_CTRL(), 2),
+            cards::new_card_entry(types::CARD_BARRIER(), 2),
+            cards::new_card_entry(types::CARD_BOMB(), 2),
+            cards::new_card_entry(types::CARD_RENT_FREE(), 2),
+            cards::new_card_entry(types::CARD_FREEZE(), 2),
+            cards::new_card_entry(types::CARD_DOG(), 2),
+            cards::new_card_entry(types::CARD_CLEANSE(), 2),
+            cards::new_card_entry(types::CARD_TURN(), 2),
+        ],
+
+        // GM模式额外卡片
+        gm_extra_cards: vector[
+            cards::new_card_entry(types::CARD_TELEPORT(), 2),
+            cards::new_card_entry(types::CARD_CAR(), 2),
+        ],
     };
 
     let game_data_id = object::id(&game_data);
@@ -224,6 +246,16 @@ public(package) fun get_card_registry(game_data: &GameData): &cards::CardRegistr
 public(package) fun get_npc_reward_params(game_data: &GameData): (u64, u64, u64, u64, u64, u64, u64) {
     let p = &game_data.npc_reward_params;
     (p.min, p.max, p.mid_lo, p.mid_hi, p.w_mid, p.w_low, p.w_high)
+}
+
+/// 获取基础初始卡片配置
+public(package) fun get_initial_cards(game_data: &GameData): &vector<cards::CardEntry> {
+    &game_data.initial_cards
+}
+
+/// 获取GM模式额外卡片配置
+public(package) fun get_gm_extra_cards(game_data: &GameData): &vector<cards::CardEntry> {
+    &game_data.gm_extra_cards
 }
 
 // ===== Configuration Validation Functions 配置验证函数 =====

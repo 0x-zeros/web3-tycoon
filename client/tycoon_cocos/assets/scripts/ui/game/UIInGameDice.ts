@@ -147,6 +147,7 @@ export class UIInGameDice extends UIBase {
 
         // 监听Buff变化（更新骰子数量选项，用于摩托车卡/汽车卡）
         EventBus.on(EventTypes.Player.BuffsUpdated, this._onBuffsUpdated, this);
+        EventBus.on(EventTypes.Player.BuffAdded, this._onBuffsUpdated, this);
     }
 
     /**
@@ -171,6 +172,7 @@ export class UIInGameDice extends UIBase {
         EventBus.off(EventTypes.Game.DecisionPending, this._onDecisionStateChanged, this);
         EventBus.off(EventTypes.Game.DecisionCleared, this._onDecisionStateChanged, this);
         EventBus.off(EventTypes.Player.BuffsUpdated, this._onBuffsUpdated, this);
+        EventBus.off(EventTypes.Player.BuffAdded, this._onBuffsUpdated, this);
 
         super.unbindEvents();
     }

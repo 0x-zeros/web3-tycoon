@@ -422,12 +422,11 @@ export class UIPlayerDetail extends UIBase {
                 this.loadBuffIcon(icon, buff.kind);
             }
 
-            // 名称 + 剩余回合数（永久buff显示"永久"）
+            // 名称 + 剩余回合数（永久buff只显示名称，不显示"永久"）
             const titleLabel = buffItem.getChild('title') as fgui.GTextField;
             if (titleLabel) {
                 const name = this.getBuffDisplayName(buff.kind, buff.value);
-                const remainingText = item.isPermanent ? '永久' : `${remaining}`;
-                titleLabel.text = `${name} ${remainingText}`;
+                titleLabel.text = item.isPermanent ? name : `${name} ${remaining}`;
             }
         };
 

@@ -257,7 +257,20 @@ entry fun create_game(
     };
 
     let creator = ctx.sender();
-    let player = create_player_with_cash(creator, starting_cash, ctx);
+    let initial_cards = tycoon::get_initial_cards(game_data);
+    let mut player = create_player_with_cash(creator, starting_cash, initial_cards, ctx);
+
+    // GM模式额外发卡
+    if ((settings & types::SETTING_GM_MODE()) != 0) {
+        let gm_cards = tycoon::get_gm_extra_cards(game_data);
+        let mut j = 0;
+        while (j < gm_cards.length()) {
+            let card = &gm_cards[j];
+            cards::give_card_to_player(&mut player.cards, cards::card_entry_kind(card), cards::card_entry_count(card));
+            j = j + 1;
+        };
+    };
+
     game.players.push_back(player);
 
     let template_map_id = map::get_map_id(map);
@@ -307,7 +320,20 @@ entry fun join(
     };
 
     // 使用游戏创建时配置的starting_cash（持久化字段，确保所有玩家一致）
-    let player = create_player_with_cash(player_addr, game.starting_cash, ctx);
+    let initial_cards = tycoon::get_initial_cards(game_data);
+    let mut player = create_player_with_cash(player_addr, game.starting_cash, initial_cards, ctx);
+
+    // GM模式额外发卡
+    if ((game.settings & types::SETTING_GM_MODE()) != 0) {
+        let gm_cards = tycoon::get_gm_extra_cards(game_data);
+        let mut j = 0;
+        while (j < gm_cards.length()) {
+            let card = &gm_cards[j];
+            cards::give_card_to_player(&mut player.cards, cards::card_entry_kind(card), cards::card_entry_count(card));
+            j = j + 1;
+        };
+    };
+
     let player_index = (game.players.length() as u8);
     game.players.push_back(player);
 
@@ -1216,18 +1242,20 @@ entry fun upgrade_building(
 
 // ===== Internal Functions 内部函数 =====
 
-fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Player {
-    let mut initial_cards = vector[];
-    //for debug
-    initial_cards.push_back(cards::new_card_entry(types::CARD_MOVE_CTRL(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_BARRIER(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_BOMB(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_RENT_FREE(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_FREEZE(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_DOG(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_CLEANSE(), 2));
-    initial_cards.push_back(cards::new_card_entry(types::CARD_TURN(), 2));
-
+/// 创建玩家（使用GameData中的初始卡片配置）
+fun create_player_with_cash(
+    owner: address,
+    cash: u64,
+    initial_cards: &vector<cards::CardEntry>,
+    _ctx: &mut TxContext
+): Player {
+    // 复制初始卡片配置
+    let mut cards_copy = vector[];
+    let mut i = 0;
+    while (i < initial_cards.length()) {
+        cards_copy.push_back(*&initial_cards[i]);
+        i = i + 1;
+    };
 
     Player {
         owner,
@@ -1236,7 +1264,7 @@ fun create_player_with_cash(owner: address, cash: u64, _ctx: &mut TxContext): Pl
         buffs: vector[],
         in_hospital_turns: 0,
         bankrupt: false,
-        cards: initial_cards,
+        cards: cards_copy,
         last_tile_id: 65535,
         next_tile_id: 65535,
         temple_levels: vector[]

@@ -100,6 +100,15 @@ UPGRADE_CAP=$(
             | .objectId'
 )
 
+# 从发布结果中提取 ProfileRegistry ID (shared object)
+REGISTRY_ID=$(
+    printf '%s' "$PUBLISH" |
+        jq -r '.objectChanges[]
+            | select(.type == "created")
+            | select(.objectType | contains("::registry::ProfileRegistry"))
+            | .objectId'
+)
+
 # 构建前端配置文件路径
 # $ENV 为local, 替换为localnet
 if [ "$ENV" = "local" ]; then
@@ -119,18 +128,20 @@ if [ ! -f "$COCOS_CONFIG" ]; then
     exit 1
 fi
 
-# 增量更新配置文件中的 profilesPackageId 字段
+# 增量更新配置文件中的 profilesPackageId 和 profilesRegistryId 字段
 # 使用 sed 替换，保持原有格式（带或不带逗号）
 sed -i '' "s|profilesPackageId: '[^']*'|profilesPackageId: '$PACKAGE_ID'|" "$COCOS_CONFIG"
+sed -i '' "s|profilesRegistryId: '[^']*'|profilesRegistryId: '$REGISTRY_ID'|" "$COCOS_CONFIG"
 
 # 输出部署完成信息
 echo "================================================================================================"
 echo "Deployment Summary:"
 echo "------------------------------------------------"
 echo "Profiles Package ID: $PACKAGE_ID"
+echo "Profiles Registry ID: $REGISTRY_ID"
 echo "Profiles Upgrade Cap: $UPGRADE_CAP"
 echo "================================================================================================"
 echo "Tycoon Profiles Contract Deployment finished!"
-echo "Updated profilesPackageId in: $COCOS_CONFIG"
+echo "Updated profilesPackageId and profilesRegistryId in: $COCOS_CONFIG"
 echo ""
 echo "To verify, run: cat $COCOS_CONFIG"

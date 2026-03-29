@@ -57,6 +57,14 @@ const PACKAGES = [
         subpaths: []
     },
 
+    // @tweenjs/tween.js
+    {
+        name: '@tweenjs/tween.js',
+        esmDir: 'node_modules/@tweenjs/tween.js/dist',
+        entryFile: 'tween.esm.js',
+        subpaths: []
+    },
+
     // @scure 系列（lib/esm/）
     {
         name: '@scure/base',
@@ -151,14 +159,20 @@ function main() {
     console.log('Libs directory:', LIBS_DIR);
     console.log('');
 
-    // 1. 清理并创建 libs 目录
+    // 1. 清理并创建 libs 目录（只删除子目录，保留根目录下的文件如 sui.system.js）
     console.log('[Step 1] 准备 libs 目录...');
     if (fs.existsSync(LIBS_DIR)) {
-        console.log('  清理现有 libs/');
-        fs.rmSync(LIBS_DIR, { recursive: true, force: true });
+        const entries = fs.readdirSync(LIBS_DIR, { withFileTypes: true });
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                fs.rmSync(path.join(LIBS_DIR, entry.name), { recursive: true, force: true });
+                console.log(`  清理子目录: ${entry.name}/`);
+            }
+        }
+    } else {
+        fs.mkdirSync(LIBS_DIR, { recursive: true });
     }
-    fs.mkdirSync(LIBS_DIR, { recursive: true });
-    console.log('  ✓ libs/ 目录已创建');
+    console.log('  ✓ libs/ 目录已准备');
     console.log('');
 
     // 2. 读取现有 import-map，保留 shims

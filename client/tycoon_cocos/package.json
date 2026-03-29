@@ -18,7 +18,7 @@
     "@types/lodash-es": "^4.17.12"
   },
   "scripts": {
-    "postinstall": "node scripts/fix-sui-modules.js"
+    "postinstall": "node scripts/fix-sui-modules.js && node scripts/copy-esm-to-libs.js"
   },
   "browserslist": [
     "Chrome >= 90",

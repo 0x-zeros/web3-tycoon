@@ -10,6 +10,6 @@
   },
   "custom_joint_texture_layouts": [],
   "script": {
-    "importMap": ""
+    "importMap": "preview-template/import-map.json"
   }
 }

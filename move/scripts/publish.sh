@@ -36,6 +36,14 @@ for i in jq $SUI; do
   fi
 done
 
+# 跨平台 sed -i 包装：BSD/macOS 需要空字符串作为 backup ext, GNU/Linux 不需要
+# 让脚本既能在 host (macOS) 上跑也能在 docker/sui-dev 容器 (Ubuntu) 里跑
+if sed --version 2>/dev/null | grep -q "GNU"; then
+    sed_inplace() { sed -i "$@"; }
+else
+    sed_inplace() { sed -i '' "$@"; }
+fi
+
 # 检查是否提供了环境参数（如testnet、mainnet）
 if [ "$#" -lt 1 ]; then
     echo "Error: No environment provided."
@@ -64,7 +72,27 @@ fi
 
 # 发布Move合约并获取JSON格式的结果
 # ../tycoon指定要发布的Move包目录，--json以JSON格式输出，"$@"传递所有剩余参数
-PUBLISH=$($SUI client publish ../tycoon --json "$@")
+# 新版sui CLI对 client publish 强制要求 Move.toml 注册 env（含 chain-id），
+# localnet 因 --force-regenesis 每次 chain-id 不同，永远无法满足，必须用 test-publish
+if [[ "$ENV" == "local" || "$ENV" == "localnet" ]]; then
+    # localnet 每次 --force-regenesis chain-id 都变，没有持久 publish 跟踪意义
+    # 用 --pubfile-path 指向 /tmp 文件绕开仓库根的 Published.toml（其中可能有别人 commit 的 stale 入口）
+    # Move.lock 会被 test-publish pin 到一个可能不再可达的 git commit，前后都 restore 做到 leave-no-trace
+    in_git_repo=false
+    if git -C ../tycoon rev-parse --is-inside-work-tree &>/dev/null; then
+        in_git_repo=true
+        git -C ../tycoon checkout -- Move.lock 2>/dev/null || true
+    fi
+    PUBFILE="${TMPDIR:-/tmp}/sui-pub-${ENV}-$$.toml"
+    rm -f "$PUBFILE"
+    PUBLISH=$($SUI client test-publish --build-env testnet --pubfile-path "$PUBFILE" ../tycoon --json "$@")
+    rm -f "$PUBFILE"
+    if [ "$in_git_repo" = true ]; then
+        git -C ../tycoon checkout -- Move.lock 2>/dev/null || true
+    fi
+else
+    PUBLISH=$($SUI client publish ../tycoon --json "$@")
+fi
 
 # 使用jq美化输出JSON结果
 echo "================================================================================================"
@@ -144,10 +172,10 @@ COCOS_CONFIG="$COCOS_CONFIG_DIR/env.$CONFIG_ENV.ts"
 # 检查配置文件是否存在
 if [ -f "$COCOS_CONFIG" ]; then
     # 配置文件已存在，使用 sed 增量更新（保留 profilesPackageId 等其他字段）
-    sed -i '' "s|packageId: '[^']*'|packageId: '$PACKAGE_ID'|" "$COCOS_CONFIG"
-    sed -i '' "s|upgradeCap: '[^']*'|upgradeCap: '$UPGRADE_CAP'|" "$COCOS_CONFIG"
-    sed -i '' "s|adminCap: '[^']*'|adminCap: '$ADMIN_CAP'|" "$COCOS_CONFIG"
-    sed -i '' "s|gameData: '[^']*'|gameData: '$GAME_DATA'|" "$COCOS_CONFIG"
+    sed_inplace "s|packageId: '[^']*'|packageId: '$PACKAGE_ID'|" "$COCOS_CONFIG"
+    sed_inplace "s|upgradeCap: '[^']*'|upgradeCap: '$UPGRADE_CAP'|" "$COCOS_CONFIG"
+    sed_inplace "s|adminCap: '[^']*'|adminCap: '$ADMIN_CAP'|" "$COCOS_CONFIG"
+    sed_inplace "s|gameData: '[^']*'|gameData: '$GAME_DATA'|" "$COCOS_CONFIG"
     echo "Updated existing config file (incremental update)"
 else
     # 配置文件不存在，创建包含所有字段的初始文件

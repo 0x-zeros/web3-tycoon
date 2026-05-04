@@ -1,0 +1,22 @@
+services:
+  sui-dev:
+    build: .
+    stdin_open: true
+    tty: true
+    ports:
+      # JSON-RPC（host 上 sui CLI 或 TS 脚本通过 http://127.0.0.1:9000 连入）
+      - "9000:9000"
+      # Faucet HTTP（充钱用）
+      - "9123:9123"
+    volumes:
+      # keys 跨重启持久化（--force-regenesis 重置链但不重置 keys）
+      - sui-config:/root/.sui
+      # sui binary 缓存，避免每次 docker rebuild 重新下 ~200MB
+      - sui-binaries:/root/.local/share/suiup
+      # 项目根 bind mount，容器内可直接 cd move/tycoon && sui move build
+      - ../../:/workspace/web3-tycoon
+    working_dir: /workspace/web3-tycoon
+
+volumes:
+  sui-config:
+  sui-binaries:

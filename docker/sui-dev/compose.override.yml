@@ -1,0 +1,34 @@
+# 在 compose.yml 之上自动叠加 Postgres + GraphQL indexer
+# 默认 docker compose up 会同时加载这个文件
+# 想跑纯 localnet 不带 indexer：docker compose -f compose.yml up（显式忽略 override）
+#
+# 依赖关系：sui-dev 等 postgres 健康检查通过后才启动 → entrypoint 会重置 sui_indexer DB
+# → sui start 加 --with-indexer + --with-graphql 让链同步事件到 PG，并暴露 GraphQL endpoint
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: sui
+      POSTGRES_PASSWORD: sui
+      POSTGRES_DB: sui_indexer
+    volumes:
+      - sui-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sui -d sui_indexer"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  sui-dev:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # entrypoint 检测此变量决定是否启用 indexer + GraphQL
+      SUI_INDEXER_DB_URL: postgres://sui:sui@postgres:5432/sui_indexer
+    ports:
+      # GraphQL endpoint, host 浏览器/curl 访问 http://localhost:9125/graphql
+      - "9125:9125"
+
+volumes:
+  sui-pgdata:

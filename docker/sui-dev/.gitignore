@@ -1,0 +1,2 @@
+# entrypoint.sh 每次启动重新生成的 keys 文件（含私钥，仅 localnet 用）
+.env.sui

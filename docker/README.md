@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `.devcontainer/` | AI/coding 长跑环境（Claude Code + Codex + suiup） | VS Code → `Dev Containers: Reopen in Container` | ✅ 已实施 |
 | `docker/sui-dev/` | Move 部署 + 集成测试（带 localnet + faucet） | `cd docker/sui-dev && docker compose run --rm --service-ports sui-dev` | ✅ 已实施 |
-| `docker/e2e/` | Playwright 端到端测试 | TBD | 📋 待 playwright 测试代码出现后再建 |
+| `docker/e2e/` | Playwright 端到端测试（headless + GUI 双模式） | `cd docker/e2e && docker compose run --rm e2e` | ✅ 已实施 |
 
 ## 设计原则
 
@@ -58,3 +58,33 @@ docker compose -f compose.yml run --rm --service-ports sui-dev
 docker compose down -v
 ```
 会删 keys、sui binary 缓存、Postgres 数据，下次启动会重建一切。
+
+## e2e 工作流
+
+测试代码在 `client/tycoon_cocos/tests/e2e/`，配置在 `client/tycoon_cocos/playwright.config.ts`。
+
+**前置条件**：先在 host 的 Cocos Creator GUI 里 Build → web-mobile，产物 `client/tycoon_cocos/build/web-mobile/` 必须存在（容器不参与 build，Cocos 是 GUI 工具跑不进容器）。
+
+**Headless 模式**（CI / 快速跑一遍）：
+```bash
+cd docker/e2e
+docker compose run --rm e2e
+```
+
+**GUI 模式**（前期验证，浏览器观察 Chromium 跑测试）：
+```bash
+cd docker/e2e
+docker compose -f compose.yml -f compose.gui.yml up
+# 容器内会起 Xvfb + noVNC, host 浏览器开 http://localhost:7900/vnc.html 看
+# 测试自动跑 --headed, 跑完保持容器存活让你重跑/调试
+```
+
+**重跑测试 / 调试 UI**（GUI 模式容器存活时）：
+```bash
+docker compose -f compose.yml -f compose.gui.yml exec e2e \
+    bash -c 'cd client/tycoon_cocos && npx playwright test --ui'
+```
+
+**与 sui-dev 容器联动**：e2e 默认走 `host.docker.internal:9000`，所以先在 host 上 `cd docker/sui-dev && docker compose up -d` 把 localnet 起来即可。e2e 测试代码读 `process.env.SUI_RPC_URL`。
+
+**输出位置**：`client/tycoon_cocos/test-results/` (raw) + `client/tycoon_cocos/playwright-report/` (HTML)，已 gitignore。

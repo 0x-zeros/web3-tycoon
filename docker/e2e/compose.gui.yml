@@ -1,0 +1,13 @@
+# GUI 模式叠加层（用法: docker compose -f compose.yml -f compose.gui.yml up）
+# entrypoint 检测 E2E_GUI=1 时启动 Xvfb + x11vnc + websockify + fluxbox
+# host 浏览器访问 http://localhost:7900/vnc.html 看容器里 Chromium 跑测试
+services:
+  e2e:
+    environment:
+      E2E_GUI: "1"
+    ports:
+      # noVNC 网页端口（仅 bind 127.0.0.1, 不对外暴露）
+      - "127.0.0.1:7900:7900"
+    # GUI 模式下保持容器存活, 让用户可以重跑测试 / 通过 noVNC 观察
+    stdin_open: true
+    tty: true

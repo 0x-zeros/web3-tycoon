@@ -1,0 +1,4 @@
+# playwright 默认输出目录, 跑测试时生成
+test-results/
+playwright-report/
+blob-report/

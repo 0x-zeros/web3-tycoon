@@ -1,0 +1,20 @@
+services:
+  e2e:
+    build: .
+    environment:
+      # 0=headless (默认), 1=GUI mode (改用 compose.gui.yml override 设为 1)
+      E2E_GUI: "0"
+      # Sui localnet 接口（host.docker.internal 解析到宿主机 docker bridge）
+      # 想用链时手动起 docker/sui-dev, e2e 会通过这俩 URL 连过去
+      SUI_RPC_URL: http://host.docker.internal:9000
+      SUI_FAUCET_URL: http://host.docker.internal:9123
+    ports:
+      # 静态 server, host 浏览器也能直接访问 build 产物调试
+      # 显式 bind 到 127.0.0.1 防止外网/局域网可见
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../../:/workspace/web3-tycoon
+    working_dir: /workspace/web3-tycoon
+    # macOS Docker Desktop 自带 host.docker.internal, Linux 上需要这条
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

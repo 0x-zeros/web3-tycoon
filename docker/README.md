@@ -88,3 +88,33 @@ docker compose -f compose.yml -f compose.gui.yml exec e2e \
 **与 sui-dev 容器联动**：e2e 默认走 `host.docker.internal:9000`，所以先在 host 上 `cd docker/sui-dev && docker compose up -d` 把 localnet 起来即可。e2e 测试代码读 `process.env.SUI_RPC_URL`。
 
 **输出位置**：`client/tycoon_cocos/test-results/` (raw) + `client/tycoon_cocos/playwright-report/` (HTML)，已 gitignore。
+
+### 注意事项 / 常见踩坑
+
+1. **Cocos 必须先 build**
+   每次改了客户端代码要先在 host 的 Cocos Creator GUI 里重新 build 到
+   `build/web-mobile/`，e2e 容器才能跑到最新版本。容器不参与 build——
+   Cocos Creator 是 GUI 工具，跑不进 Linux 容器。
+
+2. **测链上交互前先起 sui-dev**
+   e2e 默认走 `host.docker.internal:9000`，链不在容器内。要测真链：
+   ```bash
+   cd docker/sui-dev && docker compose up -d
+   ./move/scripts/publish.sh local      # publish 一次
+   cd ../e2e && docker compose run --rm e2e
+   ```
+   测试代码里通过 `process.env.SUI_RPC_URL` 拿到 URL（环境变量在
+   `docker/e2e/compose.yml` 注入）。不需要链时不起 sui-dev 即可。
+
+3. **Cocos 加载/WebGL 初始化在容器里很慢**
+   Headless Chromium + 容器内 WebGL（swiftshader 软渲染）大约要
+   10–30 秒才能让 Cocos 全局对象就绪。`playwright.config.ts` 已经把
+   timeout 拉到 60 秒。真业务测试不要直接断言"游戏 ready"，
+   要用 `page.waitForFunction(() => globalThis.cc?.director?...)`
+   之类等真实就绪信号。
+
+4. **noVNC 默认无密码（只 bind 127.0.0.1 所以正常用安全）**
+   `compose.gui.yml` 把 `7900` 显式 bind 到 `127.0.0.1`，外网/局域网
+   访问不到。但如果你 SSH 端口转发了 7900，那一端别人能连进来看你
+   的浏览器画面（甚至如果用 vnc 客户端连 5900，能控制鼠标键盘）。
+   公司/咖啡馆 wifi 下用 SSH 反代时要意识到这点。

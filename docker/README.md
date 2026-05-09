@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `.devcontainer/` | AI/coding 长跑环境（Claude Code + Codex + suiup） | VS Code → `Dev Containers: Reopen in Container` | ✅ 已实施 |
 | `docker/sui-dev/` | Move 部署 + 集成测试（带 localnet + faucet） | `cd docker/sui-dev && docker compose run --rm --service-ports sui-dev` | ✅ 已实施 |
-| `docker/e2e/` | Playwright 端到端测试（headless + GUI 双模式） | `cd docker/e2e && docker compose run --rm e2e` | ✅ 已实施 |
+| `docker/e2e/` | Playwright 端到端测试（headless + GUI 模式 + noVNC） | `cd docker/e2e && docker compose run --rm e2e` | ✅ 已实施 |
 
 ## 设计原则
 
@@ -14,11 +14,31 @@
 - **每个容器只装本职工具**：避免镜像膨胀
 - **共享同一个 sui binary**：devcontainer 和 sui-dev 都通过 `suiup` 装 sui CLI，版本可独立升级
 
-## 与 .devcontainer 的关系
+## .devcontainer 工作流
 
-devcontainer 里也有 sui CLI（通过 suiup），所以临时调试可以直接在 devcontainer 里 `sui start --with-faucet --force-regenesis &`。
+进容器：VS Code 里 `Cmd+Shift+P` → `Dev Containers: Reopen in Container`，第一次会 build 镜像（Ubuntu 24.04 + Node 24.x + suiup 装的 sui CLI + Claude Code + Codex），之后直接 attach。这是个"长跑"环境——attach 几小时改代码、跑命令行工具、提 PR 都在里面完成。
 
-但严肃的集成测试场景（每次都要干净状态、需要可复现的 ADMIN/PLAYER_A/PLAYER_B keys、要在 CI 里跑）应该走 `docker/sui-dev/`，不要污染 devcontainer。
+日常用法：
+- 装客户端依赖：`cd client/tycoon_cocos && npm install`（postinstall 自动跑 `fix-sui-modules.js` 修补 @mysten/sui ESM 模块）
+- 跑类型检查：`npx tsc -p client/tycoon_cocos/tsconfig.json --noEmit`
+- 跑 Move 测试：`cd move/tycoon && sui move test`
+- 临时起本地链（轻量调试用）：`sui start --with-faucet --force-regenesis &`
+
+严肃的集成测试场景（每次要干净状态、可复现的 ADMIN/PLAYER_A/PLAYER_B keys、要在 CI 里跑）走 `docker/sui-dev/`，不要污染 devcontainer。
+
+### 注意事项 / 常见踩坑
+
+1. **macOS 第一次进容器的隐私弹窗**
+   首次 `Reopen in Container` 时 Docker Desktop 会弹一堆"允许访问下载文件夹/文稿/网络"的隐私权限请求，全部允许（系统设置 → 隐私与安全性 → 文件与文件夹）。不允许会出现 mount 失败或 host 网络访问不通的怪问题。
+
+2. **Cocos Creator 还是得在 host 跑**
+   devcontainer 里没装 Cocos Creator，也跑不动——Cocos 是 GUI 工具，容器里没显示器没 GPU。Build → web-mobile 必须在 host 的 Cocos Creator 3.8.7 GUI 里完成，产物通过 mount 同步进容器。devcontainer 只负责 TypeScript 编辑、npm 依赖、命令行工具，Build 和 FairyGUI 编辑都走 host。
+
+3. **Sui SDK 模块兼容性靠 npm install 自动 fix**
+   `client/tycoon_cocos/package.json` 配了 postinstall hook，每次 `npm install` 后自动跑 `scripts/fix-sui-modules.js` 修补 `node_modules/@mysten/sui/dist/esm/transactions/Transaction.js`（Cocos 的 Rollup 打包不兼容 @mysten/sui 的某些 ESM 导出，比如 `resolveTransactionPlugin` 引用丢失、MapIterator 不能直接迭代）。手动删 `node_modules` 重装时要让 postinstall 跑完，跳过会导致 Cocos 构建报错。手动重跑：`node scripts/fix-sui-modules.js`。
+
+4. **suiup 装的 sui binary 跨容器不共享**
+   devcontainer 和 docker/sui-dev 各自通过 suiup 装一份 sui CLI，互不影响（版本可独立升级）。想统一版本就两边跑同一个 `suiup install sui <version>`。
 
 ## sui-dev 工作流
 
